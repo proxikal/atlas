@@ -1225,6 +1225,308 @@ fn test_function_scope() {
 }
 
 // ============================================================================
+// Array Aliasing Tests (Phase 09)
+// ============================================================================
+
+#[test]
+fn test_array_aliasing_multiple_aliases() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let arr1: number[] = [1, 2, 3];
+        let arr2: number[] = arr1;
+        let arr3: number[] = arr2;
+
+        arr1[0] = 100;
+        arr2[1] = 200;
+        arr3[2] = 300;
+
+        arr1[0] + arr2[1] + arr3[2]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 600.0), // 100 + 200 + 300
+        _ => panic!("Expected Number(600.0) - all aliases should see mutations"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_chain_of_assignments() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let original: number[] = [10, 20, 30];
+        let alias1: number[] = original;
+        let alias2: number[] = alias1;
+        let alias3: number[] = alias2;
+
+        alias3[1] = 999;
+
+        original[1]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 999.0),
+        _ => panic!("Expected Number(999.0) - original should see mutation through alias chain"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_nested_arrays() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let matrix: number[][] = [[1, 2], [3, 4]];
+        let row: number[] = matrix[0];
+
+        row[0] = 99;
+
+        matrix[0][0]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 99.0),
+        _ => panic!("Expected Number(99.0) - nested array mutation should be visible"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_identity_equality() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let arr1: number[] = [1, 2, 3];
+        let arr2: number[] = arr1;
+
+        arr1 == arr2
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Bool(b)) => assert!(b),
+        _ => panic!("Expected Bool(true) - arrays should be reference equal"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_different_arrays_not_equal() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let arr1: number[] = [1, 2, 3];
+        let arr2: number[] = [1, 2, 3];
+
+        arr1 == arr2
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Bool(b)) => assert!(!b),
+        _ => panic!("Expected Bool(false) - different array instances should not be equal"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_function_param_visibility() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn double_first_element(arr: number[]) -> void {
+            arr[0] = arr[0] * 2;
+        }
+
+        let numbers: number[] = [5, 10, 15];
+        double_first_element(numbers);
+        numbers[0]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 10.0),
+        _ => panic!("Expected Number(10.0) - function should mutate caller's array"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_multiple_function_calls() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn increment_all(arr: number[]) -> void {
+            var i: number = 0;
+            while (i < len(arr)) {
+                arr[i] = arr[i] + 1;
+                i = i + 1;
+            }
+        }
+
+        let data: number[] = [1, 2, 3];
+        increment_all(data);
+        increment_all(data);
+
+        data[0] + data[1] + data[2]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 12.0), // [3, 4, 5] -> 3 + 4 + 5
+        _ => panic!("Expected Number(12.0) - multiple mutations should accumulate"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_function_returns_mutated() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn process(arr: number[]) -> number[] {
+            arr[0] = 42;
+            return arr;
+        }
+
+        let original: number[] = [1, 2, 3];
+        let result: number[] = process(original);
+
+        original[0] + result[0]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 84.0), // 42 + 42
+        _ => panic!("Expected Number(84.0) - original and result should be same reference"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_through_helper_function() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn inner_modify(a: number[]) -> void {
+            a[0] = 999;
+        }
+
+        fn outer(arr: number[]) -> void {
+            inner_modify(arr);
+        }
+
+        let data: number[] = [1, 2, 3];
+        outer(data);
+        data[0]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 999.0),
+        _ => panic!("Expected Number(999.0) - helper function should mutate original array"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_reassignment_breaks_link() {
+    let runtime = Atlas::new();
+    let code = r#"
+        var arr1: number[] = [1, 2, 3];
+        var arr2: number[] = arr1;
+
+        arr2 = [10, 20, 30];
+        arr2[0] = 99;
+
+        arr1[0]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 1.0),
+        _ => panic!("Expected Number(1.0) - reassignment should break alias link"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_empty_array() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let arr1: number[] = [];
+        let arr2: number[] = arr1;
+
+        arr1 == arr2
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Bool(b)) => assert!(b),
+        _ => panic!("Expected Bool(true) - empty arrays should maintain reference equality"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_complex_mutation_pattern() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let source: number[] = [1, 2, 3, 4, 5];
+        let view1: number[] = source;
+        let view2: number[] = source;
+
+        view1[0] = view2[4];
+        view2[1] = view1[3];
+
+        source[0] + source[1]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 9.0), // 5 + 4
+        _ => panic!("Expected Number(9.0) - complex mutations should all be visible"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_nested_mutation_visibility() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let outer: number[][] = [[1, 2], [3, 4], [5, 6]];
+        let inner_ref: number[] = outer[1];
+
+        inner_ref[0] = 100;
+        outer[1][1] = 200;
+
+        inner_ref[0] + inner_ref[1]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 300.0), // 100 + 200
+        _ => panic!("Expected Number(300.0) - nested mutations should be visible to all references"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_function_param_multiple_args() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn swap_first_elements(a: number[], b: number[]) -> void {
+            let temp: number = a[0];
+            a[0] = b[0];
+            b[0] = temp;
+        }
+
+        let arr1: number[] = [10, 20];
+        let arr2: number[] = [30, 40];
+
+        swap_first_elements(arr1, arr2);
+
+        arr1[0] + arr2[0]
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 40.0), // 30 + 10
+        _ => panic!("Expected Number(40.0) - both arrays should be mutated"),
+    }
+}
+
+#[test]
+fn test_array_aliasing_self_reference() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn modify_same_array(arr: number[]) -> number[] {
+            arr[0] = 42;
+            return arr;
+        }
+
+        let data: number[] = [1, 2, 3];
+        let same: number[] = modify_same_array(data);
+
+        data == same
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Bool(b)) => assert!(b),
+        _ => panic!("Expected Bool(true) - function should return same reference"),
+    }
+}
+
+// ============================================================================
 // Complex Integration Tests
 // ============================================================================
 

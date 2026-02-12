@@ -7,10 +7,10 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/interpreter/phase-08-runtime-errors.md
-**Next Phase:** `phases/interpreter/phase-09-array-aliasing-tests.md`
+**Last Completed:** phases/interpreter/phase-09-array-aliasing-tests.md
+**Next Phase:** `phases/interpreter/phase-10-numeric-semantics.md`
 
-**What to implement:** Array aliasing and reference semantics tests
+**What to implement:** Numeric edge-case checks and error propagation
 
 ---
 
@@ -28,10 +28,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Interpreter Phase 09:**
-- `docs/implementation/09-value-model.md` - Value model with array reference semantics
+**For Interpreter Phase 10:**
+- `docs/numeric-edge-cases.md` - Numeric edge cases specification
+- `docs/runtime.md` - Runtime error handling
 - `docs/implementation/10-interpreter.md` - Interpreter implementation guide
-- `Atlas-SPEC.md` - Array semantics specification
 
 ---
 
@@ -90,14 +90,14 @@
 - ✅ phase-03-runtime-values.md
 - ✅ phase-07-value-model-tests.md
 
-### 6. Interpreter (5/8)
+### 6. Interpreter (6/8)
 - ✅ phase-01-interpreter-core.md
 - ✅ phase-04-arrays-mutation.md
 - ✅ phase-05-function-calls.md
 - ✅ phase-06-control-flow.md
 - ✅ phase-08-runtime-errors.md
-- ⬜ phase-09-array-aliasing-tests.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-10-numeric-semantics.md
+- ✅ phase-09-array-aliasing-tests.md
+- ⬜ phase-10-numeric-semantics.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-11-repl-state-tests.md
 
 ### 7. REPL (0/1)
@@ -153,7 +153,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 41/88 phases (47%)
+**Total Progress:** 42/88 phases (48%)
 
 ---
 
