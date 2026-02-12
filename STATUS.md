@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing Phases 01-07 (Binding, Type Checking, Rules & Nullability Tests)
+**Status:** Frontend Complete + Typing Phases 01-10 (Binding, Type Checking, Rules & Return Analysis)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/typing/phase-07-nullability-rules.md
-**Next Phase:** `phases/typing/phase-10-function-return-analysis.md`
+**Last Completed:** phases/typing/phase-10-function-return-analysis.md
+**Next Phase:** `phases/typing/phase-11-typecheck-dump-versioning.md`
 
-**What to implement:** Control-flow-aware return analysis for functions
+**What to implement:** Stabilize JSON schema version for typecheck dumps
 
 ---
 
@@ -28,10 +28,9 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Typing Phase 10:**
-- `docs/implementation/07-typechecker.md` - Type checker implementation
-- `Atlas-SPEC.md` - Language specification (control flow rules)
-- `docs/diagnostics.md` - Diagnostic codes
+**For Typing Phase 11:**
+- `docs/typecheck-dump.md` - Typecheck dump format
+- `docs/diagnostics.md` - Diagnostic versioning
 
 ---
 
@@ -75,14 +74,14 @@
 - ✅ phase-09-keyword-policy-tests.md
 - ✅ phase-10-keyword-enforcement.md
 
-### 4. Typing & Binding (5/22)
+### 4. Typing & Binding (6/22)
 - ✅ phase-01-binder.md
 - ✅ phase-02-typechecker.md
 - ✅ phase-05-type-rules-tests.md
 - ✅ phase-06-scope-shadowing-tests.md
 - ✅ phase-07-nullability-rules.md
-- ⬜ phase-10-function-return-analysis.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-11-typecheck-dump-versioning.md
+- ✅ phase-10-function-return-analysis.md
+- ⬜ phase-11-typecheck-dump-versioning.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-12-control-flow-legality.md
 - ⬜ phase-13-related-spans.md
 - ⬜ phase-14-warnings.md
@@ -162,7 +161,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 30/101 phases (30%)
+**Total Progress:** 31/101 phases (31%)
 
 ---
 
