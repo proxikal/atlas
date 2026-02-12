@@ -14,6 +14,12 @@ This log captures irreversible or high-impact design decisions. Update when a ne
 - Variables must be declared before use (no forward reference).
 - `break`/`continue` only inside loops; `return` only inside functions.
 
+## Number Literals
+- Format: `digit { digit } [ "." digit { digit } ] [ ("e"|"E") ["+" | "-"] digit { digit } ]`
+- Supports: Integer (`123`), decimal (`3.14`), and scientific notation (`1e10`, `1.5e-3`, `2.5E+10`)
+- Rationale: AI-friendliness. Scientific notation is far more readable and token-efficient than 300+ digit literals. As an AI-first language, this improves both human and AI code generation/understanding.
+- Lexer validates: Exponent must have at least one digit (e.g., `1e` or `1e+` are errors)
+
 ## Runtime Model
 - Single shared `Value` enum across interpreter and VM.
 - Reference counting (`Rc/Arc`), no GC in v0.1.

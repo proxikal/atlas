@@ -72,7 +72,7 @@
 - Detailed value model: `docs/value-model.md`.
 
 ## Literals
-- Number: `123`, `3.14`
+- Number: `123`, `3.14`, `1e10`, `1.5e-3` (supports scientific notation)
 - String: `"hello"`
 - Boolean: `true`, `false`
 - Null: `null`
@@ -162,7 +162,7 @@ primary        = number | string | "true" | "false" | "null" | ident | array_lit
 type           = primary_type [ "[]" ] ;
 primary_type   = "number" | "string" | "bool" | "void" | "null" ;
 ident          = letter { letter | digit | "_" } ;
-number         = digit { digit } [ "." digit { digit } ] ;
+number         = digit { digit } [ "." digit { digit } ] [ ("e" | "E") ["+" | "-"] digit { digit } ] ;
 string         = "\"" { char } "\"" ;
 ```
 

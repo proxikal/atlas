@@ -281,7 +281,7 @@ impl Lexer {
         }
     }
 
-    /// Scan a number literal (integer or float)
+    /// Scan a number literal (integer, float, or scientific notation)
     fn number(&mut self) -> Token {
         let start = self.current - 1; // -1 because we already advanced past first digit
 
@@ -302,6 +302,26 @@ impl Lexer {
                         self.advance();
                     }
                 }
+            }
+        }
+
+        // Check for scientific notation (e or E)
+        if !self.is_at_end() && (self.peek() == 'e' || self.peek() == 'E') {
+            self.advance(); // consume e/E
+
+            // Optional + or - sign
+            if !self.is_at_end() && (self.peek() == '+' || self.peek() == '-') {
+                self.advance();
+            }
+
+            // Must have at least one digit in exponent
+            if self.is_at_end() || !self.peek().is_ascii_digit() {
+                return self.error_token("Invalid number: exponent requires digits");
+            }
+
+            // Consume exponent digits
+            while !self.is_at_end() && self.peek().is_ascii_digit() {
+                self.advance();
             }
         }
 
@@ -583,6 +603,35 @@ mod tests {
         assert_eq!(tokens[2].lexeme, "0");
         assert_eq!(tokens[3].kind, TokenKind::Number);
         assert_eq!(tokens[3].lexeme, "123.456");
+    }
+
+    #[test]
+    fn test_scientific_notation() {
+        let mut lexer = Lexer::new("1e10 1.5e-3 2.5E+10 1e308 1E-308");
+        let (tokens, _) = lexer.tokenize();
+
+        assert_eq!(tokens[0].kind, TokenKind::Number);
+        assert_eq!(tokens[0].lexeme, "1e10");
+        assert_eq!(tokens[1].kind, TokenKind::Number);
+        assert_eq!(tokens[1].lexeme, "1.5e-3");
+        assert_eq!(tokens[2].kind, TokenKind::Number);
+        assert_eq!(tokens[2].lexeme, "2.5E+10");
+        assert_eq!(tokens[3].kind, TokenKind::Number);
+        assert_eq!(tokens[3].lexeme, "1e308");
+        assert_eq!(tokens[4].kind, TokenKind::Number);
+        assert_eq!(tokens[4].lexeme, "1E-308");
+    }
+
+    #[test]
+    fn test_scientific_notation_invalid() {
+        let mut lexer = Lexer::new("1e 1e+ 1e-");
+        let (tokens, diags) = lexer.tokenize();
+
+        // All three should be errors (exponent with no digits)
+        assert_eq!(tokens[0].kind, TokenKind::Error);
+        assert_eq!(tokens[1].kind, TokenKind::Error);
+        assert_eq!(tokens[2].kind, TokenKind::Error);
+        assert_eq!(diags.len(), 3);
     }
 
     #[test]
