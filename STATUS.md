@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/interpreter/phase-10-numeric-semantics.md
-**Next Phase:** `phases/interpreter/phase-11-repl-state-tests.md`
+**Last Completed:** phases/interpreter/phase-11-repl-state-tests.md
+**Next Phase:** `phases/repl/phase-02-repl.md`
 
-**What to implement:** REPL state persistence and error recovery tests
+**What to implement:** Full REPL CLI with interactive prompt and history
 
 ---
 
@@ -28,9 +28,9 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Interpreter Phase 11:**
-- `docs/repl-state.md` - REPL state persistence specification
+**For REPL Phase 02:**
 - `docs/implementation/14-repl.md` - REPL implementation guide
+- `Atlas-SPEC.md` - Language specification (for REPL behavior)
 
 ---
 
@@ -89,7 +89,7 @@
 - ✅ phase-03-runtime-values.md
 - ✅ phase-07-value-model-tests.md
 
-### 6. Interpreter (7/8)
+### 6. Interpreter (8/8) ✅ COMPLETE
 - ✅ phase-01-interpreter-core.md
 - ✅ phase-04-arrays-mutation.md
 - ✅ phase-05-function-calls.md
@@ -97,10 +97,10 @@
 - ✅ phase-08-runtime-errors.md
 - ✅ phase-09-array-aliasing-tests.md
 - ✅ phase-10-numeric-semantics.md
-- ⬜ phase-11-repl-state-tests.md ⬅️ **YOU ARE HERE**
+- ✅ phase-11-repl-state-tests.md
 
 ### 7. REPL (0/1)
-- ⬜ phase-02-repl.md
+- ⬜ phase-02-repl.md ⬅️ **YOU ARE HERE**
 
 ### 8. Bytecode & VM (0/17)
 - ⬜ phase-03-bytecode-format.md
@@ -152,7 +152,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 43/88 phases (49%)
+**Total Progress:** 44/88 phases (50%)
 
 ---
 

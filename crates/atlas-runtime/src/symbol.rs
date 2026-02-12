@@ -33,6 +33,7 @@ pub enum SymbolKind {
 }
 
 /// Symbol table for name resolution
+#[derive(Clone)]
 pub struct SymbolTable {
     /// Stack of scopes (innermost last)
     scopes: Vec<HashMap<String, Symbol>>,
@@ -149,6 +150,30 @@ impl SymbolTable {
         }
 
         symbols
+    }
+
+    /// Merge another symbol table into this one (for REPL state persistence)
+    ///
+    /// Adds new symbols from the other table to the top-level scope.
+    /// Overwrites existing symbols with the same name.
+    /// Does not merge nested scopes (only top-level scope and functions).
+    pub fn merge(&mut self, other: SymbolTable) {
+        // Merge top-level scope (index 0)
+        if let Some(other_top_scope) = other.scopes.first() {
+            if let Some(self_top_scope) = self.scopes.first_mut() {
+                for (name, symbol) in other_top_scope {
+                    self_top_scope.insert(name.clone(), symbol.clone());
+                }
+            }
+        }
+
+        // Merge functions (overwrite existing)
+        for (name, symbol) in other.functions {
+            // Don't overwrite builtins
+            if symbol.kind != SymbolKind::Builtin {
+                self.functions.insert(name, symbol);
+            }
+        }
     }
 }
 

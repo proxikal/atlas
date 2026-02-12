@@ -26,6 +26,14 @@ impl Binder {
         }
     }
 
+    /// Create a binder with an existing symbol table (for REPL state persistence)
+    pub fn with_symbol_table(symbol_table: SymbolTable) -> Self {
+        Self {
+            symbol_table,
+            diagnostics: Vec::new(),
+        }
+    }
+
     /// Bind a program (two-pass: hoist functions, then bind everything)
     pub fn bind(&mut self, program: &Program) -> (SymbolTable, Vec<Diagnostic>) {
         // Phase 1: Collect all top-level function declarations (hoisting)
