@@ -928,6 +928,183 @@ fn test_function_mutually_recursive() {
 }
 
 // ============================================================================
+// Runtime Error Tests (Phase 08)
+// ============================================================================
+
+#[test]
+fn test_runtime_error_divide_by_zero() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let x: number = 10 / 0;
+        x
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            assert_eq!(diags[0].code, "AT0005");
+            assert!(diags[0].message.contains("Divide by zero"));
+        }
+        Ok(val) => panic!("Expected divide by zero error, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_runtime_error_modulo_by_zero() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let x: number = 10 % 0;
+        x
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            assert_eq!(diags[0].code, "AT0005");
+        }
+        Ok(val) => panic!("Expected divide by zero error, got {:?}", val),
+    }
+}
+
+// Note: AT0007 (Invalid numeric result) is checked after arithmetic operations
+// but in practice it's difficult to trigger without very large numbers that
+// the parser may not accept. The checks are in place in the interpreter.
+
+#[test]
+fn test_runtime_error_array_out_of_bounds_code() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let arr: number[] = [1, 2, 3];
+        arr[10]
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            assert_eq!(diags[0].code, "AT0006");
+            assert!(diags[0].message.contains("out of bounds"));
+        }
+        Ok(val) => panic!("Expected out of bounds error, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_runtime_error_invalid_index_code() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let arr: number[] = [1, 2, 3];
+        arr[1.5]
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            assert_eq!(diags[0].code, "AT0103");
+            assert!(diags[0].message.contains("Invalid index"));
+        }
+        Ok(val) => panic!("Expected invalid index error, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_runtime_error_undefined_variable() {
+    let runtime = Atlas::new();
+    let code = r#"
+        let x: number = unknown_var;
+        x
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            // This will be caught by typechecker/binder, not runtime
+            // So it could be AT0002 or another compile-time error
+        }
+        Ok(val) => panic!("Expected undefined variable error, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_runtime_error_unknown_function() {
+    let runtime = Atlas::new();
+    let code = r#"
+        unknown_function(42)
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            // This will be caught by typechecker/binder as well
+        }
+        Ok(val) => panic!("Expected unknown function error, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_runtime_error_type_error_arity() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+        add(1, 2, 3)
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            // Arity errors are caught by typechecker (AT3005) before runtime
+            assert_eq!(diags[0].code, "AT3005");
+        }
+        Ok(val) => panic!("Expected arity error, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_runtime_error_in_function_call() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn divide(a: number, b: number) -> number {
+            return a / b;
+        }
+        divide(10, 0)
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            assert_eq!(diags[0].code, "AT0005");
+        }
+        Ok(val) => panic!("Expected divide by zero in function, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_runtime_error_in_nested_call() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn bad_division() -> number {
+            return 1 / 0;
+        }
+
+        fn caller() -> number {
+            return bad_division() + 1;
+        }
+
+        caller()
+    "#;
+
+    match runtime.eval(code) {
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            assert_eq!(diags[0].code, "AT0005");
+            // TODO: Stack trace should show bad_division -> caller -> top level
+        }
+        Ok(val) => panic!("Expected divide by zero in nested call, got {:?}", val),
+    }
+}
+
+// ============================================================================
 // String Tests
 // ============================================================================
 

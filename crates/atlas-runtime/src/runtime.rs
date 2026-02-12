@@ -154,7 +154,35 @@ impl Default for Atlas {
 
 /// Convert a RuntimeError to a Diagnostic
 fn runtime_error_to_diagnostic(error: RuntimeError) -> Diagnostic {
-    Diagnostic::error(error.to_string(), Span::dummy())
+    // Map runtime errors to their corresponding diagnostic codes from Atlas-SPEC.md
+    let (code, message) = match &error {
+        RuntimeError::DivideByZero => ("AT0005", "Divide by zero".to_string()),
+        RuntimeError::OutOfBounds => ("AT0006", "Array index out of bounds".to_string()),
+        RuntimeError::InvalidNumericResult => (
+            "AT0007",
+            "Invalid numeric result (NaN or Infinity)".to_string(),
+        ),
+        RuntimeError::InvalidIndex => (
+            "AT0103",
+            "Invalid index: array indices must be whole numbers".to_string(),
+        ),
+        RuntimeError::InvalidStdlibArgument => (
+            "AT0102",
+            "Invalid argument to standard library function".to_string(),
+        ),
+        RuntimeError::TypeError(msg) => ("AT0001", format!("Type error: {}", msg)),
+        RuntimeError::UndefinedVariable(name) => {
+            ("AT0002", format!("Unknown symbol: {}", name))
+        }
+        RuntimeError::UnknownFunction(name) => {
+            ("AT0002", format!("Unknown function: {}", name))
+        }
+        // VM-specific errors (for future VM implementation)
+        RuntimeError::UnknownOpcode => ("AT9998", "Unknown bytecode opcode".to_string()),
+        RuntimeError::StackUnderflow => ("AT9997", "Stack underflow".to_string()),
+    };
+
+    Diagnostic::error_with_code(code, message, Span::dummy())
 }
 
 #[cfg(test)]
