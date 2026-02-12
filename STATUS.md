@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing Phase 01 (Symbol Binding)
+**Status:** Frontend Complete + Typing Phases 01-02 (Binding + Type Checking)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/typing/phase-01-binder.md
-**Next Phase:** `phases/typing/phase-02-typechecker.md`
+**Last Completed:** phases/typing/phase-02-typechecker.md
+**Next Phase:** `phases/typing/phase-05-type-rules-tests.md`
 
-**What to implement:** Enforce strict typing rules on the bound AST
+**What to implement:** Comprehensive tests for type system rules
 
 ---
 
@@ -76,10 +76,10 @@
 - ✅ phase-09-keyword-policy-tests.md
 - ✅ phase-10-keyword-enforcement.md
 
-### 4. Typing & Binding (1/22)
+### 4. Typing & Binding (2/22)
 - ✅ phase-01-binder.md
-- ⬜ phase-02-typechecker.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-05-type-rules-tests.md
+- ✅ phase-02-typechecker.md
+- ⬜ phase-05-type-rules-tests.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-06-scope-shadowing-tests.md
 - ⬜ phase-07-nullability-rules.md
 - ⬜ phase-10-function-return-analysis.md
@@ -163,7 +163,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 26/101 phases (26%)
+**Total Progress:** 27/101 phases (27%)
 
 ---
 

@@ -28,9 +28,38 @@ pub enum Type {
 
 impl Type {
     /// Check if this type is compatible with another type
-    pub fn is_assignable_to(&self, _other: &Type) -> bool {
-        // Placeholder implementation
-        true
+    pub fn is_assignable_to(&self, other: &Type) -> bool {
+        // Unknown type is assignable to anything (error recovery)
+        if matches!(self, Type::Unknown) || matches!(other, Type::Unknown) {
+            return true;
+        }
+
+        match (self, other) {
+            // Same type is always assignable
+            (a, b) if a == b => true,
+
+            // Array types must have compatible element types
+            (Type::Array(a), Type::Array(b)) => a.is_assignable_to(b),
+
+            // Function types must have compatible signatures
+            (
+                Type::Function {
+                    params: p1,
+                    return_type: r1,
+                },
+                Type::Function {
+                    params: p2,
+                    return_type: r2,
+                },
+            ) => {
+                p1.len() == p2.len()
+                    && p1.iter().zip(p2.iter()).all(|(a, b)| a.is_assignable_to(b))
+                    && r1.is_assignable_to(r2)
+            }
+
+            // No other types are assignable
+            _ => false,
+        }
     }
 
     /// Get a human-readable name for this type
