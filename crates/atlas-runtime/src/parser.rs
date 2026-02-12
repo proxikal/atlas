@@ -68,7 +68,7 @@ impl Parser {
     fn parse_function(&mut self) -> Result<FunctionDecl, ()> {
         let fn_span = self.consume(TokenKind::Fn, "Expected 'fn'")?.span;
 
-        let name_token = self.consume(TokenKind::Identifier, "Expected function name")?;
+        let name_token = self.consume_identifier("a function name")?;
         let name = Identifier {
             name: name_token.lexeme.clone(),
             span: name_token.span,
@@ -81,7 +81,7 @@ impl Parser {
         if !self.check(TokenKind::RightParen) {
             loop {
                 let param_span_start = self.peek().span;
-                let param_name_tok = self.consume(TokenKind::Identifier, "Expected parameter name")?;
+                let param_name_tok = self.consume_identifier("a parameter name")?;
                 let param_name = param_name_tok.lexeme.clone();
                 let param_name_span = param_name_tok.span;
 
@@ -151,6 +151,14 @@ impl Parser {
                 self.error("Function declarations are only allowed at top level");
                 Err(())
             }
+            TokenKind::Import => {
+                self.error("Import statements are not supported in Atlas v0.1");
+                Err(())
+            }
+            TokenKind::Match => {
+                self.error("Match expressions are not supported in Atlas v0.1");
+                Err(())
+            }
             _ => self.parse_assign_or_expr_stmt(),
         }
     }
@@ -161,7 +169,7 @@ impl Parser {
         let keyword = self.advance().kind;
         let mutable = keyword == TokenKind::Var;
 
-        let name_token = self.consume(TokenKind::Identifier, "Expected variable name")?;
+        let name_token = self.consume_identifier("a variable name")?;
         let name = Identifier {
             name: name_token.lexeme.clone(),
             span: name_token.span,
@@ -672,7 +680,7 @@ impl Parser {
 
     /// Parse type reference
     fn parse_type_ref(&mut self) -> Result<TypeRef, ()> {
-        let token = self.consume(TokenKind::Identifier, "Expected type name")?;
+        let token = self.consume_identifier("a type name")?;
         let span = token.span;
 
         let name = match token.lexeme.as_str() {
@@ -738,6 +746,57 @@ impl Parser {
             Diagnostic::error_with_code("AT1000", message, span)
                 .with_label("syntax error"),
         );
+    }
+
+    /// Check if a token kind is a reserved keyword
+    fn is_reserved_keyword(kind: TokenKind) -> bool {
+        matches!(
+            kind,
+            TokenKind::Let
+                | TokenKind::Var
+                | TokenKind::Fn
+                | TokenKind::If
+                | TokenKind::Else
+                | TokenKind::While
+                | TokenKind::For
+                | TokenKind::Return
+                | TokenKind::Break
+                | TokenKind::Continue
+                | TokenKind::True
+                | TokenKind::False
+                | TokenKind::Null
+                | TokenKind::Import
+                | TokenKind::Match
+        )
+    }
+
+    /// Consume an identifier token with enhanced error message for keywords
+    fn consume_identifier(&mut self, context: &str) -> Result<&Token, ()> {
+        let current = self.peek();
+
+        // Check if it's a reserved keyword
+        if Self::is_reserved_keyword(current.kind) {
+            let keyword_name = &current.lexeme;
+
+            // Special message for import/match (reserved for future)
+            if current.kind == TokenKind::Import || current.kind == TokenKind::Match {
+                self.error(&format!(
+                    "Cannot use reserved keyword '{}' as {}. This keyword is reserved for future use",
+                    keyword_name, context
+                ));
+            } else {
+                self.error(&format!(
+                    "Cannot use reserved keyword '{}' as {}",
+                    keyword_name, context
+                ));
+            }
+            Err(())
+        } else if current.kind == TokenKind::Identifier {
+            Ok(self.advance())
+        } else {
+            self.error(&format!("Expected {} but found {:?}", context, current.kind));
+            Err(())
+        }
     }
 
     /// Synchronize after error

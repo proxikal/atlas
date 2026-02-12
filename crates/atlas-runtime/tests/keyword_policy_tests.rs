@@ -241,6 +241,54 @@ fn test_valid_use_of_true_false_null() {
     assert_eq!(diagnostics.len(), 0, "Expected no errors for valid use of boolean/null literals");
 }
 
+// ========== Enhanced Error Message Tests ==========
+
+#[test]
+fn test_error_message_mentions_keyword() {
+    // Verify error messages specifically mention the keyword that was misused
+    let (_program, diagnostics) = parse_source("let import = 1;");
+
+    assert!(!diagnostics.is_empty(), "Expected error");
+    assert_has_error_with_code(&diagnostics, "AT1000");
+
+    // Error message should mention 'import' keyword
+    assert!(diagnostics.iter().any(|d|
+        d.message.contains("import") && d.message.contains("reserved")
+    ), "Expected error message to mention 'import' as reserved keyword, got: {:?}",
+        diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>());
+}
+
+#[test]
+fn test_error_message_for_future_keyword() {
+    // import/match should mention they're reserved for future use
+    let (_program, diagnostics) = parse_source("fn match() {}");
+
+    assert!(!diagnostics.is_empty(), "Expected error");
+    assert_has_error_with_code(&diagnostics, "AT1000");
+
+    // Error message should mention it's reserved for future use
+    assert!(diagnostics.iter().any(|d|
+        d.message.contains("match") && d.message.contains("future")
+    ), "Expected error message to mention 'match' is reserved for future use, got: {:?}",
+        diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>());
+}
+
+#[test]
+fn test_import_statement_error_message() {
+    // import statement should mention it's not supported in v0.1
+    let (_program, diagnostics) = parse_source("import foo;");
+
+    assert!(!diagnostics.is_empty(), "Expected error");
+    assert_has_error_with_code(&diagnostics, "AT1000");
+
+    // Error message should mention import is not supported
+    assert!(diagnostics.iter().any(|d|
+        d.message.to_lowercase().contains("import") &&
+        (d.message.contains("not supported") || d.message.contains("v0.1"))
+    ), "Expected error message to mention import is not supported, got: {:?}",
+        diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>());
+}
+
 // ========== Contextual Tests ==========
 
 #[test]
