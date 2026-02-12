@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Diagnostics Core + Frontend Phases 01-07 Complete (Lexer + Parser + Recovery + Edge Cases)
+**Status:** Diagnostics Core + Frontend Phases 01-08 Complete (Lexer + Parser + AST Versioning)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/frontend/phase-07-lexer-edge-cases.md
-**Next Phase:** `phases/frontend/phase-08-ast-dump-versioning.md`
+**Last Completed:** phases/frontend/phase-08-ast-dump-versioning.md
+**Next Phase:** `phases/frontend/phase-09-keyword-policy-tests.md`
 
-**What to implement:** Stabilize the JSON schema version for AST dumps
+**What to implement:** Validate reserved keyword handling in lexer and parser
 
 ---
 
@@ -28,9 +28,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Frontend Phase 08:**
-- `docs/ast-dump.md` - AST dump format specification
-- `docs/implementation/05-ast.md` - AST implementation guide
+**For Frontend Phase 09:**
+- `docs/keyword-policy.md` - Keyword policy specification
+- `docs/implementation/03-lexer.md` - Lexer implementation guide
+- `docs/implementation/04-parser.md` - Parser implementation guide
 
 ---
 
@@ -62,7 +63,7 @@
 - ✅ phase-08-diagnostics-versioning.md
 - ✅ phase-09-diagnostics-snapshots.md
 
-### 3. Frontend (7/10)
+### 3. Frontend (8/10)
 - ✅ phase-03-ast-build.md
 - ✅ phase-01-lexer.md
 - ✅ phase-02-parser.md
@@ -70,8 +71,8 @@
 - ✅ phase-05-grammar-conformance.md
 - ✅ phase-06-parser-recovery-strategy.md
 - ✅ phase-07-lexer-edge-cases.md
-- ⬜ phase-08-ast-dump-versioning.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-09-keyword-policy-tests.md
+- ✅ phase-08-ast-dump-versioning.md
+- ⬜ phase-09-keyword-policy-tests.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-10-keyword-enforcement.md
 
 ### 4. Typing & Binding (0/22)
@@ -161,7 +162,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 22/101 phases (22%)
+**Total Progress:** 23/101 phases (23%)
 
 ---
 

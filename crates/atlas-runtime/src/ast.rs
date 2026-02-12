@@ -5,10 +5,55 @@
 use crate::span::Span;
 use serde::{Deserialize, Serialize};
 
+/// AST schema version
+///
+/// This version number is included in JSON dumps to ensure compatibility.
+/// Increment when making breaking changes to the AST structure.
+pub const AST_VERSION: u32 = 1;
+
 /// Top-level program containing all items
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Program {
     pub items: Vec<Item>,
+}
+
+/// Versioned AST wrapper for JSON serialization
+///
+/// This struct wraps a Program with version metadata for stable JSON output.
+/// Used when dumping AST to JSON for tooling and AI agents.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VersionedProgram {
+    /// AST schema version
+    pub ast_version: u32,
+    /// The actual program AST
+    #[serde(flatten)]
+    pub program: Program,
+}
+
+impl VersionedProgram {
+    /// Create a new versioned program wrapper
+    pub fn new(program: Program) -> Self {
+        Self {
+            ast_version: AST_VERSION,
+            program,
+        }
+    }
+
+    /// Serialize to JSON string
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(self)
+    }
+
+    /// Deserialize from JSON string
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
+    }
+}
+
+impl From<Program> for VersionedProgram {
+    fn from(program: Program) -> Self {
+        Self::new(program)
+    }
 }
 
 /// Top-level item (function or statement)
@@ -442,5 +487,146 @@ mod tests {
         } else {
             panic!("Expected array type");
         }
+    }
+
+    // === AST Versioning Tests (Phase 08) ===
+
+    #[test]
+    fn test_ast_version_constant() {
+        // Verify AST_VERSION is set to 1
+        assert_eq!(AST_VERSION, 1);
+    }
+
+    #[test]
+    fn test_versioned_program_creation() {
+        let program = Program { items: vec![] };
+        let versioned = VersionedProgram::new(program);
+
+        assert_eq!(versioned.ast_version, AST_VERSION);
+        assert_eq!(versioned.ast_version, 1);
+        assert_eq!(versioned.program.items.len(), 0);
+    }
+
+    #[test]
+    fn test_versioned_program_from_program() {
+        let program = Program { items: vec![] };
+        let versioned: VersionedProgram = program.into();
+
+        assert_eq!(versioned.ast_version, 1);
+    }
+
+    #[test]
+    fn test_versioned_program_to_json() {
+        let program = Program { items: vec![] };
+        let versioned = VersionedProgram::new(program);
+
+        let json = versioned.to_json().expect("Failed to serialize to JSON");
+
+        // Verify JSON contains ast_version field
+        assert!(json.contains("\"ast_version\""));
+        assert!(json.contains("\"ast_version\": 1"));
+        assert!(json.contains("\"items\""));
+    }
+
+    #[test]
+    fn test_versioned_program_from_json() {
+        let json = r#"{
+            "ast_version": 1,
+            "items": []
+        }"#;
+
+        let versioned = VersionedProgram::from_json(json).expect("Failed to parse JSON");
+
+        assert_eq!(versioned.ast_version, 1);
+        assert_eq!(versioned.program.items.len(), 0);
+    }
+
+    #[test]
+    fn test_versioned_program_with_content() {
+        // Create a program with an actual statement
+        let program = Program {
+            items: vec![Item::Statement(Stmt::Expr(ExprStmt {
+                expr: Expr::Literal(Literal::Number(42.0), Span::new(0, 2)),
+                span: Span::new(0, 2),
+            }))],
+        };
+
+        let versioned = VersionedProgram::new(program);
+        let json = versioned.to_json().expect("Failed to serialize");
+
+        // Verify version is included in JSON with content
+        assert!(json.contains("\"ast_version\": 1"));
+        assert!(json.contains("\"items\""));
+    }
+
+    #[test]
+    fn test_versioned_program_round_trip() {
+        // Create a simple program
+        let original_program = Program {
+            items: vec![Item::Statement(Stmt::Expr(ExprStmt {
+                expr: Expr::Literal(Literal::Bool(true), Span::new(0, 4)),
+                span: Span::new(0, 4),
+            }))],
+        };
+
+        let versioned = VersionedProgram::new(original_program.clone());
+
+        // Serialize to JSON
+        let json = versioned.to_json().expect("Failed to serialize");
+
+        // Deserialize back
+        let deserialized = VersionedProgram::from_json(&json).expect("Failed to deserialize");
+
+        // Verify version is preserved
+        assert_eq!(deserialized.ast_version, 1);
+        assert_eq!(deserialized.program.items.len(), 1);
+    }
+
+    #[test]
+    fn test_version_mismatch_detection() {
+        // Test with a future version number (forward compatibility test)
+        let json_future = r#"{
+            "ast_version": 2,
+            "items": []
+        }"#;
+
+        // Should still parse (for forward compatibility)
+        let result = VersionedProgram::from_json(json_future);
+        assert!(result.is_ok(), "Should parse future versions");
+
+        if let Ok(versioned) = result {
+            // Can detect version mismatch
+            assert_ne!(versioned.ast_version, AST_VERSION);
+            assert_eq!(versioned.ast_version, 2);
+        }
+    }
+
+    #[test]
+    fn test_missing_version_field() {
+        // Test JSON without version field (backward compatibility)
+        let json_no_version = r#"{
+            "items": []
+        }"#;
+
+        // This should fail because ast_version is required
+        let result = VersionedProgram::from_json(json_no_version);
+        assert!(result.is_err(), "Should fail without ast_version field");
+    }
+
+    #[test]
+    fn test_ast_dump_field_order() {
+        // Verify ast_version comes first in JSON output
+        let program = Program { items: vec![] };
+        let versioned = VersionedProgram::new(program);
+        let json = versioned.to_json().expect("Failed to serialize");
+
+        // ast_version should appear before items in the JSON
+        let version_pos = json.find("\"ast_version\"").expect("ast_version not found");
+        let items_pos = json.find("\"items\"").expect("items not found");
+
+        assert!(
+            version_pos < items_pos,
+            "ast_version should appear before items in JSON output"
+        );
     }
 }
