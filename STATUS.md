@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing Phases 01-08 (Binding, Type Checking, Scopes, Nullability, Returns, Warnings, Diagnostics & Semantic Edge Cases)
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/typing/phase-18-semantic-edge-cases.md
-**Next Phase:** `phases/typing/phase-11-typecheck-stability.md`
+**Last Completed:** phases/interpreter/phase-07-value-model-tests.md
+**Next Phase:** `phases/interpreter/phase-01-interpreter-core.md`
 
-**What to implement:** Stabilize typecheck dump format and guarantee diagnostic stability
+**What to implement:** Implement evaluation of the AST (expression evaluation, statement execution, control flow)
 
 ---
 
@@ -28,10 +28,11 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Typing Phase 11:**
-- `docs/typecheck-dump.md` - Typecheck dump specification
-- `docs/diagnostics.md` - Diagnostic specification
-- `docs/implementation/07-typechecker.md` - Type checker implementation
+**For Interpreter Phase 01:**
+- `docs/implementation/09-value-model.md` - Value model (shared with interpreter)
+- `docs/implementation/10-interpreter.md` - Interpreter implementation guide
+- `docs/runtime.md` - Runtime specification
+- `Atlas-SPEC.md` - Language specification
 
 ---
 
@@ -75,23 +76,23 @@
 - ✅ phase-09-keyword-policy-tests.md
 - ✅ phase-10-keyword-enforcement.md
 
-### 4. Typing & Binding (8/9)
+### 4. Typing & Binding (9/9) ✅ COMPLETE
 - ✅ phase-01-binder.md
 - ✅ phase-02-typechecker.md
-- ✅ phase-03-scopes-shadowing.md
-- ✅ phase-04-nullability.md
-- ✅ phase-05-function-returns.md
-- ✅ phase-06-warnings.md
-- ✅ phase-07-diagnostics.md
-- ✅ phase-08-semantic-edge-cases.md
-- ⬜ phase-09-typecheck-stability.md ⬅️ **YOU ARE HERE**
+- ✅ phase-06-scopes-shadowing.md
+- ✅ phase-07-nullability.md
+- ✅ phase-10-function-returns.md
+- ✅ phase-14-warnings.md
+- ✅ phase-13-diagnostics.md
+- ✅ phase-18-semantic-edge-cases.md
+- ✅ phase-11-typecheck-stability.md
 
-### 5. Runtime Values (0/2)
-- ⬜ phase-03-runtime-values.md
-- ⬜ phase-07-value-model-tests.md
+### 5. Runtime Values (2/2) ✅ COMPLETE
+- ✅ phase-03-runtime-values.md
+- ✅ phase-07-value-model-tests.md
 
 ### 6. Interpreter (0/11)
-- ⬜ phase-01-interpreter-core.md
+- ⬜ phase-01-interpreter-core.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-04-arrays-mutation.md
 - ⬜ phase-05-function-calls.md
 - ⬜ phase-06-control-flow.md
@@ -153,7 +154,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 33/88 phases (38%)
+**Total Progress:** 36/88 phases (41%)
 
 ---
 
@@ -216,6 +217,7 @@ Change date at top of file to current date
 | **VM** | `11-bytecode.md`, `12-vm.md` |
 | **Stdlib** | `09-value-model.md`, `13-stdlib.md` |
 | **CLI** | `14-repl.md` |
+| **LSP & Tooling** | `16-lsp.md` |
 | **Testing** | `15-testing.md` |
 
 ---
