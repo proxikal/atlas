@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing Phases 01-02 (Binding + Type Checking)
+**Status:** Frontend Complete + Typing Phases 01-05 (Binding, Type Checking & Type Rules Tests)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/typing/phase-02-typechecker.md
-**Next Phase:** `phases/typing/phase-05-type-rules-tests.md`
+**Last Completed:** phases/typing/phase-05-type-rules-tests.md
+**Next Phase:** `phases/typing/phase-06-scope-shadowing-tests.md`
 
-**What to implement:** Comprehensive tests for type system rules
+**What to implement:** Tests for scope resolution rules and shadowing behavior
 
 ---
 
@@ -28,11 +28,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Typing Phase 02:**
+**For Typing Phase 06:**
 - `docs/implementation/02-core-types.md` - Core type definitions
-- `docs/implementation/07-typechecker.md` - Type checker implementation guide
-- `Atlas-SPEC.md` - Language specification
-- `docs/diagnostics.md` - Diagnostic codes
+- `docs/implementation/06-symbol-table.md` - Symbol table and scoping
+- `Atlas-SPEC.md` - Language specification (scope rules)
 
 ---
 
@@ -76,11 +75,11 @@
 - ✅ phase-09-keyword-policy-tests.md
 - ✅ phase-10-keyword-enforcement.md
 
-### 4. Typing & Binding (2/22)
+### 4. Typing & Binding (3/22)
 - ✅ phase-01-binder.md
 - ✅ phase-02-typechecker.md
-- ⬜ phase-05-type-rules-tests.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-06-scope-shadowing-tests.md
+- ✅ phase-05-type-rules-tests.md
+- ⬜ phase-06-scope-shadowing-tests.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-07-nullability-rules.md
 - ⬜ phase-10-function-return-analysis.md
 - ⬜ phase-11-typecheck-dump-versioning.md
@@ -163,7 +162,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 27/101 phases (27%)
+**Total Progress:** 28/101 phases (28%)
 
 ---
 
