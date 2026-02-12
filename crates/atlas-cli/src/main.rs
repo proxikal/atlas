@@ -1,6 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
+mod commands;
+
 #[derive(Parser)]
 #[command(name = "atlas")]
 #[command(about = "Atlas programming language compiler and runtime", long_about = None)]
@@ -48,8 +50,7 @@ fn main() -> Result<()> {
             println!("(Not yet implemented)");
         }
         Commands::Repl => {
-            println!("Starting REPL...");
-            println!("(Not yet implemented)");
+            commands::repl::run()?;
         }
     }
 

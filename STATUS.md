@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/interpreter/phase-11-repl-state-tests.md
-**Next Phase:** `phases/interpreter/phase-02-repl.md`
+**Last Completed:** phases/interpreter/phase-02-repl.md
+**Next Phase:** `phases/bytecode-vm/phase-03-bytecode-format.md`
 
-**What to implement:** Full REPL CLI with interactive prompt and history
+**What to implement:** Define bytecode format and instruction encoding
 
 ---
 
@@ -29,10 +29,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Interpreter Phase 02 (REPL):**
-- `Atlas-SPEC.md` - Language specification (CRITICAL: verify syntax before implementation!)
-- `docs/implementation/14-repl.md` - REPL implementation guide
-- `docs/repl.md` - REPL specification
+**For Bytecode & VM Phase 03 (Bytecode Format):**
+- `docs/ir.md` - Intermediate representation documentation
+- `docs/bytecode-format.md` - Bytecode format specification
+- `docs/implementation/11-bytecode.md` - Bytecode implementation guide
 
 ---
 
@@ -101,11 +101,11 @@
 - ✅ phase-10-numeric-semantics.md
 - ✅ phase-11-repl-state-tests.md
 
-### 7. REPL (0/1)
-- ⬜ phases/interpreter/phase-02-repl.md ⬅️ **YOU ARE HERE**
+### 7. REPL (1/1) ✅ COMPLETE
+- ✅ phases/interpreter/phase-02-repl.md
 
 ### 8. Bytecode & VM (0/17)
-- ⬜ phase-03-bytecode-format.md
+- ⬜ phase-03-bytecode-format.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-01-bytecode-compiler.md
 - ⬜ phase-02-vm.md
 - ⬜ phase-06-constants-pool.md
@@ -154,7 +154,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 44/88 phases (50%)
+**Total Progress:** 45/88 phases (51%)
 
 ---
 
