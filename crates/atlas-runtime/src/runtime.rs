@@ -136,7 +136,7 @@ mod tests {
     fn test_eval_simple_expression() {
         let runtime = Atlas::new();
         let result = runtime.eval("1 + 2");
-        // TODO: When implemented, should return Value::Int(3)
+        // TODO: When implemented, should return Value::Number(3.0)
         assert!(result.is_err());
     }
 
@@ -260,8 +260,8 @@ mod tests {
         let runtime = Atlas::new();
         let result = runtime.eval("42");
         match result {
-            Ok(Value::Int(n)) => assert_eq!(n, 42),
-            _ => panic!("Expected Int(42)"),
+            Ok(Value::Number(n)) => assert_eq!(n, 42.0),
+            _ => panic!("Expected Number(42.0)"),
         }
     }
 
@@ -271,8 +271,8 @@ mod tests {
         let runtime = Atlas::new();
         let result = runtime.eval("1 + 2 * 3");
         match result {
-            Ok(Value::Int(n)) => assert_eq!(n, 7),
-            _ => panic!("Expected Int(7)"),
+            Ok(Value::Number(n)) => assert_eq!(n, 7.0),
+            _ => panic!("Expected Number(7.0)"),
         }
     }
 

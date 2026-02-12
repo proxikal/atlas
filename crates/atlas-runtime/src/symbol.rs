@@ -128,6 +128,28 @@ impl SymbolTable {
             span: Span::dummy(),
         });
     }
+
+    /// Get all symbols from all scopes and functions
+    /// Returns a vector of all symbols in the table
+    pub fn all_symbols(&self) -> Vec<Symbol> {
+        let mut symbols = Vec::new();
+
+        // Collect from all scopes
+        for scope in &self.scopes {
+            for symbol in scope.values() {
+                symbols.push(symbol.clone());
+            }
+        }
+
+        // Collect from functions (excluding builtins for cleaner output)
+        for symbol in self.functions.values() {
+            if symbol.kind != SymbolKind::Builtin {
+                symbols.push(symbol.clone());
+            }
+        }
+
+        symbols
+    }
 }
 
 impl Default for SymbolTable {

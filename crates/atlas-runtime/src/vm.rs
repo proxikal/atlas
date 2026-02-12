@@ -47,8 +47,8 @@ mod tests {
     #[test]
     fn test_vm_stack() {
         let mut vm = VM::new();
-        vm.push(Value::Int(42));
+        vm.push(Value::Number(42.0));
         let val = vm.pop().unwrap();
-        assert_eq!(val, Value::Int(42));
+        assert_eq!(val, Value::Number(42.0));
     }
 }

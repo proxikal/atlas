@@ -110,7 +110,15 @@ This is the canonical build order for AI agents. Execute phases in order. Do not
 9. `phases/cli/phase-09-json-dump-stability-tests.md`
 10. `phases/cli/phase-10-cli-e2e-tests.md`
 
-## 11. Polish
+## 11. LSP & Tooling
+1. `phases/lsp/phase-01-lsp-foundation.md`
+2. `phases/lsp/phase-02-lsp-diagnostics.md`
+3. `phases/lsp/phase-03-lsp-navigation.md`
+4. `phases/lsp/phase-04-lsp-completion.md`
+5. `phases/lsp/phase-05-lsp-formatting.md`
+6. `phases/lsp/phase-06-lsp-testing.md`
+
+## 12. Polish
 1. `phases/polish/phase-01-polish.md`
 2. `phases/polish/phase-02-regression-suite.md`
 3. `phases/polish/phase-03-docs-pass.md`

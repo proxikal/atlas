@@ -19,6 +19,7 @@ This directory contains concrete architectural decisions and implementation deta
 | **VM** | `12-vm.md`, `11-bytecode.md`, `09-value-model.md` |
 | **Standard Library** | `13-stdlib.md`, `09-value-model.md` |
 | **REPL** | `14-repl.md` |
+| **LSP & Tooling** | `16-lsp.md` |
 | **Testing** | `15-testing.md` |
 
 ## File Descriptions
@@ -38,6 +39,7 @@ This directory contains concrete architectural decisions and implementation deta
 - **13-stdlib.md** - print, len, str implementation strategy
 - **14-repl.md** - REPL core architecture, state management
 - **15-testing.md** - Golden test patterns, integration testing
+- **16-lsp.md** - Language Server Protocol implementation, editor integration
 
 ## Key Architectural Decisions
 

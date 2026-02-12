@@ -24,6 +24,7 @@ pub mod span;
 pub mod stdlib;
 pub mod symbol;
 pub mod token;
+pub mod typecheck_dump;
 pub mod typechecker;
 pub mod types;
 pub mod value;
@@ -49,9 +50,10 @@ pub use runtime::{Atlas, RuntimeResult};
 pub use span::Span;
 pub use symbol::{Symbol, SymbolKind, SymbolTable};
 pub use token::{Token, TokenKind};
+pub use typecheck_dump::{SymbolInfo, TypeInfo, TypecheckDump, TYPECHECK_VERSION};
 pub use typechecker::TypeChecker;
 pub use types::Type;
-pub use value::{RuntimeError, Value};
+pub use value::{FunctionRef, RuntimeError, Value};
 pub use vm::VM;
 
 #[cfg(test)]

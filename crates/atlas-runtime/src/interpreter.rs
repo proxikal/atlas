@@ -43,7 +43,7 @@ mod tests {
     #[test]
     fn test_interpreter_creation() {
         let mut interp = Interpreter::new();
-        interp.define_global("x".to_string(), Value::Int(42));
+        interp.define_global("x".to_string(), Value::Number(42.0));
         assert!(interp.globals.contains_key("x"));
     }
 }

@@ -115,8 +115,8 @@ fn test_eval_returns_value() {
     let result = runtime.eval("42");
 
     match result {
-        Ok(Value::Int(n)) => assert_eq!(n, 42),
-        _ => panic!("Expected Int(42)"),
+        Ok(Value::Number(n)) => assert_eq!(n, 42.0),
+        _ => panic!("Expected Number(42.0)"),
     }
 }
 
@@ -132,8 +132,8 @@ fn test_eval_preserves_state() {
     let result = runtime.eval("x").unwrap();
 
     match result {
-        Value::Int(n) => assert_eq!(n, 10),
-        _ => panic!("Expected Int(10)"),
+        Value::Number(n) => assert_eq!(n, 10.0),
+        _ => panic!("Expected Number(10.0)"),
     }
 }
 
