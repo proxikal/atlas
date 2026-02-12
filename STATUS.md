@@ -7,10 +7,10 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/interpreter/phase-02-repl.md
-**Next Phase:** `phases/bytecode-vm/phase-03-bytecode-format.md`
+**Last Completed:** phases/bytecode-vm/phase-03-bytecode-format.md
+**Next Phase:** `phases/bytecode-vm/phase-01-bytecode-compiler.md`
 
-**What to implement:** Define bytecode format and instruction encoding
+**What to implement:** Compile AST directly to bytecode with support for expressions, statements, and functions
 
 ---
 
@@ -29,10 +29,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Bytecode & VM Phase 03 (Bytecode Format):**
+**For Bytecode & VM Phase 01 (Bytecode Compiler):**
 - `docs/ir.md` - Intermediate representation documentation
-- `docs/bytecode-format.md` - Bytecode format specification
 - `docs/implementation/11-bytecode.md` - Bytecode implementation guide
+- `Atlas-SPEC.md` - Language specification (CRITICAL: verify syntax before implementation!)
 
 ---
 
@@ -104,8 +104,9 @@
 ### 7. REPL (1/1) ✅ COMPLETE
 - ✅ phases/interpreter/phase-02-repl.md
 
-### 8. Bytecode & VM (0/17)
-- ⬜ phase-03-bytecode-format.md ⬅️ **YOU ARE HERE**
+### 8. Bytecode & VM (1/17)
+- ✅ phase-03-bytecode-format.md
+- ⬜ phase-01-bytecode-compiler.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-01-bytecode-compiler.md
 - ⬜ phase-02-vm.md
 - ⬜ phase-06-constants-pool.md
@@ -154,7 +155,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 45/88 phases (51%)
+**Total Progress:** 46/88 phases (52%)
 
 ---
 
