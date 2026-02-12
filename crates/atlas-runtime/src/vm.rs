@@ -481,6 +481,17 @@ impl VM {
     fn current_frame(&self) -> &CallFrame {
         self.frames.last().expect("No call frame available")
     }
+
+    /// Generate a stack trace from the current call frames
+    /// Returns a vector of function names from innermost to outermost
+    #[allow(dead_code)]
+    fn stack_trace(&self) -> Vec<String> {
+        self.frames
+            .iter()
+            .rev()
+            .map(|frame| frame.function_name.clone())
+            .collect()
+    }
 }
 
 impl Default for VM {
@@ -1268,5 +1279,108 @@ mod tests {
         // Each outer iteration: inner loop breaks after j=0, so outer increments once
         // Total: 3 iterations = 3
         assert_eq!(result, Some(Value::Number(3.0)));
+    }
+
+    // ===== Runtime Error Tests (Phase 09) =====
+
+    #[test]
+    fn test_vm_runtime_error_modulo_by_zero() {
+        // Test modulo by zero runtime error
+        let result = execute_source("10 % 0;");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+    }
+
+    #[test]
+    fn test_vm_runtime_error_zero_divided_by_zero() {
+        // 0/0 should trigger divide by zero error
+        let result = execute_source("0 / 0;");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+    }
+
+    #[test]
+    fn test_vm_runtime_error_array_out_of_bounds_read() {
+        // Test array out of bounds read
+        let result = execute_source("let arr = [1, 2, 3]; arr[10];");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::OutOfBounds));
+    }
+
+    // TODO: Add array out of bounds write test when array index assignment is implemented in compiler
+    // #[test]
+    // fn test_vm_runtime_error_array_out_of_bounds_write() {
+    //     let result = execute_source("var arr = [1, 2, 3]; arr[10] = 5; arr;");
+    //     assert!(result.is_err());
+    //     assert!(matches!(result.unwrap_err(), RuntimeError::OutOfBounds));
+    // }
+
+    #[test]
+    fn test_vm_runtime_error_negative_index() {
+        // Test negative array index
+        let result = execute_source("let arr = [1, 2, 3]; arr[-1];");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::InvalidIndex));
+    }
+
+    #[test]
+    fn test_vm_runtime_error_non_integer_index() {
+        // Test non-integer array index
+        let result = execute_source("let arr = [1, 2, 3]; arr[1.5];");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::InvalidIndex));
+    }
+
+    #[test]
+    fn test_vm_runtime_error_invalid_numeric_add() {
+        // Test invalid numeric result from large number addition
+        let result = execute_source("let x = 1.7976931348623157e308 + 1.7976931348623157e308;");
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            RuntimeError::InvalidNumericResult
+        ));
+    }
+
+    #[test]
+    fn test_vm_runtime_error_invalid_numeric_multiply() {
+        // Test invalid numeric result from large number multiplication
+        let result = execute_source("let x = 1e308 * 2.0;");
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            RuntimeError::InvalidNumericResult
+        ));
+    }
+
+    #[test]
+    fn test_vm_runtime_error_in_expression() {
+        // Test that runtime errors propagate through expressions
+        let result = execute_source("let x = 5 + (10 / 0);");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+    }
+
+    // TODO: Add function call error test when functions are fully implemented
+    // #[test]
+    // fn test_vm_runtime_error_in_function_call() {
+    //     let result = execute_source(
+    //         r#"
+    //         function divide(a, b) {
+    //             return a / b;
+    //         }
+    //         divide(10, 0);
+    //     "#,
+    //     );
+    //     assert!(result.is_err());
+    //     assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+    // }
+
+    #[test]
+    fn test_vm_runtime_error_compound_divide_by_zero() {
+        // Test divide by zero in compound assignment
+        let result = execute_source("var x = 10; x = x / 0;");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
     }
 }

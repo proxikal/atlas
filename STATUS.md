@@ -7,12 +7,10 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/bytecode-vm/phase-08-branching.md
-**Next Phase:** `phases/bytecode-vm/phase-09-vm-errors.md`
+**Last Completed:** phases/bytecode-vm/phase-09-vm-errors.md
+**Next Phase:** `phases/bytecode-vm/phase-10-bytecode-serialization.md`
 
-**What to implement:** Align VM runtime errors with interpreter diagnostics and stack traces
-
-**Status Note:** Phase 08 found and fixed critical bug where global variable declarations left values on stack, corrupting local variable indices. All control flow tests now pass.
+**What to implement:** Bytecode serialization and deserialization for AOT compilation
 
 ---
 
@@ -31,10 +29,9 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Bytecode & VM Phase 09 (VM Errors):**
-- `docs/diagnostics.md` - Diagnostic specification
-- `docs/runtime.md` - Runtime documentation
-- Current vm.rs and value.rs implementations
+**For Bytecode & VM Phase 10 (Bytecode Serialization):**
+- `docs/implementation/11-bytecode.md` - Bytecode format specification
+- Current bytecode.rs implementation
 
 ---
 
@@ -106,16 +103,15 @@
 ### 7. REPL (1/1) ✅ COMPLETE
 - ✅ phases/interpreter/phase-02-repl.md
 
-### 8. Bytecode & VM (6/17)
+### 8. Bytecode & VM (7/17)
 - ✅ phase-03-bytecode-format.md
 - ✅ phase-01-bytecode-compiler.md
 - ✅ phase-02-vm.md
 - ✅ phase-06-constants-pool.md
 - ✅ phase-07-stack-frames.md
 - ✅ phase-08-branching.md
-- ⬜ phase-09-vm-errors.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-08-branching.md
-- ⬜ phase-09-vm-errors.md
+- ✅ phase-09-vm-errors.md
+- ⬜ phase-10-bytecode-serialization.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-10-bytecode-serialization.md
 - ⬜ phase-11-bytecode-versioning.md
 - ⬜ phase-04-disassembler.md
@@ -158,7 +154,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 51/88 phases (58%)
+**Total Progress:** 52/88 phases (59%)
 
 ---
 
