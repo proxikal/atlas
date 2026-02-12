@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Diagnostics Core + Frontend Phases 01-08 Complete (Lexer + Parser + AST Versioning)
+**Status:** Diagnostics Core + Frontend Phases 01-09 Complete (Lexer + Parser + Keyword Policy)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/frontend/phase-08-ast-dump-versioning.md
-**Next Phase:** `phases/frontend/phase-09-keyword-policy-tests.md`
+**Last Completed:** phases/frontend/phase-09-keyword-policy-tests.md
+**Next Phase:** `phases/frontend/phase-10-keyword-enforcement.md`
 
-**What to implement:** Validate reserved keyword handling in lexer and parser
+**What to implement:** Ensure lexer and parser enforce the keyword policy consistently
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Frontend Phase 09:**
+**For Frontend Phase 10:**
 - `docs/keyword-policy.md` - Keyword policy specification
 - `docs/implementation/03-lexer.md` - Lexer implementation guide
 - `docs/implementation/04-parser.md` - Parser implementation guide
@@ -63,7 +63,7 @@
 - ✅ phase-08-diagnostics-versioning.md
 - ✅ phase-09-diagnostics-snapshots.md
 
-### 3. Frontend (8/10)
+### 3. Frontend (9/10)
 - ✅ phase-03-ast-build.md
 - ✅ phase-01-lexer.md
 - ✅ phase-02-parser.md
@@ -72,8 +72,8 @@
 - ✅ phase-06-parser-recovery-strategy.md
 - ✅ phase-07-lexer-edge-cases.md
 - ✅ phase-08-ast-dump-versioning.md
-- ⬜ phase-09-keyword-policy-tests.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-10-keyword-enforcement.md
+- ✅ phase-09-keyword-policy-tests.md
+- ⬜ phase-10-keyword-enforcement.md ⬅️ **YOU ARE HERE**
 
 ### 4. Typing & Binding (0/22)
 - ⬜ phase-01-binder.md
@@ -162,7 +162,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 23/101 phases (23%)
+**Total Progress:** 24/101 phases (24%)
 
 ---
 
