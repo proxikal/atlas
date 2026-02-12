@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Diagnostics Core Complete + Frontend Phase 03 Complete
+**Status:** Diagnostics Core Complete + Frontend Phase 01 Complete (Lexer)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/frontend/phase-03-ast-build.md
-**Next Phase:** `phases/frontend/phase-01-lexer.md`
+**Last Completed:** phases/frontend/phase-01-lexer.md
+**Next Phase:** `phases/frontend/phase-02-parser.md`
 
-**What to implement:** Implement lexical analyzer to tokenize Atlas source code
+**What to implement:** Parse tokens into AST using Pratt parsing for expressions
 
 ---
 
@@ -28,9 +28,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Frontend Phase 01:**
+**For Frontend Phase 02:**
 - `docs/implementation/02-core-types.md` - Core type definitions
-- `docs/implementation/03-lexer.md` - Lexer implementation guide
+- `docs/implementation/04-parser.md` - Parser implementation guide
+- `docs/implementation/05-ast.md` - AST structure reference
 
 ---
 
@@ -62,10 +63,10 @@
 - ✅ phase-08-diagnostics-versioning.md
 - ✅ phase-09-diagnostics-snapshots.md
 
-### 3. Frontend (1/10)
+### 3. Frontend (2/10)
 - ✅ phase-03-ast-build.md
-- ⬜ phase-01-lexer.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-02-parser.md
+- ✅ phase-01-lexer.md
+- ⬜ phase-02-parser.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-04-parser-errors.md
 - ⬜ phase-05-grammar-conformance.md
 - ⬜ phase-06-parser-recovery-strategy.md
@@ -161,7 +162,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 16/101 phases (16%)
+**Total Progress:** 17/101 phases (17%)
 
 ---
 
