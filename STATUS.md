@@ -7,10 +7,10 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/interpreter/phase-04-arrays-mutation.md
-**Next Phase:** `phases/interpreter/phase-05-function-calls.md`
+**Last Completed:** phases/interpreter/phase-06-control-flow.md
+**Next Phase:** `phases/interpreter/phase-08-runtime-errors.md`
 
-**What to implement:** Function calls, user-defined functions, and function call semantics
+**What to implement:** Runtime error handling, error propagation, and error messages
 
 ---
 
@@ -28,10 +28,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Interpreter Phase 05:**
-- `docs/implementation/09-value-model.md` - Value model with function references
+**For Interpreter Phase 08:**
+- `docs/implementation/09-value-model.md` - Value model and runtime errors
 - `docs/implementation/10-interpreter.md` - Interpreter implementation guide
-- `Atlas-SPEC.md` - Language specification
+- `Atlas-SPEC.md` - Language specification error model
 
 ---
 
@@ -90,12 +90,12 @@
 - ✅ phase-03-runtime-values.md
 - ✅ phase-07-value-model-tests.md
 
-### 6. Interpreter (2/8)
+### 6. Interpreter (4/8)
 - ✅ phase-01-interpreter-core.md
 - ✅ phase-04-arrays-mutation.md
-- ⬜ phase-05-function-calls.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-06-control-flow.md
-- ⬜ phase-08-runtime-errors.md
+- ✅ phase-05-function-calls.md
+- ✅ phase-06-control-flow.md
+- ⬜ phase-08-runtime-errors.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-09-array-aliasing-tests.md
 - ⬜ phase-10-numeric-semantics.md
 - ⬜ phase-11-repl-state-tests.md
@@ -153,7 +153,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 38/88 phases (43%)
+**Total Progress:** 40/88 phases (45%)
 
 ---
 

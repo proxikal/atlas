@@ -723,6 +723,211 @@ fn test_nested_array_mutation() {
 }
 
 // ============================================================================
+// Function Call Tests (Phase 05)
+// ============================================================================
+
+#[test]
+fn test_function_nested_calls() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+
+        fn multiply(x: number, y: number) -> number {
+            return x * y;
+        }
+
+        fn compute(n: number) -> number {
+            return add(multiply(n, 2), 5);
+        }
+
+        compute(3)
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 11.0), // (3 * 2) + 5 = 11
+        _ => panic!("Expected Number(11.0)"),
+    }
+}
+
+#[test]
+fn test_function_wrong_arity_too_few() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+        add(5)
+    "#;
+
+    match runtime.eval(code) {
+        Err(_) => {}, // Expected runtime error for wrong arity
+        Ok(val) => panic!("Expected arity error, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_function_wrong_arity_too_many() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+        add(1, 2, 3)
+    "#;
+
+    match runtime.eval(code) {
+        Err(_) => {}, // Expected runtime error for wrong arity
+        Ok(val) => panic!("Expected arity error, got {:?}", val),
+    }
+}
+
+#[test]
+fn test_function_void_return() {
+    let runtime = Atlas::new();
+    let code = r#"
+        var result: number = 0;
+
+        fn set_result(x: number) -> void {
+            result = x;
+        }
+
+        set_result(42);
+        result
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 42.0),
+        _ => panic!("Expected Number(42.0)"),
+    }
+}
+
+#[test]
+fn test_function_no_parameters() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn get_answer() -> number {
+            return 42;
+        }
+        get_answer()
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 42.0),
+        _ => panic!("Expected Number(42.0)"),
+    }
+}
+
+#[test]
+fn test_function_multiple_parameters() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn sum_four(a: number, b: number, c: number, d: number) -> number {
+            return a + b + c + d;
+        }
+        sum_four(1, 2, 3, 4)
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 10.0),
+        _ => panic!("Expected Number(10.0)"),
+    }
+}
+
+#[test]
+fn test_function_call_stack_depth() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn count_down(n: number) -> number {
+            if (n <= 0) {
+                return 0;
+            }
+            return n + count_down(n - 1);
+        }
+        count_down(5)
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 15.0), // 5 + 4 + 3 + 2 + 1 = 15
+        _ => panic!("Expected Number(15.0)"),
+    }
+}
+
+#[test]
+fn test_function_local_variable_isolation() {
+    let runtime = Atlas::new();
+    let code = r#"
+        var global: number = 100;
+
+        fn modify_local() -> number {
+            let global: number = 50;
+            return global;
+        }
+
+        let result: number = modify_local();
+        result + global
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 150.0), // 50 + 100 = 150
+        _ => panic!("Expected Number(150.0)"),
+    }
+}
+
+#[test]
+fn test_function_return_early_from_nested() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn find_first_positive(a: number, b: number, c: number) -> number {
+            if (a > 0) {
+                return a;
+            }
+            if (b > 0) {
+                return b;
+            }
+            if (c > 0) {
+                return c;
+            }
+            return -1;
+        }
+        find_first_positive(-5, -3, 7)
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Number(n)) => assert_eq!(n, 7.0),
+        _ => panic!("Expected Number(7.0)"),
+    }
+}
+
+#[test]
+fn test_function_mutually_recursive() {
+    let runtime = Atlas::new();
+    let code = r#"
+        fn is_even(n: number) -> bool {
+            if (n == 0) {
+                return true;
+            }
+            return is_odd(n - 1);
+        }
+
+        fn is_odd(n: number) -> bool {
+            if (n == 0) {
+                return false;
+            }
+            return is_even(n - 1);
+        }
+
+        is_even(4)
+    "#;
+
+    match runtime.eval(code) {
+        Ok(Value::Bool(b)) => assert!(b),
+        _ => panic!("Expected Bool(true)"),
+    }
+}
+
+// ============================================================================
 // String Tests
 // ============================================================================
 
