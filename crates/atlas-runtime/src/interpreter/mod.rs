@@ -96,7 +96,11 @@ impl Interpreter {
     }
 
     /// Get a variable value
-    pub(super) fn get_variable(&self, name: &str) -> Result<Value, RuntimeError> {
+    pub(super) fn get_variable(
+        &self,
+        name: &str,
+        span: crate::span::Span,
+    ) -> Result<Value, RuntimeError> {
         // Check locals (innermost to outermost)
         for scope in self.locals.iter().rev() {
             if let Some(value) = scope.get(name) {
@@ -105,14 +109,21 @@ impl Interpreter {
         }
 
         // Check globals
-        self.globals
-            .get(name)
-            .cloned()
-            .ok_or_else(|| RuntimeError::UndefinedVariable(name.to_string()))
+        self.globals.get(name).cloned().ok_or_else(|| {
+            RuntimeError::UndefinedVariable {
+                name: name.to_string(),
+                span,
+            }
+        })
     }
 
     /// Set a variable value
-    pub(super) fn set_variable(&mut self, name: &str, value: Value) -> Result<(), RuntimeError> {
+    pub(super) fn set_variable(
+        &mut self,
+        name: &str,
+        value: Value,
+        span: crate::span::Span,
+    ) -> Result<(), RuntimeError> {
         // Find in locals (innermost to outermost)
         for scope in self.locals.iter_mut().rev() {
             if scope.contains_key(name) {
@@ -127,29 +138,40 @@ impl Interpreter {
             return Ok(());
         }
 
-        Err(RuntimeError::UndefinedVariable(name.to_string()))
+        Err(RuntimeError::UndefinedVariable {
+            name: name.to_string(),
+            span,
+        })
     }
 
     /// Get an array element by index
-    pub(super) fn get_array_element(&self, arr: Value, idx: Value) -> Result<Value, RuntimeError> {
+    pub(super) fn get_array_element(
+        &self,
+        arr: Value,
+        idx: Value,
+        span: crate::span::Span,
+    ) -> Result<Value, RuntimeError> {
         if let Value::Array(arr) = arr {
             if let Value::Number(n) = idx {
                 let index_val = n as i64;
                 if n.fract() != 0.0 || n < 0.0 {
-                    return Err(RuntimeError::InvalidIndex);
+                    return Err(RuntimeError::InvalidIndex { span });
                 }
 
                 let borrowed = arr.borrow();
                 if index_val >= 0 && (index_val as usize) < borrowed.len() {
                     Ok(borrowed[index_val as usize].clone())
                 } else {
-                    Err(RuntimeError::OutOfBounds)
+                    Err(RuntimeError::OutOfBounds { span })
                 }
             } else {
-                Err(RuntimeError::InvalidIndex)
+                Err(RuntimeError::InvalidIndex { span })
             }
         } else {
-            Err(RuntimeError::TypeError("Cannot index non-array".to_string()))
+            Err(RuntimeError::TypeError {
+                msg: "Cannot index non-array".to_string(),
+                span,
+            })
         }
     }
 
@@ -159,12 +181,13 @@ impl Interpreter {
         arr: Value,
         idx: Value,
         value: Value,
+        span: crate::span::Span,
     ) -> Result<(), RuntimeError> {
         if let Value::Array(arr) = arr {
             if let Value::Number(n) = idx {
                 let index_val = n as i64;
                 if n.fract() != 0.0 || n < 0.0 {
-                    return Err(RuntimeError::InvalidIndex);
+                    return Err(RuntimeError::InvalidIndex { span });
                 }
 
                 let mut borrowed = arr.borrow_mut();
@@ -172,13 +195,16 @@ impl Interpreter {
                     borrowed[index_val as usize] = value;
                     Ok(())
                 } else {
-                    Err(RuntimeError::OutOfBounds)
+                    Err(RuntimeError::OutOfBounds { span })
                 }
             } else {
-                Err(RuntimeError::InvalidIndex)
+                Err(RuntimeError::InvalidIndex { span })
             }
         } else {
-            Err(RuntimeError::TypeError("Cannot index non-array".to_string()))
+            Err(RuntimeError::TypeError {
+                msg: "Cannot index non-array".to_string(),
+                span,
+            })
         }
     }
 

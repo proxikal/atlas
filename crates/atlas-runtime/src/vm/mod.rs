@@ -183,7 +183,9 @@ impl VM {
                 Opcode::Constant => {
                     let index = self.read_u16() as usize;
                     if index >= self.bytecode.constants.len() {
-                        return Err(RuntimeError::UnknownOpcode);
+                        return Err(RuntimeError::UnknownOpcode {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                     }
                     let value = self.bytecode.constants[index].clone();
                     self.push(value);
@@ -198,7 +200,9 @@ impl VM {
                     let base = self.current_frame().stack_base;
                     let absolute_index = base + index;
                     if absolute_index >= self.stack.len() {
-                        return Err(RuntimeError::StackUnderflow);
+                        return Err(RuntimeError::StackUnderflow {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                     }
                     let value = self.stack[absolute_index].clone();
                     self.push(value);
@@ -219,27 +223,40 @@ impl VM {
                 Opcode::GetGlobal => {
                     let name_index = self.read_u16() as usize;
                     if name_index >= self.bytecode.constants.len() {
-                        return Err(RuntimeError::UnknownOpcode);
+                        return Err(RuntimeError::UnknownOpcode {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                     }
                     let name = match &self.bytecode.constants[name_index] {
                         Value::String(s) => s.as_ref().clone(),
-                        _ => return Err(RuntimeError::TypeError(format!("Expected string constant for variable name"))),
+                        _ => return Err(RuntimeError::TypeError {
+                            msg: "Expected string constant for variable name".to_string(),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        }),
                     };
                     let value = self
                         .globals
                         .get(&name)
                         .cloned()
-                        .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()))?;
+                        .ok_or_else(|| RuntimeError::UndefinedVariable {
+                            name: name.clone(),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        })?;
                     self.push(value);
                 }
                 Opcode::SetGlobal => {
                     let name_index = self.read_u16() as usize;
                     if name_index >= self.bytecode.constants.len() {
-                        return Err(RuntimeError::UnknownOpcode);
+                        return Err(RuntimeError::UnknownOpcode {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                     }
                     let name = match &self.bytecode.constants[name_index] {
                         Value::String(s) => s.as_ref().clone(),
-                        _ => return Err(RuntimeError::TypeError(format!("Expected string constant for variable name"))),
+                        _ => return Err(RuntimeError::TypeError {
+                            msg: "Expected string constant for variable name".to_string(),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        }),
                     };
                     let value = self.peek(0).clone();
                     self.globals.insert(name, value);
@@ -253,14 +270,19 @@ impl VM {
                         (Value::Number(x), Value::Number(y)) => {
                             let result = x + y;
                             if result.is_nan() || result.is_infinite() {
-                                return Err(RuntimeError::InvalidNumericResult);
+                                return Err(RuntimeError::InvalidNumericResult {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                             }
                             self.push(Value::Number(result));
                         }
                         (Value::String(x), Value::String(y)) => {
                             self.push(Value::String(Rc::new(format!("{}{}", x, y))));
                         }
-                        _ => return Err(RuntimeError::TypeError(format!("Invalid operands for +"))),
+                        _ => return Err(RuntimeError::TypeError {
+                            msg: "Invalid operands for +".to_string(),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        }),
                     }
                 }
                 Opcode::Sub => self.binary_numeric_op(|a, b| a - b)?,
@@ -269,11 +291,15 @@ impl VM {
                     let b = self.pop_number()?;
                     let a = self.pop_number()?;
                     if b == 0.0 {
-                        return Err(RuntimeError::DivideByZero);
+                        return Err(RuntimeError::DivideByZero {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                     }
                     let result = a / b;
                     if result.is_nan() || result.is_infinite() {
-                        return Err(RuntimeError::InvalidNumericResult);
+                        return Err(RuntimeError::InvalidNumericResult {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                     }
                     self.push(Value::Number(result));
                 }
@@ -281,11 +307,15 @@ impl VM {
                     let b = self.pop_number()?;
                     let a = self.pop_number()?;
                     if b == 0.0 {
-                        return Err(RuntimeError::DivideByZero);
+                        return Err(RuntimeError::DivideByZero {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                     }
                     let result = a % b;
                     if result.is_nan() || result.is_infinite() {
-                        return Err(RuntimeError::InvalidNumericResult);
+                        return Err(RuntimeError::InvalidNumericResult {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                     }
                     self.push(Value::Number(result));
                 }
@@ -293,7 +323,10 @@ impl VM {
                     let value = self.pop();
                     match value {
                         Value::Number(n) => self.push(Value::Number(-n)),
-                        _ => return Err(RuntimeError::TypeError(format!("Cannot negate non-number"))),
+                        _ => return Err(RuntimeError::TypeError {
+                            msg: "Cannot negate non-number".to_string(),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        }),
                     }
                 }
 
@@ -334,12 +367,17 @@ impl VM {
                     let value = self.pop();
                     match value {
                         Value::Bool(b) => self.push(Value::Bool(!b)),
-                        _ => return Err(RuntimeError::TypeError(format!("Cannot apply ! to non-boolean"))),
+                        _ => return Err(RuntimeError::TypeError {
+                            msg: "Cannot apply ! to non-boolean".to_string(),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        }),
                     }
                 }
                 Opcode::And | Opcode::Or => {
                     // TODO: Short-circuit evaluation
-                    return Err(RuntimeError::UnknownOpcode);
+                    return Err(RuntimeError::UnknownOpcode {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                 }
 
                 // ===== Control Flow =====
@@ -381,7 +419,11 @@ impl VM {
                                 self.pop();
 
                                 // Call the builtin
-                                let result = crate::stdlib::call_builtin(&func.name, &args)?;
+                                let result = crate::stdlib::call_builtin(
+                                    &func.name,
+                                    &args,
+                                    self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                                )?;
 
                                 // Push the result
                                 self.push(result);
@@ -397,10 +439,13 @@ impl VM {
 
                                 // Verify argument count matches
                                 if arg_count != func.arity {
-                                    return Err(RuntimeError::TypeError(format!(
-                                        "Function {} expects {} arguments, got {}",
-                                        func.name, func.arity, arg_count
-                                    )));
+                                    return Err(RuntimeError::TypeError {
+                                        msg: format!(
+                                            "Function {} expects {} arguments, got {}",
+                                            func.name, func.arity, arg_count
+                                        ),
+                                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                                    });
                                 }
 
                                 // Push the frame
@@ -411,9 +456,10 @@ impl VM {
                             }
                         }
                         _ => {
-                            return Err(RuntimeError::TypeError(format!(
-                                "Cannot call non-function value"
-                            )));
+                            return Err(RuntimeError::TypeError {
+                                msg: "Cannot call non-function value".to_string(),
+                                span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                            });
                         }
                     }
                 }
@@ -463,16 +509,23 @@ impl VM {
                     match array {
                         Value::Array(arr) => {
                             if index.fract() != 0.0 || index < 0.0 {
-                                return Err(RuntimeError::InvalidIndex);
+                                return Err(RuntimeError::InvalidIndex {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                             }
                             let idx = index as usize;
                             let borrowed = arr.borrow();
                             if idx >= borrowed.len() {
-                                return Err(RuntimeError::OutOfBounds);
+                                return Err(RuntimeError::OutOfBounds {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                             }
                             self.push(borrowed[idx].clone());
                         }
-                        _ => return Err(RuntimeError::TypeError(format!("Cannot index non-array"))),
+                        _ => return Err(RuntimeError::TypeError {
+                            msg: "Cannot index non-array".to_string(),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        }),
                     }
                 }
                 Opcode::SetIndex => {
@@ -482,16 +535,23 @@ impl VM {
                     match array {
                         Value::Array(arr) => {
                             if index.fract() != 0.0 || index < 0.0 {
-                                return Err(RuntimeError::InvalidIndex);
+                                return Err(RuntimeError::InvalidIndex {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                             }
                             let idx = index as usize;
                             let mut borrowed = arr.borrow_mut();
                             if idx >= borrowed.len() {
-                                return Err(RuntimeError::OutOfBounds);
+                                return Err(RuntimeError::OutOfBounds {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
                             }
                             borrowed[idx] = value;
                         }
-                        _ => return Err(RuntimeError::TypeError(format!("Cannot index non-array"))),
+                        _ => return Err(RuntimeError::TypeError {
+                            msg: "Cannot index non-array".to_string(),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        }),
                     }
                 }
 
@@ -540,7 +600,10 @@ impl VM {
     fn pop_number(&mut self) -> Result<f64, RuntimeError> {
         match self.pop() {
             Value::Number(n) => Ok(n),
-            _ => Err(RuntimeError::TypeError(format!("Expected number"))),
+            _ => Err(RuntimeError::TypeError {
+                msg: "Expected number".to_string(),
+                span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+            }),
         }
     }
 
@@ -552,7 +615,9 @@ impl VM {
         let a = self.pop_number()?;
         let result = op(a, b);
         if result.is_nan() || result.is_infinite() {
-            return Err(RuntimeError::InvalidNumericResult);
+            return Err(RuntimeError::InvalidNumericResult {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
         }
         self.push(Value::Number(result));
         Ok(())
@@ -560,11 +625,15 @@ impl VM {
 
     fn read_opcode(&mut self) -> Result<Opcode, RuntimeError> {
         if self.ip >= self.bytecode.instructions.len() {
-            return Err(RuntimeError::UnknownOpcode);
+            return Err(RuntimeError::UnknownOpcode {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    });
         }
         let byte = self.bytecode.instructions[self.ip];
         self.ip += 1;
-        Opcode::try_from(byte).map_err(|_| RuntimeError::UnknownOpcode)
+        Opcode::try_from(byte).map_err(|_| RuntimeError::UnknownOpcode {
+                        span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                    })
     }
 
     fn read_u8(&mut self) -> u8 {
@@ -701,7 +770,7 @@ mod tests {
     fn test_vm_division_by_zero() {
         let result = execute_source("10 / 0;");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     #[test]
@@ -1040,7 +1109,7 @@ mod tests {
         let result = vm.run();
         assert!(result.is_err());
         match result.unwrap_err() {
-            RuntimeError::TypeError(msg) => assert!(msg.contains("expects 2 arguments")),
+            RuntimeError::TypeError { msg, .. } => assert!(msg.contains("expects 2 arguments")),
             _ => panic!("Expected TypeError"),
         }
     }
@@ -1063,7 +1132,7 @@ mod tests {
         let result = vm.run();
         assert!(result.is_err());
         match result.unwrap_err() {
-            RuntimeError::TypeError(msg) => assert!(msg.contains("Cannot call non-function")),
+            RuntimeError::TypeError { msg, .. } => assert!(msg.contains("Cannot call non-function")),
             _ => panic!("Expected TypeError"),
         }
     }
@@ -1395,7 +1464,7 @@ mod tests {
         // Test modulo by zero runtime error
         let result = execute_source("10 % 0;");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     #[test]
@@ -1403,7 +1472,7 @@ mod tests {
         // 0/0 should trigger divide by zero error
         let result = execute_source("0 / 0;");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     #[test]
@@ -1411,7 +1480,7 @@ mod tests {
         // Test array out of bounds read
         let result = execute_source("let arr = [1, 2, 3]; arr[10];");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::OutOfBounds));
+        assert!(matches!(result.unwrap_err(), RuntimeError::OutOfBounds { .. }));
     }
 
     // TODO: Add array out of bounds write test when array index assignment is implemented in compiler
@@ -1419,7 +1488,7 @@ mod tests {
     // fn test_vm_runtime_error_array_out_of_bounds_write() {
     //     let result = execute_source("var arr = [1, 2, 3]; arr[10] = 5; arr;");
     //     assert!(result.is_err());
-    //     assert!(matches!(result.unwrap_err(), RuntimeError::OutOfBounds));
+    //     assert!(matches!(result.unwrap_err(), RuntimeError::OutOfBounds { .. }));
     // }
 
     #[test]
@@ -1427,7 +1496,7 @@ mod tests {
         // Test negative array index
         let result = execute_source("let arr = [1, 2, 3]; arr[-1];");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::InvalidIndex));
+        assert!(matches!(result.unwrap_err(), RuntimeError::InvalidIndex { .. }));
     }
 
     #[test]
@@ -1435,7 +1504,7 @@ mod tests {
         // Test non-integer array index
         let result = execute_source("let arr = [1, 2, 3]; arr[1.5];");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::InvalidIndex));
+        assert!(matches!(result.unwrap_err(), RuntimeError::InvalidIndex { .. }));
     }
 
     #[test]
@@ -1445,7 +1514,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            RuntimeError::InvalidNumericResult
+            RuntimeError::InvalidNumericResult { .. }
         ));
     }
 
@@ -1456,7 +1525,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            RuntimeError::InvalidNumericResult
+            RuntimeError::InvalidNumericResult { .. }
         ));
     }
 
@@ -1465,7 +1534,7 @@ mod tests {
         // Test that runtime errors propagate through expressions
         let result = execute_source("let x = 5 + (10 / 0);");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     // TODO: Add function call error test when functions are fully implemented
@@ -1480,7 +1549,7 @@ mod tests {
     //     "#,
     //     );
     //     assert!(result.is_err());
-    //     assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+    //     assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     // }
 
     #[test]
@@ -1488,7 +1557,7 @@ mod tests {
         // Test divide by zero in compound assignment
         let result = execute_source("var x = 10; x = x / 0;");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     // ===== Phase 17: VM Numeric Error Propagation Tests =====
@@ -1498,7 +1567,7 @@ mod tests {
         // Test modulo by zero (AT0005)
         let result = execute_source("10 % 0;");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     #[test]
@@ -1506,7 +1575,7 @@ mod tests {
         // Test 0 % 0 should also be divide by zero
         let result = execute_source("0 % 0;");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     #[test]
@@ -1517,7 +1586,7 @@ mod tests {
         if result.is_err() {
             assert!(matches!(
                 result.unwrap_err(),
-                RuntimeError::InvalidNumericResult | RuntimeError::DivideByZero
+                RuntimeError::InvalidNumericResult { .. } | RuntimeError::DivideByZero { .. }
             ));
         }
     }
@@ -1529,7 +1598,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            RuntimeError::InvalidNumericResult
+            RuntimeError::InvalidNumericResult { .. }
         ));
     }
 
@@ -1542,7 +1611,7 @@ mod tests {
         if result.is_err() {
             assert!(matches!(
                 result.unwrap_err(),
-                RuntimeError::InvalidNumericResult
+                RuntimeError::InvalidNumericResult { .. }
             ));
         } else {
             // Should succeed
@@ -1557,7 +1626,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            RuntimeError::InvalidNumericResult
+            RuntimeError::InvalidNumericResult { .. }
         ));
     }
 
@@ -1569,7 +1638,7 @@ mod tests {
         // Test VM
         let vm_result = execute_source(source);
         assert!(vm_result.is_err());
-        assert!(matches!(vm_result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(vm_result.unwrap_err(), RuntimeError::DivideByZero { .. }));
 
         // Test Interpreter (via runtime)
         use crate::runtime::Atlas;
@@ -1592,7 +1661,7 @@ mod tests {
         assert!(vm_result.is_err());
         assert!(matches!(
             vm_result.unwrap_err(),
-            RuntimeError::InvalidNumericResult
+            RuntimeError::InvalidNumericResult { .. }
         ));
 
         // Test Interpreter (via runtime)
@@ -1610,7 +1679,7 @@ mod tests {
         // Test that numeric errors propagate correctly in nested expressions
         let result = execute_source("let x = (5 + 3) * (10 / 0);");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     #[test]
@@ -1618,7 +1687,7 @@ mod tests {
         // Test numeric error in array element
         let result = execute_source("let arr = [1, 2, 10 / 0];");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     #[test]
@@ -1626,7 +1695,7 @@ mod tests {
         // Test numeric error used as array index
         let result = execute_source("let arr = [1, 2, 3]; arr[10 / 0];");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero));
+        assert!(matches!(result.unwrap_err(), RuntimeError::DivideByZero { .. }));
     }
 
     #[test]
@@ -1655,7 +1724,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            RuntimeError::InvalidNumericResult
+            RuntimeError::InvalidNumericResult { .. }
         ));
     }
 
@@ -1666,7 +1735,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            RuntimeError::InvalidNumericResult
+            RuntimeError::InvalidNumericResult { .. }
         ));
     }
 

@@ -117,39 +117,80 @@ impl PartialEq for Value {
 
 impl Eq for Value {}
 
-/// Runtime error type
+/// Runtime error type with source span information
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum RuntimeError {
     /// Type error
-    #[error("Type error: {0}")]
-    TypeError(String),
+    #[error("Type error: {msg}")]
+    TypeError {
+        msg: String,
+        span: crate::span::Span,
+    },
     /// Undefined variable
-    #[error("Undefined variable: {0}")]
-    UndefinedVariable(String),
+    #[error("Undefined variable: {name}")]
+    UndefinedVariable {
+        name: String,
+        span: crate::span::Span,
+    },
     /// Division by zero
     #[error("Division by zero")]
-    DivideByZero,
+    DivideByZero {
+        span: crate::span::Span,
+    },
     /// Array index out of bounds
     #[error("Array index out of bounds")]
-    OutOfBounds,
+    OutOfBounds {
+        span: crate::span::Span,
+    },
     /// Invalid numeric result (NaN, Infinity)
     #[error("Invalid numeric result")]
-    InvalidNumericResult,
+    InvalidNumericResult {
+        span: crate::span::Span,
+    },
     /// Unknown opcode (VM error)
     #[error("Unknown opcode")]
-    UnknownOpcode,
+    UnknownOpcode {
+        span: crate::span::Span,
+    },
     /// Stack underflow (VM error)
     #[error("Stack underflow")]
-    StackUnderflow,
+    StackUnderflow {
+        span: crate::span::Span,
+    },
     /// Unknown function
-    #[error("Unknown function: {0}")]
-    UnknownFunction(String),
+    #[error("Unknown function: {name}")]
+    UnknownFunction {
+        name: String,
+        span: crate::span::Span,
+    },
     /// Invalid stdlib argument
     #[error("Invalid stdlib argument")]
-    InvalidStdlibArgument,
+    InvalidStdlibArgument {
+        span: crate::span::Span,
+    },
     /// Invalid index (non-integer)
     #[error("Invalid index: expected number")]
-    InvalidIndex,
+    InvalidIndex {
+        span: crate::span::Span,
+    },
+}
+
+impl RuntimeError {
+    /// Get the source span for this error
+    pub fn span(&self) -> crate::span::Span {
+        match self {
+            RuntimeError::TypeError { span, .. } => *span,
+            RuntimeError::UndefinedVariable { span, .. } => *span,
+            RuntimeError::DivideByZero { span } => *span,
+            RuntimeError::OutOfBounds { span } => *span,
+            RuntimeError::InvalidNumericResult { span } => *span,
+            RuntimeError::UnknownOpcode { span } => *span,
+            RuntimeError::StackUnderflow { span } => *span,
+            RuntimeError::UnknownFunction { span, .. } => *span,
+            RuntimeError::InvalidStdlibArgument { span } => *span,
+            RuntimeError::InvalidIndex { span } => *span,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -326,9 +367,14 @@ mod tests {
 
     #[test]
     fn test_runtime_errors() {
-        let err1 = RuntimeError::DivideByZero;
-        let err2 = RuntimeError::OutOfBounds;
-        let err3 = RuntimeError::UnknownFunction("foo".to_string());
+        use crate::span::Span;
+
+        let err1 = RuntimeError::DivideByZero { span: Span::dummy() };
+        let err2 = RuntimeError::OutOfBounds { span: Span::dummy() };
+        let err3 = RuntimeError::UnknownFunction {
+            name: "foo".to_string(),
+            span: Span::dummy(),
+        };
 
         assert_eq!(err1.to_string(), "Division by zero");
         assert_eq!(err2.to_string(), "Array index out of bounds");

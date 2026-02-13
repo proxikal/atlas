@@ -9,7 +9,7 @@ impl Interpreter {
     pub(super) fn eval_expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(lit, _) => Ok(self.eval_literal(lit)),
-            Expr::Identifier(id) => self.get_variable(&id.name),
+            Expr::Identifier(id) => self.get_variable(&id.name, id.span),
             Expr::Binary(binary) => self.eval_binary(binary),
             Expr::Unary(unary) => self.eval_unary(unary),
             Expr::Call(call) => self.eval_call(call),
@@ -43,7 +43,10 @@ impl Interpreter {
                     return Ok(Value::Bool(b));
                 }
             }
-            return Err(RuntimeError::TypeError("Expected bool for &&".to_string()));
+            return Err(RuntimeError::TypeError {
+                msg: "Expected bool for &&".to_string(),
+                span: binary.span,
+            });
         }
 
         if binary.op == BinaryOp::Or {
@@ -57,7 +60,10 @@ impl Interpreter {
                     return Ok(Value::Bool(b));
                 }
             }
-            return Err(RuntimeError::TypeError("Expected bool for ||".to_string()));
+            return Err(RuntimeError::TypeError {
+                msg: "Expected bool for ||".to_string(),
+                span: binary.span,
+            });
         }
 
         // Regular binary operations
@@ -69,51 +75,60 @@ impl Interpreter {
                 (Value::Number(a), Value::Number(b)) => {
                     let result = a + b;
                     if result.is_nan() || result.is_infinite() {
-                        return Err(RuntimeError::InvalidNumericResult);
+                        return Err(RuntimeError::InvalidNumericResult { span: binary.span });
                     }
                     Ok(Value::Number(result))
                 }
                 (Value::String(a), Value::String(b)) => {
                     Ok(Value::string(format!("{}{}", a, b)))
                 }
-                _ => Err(RuntimeError::TypeError("Invalid operands for +".to_string())),
+                _ => Err(RuntimeError::TypeError {
+                    msg: "Invalid operands for +".to_string(),
+                    span: binary.span,
+                }),
             },
-            BinaryOp::Sub => self.numeric_binary_op(left, right, |a, b| a - b),
-            BinaryOp::Mul => self.numeric_binary_op(left, right, |a, b| a * b),
+            BinaryOp::Sub => self.numeric_binary_op(left, right, |a, b| a - b, binary.span),
+            BinaryOp::Mul => self.numeric_binary_op(left, right, |a, b| a * b, binary.span),
             BinaryOp::Div => {
                 if let (Value::Number(a), Value::Number(b)) = (&left, &right) {
                     if *b == 0.0 {
-                        return Err(RuntimeError::DivideByZero);
+                        return Err(RuntimeError::DivideByZero { span: binary.span });
                     }
                     let result = a / b;
                     if result.is_nan() || result.is_infinite() {
-                        return Err(RuntimeError::InvalidNumericResult);
+                        return Err(RuntimeError::InvalidNumericResult { span: binary.span });
                     }
                     Ok(Value::Number(result))
                 } else {
-                    Err(RuntimeError::TypeError("Expected numbers for /".to_string()))
+                    Err(RuntimeError::TypeError {
+                        msg: "Expected numbers for /".to_string(),
+                        span: binary.span,
+                    })
                 }
             }
             BinaryOp::Mod => {
                 if let (Value::Number(a), Value::Number(b)) = (&left, &right) {
                     if *b == 0.0 {
-                        return Err(RuntimeError::DivideByZero);
+                        return Err(RuntimeError::DivideByZero { span: binary.span });
                     }
                     let result = a % b;
                     if result.is_nan() || result.is_infinite() {
-                        return Err(RuntimeError::InvalidNumericResult);
+                        return Err(RuntimeError::InvalidNumericResult { span: binary.span });
                     }
                     Ok(Value::Number(result))
                 } else {
-                    Err(RuntimeError::TypeError("Expected numbers for %".to_string()))
+                    Err(RuntimeError::TypeError {
+                        msg: "Expected numbers for %".to_string(),
+                        span: binary.span,
+                    })
                 }
             }
             BinaryOp::Eq => Ok(Value::Bool(left == right)),
             BinaryOp::Ne => Ok(Value::Bool(left != right)),
-            BinaryOp::Lt => self.numeric_comparison(left, right, |a, b| a < b),
-            BinaryOp::Le => self.numeric_comparison(left, right, |a, b| a <= b),
-            BinaryOp::Gt => self.numeric_comparison(left, right, |a, b| a > b),
-            BinaryOp::Ge => self.numeric_comparison(left, right, |a, b| a >= b),
+            BinaryOp::Lt => self.numeric_comparison(left, right, |a, b| a < b, binary.span),
+            BinaryOp::Le => self.numeric_comparison(left, right, |a, b| a <= b, binary.span),
+            BinaryOp::Gt => self.numeric_comparison(left, right, |a, b| a > b, binary.span),
+            BinaryOp::Ge => self.numeric_comparison(left, right, |a, b| a >= b, binary.span),
             BinaryOp::And | BinaryOp::Or => {
                 // Already handled above
                 unreachable!()
@@ -122,18 +137,27 @@ impl Interpreter {
     }
 
     /// Helper for numeric binary operations
-    fn numeric_binary_op<F>(&self, left: Value, right: Value, op: F) -> Result<Value, RuntimeError>
+    fn numeric_binary_op<F>(
+        &self,
+        left: Value,
+        right: Value,
+        op: F,
+        span: crate::span::Span,
+    ) -> Result<Value, RuntimeError>
     where
         F: FnOnce(f64, f64) -> f64,
     {
         if let (Value::Number(a), Value::Number(b)) = (left, right) {
             let result = op(a, b);
             if result.is_nan() || result.is_infinite() {
-                return Err(RuntimeError::InvalidNumericResult);
+                return Err(RuntimeError::InvalidNumericResult { span });
             }
             Ok(Value::Number(result))
         } else {
-            Err(RuntimeError::TypeError("Expected numbers".to_string()))
+            Err(RuntimeError::TypeError {
+                msg: "Expected numbers".to_string(),
+                span,
+            })
         }
     }
 
@@ -143,6 +167,7 @@ impl Interpreter {
         left: Value,
         right: Value,
         op: F,
+        span: crate::span::Span,
     ) -> Result<Value, RuntimeError>
     where
         F: FnOnce(f64, f64) -> bool,
@@ -150,7 +175,10 @@ impl Interpreter {
         if let (Value::Number(a), Value::Number(b)) = (left, right) {
             Ok(Value::Bool(op(a, b)))
         } else {
-            Err(RuntimeError::TypeError("Expected numbers for comparison".to_string()))
+            Err(RuntimeError::TypeError {
+                msg: "Expected numbers for comparison".to_string(),
+                span,
+            })
         }
     }
 
@@ -163,14 +191,20 @@ impl Interpreter {
                 if let Value::Number(n) = operand {
                     Ok(Value::Number(-n))
                 } else {
-                    Err(RuntimeError::TypeError("Expected number for -".to_string()))
+                    Err(RuntimeError::TypeError {
+                        msg: "Expected number for -".to_string(),
+                        span: unary.span,
+                    })
                 }
             }
             UnaryOp::Not => {
                 if let Value::Bool(b) = operand {
                     Ok(Value::Bool(!b))
                 } else {
-                    Err(RuntimeError::TypeError("Expected bool for !".to_string()))
+                    Err(RuntimeError::TypeError {
+                        msg: "Expected bool for !".to_string(),
+                        span: unary.span,
+                    })
                 }
             }
         }
@@ -189,19 +223,24 @@ impl Interpreter {
 
             // Check for stdlib functions first
             if crate::stdlib::is_builtin(func_name) {
-                return crate::stdlib::call_builtin(func_name, &args)
-                    .map_err(|_| RuntimeError::InvalidStdlibArgument);
+                return crate::stdlib::call_builtin(func_name, &args, call.span);
             }
 
             // Check for user-defined functions
             if let Some(func) = self.functions.get(func_name).cloned() {
-                return self.call_user_function(&func, args);
+                return self.call_user_function(&func, args, call.span);
             }
 
-            return Err(RuntimeError::UnknownFunction(func_name.clone()));
+            return Err(RuntimeError::UnknownFunction {
+                name: func_name.clone(),
+                span: call.span,
+            });
         }
 
-        Err(RuntimeError::TypeError("Expected function name".to_string()))
+        Err(RuntimeError::TypeError {
+            msg: "Expected function name".to_string(),
+            span: call.span,
+        })
     }
 
     /// Call a user-defined function
@@ -209,15 +248,19 @@ impl Interpreter {
         &mut self,
         func: &UserFunction,
         args: Vec<Value>,
+        call_span: crate::span::Span,
     ) -> Result<Value, RuntimeError> {
         // Check arity
         if args.len() != func.params.len() {
-            return Err(RuntimeError::TypeError(format!(
-                "Function {} expects {} arguments, got {}",
-                func.name,
-                func.params.len(),
-                args.len()
-            )));
+            return Err(RuntimeError::TypeError {
+                msg: format!(
+                    "Function {} expects {} arguments, got {}",
+                    func.name,
+                    func.params.len(),
+                    args.len()
+                ),
+                span: call_span,
+            });
         }
 
         // Push new scope for function
@@ -256,37 +299,40 @@ impl Interpreter {
                 if let Value::Number(n) = idx {
                     let index_val = n as i64;
                     if n.fract() != 0.0 || n < 0.0 {
-                        return Err(RuntimeError::InvalidIndex);
+                        return Err(RuntimeError::InvalidIndex { span: index.span });
                     }
 
                     let borrowed = arr.borrow();
                     if index_val >= 0 && (index_val as usize) < borrowed.len() {
                         Ok(borrowed[index_val as usize].clone())
                     } else {
-                        Err(RuntimeError::OutOfBounds)
+                        Err(RuntimeError::OutOfBounds { span: index.span })
                     }
                 } else {
-                    Err(RuntimeError::InvalidIndex)
+                    Err(RuntimeError::InvalidIndex { span: index.span })
                 }
             }
             Value::String(s) => {
                 if let Value::Number(n) = idx {
                     let index_val = n as i64;
                     if n.fract() != 0.0 || n < 0.0 {
-                        return Err(RuntimeError::InvalidIndex);
+                        return Err(RuntimeError::InvalidIndex { span: index.span });
                     }
 
                     let chars: Vec<char> = s.chars().collect();
                     if index_val >= 0 && (index_val as usize) < chars.len() {
                         Ok(Value::string(chars[index_val as usize].to_string()))
                     } else {
-                        Err(RuntimeError::OutOfBounds)
+                        Err(RuntimeError::OutOfBounds { span: index.span })
                     }
                 } else {
-                    Err(RuntimeError::InvalidIndex)
+                    Err(RuntimeError::InvalidIndex { span: index.span })
                 }
             }
-            _ => Err(RuntimeError::TypeError("Cannot index non-array/string".to_string())),
+            _ => Err(RuntimeError::TypeError {
+                msg: "Cannot index non-array/string".to_string(),
+                span: index.span,
+            }),
         }
     }
 
