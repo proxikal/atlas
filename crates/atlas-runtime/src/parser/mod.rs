@@ -513,4 +513,47 @@ mod tests {
         let (_program, diagnostics) = parse_source(source);
         assert!(diagnostics.len() >= 1);
     }
+
+    #[test]
+    fn test_parse_function_type() {
+        // Simple function type
+        let source = "fn test(f: (number) -> bool) -> void { }";
+        let (program, diagnostics) = parse_source(source);
+        assert_eq!(diagnostics.len(), 0, "Expected no errors");
+        assert_eq!(program.items.len(), 1);
+
+        if let Item::Function(func) = &program.items[0] {
+            assert_eq!(func.params.len(), 1);
+            match &func.params[0].type_ref {
+                TypeRef::Function {
+                    params,
+                    return_type,
+                    ..
+                } => {
+                    assert_eq!(params.len(), 1);
+                    assert!(matches!(params[0], TypeRef::Named(ref name, _) if name == "number"));
+                    assert!(matches!(**return_type, TypeRef::Named(ref name, _) if name == "bool"));
+                }
+                _ => panic!("Expected function type"),
+            }
+        } else {
+            panic!("Expected function declaration");
+        }
+    }
+
+    #[test]
+    fn test_parse_function_type_multiple_params() {
+        let source = "fn test(f: (number, string) -> bool) -> void { }";
+        let (program, diagnostics) = parse_source(source);
+        assert_eq!(diagnostics.len(), 0, "Expected no errors");
+        assert_eq!(program.items.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_function_type_no_params() {
+        let source = "fn test(f: () -> number) -> void { }";
+        let (program, diagnostics) = parse_source(source);
+        assert_eq!(diagnostics.len(), 0, "Expected no errors");
+        assert_eq!(program.items.len(), 1);
+    }
 }

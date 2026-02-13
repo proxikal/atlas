@@ -37,6 +37,53 @@ These features require careful design and research before implementation:
 - Arrays: `T[]`
 - Function: `(T1, T2) -> T3`
 
+### Function Types
+Functions are first-class values that can be stored in variables, passed as arguments, and returned from functions.
+
+**Syntax:**
+```atlas
+// Function type with one parameter
+(number) -> bool
+
+// Function type with multiple parameters
+(number, string) -> number
+
+// Function type with no parameters
+() -> void
+
+// Nested function types
+((number) -> bool) -> string
+
+// Function type with array parameters/returns
+(number[]) -> string[]
+```
+
+**Examples:**
+```atlas
+// Store function in variable
+fn double(x: number) -> number { return x * 2; }
+let f = double;
+f(5);  // 10
+
+// Pass function as argument
+fn apply(fn_param: (number) -> number, x: number) -> number {
+    return fn_param(x);
+}
+apply(double, 5);  // 10
+
+// Return function from function
+fn getDouble() -> (number) -> number {
+    return double;
+}
+let g = getDouble();
+g(5);  // 10
+```
+
+**Limitations (v0.2):**
+- No anonymous function syntax: `fn(x) { ... }` (planned for v0.3+)
+- No closure capture: Functions can only reference globals (planned for v0.3+)
+- All function values must be named functions
+
 ### Typing Rules
 - `let` is immutable, `var` is mutable.
 - No implicit `any`.

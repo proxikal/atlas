@@ -289,6 +289,11 @@ pub struct Identifier {
 pub enum TypeRef {
     Named(String, Span),
     Array(Box<TypeRef>, Span),
+    Function {
+        params: Vec<TypeRef>,
+        return_type: Box<TypeRef>,
+        span: Span,
+    },
 }
 
 /// Unary operator
@@ -362,6 +367,7 @@ impl TypeRef {
         match self {
             TypeRef::Named(_, span) => *span,
             TypeRef::Array(_, span) => *span,
+            TypeRef::Function { span, .. } => *span,
         }
     }
 }

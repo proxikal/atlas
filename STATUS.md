@@ -1,17 +1,22 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-13
-**Status:** 🚀 v0.2 Phase 1 COMPLETE - String API Live!
+**Status:** 🚀 v0.2 Phase 1 COMPLETE + First-Class Functions Ready!
 
 ---
 
 ## 🎯 Current Phase
 
 **Version:** v0.2 (adding depth to v0.1 foundation)
-**Last Completed:** phases/stdlib/phase-01-complete-string-api.md
+**Last Completed:**
+- phases/stdlib/phase-01-complete-string-api.md
+- **First-Class Functions** (prerequisite for Phase 2)
+
 **Next Phase:** phases/stdlib/phase-02-complete-array-api.md
 
 **v0.2 phase files complete - 68 comprehensive phases ready for implementation!**
+
+**Recent addition:** First-class functions implemented as Phase 2 prerequisite (named functions only, closures deferred to v0.3+)
 
 ---
 
@@ -248,6 +253,15 @@ All v0.2 phase files follow these standards:
 - **Testing integrated** - Each phase includes comprehensive tests
 - **Quality over speed** - Proper implementation, not rushing
 - **Token-efficient documentation** - Optimized for AI agents
+
+### First-Class Functions (v0.2 Prerequisite)
+**Completed:** 2026-02-13 (prerequisite for Array API Phase 2)
+- ✅ Function type syntax: `(number, string) -> bool`
+- ✅ Functions as values (store in variables, pass as args, return from functions)
+- ✅ Type checking for function types
+- ✅ 100% interpreter/VM parity maintained
+- ⚠️ **Named functions only** - no anonymous functions or closure capture (v0.3+)
+- 📄 Documentation: `docs/features/first-class-functions.md`
 
 ### Test Infrastructure
 **Atlas uses production-grade Rust testing tools:**

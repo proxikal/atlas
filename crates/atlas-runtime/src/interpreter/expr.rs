@@ -210,35 +210,40 @@ impl Interpreter {
 
     /// Evaluate a function call
     pub(super) fn eval_call(&mut self, call: &CallExpr) -> Result<Value, RuntimeError> {
-        // Evaluate callee to get function name
-        if let Expr::Identifier(id) = call.callee.as_ref() {
-            let func_name = &id.name;
+        // Evaluate callee as ANY expression (enables first-class functions)
+        let callee_value = self.eval_expr(&call.callee)?;
 
-            // Evaluate arguments
-            let args: Result<Vec<Value>, _> =
-                call.args.iter().map(|arg| self.eval_expr(arg)).collect();
-            let args = args?;
+        // Evaluate arguments
+        let args: Result<Vec<Value>, _> =
+            call.args.iter().map(|arg| self.eval_expr(arg)).collect();
+        let args = args?;
 
-            // Check for stdlib functions first
-            if crate::stdlib::is_builtin(func_name) {
-                return crate::stdlib::call_builtin(func_name, &args, call.span);
+        // Callee must be a function value
+        match callee_value {
+            Value::Function(func_ref) => {
+                // Check for stdlib functions first
+                if crate::stdlib::is_builtin(&func_ref.name) {
+                    return crate::stdlib::call_builtin(&func_ref.name, &args, call.span);
+                }
+
+                // User-defined function - look up body
+                if let Some(func) = self.function_bodies.get(&func_ref.name).cloned() {
+                    return self.call_user_function(&func, args, call.span);
+                }
+
+                Err(RuntimeError::UnknownFunction {
+                    name: func_ref.name.clone(),
+                    span: call.span,
+                })
             }
-
-            // Check for user-defined functions
-            if let Some(func) = self.functions.get(func_name).cloned() {
-                return self.call_user_function(&func, args, call.span);
-            }
-
-            return Err(RuntimeError::UnknownFunction {
-                name: func_name.clone(),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!(
+                    "Cannot call non-function type {}",
+                    callee_value.type_name()
+                ),
                 span: call.span,
-            });
+            }),
         }
-
-        Err(RuntimeError::TypeError {
-            msg: "Expected function name".to_string(),
-            span: call.span,
-        })
     }
 
     /// Call a user-defined function

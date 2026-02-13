@@ -247,7 +247,10 @@ impl<'a> TypeChecker<'a> {
                         ),
                         call.span,
                     )
-                    .with_label("not callable"),
+                    .with_label("not callable")
+                    .with_help(
+                        "Expected a function type like (number, string) -> bool".to_string(),
+                    ),
                 );
                 Type::Unknown
             }

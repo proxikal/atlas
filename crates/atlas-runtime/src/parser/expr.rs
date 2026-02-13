@@ -265,6 +265,11 @@ impl Parser {
 
     /// Parse type reference
     pub(super) fn parse_type_ref(&mut self) -> Result<TypeRef, ()> {
+        // Check if this is a function type: (T1, T2) -> T3
+        if self.check(TokenKind::LeftParen) {
+            return self.parse_function_type();
+        }
+
         let token = self.consume_identifier("a type name")?;
         let span = token.span;
 
@@ -290,5 +295,48 @@ impl Parser {
         }
 
         Ok(type_ref)
+    }
+
+    /// Parse function type: (T1, T2) -> ReturnType
+    fn parse_function_type(&mut self) -> Result<TypeRef, ()> {
+        let start_token = self.consume(
+            TokenKind::LeftParen,
+            "Expected '(' at start of function type",
+        )?;
+        let start_span = start_token.span;
+
+        let mut params = Vec::new();
+
+        // Parse parameter types
+        if !self.check(TokenKind::RightParen) {
+            loop {
+                let param_type = self.parse_type_ref()?;
+                params.push(param_type);
+
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
+        }
+
+        self.consume(
+            TokenKind::RightParen,
+            "Expected ')' after function parameter types",
+        )?;
+
+        // Expect arrow ->
+        self.consume(TokenKind::Arrow, "Expected '->' in function type")?;
+
+        // Parse return type
+        let return_type = self.parse_type_ref()?;
+        let end_span = return_type.span();
+
+        let full_span = Span::new(start_span.start, end_span.end);
+
+        Ok(TypeRef::Function {
+            params,
+            return_type: Box::new(return_type),
+            span: full_span,
+        })
     }
 }

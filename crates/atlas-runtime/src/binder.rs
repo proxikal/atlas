@@ -380,6 +380,18 @@ impl Binder {
                 }
             },
             TypeRef::Array(elem, _) => Type::Array(Box::new(self.resolve_type_ref(elem))),
+            TypeRef::Function {
+                params,
+                return_type,
+                ..
+            } => {
+                let param_types = params.iter().map(|p| self.resolve_type_ref(p)).collect();
+                let ret_type = Box::new(self.resolve_type_ref(return_type));
+                Type::Function {
+                    params: param_types,
+                    return_type: ret_type,
+                }
+            }
         }
     }
 }

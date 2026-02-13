@@ -37,8 +37,8 @@ pub struct Interpreter {
     pub(super) globals: HashMap<String, Value>,
     /// Local scopes (stack of environments)
     pub(super) locals: Vec<HashMap<String, Value>>,
-    /// User-defined functions
-    pub(super) functions: HashMap<String, UserFunction>,
+    /// User-defined function bodies (accessed via Value::Function references)
+    pub(super) function_bodies: HashMap<String, UserFunction>,
     /// Current control flow state
     pub(super) control_flow: ControlFlow,
 }
@@ -46,12 +46,51 @@ pub struct Interpreter {
 impl Interpreter {
     /// Create a new interpreter
     pub fn new() -> Self {
-        Self {
+        let mut interpreter = Self {
             globals: HashMap::new(),
             locals: vec![HashMap::new()],
-            functions: HashMap::new(),
+            function_bodies: HashMap::new(),
             control_flow: ControlFlow::None,
-        }
+        };
+
+        // Register builtin functions in globals
+        // Core builtins
+        interpreter.register_builtin("print", 1);
+        interpreter.register_builtin("len", 1);
+        interpreter.register_builtin("str", 1);
+
+        // String functions
+        interpreter.register_builtin("split", 2);
+        interpreter.register_builtin("join", 2);
+        interpreter.register_builtin("trim", 1);
+        interpreter.register_builtin("trimStart", 1);
+        interpreter.register_builtin("trimEnd", 1);
+        interpreter.register_builtin("indexOf", 2);
+        interpreter.register_builtin("lastIndexOf", 2);
+        interpreter.register_builtin("includes", 2);
+        interpreter.register_builtin("startsWith", 2);
+        interpreter.register_builtin("endsWith", 2);
+        interpreter.register_builtin("substring", 3);
+        interpreter.register_builtin("charAt", 2);
+        interpreter.register_builtin("toUpperCase", 1);
+        interpreter.register_builtin("toLowerCase", 1);
+        interpreter.register_builtin("repeat", 2);
+        interpreter.register_builtin("replace", 3);
+        interpreter.register_builtin("padStart", 3);
+        interpreter.register_builtin("padEnd", 3);
+
+        interpreter
+    }
+
+    /// Register a builtin function in globals
+    fn register_builtin(&mut self, name: &str, arity: usize) {
+        let func_value = Value::Function(FunctionRef {
+            name: name.to_string(),
+            arity,
+            bytecode_offset: 0, // Not used in interpreter
+            local_count: 0,     // Not used in interpreter
+        });
+        self.globals.insert(name.to_string(), func_value);
     }
 
     /// Evaluate a program
@@ -61,8 +100,8 @@ impl Interpreter {
         for item in &program.items {
             match item {
                 Item::Function(func) => {
-                    // Store user-defined function
-                    self.functions.insert(
+                    // Store user-defined function body
+                    self.function_bodies.insert(
                         func.name.name.clone(),
                         UserFunction {
                             name: func.name.name.clone(),
