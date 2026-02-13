@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM Complete + Stdlib In Progress (Phase 05 Complete)
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM Complete + Stdlib In Progress (Phase 06 Complete)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/stdlib/phase-05-io-security-model.md
-**Next Phase:** `phases/stdlib/phase-06-json-stdlib-plan.md`
+**Last Completed:** phases/stdlib/phase-06-json-stdlib-plan.md
+**Next Phase:** `phases/stdlib/phase-07-prelude-binding.md`
 
-**What to implement:** Plan JSON parsing/serialization module for v1.0
+**What to implement:** Ensure prelude built-ins are always in scope
 
 ---
 
@@ -29,11 +29,11 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Standard Library Phase 06:**
-- `docs/stdlib-expansion-plan.md` - Stdlib expansion roadmap
-- `docs/io-security-model.md` - I/O security model
+**For Standard Library Phase 07:**
+- `docs/prelude.md` - Prelude specification
 - `docs/stdlib.md` - Current stdlib specification
-- `phases/stdlib/phase-06-json-stdlib-plan.md` - Phase implementation guide
+- `docs/implementation/06-symbol-table.md` - Symbol table implementation
+- `phases/stdlib/phase-07-prelude-binding.md` - Phase implementation guide
 
 ---
 
@@ -124,14 +124,14 @@
 - ✅ phase-16-bytecode-format-tests.md
 - ✅ phase-17-runtime-numeric-errors.md
 
-### 9. Standard Library (5/8)
+### 9. Standard Library (6/8)
 - ✅ phase-01-stdlib.md
 - ✅ phase-02-stdlib-tests.md
 - ✅ phase-03-stdlib-doc-sync.md
 - ✅ phase-04-stdlib-expansion-plan.md
 - ✅ phase-05-io-security-model.md
-- ⬜ phase-06-json-stdlib-plan.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-07-prelude-binding.md
+- ✅ phase-06-json-stdlib-plan.md
+- ⬜ phase-07-prelude-binding.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-08-prelude-tests.md
 
 ### 10. CLI (0/10)
@@ -163,7 +163,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 67/93 phases (72%)
+**Total Progress:** 68/93 phases (73%)
 
 ---
 

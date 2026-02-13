@@ -39,7 +39,7 @@ This document defines the roadmap for growing the Atlas standard library beyond 
 - ✅ Documentation sync
 - ✅ Expansion plan (this document)
 - ✅ Security model for I/O
-- ⬜ JSON stdlib plan
+- ✅ JSON stdlib plan
 
 ---
 
