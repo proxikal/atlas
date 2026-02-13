@@ -7,10 +7,10 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/cli/phase-10-cli-e2e-tests.md
-**Next Phase:** `phases/lsp/phase-01-lsp-foundation.md`
+**Last Completed:** phases/lsp/phase-01-lsp-foundation.md
+**Next Phase:** `phases/lsp/phase-02-lsp-diagnostics.md`
 
-**What to implement:** LSP foundation and server setup
+**What to implement:** Enhanced LSP diagnostics with pull-based diagnostics
 
 ---
 
@@ -29,9 +29,9 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For LSP Phase 01:**
-- `docs/lsp-foundation.md` - LSP foundation specification
-- `phases/lsp/phase-01-lsp-foundation.md` - Phase implementation guide
+**For LSP Phase 02:**
+- `docs/implementation/16-lsp.md` - LSP implementation guide
+- `phases/lsp/phase-02-lsp-diagnostics.md` - Phase implementation guide
 
 ---
 
@@ -144,9 +144,9 @@
 - ✅ phase-09-json-dump-stability-tests.md
 - ✅ phase-10-cli-e2e-tests.md
 
-### 11. LSP (0/6)
-- ⬜ phase-01-lsp-foundation.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-02-lsp-diagnostics.md
+### 11. LSP (1/6)
+- ✅ phase-01-lsp-foundation.md
+- ⬜ phase-02-lsp-diagnostics.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-03-lsp-navigation.md
 - ⬜ phase-04-lsp-completion.md
 - ⬜ phase-05-lsp-formatting.md
@@ -161,7 +161,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 80/93 phases (86%)
+**Total Progress:** 81/93 phases (87%)
 
 ---
 

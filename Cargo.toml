@@ -2,6 +2,7 @@
 members = [
     "crates/atlas-runtime",
     "crates/atlas-cli",
+    "crates/atlas-lsp",
 ]
 resolver = "2"
 
