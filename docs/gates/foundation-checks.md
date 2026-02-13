@@ -12,7 +12,7 @@
 **If building on existing code:**
 - [ ] Read existing code first
 - [ ] Check against Atlas-SPEC.md (grammar, types, semantics)
-- [ ] Check against COMPILER_PRINCIPLES.md (no stubs, parity, quality)
+- [ ] Check against `docs/gates/compiler-principles.md` (no stubs, parity, quality)
 - [ ] Look for: implicit types, stubs, TODOs, parity breaks
 
 **If violations found:** Fix existing code FIRST, don't build on broken foundation.
@@ -97,4 +97,4 @@ Proceeding to GATE 2.
 
 ---
 
-**Reference:** COMPILER_PRINCIPLES.md, decision-log.md, Atlas-SPEC.md
+**Reference:** `docs/gates/compiler-principles.md`, `docs/reference/decision-log.md`, Atlas-SPEC.md

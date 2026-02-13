@@ -20,7 +20,7 @@
 | **Module system, imports, exports** | `docs/specification/modules.md` |
 | **REPL behavior, interactive mode** | `docs/specification/repl.md` |
 | **Bytecode, VM, compilation** | `docs/specification/bytecode.md` |
-| **Error codes, diagnostics** | `docs/specification/diagnostics.md` |
+| **Error codes, diagnostics** | `docs/specification/diagnostic-system.md` |
 | **Stdlib functions, API** | `docs/api/stdlib.md` |
 
 **Example:** "I'm implementing pattern matching" → Read `docs/specification/types.md` (Pattern Matching section)
@@ -154,7 +154,7 @@ str(value: number | bool | null) -> string
 
 ### Diagnostics & API
 
-**docs/specification/diagnostics.md** (~300 lines, ~12kb)
+**docs/specification/diagnostic-system.md** (~300 lines, ~12kb)
 - Error code reference
 - Diagnostic formats (human + JSON)
 - Warning system

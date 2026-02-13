@@ -30,7 +30,7 @@
 
 ### 3. Design Consistency Check
 **Does request align with Atlas identity?**
-- Read `COMPILER_PRINCIPLES.md`
+- Read `docs/gates/compiler-principles.md`
 - Check if conflicts with "What Atlas IS"
 - Check if matches "Anti-Patterns"
 
@@ -103,4 +103,4 @@ This might be fine if [conditions]. Want to discuss?
 
 ---
 
-**Reference:** COMPILER_PRINCIPLES.md, STATUS.md, Atlas-SPEC.md, phase files
+**Reference:** `docs/gates/compiler-principles.md`, STATUS.md, Atlas-SPEC.md, phase files

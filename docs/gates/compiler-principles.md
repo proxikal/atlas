@@ -77,7 +77,7 @@
 - **Bugs:** Test first (strict TDD) → fix → verify GREEN
 - **Exploratory work:** Discover edge cases WHILE implementing
 
-**Reference:** `gates/workflow.md` GATE 2
+**Reference:** `.claude/skills/atlas/gates/gate-2-implement.md`
 
 **Never violate:** Forcing test-first for features (causes v0.1 problem: hours of tests, zero implementation)
 
@@ -92,7 +92,7 @@
 - **Never simplify for counts** - Quality and correctness matter more
 - **Complex algorithms needed** - Compilers aren't simple, embrace necessary complexity
 
-**Reference:** `gates/workflow.md` Line Limits section, `.claude/skills/atlas/skill.md`
+**Reference:** `.claude/skills/atlas/gates/README.md` Line Limits section, `.claude/skills/atlas/skill.md`
 
 **Never violate:** Oversimplifying compiler logic to hit arbitrary line counts
 

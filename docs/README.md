@@ -97,8 +97,15 @@ Configuration formats and options
 - `guides/` = PRACTICES for building it
 - `api/` = USING what was built
 
+**Development Workflow (Atlas Skill):**
+- **Skill Definition:** `/.claude/skills/atlas/skill.md` - Project overview, roles, rules
+- **Gate System:** `/.claude/skills/atlas/gates/` - Workflow gates (-1 through 6)
+- **Workflows:** `/.claude/skills/atlas/workflows/` - Structured dev, bug-fix, refactoring, enhancement, debugging, dead-code cleanup
+- **Gate Index:** `/.claude/skills/atlas/gates/README.md` - Complete gate reference
+
 **Key Rules:**
 - **Always check STATUS.md first** - Shows current phase and doc map
+- **Run GATE -1 before any work** - Communication & sanity check
 - **Reference implementation/ guides** - Detailed component architecture
 - **Maintain interpreter/VM parity** - Critical requirement
 - **Follow phase file guidance** - Phases specify which docs to use
