@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM Complete + Stdlib In Progress (Phase 03 Complete)
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM Complete + Stdlib In Progress (Phase 04 Complete)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/stdlib/phase-03-stdlib-doc-sync.md
-**Next Phase:** `phases/stdlib/phase-04-stdlib-expansion-plan.md`
+**Last Completed:** phases/stdlib/phase-04-stdlib-expansion-plan.md
+**Next Phase:** `phases/stdlib/phase-05-io-security-model.md`
 
-**What to implement:** Design expansion plan for growing the standard library
+**What to implement:** Define security boundaries for any future IO-related stdlib features
 
 ---
 
@@ -29,9 +29,9 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Standard Library Phase 04:**
-- `docs/stdlib.md` - Standard library specification
-- `phases/stdlib/phase-04-stdlib-expansion-plan.md` - Phase implementation guide
+**For Standard Library Phase 05:**
+- `docs/stdlib-expansion-plan.md` - Stdlib expansion roadmap
+- `phases/stdlib/phase-05-io-security-model.md` - Phase implementation guide
 
 ---
 
@@ -122,12 +122,12 @@
 - ✅ phase-16-bytecode-format-tests.md
 - ✅ phase-17-runtime-numeric-errors.md
 
-### 9. Standard Library (3/8)
+### 9. Standard Library (4/8)
 - ✅ phase-01-stdlib.md
 - ✅ phase-02-stdlib-tests.md
 - ✅ phase-03-stdlib-doc-sync.md
-- ⬜ phase-04-stdlib-expansion-plan.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-05-io-security-model.md
+- ✅ phase-04-stdlib-expansion-plan.md
+- ⬜ phase-05-io-security-model.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-06-json-stdlib-plan.md
 - ⬜ phase-07-prelude-binding.md
 - ⬜ phase-08-prelude-tests.md
@@ -161,7 +161,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 65/93 phases (70%)
+**Total Progress:** 66/93 phases (71%)
 
 ---
 

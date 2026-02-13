@@ -1,5 +1,7 @@
 # Atlas Stdlib (v0.1)
 
+> **📋 Expansion Plan:** See `docs/stdlib-expansion-plan.md` for the roadmap beyond v0.1
+
 ## print
 - Signature: `print(value: string|number|bool|null) -> void`
 - Behavior:

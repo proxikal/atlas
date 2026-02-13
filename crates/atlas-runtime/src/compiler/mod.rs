@@ -109,15 +109,12 @@ impl Compiler {
 
     /// Compile a function declaration
     fn compile_function(&mut self, func: &FunctionDecl) -> Result<(), Vec<Diagnostic>> {
-        // Record the start offset for this function
-        let function_offset = self.bytecode.current_offset();
-
         // We'll update the function ref after compiling the body to get accurate local_count
-        // For now, create a placeholder
+        // For now, create a placeholder with bytecode_offset = 0 (will be updated)
         let placeholder_ref = crate::value::FunctionRef {
             name: func.name.name.clone(),
             arity: func.params.len(),
-            bytecode_offset: function_offset,
+            bytecode_offset: 0, // Placeholder - will be updated after Jump
             local_count: 0, // Will be updated after compiling body
         };
         let placeholder_value = crate::value::Value::Function(placeholder_ref);
@@ -137,6 +134,9 @@ impl Compiler {
         self.bytecode.emit(Opcode::Jump, func.span);
         let skip_jump = self.bytecode.current_offset();
         self.bytecode.emit_u16(0xFFFF); // Placeholder
+
+        // NOW record the function body offset (after all setup code)
+        let function_offset = self.bytecode.current_offset();
 
         // Now compile the function body at function_offset
         // The function body is compiled inline in the bytecode

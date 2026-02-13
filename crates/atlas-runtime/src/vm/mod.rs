@@ -450,7 +450,7 @@ impl VM {
                                 let frame = CallFrame {
                                     function_name: func.name.clone(),
                                     return_ip: self.ip,
-                                    stack_base: self.stack.len() - arg_count,
+                                    stack_base: self.stack.len() - arg_count, // Points to first argument
                                     local_count: func.local_count, // Use total locals, not just arity
                                 };
 
@@ -492,8 +492,14 @@ impl VM {
                     let frame = self.frames.pop();
 
                     if let Some(f) = frame {
-                        // Clean up the stack (remove locals and function value)
+                        // Clean up the stack (remove locals, arguments, and function value)
+                        // stack_base points to first argument, so we need to also remove the function value below it
                         while self.stack.len() > f.stack_base {
+                            self.stack.pop();
+                        }
+                        // Also remove the function value (one slot below stack_base)
+                        // Only if stack_base > 0 (not at the very start of the stack)
+                        if f.stack_base > 0 && !self.stack.is_empty() {
                             self.stack.pop();
                         }
 
@@ -563,7 +569,10 @@ impl VM {
                         span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
                     });
                             }
-                            borrowed[idx] = value;
+                            borrowed[idx] = value.clone();
+                            // Push the assigned value back (assignment expressions return the value)
+                            drop(borrowed); // Release the borrow before pushing
+                            self.push(value);
                         }
                         _ => return Err(RuntimeError::TypeError {
                             msg: "Cannot index non-array".to_string(),
