@@ -12,7 +12,8 @@
 - phases/stdlib/phase-01-complete-string-api.md
 - **First-Class Functions** (prerequisite for Phase 2)
 
-**Next Phase:** phases/stdlib/phase-02-complete-array-api.md
+**Next Phase:** phases/blockers/blocker-01-json-value-type.md
+**⚠️ Note:** Foundation blockers MUST be completed before v0.2 phases (see tracker below)
 
 **v0.2 phase files complete - 68 comprehensive phases ready for implementation!**
 
@@ -37,11 +38,18 @@ v0.2 transforms Atlas into a production-ready language:
 - **LSP:** Hover, actions, tokens, symbols, folding, hints, refactoring, find-references
 - **Polish:** Comprehensive testing, performance verification, documentation, stability
 
+### ⚠️ IMPORTANT: Foundation Blockers MUST Be Completed First
+
+**Before starting v0.2 phases,** AI agents MUST complete foundation blockers in `phases/blockers/`.
+
+40+ of 68 v0.2 phases are blocked by missing foundation. See [blocker progress tracker](#-foundation-blockers-must-complete-first) below.
+
 ### To Start v0.2 Implementation:
-1. Read next phase file: `phases/stdlib/phase-01-complete-string-api.md`
-2. Follow detailed implementation guidance (blockers, architecture, tests)
-3. Maintain interpreter/VM parity throughout
-4. Update this file after each phase completion
+1. **FIRST:** Complete foundation blockers (see tracker below)
+2. **THEN:** Read v0.2 phase files starting with `phases/stdlib/phase-02-complete-array-api.md`
+3. Follow detailed implementation guidance (blockers, architecture, tests)
+4. Maintain interpreter/VM parity throughout
+5. Update this file after each phase completion
 
 ---
 
@@ -83,6 +91,80 @@ v0.2 transforms Atlas into a production-ready language:
 
 ### Feature Documentation
 **Phases create feature docs in `docs/features/` as they implement new capabilities.** Phase files specify which docs to create/update.
+
+---
+
+## 🚨 Foundation Blockers (MUST COMPLETE FIRST)
+
+**⚠️ CRITICAL:** These foundation phases MUST be completed BEFORE v0.2 phases can begin.
+
+**Why:** 40+ of 68 v0.2 phases depend on these foundations. Attempting v0.2 phases without completing blockers will result in incomplete implementations.
+
+**Documentation:** `phases/blockers/README.md` - Full dependency analysis and implementation order
+
+**Progress:** 0/19 blocker sub-phases complete
+
+### BLOCKER 01: JSON Value Type (1-2 weeks) ✅ Single Phase
+- ⬜ blocker-01-json-value-type.md
+
+**Blocks:** JSON API, HTTP, 10+ phases
+
+### BLOCKER 02: Generic Type Parameters (4-6 weeks) - 4 Sub-Phases
+- ⬜ blocker-02-a-type-system-foundation.md (Week 1: Syntax & AST)
+- ⬜ blocker-02-b-type-checker-inference.md (Weeks 2-3: Type checking & inference)
+- ⬜ blocker-02-c-runtime-implementation.md (Weeks 4-5: Monomorphization & execution)
+- ⬜ blocker-02-d-builtin-types.md (Week 6: Option<T>, Result<T,E>)
+
+**Blocks:** Pattern matching, Result<T,E>, HashMap<K,V>, 15+ phases
+
+### BLOCKER 03: Pattern Matching (2-3 weeks) - 2 Sub-Phases
+- ⬜ blocker-03-a-pattern-syntax-typechecking.md (Week 1: Syntax & type checking)
+- ⬜ blocker-03-b-runtime-execution.md (Weeks 2-3: Runtime execution)
+
+**Requires:** BLOCKER 02 complete
+**Blocks:** Error handling, Option/Result usage, union types
+
+### BLOCKER 04: Module System (3-4 weeks) - 4 Sub-Phases
+- ⬜ blocker-04-a-syntax-resolution.md (Week 1: Import/export syntax & resolution)
+- ⬜ blocker-04-b-loading-caching.md (Week 2: Module loading & caching)
+- ⬜ blocker-04-c-type-system-integration.md (Week 3: Cross-module types)
+- ⬜ blocker-04-d-runtime-implementation.md (Week 4: Runtime execution)
+
+**Blocks:** Package management, multi-file programs, 15+ phases
+
+### BLOCKER 05: Configuration System (1-2 weeks) ✅ Single Phase
+- ⬜ blocker-05-configuration-system.md
+
+**Blocks:** Package manifest, CLI config, security config, 5+ phases
+
+### BLOCKER 06: Security Model (2-3 weeks) - 3 Sub-Phases
+- ⬜ blocker-06-a-permission-system.md (Week 1: Permission types & policies)
+- ⬜ blocker-06-b-runtime-enforcement.md (Week 2: Runtime integration)
+- ⬜ blocker-06-c-audit-configuration.md (Week 3: Audit logging & prompts)
+
+**Requires:** BLOCKER 05 complete
+**Blocks:** File I/O, Network, Process management, all I/O phases
+
+---
+
+**Total Estimated Effort:** 14-20 weeks (3.5-5 months)
+
+**Parallel Execution Recommended:**
+- Track A: BLOCKER 02 → BLOCKER 03 (6-9 weeks) - Type system (longest pole)
+- Track B: BLOCKER 05 → BLOCKER 06 (3-5 weeks) - Security & config
+- Track C: BLOCKER 01 (1-2 weeks) - JSON (independent)
+- Track D: BLOCKER 04 (3-4 weeks) - Modules (can overlap with Track B)
+
+**With parallelization:** 6-9 weeks minimum (limited by Track A)
+
+**For AI Agents:**
+1. Complete blockers in order (respect dependencies)
+2. Each sub-phase is 1 week max of focused work
+3. All tests must pass before moving to next sub-phase
+4. Follow same workflow as regular phases (GATE -1 through GATE 6)
+5. Update this tracker after each sub-phase completion
+
+**See:** `phases/blockers/COVERAGE.md` for complete dependency analysis
 
 ---
 
@@ -215,18 +297,26 @@ All v0.2 phase files follow these standards:
 
 ## 🔄 Handoff Protocol
 
-**When you complete a phase:**
+**When you complete a blocker or phase:**
 
-1. Mark phase complete: Change `⬜` to `✅` in tracker above
+1. Mark complete: Change `⬜` to `✅` in appropriate tracker above
 2. Update Current Phase section at top
 3. Update Last Updated date
 4. Commit changes
 
-**Example handoff:**
+**Example handoff (blocker):**
 ```markdown
-**Last Completed:** phases/stdlib/phase-01-complete-string-api.md
-**Next Phase:** phases/stdlib/phase-02-complete-array-api.md
+**Last Completed:** phases/blockers/blocker-01-json-value-type.md
+**Next Phase:** phases/blockers/blocker-02-a-type-system-foundation.md
 ```
+
+**Example handoff (v0.2 phase):**
+```markdown
+**Last Completed:** phases/stdlib/phase-02-complete-array-api.md
+**Next Phase:** phases/stdlib/phase-03-complete-math-api.md
+```
+
+**IMPORTANT:** All blockers must be complete before starting v0.2 phases.
 
 ---
 
