@@ -12,6 +12,16 @@ use serialize::{deserialize_span, deserialize_value, serialize_span, serialize_v
 use crate::span::Span;
 use crate::value::Value;
 
+/// Current bytecode format version
+///
+/// This version is incremented when the bytecode format changes in a
+/// backward-incompatible way. The VM will reject bytecode files with
+/// different version numbers to prevent runtime errors from format mismatches.
+///
+/// Version history:
+/// - Version 1: Initial bytecode format (Phase 10)
+pub const BYTECODE_VERSION: u16 = 1;
+
 /// Debug information for bytecode
 ///
 /// Maps instruction offsets to source spans for error reporting
@@ -106,7 +116,7 @@ impl Bytecode {
 
         // Header
         bytes.extend_from_slice(b"ATB\0"); // Magic number
-        bytes.extend_from_slice(&1u16.to_be_bytes()); // Version
+        bytes.extend_from_slice(&BYTECODE_VERSION.to_be_bytes()); // Version
         let flags = if self.debug_info.is_empty() { 0u16 } else { 1u16 };
         bytes.extend_from_slice(&flags.to_be_bytes()); // Flags
 
@@ -134,22 +144,26 @@ impl Bytecode {
 
     /// Deserialize bytecode from binary format (.atb file)
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
-        let mut offset = 0;
-
-        // Read header
+        // Read and validate header
         if bytes.len() < 8 {
             return Err("Invalid bytecode file: too short".to_string());
         }
         if &bytes[0..4] != b"ATB\0" {
-            return Err("Invalid bytecode file: bad magic number".to_string());
+            return Err("Invalid bytecode file: bad magic number. Expected 'ATB\\0', this may not be an Atlas bytecode file.".to_string());
         }
         let version = u16::from_be_bytes([bytes[4], bytes[5]]);
-        if version != 1 {
-            return Err(format!("Unsupported bytecode version: {}", version));
+        if version != BYTECODE_VERSION {
+            return Err(format!(
+                "Bytecode version mismatch: file has version {}, but this VM supports version {}. \
+                 Recompile the source file with the current Atlas compiler.",
+                version, BYTECODE_VERSION
+            ));
         }
         let flags = u16::from_be_bytes([bytes[6], bytes[7]]);
         let has_debug_info = (flags & 1) != 0;
-        offset = 8;
+
+        // Start reading sections after header (8 bytes)
+        let mut offset = 8;
 
         // Read constants
         if offset + 4 > bytes.len() {
@@ -221,6 +235,15 @@ impl Bytecode {
                 });
                 offset += consumed;
             }
+        }
+
+        // Verify we consumed exactly the expected amount of data
+        if offset != bytes.len() {
+            return Err(format!(
+                "Invalid bytecode: expected {} bytes, but only consumed {}",
+                bytes.len(),
+                offset
+            ));
         }
 
         Ok(Bytecode {
@@ -691,7 +714,78 @@ mod tests {
         let bytes = b"ATB\0\x00\x99\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
         let result = Bytecode::from_bytes(bytes);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unsupported bytecode version"));
+        let err = result.unwrap_err();
+        assert!(err.contains("version mismatch"));
+        assert!(err.contains("153")); // 0x0099 in decimal
+    }
+
+    #[test]
+    fn test_bytecode_version_constant() {
+        // Verify that BYTECODE_VERSION constant is used in serialization
+        let bytecode = Bytecode::new();
+        let bytes = bytecode.to_bytes();
+
+        // Extract version from header (bytes 4-5)
+        let version = u16::from_be_bytes([bytes[4], bytes[5]]);
+        assert_eq!(version, BYTECODE_VERSION);
+    }
+
+    #[test]
+    fn test_bytecode_version_too_old() {
+        // Simulate loading bytecode from an older version (version 0)
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"ATB\0"); // Magic
+        bytes.extend_from_slice(&0u16.to_be_bytes()); // Version 0 (too old)
+        bytes.extend_from_slice(&0u16.to_be_bytes()); // Flags
+        bytes.extend_from_slice(&0u32.to_be_bytes()); // Constants count
+        bytes.extend_from_slice(&0u32.to_be_bytes()); // Instructions length
+
+        let result = Bytecode::from_bytes(&bytes);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("version mismatch"));
+        assert!(err.contains("0")); // Old version
+        assert!(err.contains(&BYTECODE_VERSION.to_string())); // Expected version
+    }
+
+    #[test]
+    fn test_bytecode_version_too_new() {
+        // Simulate loading bytecode from a newer version (version 99)
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"ATB\0"); // Magic
+        bytes.extend_from_slice(&99u16.to_be_bytes()); // Version 99 (too new)
+        bytes.extend_from_slice(&0u16.to_be_bytes()); // Flags
+        bytes.extend_from_slice(&0u32.to_be_bytes()); // Constants count
+        bytes.extend_from_slice(&0u32.to_be_bytes()); // Instructions length
+
+        let result = Bytecode::from_bytes(&bytes);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("version mismatch"));
+        assert!(err.contains("99")); // New version
+        assert!(err.contains(&BYTECODE_VERSION.to_string())); // Expected version
+        assert!(err.contains("Recompile")); // Helpful suggestion
+    }
+
+    #[test]
+    fn test_bytecode_current_version_accepted() {
+        // Verify that bytecode with current version is accepted
+        let bytecode = Bytecode::new();
+        let bytes = bytecode.to_bytes();
+
+        let result = Bytecode::from_bytes(&bytes);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_bytecode_magic_number_error_message() {
+        // Test improved magic number error message
+        let bytes = b"XXX\0\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        let result = Bytecode::from_bytes(bytes);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("bad magic number"));
+        assert!(err.contains("ATB")); // Mentions expected magic
     }
 
     #[test]

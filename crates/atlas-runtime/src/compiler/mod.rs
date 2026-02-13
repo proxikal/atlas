@@ -18,7 +18,11 @@ use crate::span::Span;
 #[derive(Debug, Clone)]
 pub(super) struct Local {
     pub(super) name: String,
+    /// Scope depth of this local (for shadowing resolution)
+    #[allow(dead_code)] // TODO: Use in scope resolution (future phase)
     pub(super) depth: usize,
+    /// Whether this local is mutable (let vs var)
+    #[allow(dead_code)] // TODO: Use for const checking (future phase)
     pub(super) mutable: bool,
 }
 

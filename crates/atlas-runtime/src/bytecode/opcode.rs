@@ -3,9 +3,6 @@
 //! Stack-based bytecode with 30 opcodes organized by category.
 //! Operands are encoded separately in the instruction stream.
 
-use crate::span::Span;
-use crate::value::Value;
-
 /// Bytecode opcode (30 instructions)
 ///
 /// Stack-based VM with explicit byte values for serialization.
