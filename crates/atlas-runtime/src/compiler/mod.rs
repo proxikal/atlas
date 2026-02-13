@@ -10,7 +10,7 @@ mod expr;
 mod stmt;
 
 use crate::ast::*;
-use crate::bytecode::{Bytecode, Opcode};
+use crate::bytecode::{Bytecode, Opcode, Optimizer};
 use crate::diagnostic::Diagnostic;
 use crate::span::Span;
 
@@ -43,6 +43,8 @@ pub struct Compiler {
     pub(super) scope_depth: usize,
     /// Loop context stack (for break/continue)
     pub(super) loops: Vec<LoopContext>,
+    /// Bytecode optimizer (optional)
+    optimizer: Option<Optimizer>,
 }
 
 impl Compiler {
@@ -53,7 +55,27 @@ impl Compiler {
             locals: Vec::new(),
             scope_depth: 0,
             loops: Vec::new(),
+            optimizer: None, // Optimization disabled by default
         }
+    }
+
+    /// Enable bytecode optimization with default passes
+    ///
+    /// In v0.1, this enables placeholder optimization passes.
+    /// Future versions will implement actual optimizations.
+    pub fn with_optimization() -> Self {
+        Self {
+            bytecode: Bytecode::new(),
+            locals: Vec::new(),
+            scope_depth: 0,
+            loops: Vec::new(),
+            optimizer: Some(Optimizer::with_default_passes()),
+        }
+    }
+
+    /// Set the optimizer to use (or None to disable optimization)
+    pub fn set_optimizer(&mut self, optimizer: Option<Optimizer>) {
+        self.optimizer = optimizer;
     }
 
     /// Compile an AST to bytecode
@@ -67,7 +89,14 @@ impl Compiler {
         self.bytecode.emit(Opcode::Halt, Span::dummy());
 
         // Take ownership of the bytecode
-        Ok(std::mem::replace(&mut self.bytecode, Bytecode::new()))
+        let mut bytecode = std::mem::replace(&mut self.bytecode, Bytecode::new());
+
+        // Apply optimization if enabled
+        if let Some(ref optimizer) = self.optimizer {
+            bytecode = optimizer.optimize(bytecode);
+        }
+
+        Ok(bytecode)
     }
 
     /// Compile a top-level item

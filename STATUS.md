@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM In Progress (Phase 04 Complete)
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM In Progress (Phase 05 Complete)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/bytecode-vm/phase-04-disassembler.md
-**Next Phase:** `phases/bytecode-vm/phase-05-optimizer-hooks.md`
+**Last Completed:** phases/bytecode-vm/phase-05-optimizer-hooks.md
+**Next Phase:** `phases/bytecode-vm/phase-12-profiling-hooks.md`
 
-**What to implement:** Add hooks for future bytecode optimizer integration
+**What to implement:** Add hooks for performance profiling and instrumentation
 
 ---
 
@@ -29,9 +29,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Bytecode & VM Phase 05:**
+**For Bytecode & VM Phase 12:**
 - `docs/implementation/11-bytecode.md` - Bytecode format specification
-- `phases/bytecode-vm/phase-05-optimizer-hooks.md` - Phase implementation guide
+- `docs/implementation/12-vm.md` - VM implementation guide
+- `phases/bytecode-vm/phase-12-profiling-hooks.md` - Phase implementation guide
 
 ---
 
@@ -103,7 +104,7 @@
 ### 7. REPL (1/1) ✅ COMPLETE
 - ✅ phases/interpreter/phase-02-repl.md
 
-### 8. Bytecode & VM (10/15)
+### 8. Bytecode & VM (11/15)
 - ✅ phase-03-bytecode-format.md
 - ✅ phase-01-bytecode-compiler.md
 - ✅ phase-02-vm.md
@@ -114,7 +115,8 @@
 - ✅ phase-10-bytecode-serialization.md
 - ✅ phase-11-bytecode-versioning.md
 - ✅ phase-04-disassembler.md
-- ⬜ phase-05-optimizer-hooks.md ⬅️ **YOU ARE HERE**
+- ✅ phase-05-optimizer-hooks.md
+- ⬜ phase-12-profiling-hooks.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-12-profiling-hooks.md
 - ⬜ phase-13-debugger-hooks.md
 - ⬜ phase-14-debug-info.md
@@ -153,7 +155,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 55/86 phases (64%)
+**Total Progress:** 56/86 phases (65%)
 
 ---
 

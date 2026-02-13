@@ -5,10 +5,12 @@
 
 mod disasm;
 mod opcode;
+mod optimizer;
 mod serialize;
 
 pub use disasm::disassemble;
 pub use opcode::Opcode;
+pub use optimizer::{ConstantFoldingPass, OptimizationPass, Optimizer};
 use serialize::{deserialize_span, deserialize_value, serialize_span, serialize_value};
 
 use crate::span::Span;
