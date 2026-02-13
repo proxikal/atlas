@@ -51,6 +51,16 @@ enum Commands {
         #[arg(long)]
         no_history: bool,
     },
+    /// Dump AST to JSON
+    Ast {
+        /// Path to the Atlas source file
+        file: String,
+    },
+    /// Dump typecheck information to JSON
+    Typecheck {
+        /// Path to the Atlas source file
+        file: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -77,6 +87,12 @@ fn main() -> Result<()> {
             // Command-line flag overrides environment variable
             let disable_history = no_history || config.no_history;
             commands::repl::run(tui, disable_history, &config)?;
+        }
+        Commands::Ast { file } => {
+            commands::ast::run(&file)?;
+        }
+        Commands::Typecheck { file } => {
+            commands::typecheck::run(&file)?;
         }
     }
 
