@@ -7,10 +7,10 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/bytecode-vm/phase-17-runtime-numeric-errors.md
-**Next Phase:** `phases/stdlib/phase-01-stdlib.md`
+**Last Completed:** phases/stdlib/phase-01-stdlib.md
+**Next Phase:** `phases/stdlib/phase-02-stdlib-tests.md`
 
-**What to implement:** Implement v0.1 standard library (print, len, str) with correct types and error handling
+**What to implement:** Comprehensive tests for stdlib functions in both interpreter and VM
 
 ---
 
@@ -29,10 +29,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Standard Library Phase 01:**
+**For Standard Library Phase 02:**
 - `docs/implementation/13-stdlib.md` - Standard library implementation guide
 - `docs/stdlib.md` - Standard library specification
-- `phases/stdlib/phase-01-stdlib.md` - Phase implementation guide
+- `phases/stdlib/phase-02-stdlib-tests.md` - Phase implementation guide
 
 ---
 
@@ -123,9 +123,9 @@
 - ✅ phase-16-bytecode-format-tests.md
 - ✅ phase-17-runtime-numeric-errors.md
 
-### 9. Standard Library (0/8)
-- ⬜ phase-01-stdlib.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-02-stdlib-tests.md
+### 9. Standard Library (1/8)
+- ✅ phase-01-stdlib.md
+- ⬜ phase-02-stdlib-tests.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-03-stdlib-doc-sync.md
 - ⬜ phase-04-stdlib-expansion-plan.md
 - ⬜ phase-05-io-security-model.md
@@ -162,7 +162,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 62/93 phases (67%)
+**Total Progress:** 63/93 phases (68%)
 
 ---
 

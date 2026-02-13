@@ -18,11 +18,51 @@ impl Compiler {
             Expr::Group(group) => self.compile_expr(&group.expr),
             Expr::ArrayLiteral(arr) => self.compile_array_literal(arr),
             Expr::Index(index) => self.compile_index(index),
-            Expr::Call(_) => {
-                // TODO: Function calls in next phase
-                Ok(())
-            }
+            Expr::Call(call) => self.compile_call(call),
         }
+    }
+
+    /// Compile a function call expression
+    fn compile_call(&mut self, call: &CallExpr) -> Result<(), Vec<Diagnostic>> {
+        // Extract function name from callee (must be an identifier for now)
+        let func_name = match call.callee.as_ref() {
+            Expr::Identifier(ident) => &ident.name,
+            _ => {
+                // Complex callees (like method calls) not supported yet
+                return Ok(());
+            }
+        };
+
+        // Compile all arguments first (they'll be on the stack)
+        for arg in &call.args {
+            self.compile_expr(arg)?;
+        }
+
+        // Check if it's a builtin function
+        if crate::stdlib::is_builtin(func_name) {
+            // Create a Function value for the builtin with bytecode_offset = 0
+            let func_ref = crate::value::FunctionRef {
+                name: func_name.to_string(),
+                arity: call.args.len(),
+                bytecode_offset: 0, // Builtins have offset 0
+            };
+            let func_value = crate::value::Value::Function(func_ref);
+            let const_idx = self.bytecode.add_constant(func_value);
+
+            // Load the function constant
+            self.bytecode.emit(crate::bytecode::Opcode::Constant, call.span);
+            self.bytecode.emit_u16(const_idx);
+
+            // Emit call instruction with argument count
+            self.bytecode.emit(crate::bytecode::Opcode::Call, call.span);
+            self.bytecode.emit_u8(call.args.len() as u8);
+        } else {
+            // User-defined function (TODO: implement later)
+            // For now, just emit a placeholder
+            return Ok(());
+        }
+
+        Ok(())
     }
 
     /// Compile a literal

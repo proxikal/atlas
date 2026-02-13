@@ -368,27 +368,47 @@ impl VM {
 
                     match function {
                         Value::Function(func) => {
-                            // Create a new call frame
-                            let frame = CallFrame {
-                                function_name: func.name.clone(),
-                                return_ip: self.ip,
-                                stack_base: self.stack.len() - arg_count,
-                                local_count: func.arity,
-                            };
+                            // Check if it's a builtin function (bytecode_offset == 0)
+                            if func.bytecode_offset == 0 || crate::stdlib::is_builtin(&func.name) {
+                                // Builtin function - call directly
+                                let mut args = Vec::with_capacity(arg_count);
+                                for _ in 0..arg_count {
+                                    args.push(self.pop());
+                                }
+                                args.reverse(); // Args were pushed in reverse order
 
-                            // Verify argument count matches
-                            if arg_count != func.arity {
-                                return Err(RuntimeError::TypeError(format!(
-                                    "Function {} expects {} arguments, got {}",
-                                    func.name, func.arity, arg_count
-                                )));
+                                // Pop the function value
+                                self.pop();
+
+                                // Call the builtin
+                                let result = crate::stdlib::call_builtin(&func.name, &args)?;
+
+                                // Push the result
+                                self.push(result);
+                            } else {
+                                // User-defined function
+                                // Create a new call frame
+                                let frame = CallFrame {
+                                    function_name: func.name.clone(),
+                                    return_ip: self.ip,
+                                    stack_base: self.stack.len() - arg_count,
+                                    local_count: func.arity,
+                                };
+
+                                // Verify argument count matches
+                                if arg_count != func.arity {
+                                    return Err(RuntimeError::TypeError(format!(
+                                        "Function {} expects {} arguments, got {}",
+                                        func.name, func.arity, arg_count
+                                    )));
+                                }
+
+                                // Push the frame
+                                self.frames.push(frame);
+
+                                // Jump to function bytecode
+                                self.ip = func.bytecode_offset;
                             }
-
-                            // Push the frame
-                            self.frames.push(frame);
-
-                            // Jump to function bytecode
-                            self.ip = func.bytecode_offset;
                         }
                         _ => {
                             return Err(RuntimeError::TypeError(format!(
@@ -1674,5 +1694,179 @@ mod tests {
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0].code, "AT0007");
         assert!(diags[0].message.contains("Invalid numeric result"));
+    }
+
+    // ===== Stdlib Tests (Phase Stdlib-01) =====
+
+    #[test]
+    fn test_vm_stdlib_print_number() {
+        // Note: We can't easily test stdout, but we can verify no error
+        let result = execute_source("print(42);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Null));
+    }
+
+    #[test]
+    fn test_vm_stdlib_print_string() {
+        let result = execute_source("print(\"hello\");");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Null));
+    }
+
+    #[test]
+    fn test_vm_stdlib_print_bool() {
+        let result = execute_source("print(true);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Null));
+    }
+
+    #[test]
+    fn test_vm_stdlib_print_null() {
+        let result = execute_source("print(null);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Null));
+    }
+
+    #[test]
+    fn test_vm_stdlib_len_string() {
+        let result = execute_source("len(\"hello\");");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(5.0)));
+    }
+
+    #[test]
+    fn test_vm_stdlib_len_unicode_string() {
+        // Test Unicode scalar count
+        let result = execute_source("len(\"🎉\");");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(1.0))); // 1 char, not 4 bytes
+    }
+
+    #[test]
+    fn test_vm_stdlib_len_array() {
+        let result = execute_source("len([1, 2, 3]);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(3.0)));
+    }
+
+    #[test]
+    fn test_vm_stdlib_len_empty_string() {
+        let result = execute_source("len(\"\");");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(0.0)));
+    }
+
+    #[test]
+    fn test_vm_stdlib_len_empty_array() {
+        let result = execute_source("len([]);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(0.0)));
+    }
+
+    #[test]
+    fn test_vm_stdlib_str_number() {
+        let result = execute_source("str(42);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::string("42")));
+    }
+
+    #[test]
+    fn test_vm_stdlib_str_bool_true() {
+        let result = execute_source("str(true);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::string("true")));
+    }
+
+    #[test]
+    fn test_vm_stdlib_str_bool_false() {
+        let result = execute_source("str(false);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::string("false")));
+    }
+
+    #[test]
+    fn test_vm_stdlib_str_null() {
+        let result = execute_source("str(null);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::string("null")));
+    }
+
+    #[test]
+    fn test_vm_stdlib_len_in_expression() {
+        let result = execute_source("let x = len(\"test\") + 1;");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(5.0))); // 4 + 1
+    }
+
+    #[test]
+    fn test_vm_stdlib_str_in_concat() {
+        let result = execute_source("let x = \"Number: \" + str(42);");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::string("Number: 42")));
+    }
+
+    #[test]
+    fn test_vm_stdlib_nested_calls() {
+        let result = execute_source("len(str(12345));");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(5.0))); // "12345" has 5 chars
+    }
+
+    #[test]
+    fn test_vm_stdlib_in_variable() {
+        let result = execute_source("let x = len(\"hello\"); x;");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(5.0)));
+    }
+
+    #[test]
+    fn test_vm_stdlib_in_array() {
+        let result = execute_source("let arr = [len(\"a\"), len(\"ab\"), len(\"abc\")]; arr[1];");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Number(2.0)));
+    }
+
+    #[test]
+    fn test_vm_stdlib_matches_interpreter_print() {
+        // Verify VM and interpreter produce same behavior
+        let source = "print(\"test\");";
+
+        let vm_result = execute_source(source);
+        assert!(vm_result.is_ok());
+
+        use crate::runtime::Atlas;
+        let runtime = Atlas::new();
+        let interp_result = runtime.eval(source);
+        assert!(interp_result.is_ok());
+    }
+
+    #[test]
+    fn test_vm_stdlib_matches_interpreter_len() {
+        let source = "len(\"hello\");";
+
+        let vm_result = execute_source(source);
+        assert!(vm_result.is_ok());
+        assert_eq!(vm_result.unwrap(), Some(Value::Number(5.0)));
+
+        use crate::runtime::Atlas;
+        let runtime = Atlas::new();
+        let interp_result = runtime.eval(source);
+        assert!(interp_result.is_ok());
+        assert_eq!(interp_result.unwrap(), Value::Number(5.0));
+    }
+
+    #[test]
+    fn test_vm_stdlib_matches_interpreter_str() {
+        let source = "str(42);";
+
+        let vm_result = execute_source(source);
+        assert!(vm_result.is_ok());
+        assert_eq!(vm_result.unwrap(), Some(Value::string("42")));
+
+        use crate::runtime::Atlas;
+        let runtime = Atlas::new();
+        let interp_result = runtime.eval(source);
+        assert!(interp_result.is_ok());
+        assert_eq!(interp_result.unwrap(), Value::string("42"));
     }
 }
