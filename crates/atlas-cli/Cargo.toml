@@ -13,6 +13,7 @@ clap = { version = "4.5", features = ["derive"] }
 rustyline = "14.0"  # Line editor for REPL
 ratatui = "0.28"  # TUI framework for rich REPL mode
 crossterm = "0.28"  # Terminal backend for ratatui
+dirs = "5.0"  # Platform-specific directories (for history file)
 anyhow = "1.0"
 
 [dev-dependencies]

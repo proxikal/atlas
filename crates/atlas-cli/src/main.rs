@@ -46,6 +46,9 @@ enum Commands {
         /// Use TUI mode (ratatui) instead of line editor
         #[arg(long)]
         tui: bool,
+        /// Disable history persistence (for privacy)
+        #[arg(long)]
+        no_history: bool,
     },
 }
 
@@ -62,8 +65,8 @@ fn main() -> Result<()> {
         Commands::Build { file, disasm, json } => {
             commands::build::run(&file, disasm, json)?;
         }
-        Commands::Repl { tui } => {
-            commands::repl::run(tui)?;
+        Commands::Repl { tui, no_history } => {
+            commands::repl::run(tui, no_history)?;
         }
     }
 
@@ -87,7 +90,17 @@ mod tests {
         // Verify TUI flag is parsed correctly
         let cli = Cli::parse_from(["atlas", "repl", "--tui"]);
         match cli.command {
-            Commands::Repl { tui } => assert!(tui),
+            Commands::Repl { tui, .. } => assert!(tui),
+            _ => panic!("Expected Repl command"),
+        }
+    }
+
+    #[test]
+    fn test_cli_repl_no_history_flag() {
+        // Verify no-history flag is parsed correctly
+        let cli = Cli::parse_from(["atlas", "repl", "--no-history"]);
+        match cli.command {
+            Commands::Repl { no_history, .. } => assert!(no_history),
             _ => panic!("Expected Repl command"),
         }
     }

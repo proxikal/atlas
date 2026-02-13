@@ -7,10 +7,10 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/cli/phase-02-cli-diagnostics.md
-**Next Phase:** `phases/cli/phase-04-build-output.md`
+**Last Completed:** phases/cli/phase-05-repl-history.md
+**Next Phase:** `phases/cli/phase-06-config-behavior.md`
 
-**What to implement:** Build output improvements (phase 03 already complete)
+**What to implement:** Configuration file behavior
 
 ---
 
@@ -29,10 +29,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For CLI Phase 04:**
-- `docs/diagnostics.md` - Diagnostic specification
+**For CLI Phase 05:**
+- `docs/repl.md` - REPL specification
 - `Atlas-SPEC.md` - Language specification
-- `phases/cli/phase-04-build-output.md` - Phase implementation guide
+- `phases/cli/phase-05-repl-history.md` - Phase implementation guide
 
 ---
 
@@ -133,11 +133,13 @@
 - ✅ phase-07-prelude-binding.md
 - ✅ phase-08-prelude-tests.md
 
-### 10. CLI (3/10)
+### 10. CLI (5/10)
 - ✅ phase-01-cli.md
 - ✅ phase-02-cli-diagnostics.md
 - ✅ phase-03-repl-modes.md
-- ⬜ phase-04-build-output.md ⬅️ **YOU ARE HERE**
+- ✅ phase-04-build-output.md (completed in phase 01)
+- ✅ phase-05-repl-history.md
+- ⬜ phase-06-config-behavior.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-04-build-output.md
 - ⬜ phase-05-repl-history.md
 - ⬜ phase-06-config-behavior.md
@@ -163,7 +165,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 73/93 phases (78%)
+**Total Progress:** 75/93 phases (80%)
 
 ---
 
