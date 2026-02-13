@@ -79,7 +79,7 @@ let y = 10;
 - Continue parsing line 2
 - Result: One error, both declarations attempted
 
-**Code Location:** `parser.rs:178` (`parse_var_decl`)
+**Code Location:** `parser/mod.rs` (`parse_var_decl`)
 
 ### 2. Missing Closing Brace
 
@@ -98,7 +98,7 @@ fn other() {
 - Continue parsing `other()` function
 - Result: One error for missing brace
 
-**Code Location:** `parser.rs:409` (`parse_block`)
+**Code Location:** `parser/mod.rs` (`parse_block`)
 
 ### 3. Missing Closing Parenthesis
 
@@ -115,7 +115,7 @@ if (x > 10 {
 - Synchronize at block or next statement
 - Result: Error reported, subsequent code may be skipped
 
-**Code Location:** `parser.rs:232` (`parse_if_stmt`)
+**Code Location:** `parser/stmt.rs` (`parse_if_stmt`)
 
 ### 4. Invalid Expression
 
@@ -132,7 +132,7 @@ let y = 42;
 - Continue parsing line 2
 - Result: One error, second declaration parsed
 
-**Code Location:** `parser.rs:447` (`parse_prefix`)
+**Code Location:** `parser/expr.rs` (`parse_prefix`)
 
 ### 5. Mismatched Braces in Nested Blocks
 
@@ -152,7 +152,7 @@ fn test() {
 - Outer function may report secondary error
 - Result: Reports primary error, attempts to continue
 
-**Code Location:** `parser.rs:402-410` (`parse_block`)
+**Code Location:** `parser/mod.rs` (`parse_block`)
 
 ## Design Decisions
 
@@ -184,7 +184,7 @@ All error recovery scenarios must be tested to ensure:
 3. No crashes or infinite loops in recovery
 4. Diagnostic quality remains high (no excessive cascading errors)
 
-See `parser.rs` test suite for comprehensive recovery tests.
+See `parser/mod.rs` test suite for comprehensive recovery tests.
 
 ## Future Enhancements
 

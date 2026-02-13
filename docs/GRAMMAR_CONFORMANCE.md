@@ -4,7 +4,7 @@
 **Status:** Complete
 **Date:** 2026-02-12
 
-This document maps Atlas EBNF grammar rules from `Atlas-SPEC.md` to their corresponding parser implementation functions in `crates/atlas-runtime/src/parser.rs`.
+This document maps Atlas EBNF grammar rules from `Atlas-SPEC.md` to their corresponding parser implementation functions in the `crates/atlas-runtime/src/parser/` module.
 
 ---
 

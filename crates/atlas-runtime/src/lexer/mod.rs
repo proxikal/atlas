@@ -6,26 +6,29 @@ use crate::diagnostic::Diagnostic;
 use crate::span::Span;
 use crate::token::{Token, TokenKind};
 
+
+mod literals;
+
 /// Lexer state for tokenizing source code
 pub struct Lexer {
     /// Original source code
-    source: String,
+    pub(super) source: String,
     /// Characters of source code
-    chars: Vec<char>,
+    pub(super) chars: Vec<char>,
     /// Current position in chars
-    current: usize,
+    pub(super) current: usize,
     /// Current line number (1-indexed)
-    line: u32,
+    pub(super) line: u32,
     /// Current column number (1-indexed)
-    column: u32,
+    pub(super) column: u32,
     /// Start position of current token
-    start_pos: usize,
+    pub(super) start_pos: usize,
     /// Start line of current token
-    start_line: u32,
+    pub(super) start_line: u32,
     /// Start column of current token
-    start_column: u32,
+    pub(super) start_column: u32,
     /// Collected diagnostics
-    diagnostics: Vec<Diagnostic>,
+    pub(super) diagnostics: Vec<Diagnostic>,
 }
 
 impl Lexer {
@@ -257,135 +260,11 @@ impl Lexer {
     }
 
     /// Scan a string literal
-    fn string(&mut self) -> Token {
-        let mut value = String::new();
-        let mut has_error = false;
-        let mut error_token = None;
-
-        while !self.is_at_end() && self.peek() != '"' {
-            if self.peek() == '\n' {
-                self.line += 1;
-                self.column = 1;
-            }
-
-            if self.peek() == '\\' {
-                self.advance(); // consume backslash
-                if self.is_at_end() {
-                    return self.error_unterminated_string();
-                }
-
-                let escape_char = self.peek();
-                let escaped = match escape_char {
-                    'n' => '\n',
-                    'r' => '\r',
-                    't' => '\t',
-                    '\\' => '\\',
-                    '"' => '"',
-                    _ => {
-                        // Record error but continue parsing to find end of string
-                        if !has_error {
-                            error_token = Some(self.error_invalid_escape(escape_char));
-                            has_error = true;
-                        }
-                        self.advance(); // consume the invalid character
-                        continue; // Skip adding to value
-                    }
-                };
-
-                self.advance(); // consume escaped character
-                value.push(escaped);
-            } else {
-                value.push(self.advance());
-            }
-        }
-
-        if self.is_at_end() {
-            return self.error_unterminated_string();
-        }
-
-        self.advance(); // Closing "
-
-        // If we had an error, return that instead of a valid token
-        if let Some(err) = error_token {
-            err
-        } else {
-            self.make_token(TokenKind::String, &value)
-        }
-    }
-
-    /// Scan a number literal (integer, float, or scientific notation)
-    fn number(&mut self) -> Token {
-        let start = self.current - 1; // -1 because we already advanced past first digit
-
-        // Consume all digits
-        while !self.is_at_end() && self.peek().is_ascii_digit() {
-            self.advance();
-        }
-
-        // Check for decimal point
-        if !self.is_at_end() && self.peek() == '.' {
-            // Look ahead to ensure there's a digit after the dot
-            if let Some(c) = self.peek_next() {
-                if c.is_ascii_digit() {
-                    self.advance(); // consume .
-
-                    // Consume fractional digits
-                    while !self.is_at_end() && self.peek().is_ascii_digit() {
-                        self.advance();
-                    }
-                }
-            }
-        }
-
-        // Check for scientific notation (e or E)
-        if !self.is_at_end() && (self.peek() == 'e' || self.peek() == 'E') {
-            self.advance(); // consume e/E
-
-            // Optional + or - sign
-            if !self.is_at_end() && (self.peek() == '+' || self.peek() == '-') {
-                self.advance();
-            }
-
-            // Must have at least one digit in exponent
-            if self.is_at_end() || !self.peek().is_ascii_digit() {
-                return self.error_token("Invalid number: exponent requires digits");
-            }
-
-            // Consume exponent digits
-            while !self.is_at_end() && self.peek().is_ascii_digit() {
-                self.advance();
-            }
-        }
-
-        let lexeme: String = self.chars[start..self.current].iter().collect();
-        self.make_token(TokenKind::Number, &lexeme)
-    }
-
-    /// Scan an identifier or keyword
-    fn identifier(&mut self) -> Token {
-        let start = self.current - 1; // -1 because we already advanced past first char
-
-        while !self.is_at_end() {
-            let c = self.peek();
-            if c.is_alphanumeric() || c == '_' {
-                self.advance();
-            } else {
-                break;
-            }
-        }
-
-        let lexeme: String = self.chars[start..self.current].iter().collect();
-
-        // Check if it's a keyword
-        let kind = TokenKind::is_keyword(&lexeme).unwrap_or(TokenKind::Identifier);
-
-        self.make_token(kind, &lexeme)
-    }
 
     // === Character navigation ===
 
     /// Advance to next character and return it
-    fn advance(&mut self) -> char {
+    pub(super) fn advance(&mut self) -> char {
         let c = self.chars[self.current];
         self.current += 1;
         self.column += 1;
@@ -393,7 +272,7 @@ impl Lexer {
     }
 
     /// Peek at current character without advancing
-    fn peek(&self) -> char {
+    pub(super) fn peek(&self) -> char {
         if self.is_at_end() {
             '\0'
         } else {
@@ -402,7 +281,7 @@ impl Lexer {
     }
 
     /// Peek at next character (current + 1)
-    fn peek_next(&self) -> Option<char> {
+    pub(super) fn peek_next(&self) -> Option<char> {
         if self.current + 1 >= self.chars.len() {
             None
         } else {
@@ -421,14 +300,14 @@ impl Lexer {
     }
 
     /// Check if we've reached the end of source
-    fn is_at_end(&self) -> bool {
+    pub(super) fn is_at_end(&self) -> bool {
         self.current >= self.chars.len()
     }
 
     // === Token creation ===
 
     /// Create a token with the given kind and lexeme
-    fn make_token(&self, kind: TokenKind, lexeme: &str) -> Token {
+    pub(super) fn make_token(&self, kind: TokenKind, lexeme: &str) -> Token {
         let span = Span {
             start: self.start_pos,
             end: self.current,
@@ -442,7 +321,7 @@ impl Lexer {
     }
 
     /// Create an error token and record a diagnostic with a specific code
-    fn error_token_with_code(&mut self, code: &str, message: &str) -> Token {
+    pub(super) fn error_token_with_code(&mut self, code: &str, message: &str) -> Token {
         let span = Span {
             start: self.start_pos,
             end: self.current.max(self.start_pos + 1),
@@ -467,17 +346,17 @@ impl Lexer {
     }
 
     /// Create an error token for invalid/unexpected characters (AT1001)
-    fn error_token(&mut self, message: &str) -> Token {
+    pub(super) fn error_token(&mut self, message: &str) -> Token {
         self.error_token_with_code("AT1001", message)
     }
 
     /// Create an error token for unterminated strings (AT1002)
-    fn error_unterminated_string(&mut self) -> Token {
+    pub(super) fn error_unterminated_string(&mut self) -> Token {
         self.error_token_with_code("AT1002", "Unterminated string literal")
     }
 
     /// Create an error token for invalid escape sequences (AT1003)
-    fn error_invalid_escape(&mut self, escape_char: char) -> Token {
+    pub(super) fn error_invalid_escape(&mut self, escape_char: char) -> Token {
         self.error_token_with_code(
             "AT1003",
             &format!("Invalid escape sequence '\\{}'", escape_char),

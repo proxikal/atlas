@@ -7,7 +7,7 @@ Patterns for unit, golden, and integration tests.
 Place unit tests in the same file as the implementation:
 
 ```rust
-// lexer.rs
+// lexer/ module
 #[cfg(test)]
 mod tests {
     use super::*;

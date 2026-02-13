@@ -6,37 +6,39 @@
 //! - Locals are tracked by index (stack slots)
 //! - Globals are tracked by name (string constants)
 
+mod expr;
+mod stmt;
+
 use crate::ast::*;
 use crate::bytecode::{Bytecode, Opcode};
 use crate::diagnostic::Diagnostic;
 use crate::span::Span;
-use crate::value::Value;
 
 /// Local variable information
 #[derive(Debug, Clone)]
-struct Local {
-    name: String,
-    depth: usize,
-    mutable: bool,
+pub(super) struct Local {
+    pub(super) name: String,
+    pub(super) depth: usize,
+    pub(super) mutable: bool,
 }
 
 /// Loop context for break/continue
 #[derive(Debug, Clone)]
-struct LoopContext {
-    start_offset: usize,
-    break_jumps: Vec<usize>,
+pub(super) struct LoopContext {
+    pub(super) start_offset: usize,
+    pub(super) break_jumps: Vec<usize>,
 }
 
 /// Compiler state
 pub struct Compiler {
     /// Output bytecode
-    bytecode: Bytecode,
+    pub(super) bytecode: Bytecode,
     /// Local variables (stack slots)
-    locals: Vec<Local>,
+    pub(super) locals: Vec<Local>,
     /// Current scope depth
-    scope_depth: usize,
+    pub(super) scope_depth: usize,
     /// Loop context stack (for break/continue)
-    loops: Vec<LoopContext>,
+    pub(super) loops: Vec<LoopContext>,
 }
 
 impl Compiler {
@@ -75,401 +77,8 @@ impl Compiler {
         }
     }
 
-    /// Compile a statement
-    fn compile_stmt(&mut self, stmt: &Stmt) -> Result<(), Vec<Diagnostic>> {
-        match stmt {
-            Stmt::VarDecl(decl) => self.compile_var_decl(decl),
-            Stmt::Assign(assign) => {
-                // Compile assignment and pop the result (statement context)
-                self.compile_assign(assign)?;
-                self.bytecode.emit(Opcode::Pop, assign.span);
-                Ok(())
-            }
-            Stmt::Expr(expr_stmt) => {
-                // Compile expression and pop the result (statement context)
-                self.compile_expr(&expr_stmt.expr)?;
-                self.bytecode.emit(Opcode::Pop, expr_stmt.span);
-                Ok(())
-            }
-            Stmt::Return(ret) => {
-                if let Some(expr) = &ret.value {
-                    self.compile_expr(expr)?;
-                } else {
-                    self.bytecode.emit(Opcode::Null, ret.span);
-                }
-                self.bytecode.emit(Opcode::Return, ret.span);
-                Ok(())
-            }
-            Stmt::If(if_stmt) => self.compile_if(if_stmt),
-            Stmt::While(while_stmt) => self.compile_while(while_stmt),
-            Stmt::For(for_stmt) => self.compile_for(for_stmt),
-            Stmt::Break(span) => self.compile_break(*span),
-            Stmt::Continue(span) => self.compile_continue(*span),
-            Stmt::CompoundAssign(_) | Stmt::Increment(_) | Stmt::Decrement(_) => {
-                // TODO: Compound assignment and increment/decrement
-                Ok(())
-            }
-        }
-    }
-
-    /// Compile a variable declaration
-    fn compile_var_decl(&mut self, decl: &VarDecl) -> Result<(), Vec<Diagnostic>> {
-        // Compile the initializer
-        self.compile_expr(&decl.init)?;
-
-        if self.scope_depth == 0 {
-            // Global variable - use SetGlobal then Pop
-            // SetGlobal uses peek() to support assignment expressions like x = y = 5,
-            // but for variable declarations we need to pop the value to avoid polluting
-            // the stack (which would corrupt local variable indices)
-            let name_idx = self.bytecode.add_constant(Value::string(&decl.name.name));
-            self.bytecode.emit(Opcode::SetGlobal, decl.span);
-            self.bytecode.emit_u16(name_idx);
-            self.bytecode.emit(Opcode::Pop, decl.span);
-        } else {
-            // Local variable - add to locals list
-            // Value stays on stack (locals are stack-allocated)
-            self.locals.push(Local {
-                name: decl.name.name.clone(),
-                depth: self.scope_depth,
-                mutable: decl.mutable,
-            });
-        }
-
-        Ok(())
-    }
-
-    /// Compile an assignment
-    fn compile_assign(&mut self, assign: &Assign) -> Result<(), Vec<Diagnostic>> {
-        // Compile the value
-        self.compile_expr(&assign.value)?;
-
-        match &assign.target {
-            AssignTarget::Name(ident) => {
-                // Try to find local first
-                if let Some(local_idx) = self.resolve_local(&ident.name) {
-                    self.bytecode.emit(Opcode::SetLocal, assign.span);
-                    self.bytecode.emit_u16(local_idx as u16);
-                } else {
-                    // Global variable
-                    let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
-                    self.bytecode.emit(Opcode::SetGlobal, assign.span);
-                    self.bytecode.emit_u16(name_idx);
-                }
-            }
-            AssignTarget::Index { .. } => {
-                // TODO: Array index assignment
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Compile an expression
-    fn compile_expr(&mut self, expr: &Expr) -> Result<(), Vec<Diagnostic>> {
-        match expr {
-            Expr::Literal(lit, span) => self.compile_literal(lit, *span),
-            Expr::Identifier(ident) => self.compile_identifier(ident),
-            Expr::Binary(bin) => self.compile_binary(bin),
-            Expr::Unary(un) => self.compile_unary(un),
-            Expr::Group(group) => self.compile_expr(&group.expr),
-            Expr::ArrayLiteral(arr) => self.compile_array_literal(arr),
-            Expr::Index(index) => self.compile_index(index),
-            Expr::Call(_) => {
-                // TODO: Function calls in next phase
-                Ok(())
-            }
-        }
-    }
-
-    /// Compile a literal
-    fn compile_literal(&mut self, lit: &Literal, span: Span) -> Result<(), Vec<Diagnostic>> {
-        match lit {
-            Literal::Number(n) => {
-                let idx = self.bytecode.add_constant(Value::Number(*n));
-                self.bytecode.emit(Opcode::Constant, span);
-                self.bytecode.emit_u16(idx);
-            }
-            Literal::String(s) => {
-                let idx = self.bytecode.add_constant(Value::string(s));
-                self.bytecode.emit(Opcode::Constant, span);
-                self.bytecode.emit_u16(idx);
-            }
-            Literal::Bool(b) => {
-                let opcode = if *b { Opcode::True } else { Opcode::False };
-                self.bytecode.emit(opcode, span);
-            }
-            Literal::Null => {
-                self.bytecode.emit(Opcode::Null, span);
-            }
-        }
-        Ok(())
-    }
-
-    /// Compile an identifier (variable access)
-    fn compile_identifier(&mut self, ident: &Identifier) -> Result<(), Vec<Diagnostic>> {
-        // Try to resolve as local first
-        if let Some(local_idx) = self.resolve_local(&ident.name) {
-            self.bytecode.emit(Opcode::GetLocal, ident.span);
-            self.bytecode.emit_u16(local_idx as u16);
-        } else {
-            // Global variable
-            let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
-            self.bytecode.emit(Opcode::GetGlobal, ident.span);
-            self.bytecode.emit_u16(name_idx);
-        }
-        Ok(())
-    }
-
-    /// Compile a binary expression
-    fn compile_binary(&mut self, bin: &BinaryExpr) -> Result<(), Vec<Diagnostic>> {
-        // Compile left and right operands
-        self.compile_expr(&bin.left)?;
-        self.compile_expr(&bin.right)?;
-
-        // Emit the appropriate opcode
-        let opcode = match bin.op {
-            BinaryOp::Add => Opcode::Add,
-            BinaryOp::Sub => Opcode::Sub,
-            BinaryOp::Mul => Opcode::Mul,
-            BinaryOp::Div => Opcode::Div,
-            BinaryOp::Mod => Opcode::Mod,
-            BinaryOp::Eq => Opcode::Equal,
-            BinaryOp::Ne => Opcode::NotEqual,
-            BinaryOp::Lt => Opcode::Less,
-            BinaryOp::Le => Opcode::LessEqual,
-            BinaryOp::Gt => Opcode::Greater,
-            BinaryOp::Ge => Opcode::GreaterEqual,
-            BinaryOp::And | BinaryOp::Or => {
-                // TODO: Short-circuit evaluation
-                return Ok(());
-            }
-        };
-
-        self.bytecode.emit(opcode, bin.span);
-        Ok(())
-    }
-
-    /// Compile a unary expression
-    fn compile_unary(&mut self, un: &UnaryExpr) -> Result<(), Vec<Diagnostic>> {
-        // Compile the operand
-        self.compile_expr(&un.expr)?;
-
-        // Emit the opcode
-        let opcode = match un.op {
-            UnaryOp::Negate => Opcode::Negate,
-            UnaryOp::Not => Opcode::Not,
-        };
-
-        self.bytecode.emit(opcode, un.span);
-        Ok(())
-    }
-
-    /// Compile an if statement
-    fn compile_if(&mut self, if_stmt: &IfStmt) -> Result<(), Vec<Diagnostic>> {
-        // Compile condition
-        self.compile_expr(&if_stmt.cond)?;
-
-        // Jump if false - we'll patch this later
-        self.bytecode.emit(Opcode::JumpIfFalse, if_stmt.span);
-        let then_jump = self.bytecode.current_offset();
-        self.bytecode.emit_u16(0xFFFF); // Placeholder
-
-        // Compile then branch
-        self.compile_block(&if_stmt.then_block)?;
-
-        if let Some(else_block) = &if_stmt.else_block {
-            // Jump over else branch
-            self.bytecode.emit(Opcode::Jump, if_stmt.span);
-            let else_jump = self.bytecode.current_offset();
-            self.bytecode.emit_u16(0xFFFF); // Placeholder
-
-            // Patch the then jump to go here
-            self.bytecode.patch_jump(then_jump);
-
-            // Compile else branch
-            self.compile_block(else_block)?;
-
-            // Patch the else jump
-            self.bytecode.patch_jump(else_jump);
-        } else {
-            // No else branch, just patch the jump
-            self.bytecode.patch_jump(then_jump);
-        }
-
-        Ok(())
-    }
-
-    /// Compile a while loop
-    fn compile_while(&mut self, while_stmt: &WhileStmt) -> Result<(), Vec<Diagnostic>> {
-        let loop_start = self.bytecode.current_offset();
-
-        // Start a new loop context
-        self.loops.push(LoopContext {
-            start_offset: loop_start,
-            break_jumps: Vec::new(),
-        });
-
-        // Compile condition
-        self.compile_expr(&while_stmt.cond)?;
-
-        // Jump if false (exit loop)
-        self.bytecode.emit(Opcode::JumpIfFalse, while_stmt.span);
-        let exit_jump = self.bytecode.current_offset();
-        self.bytecode.emit_u16(0xFFFF); // Placeholder
-
-        // Compile body
-        self.compile_block(&while_stmt.body)?;
-
-        // Loop back to start
-        // Negative offset to jump backward
-        let offset = loop_start as isize - (self.bytecode.current_offset() as isize + 3);
-        self.bytecode.emit(Opcode::Loop, while_stmt.span);
-        self.bytecode.emit_i16(offset as i16);
-
-        // Patch exit jump
-        self.bytecode.patch_jump(exit_jump);
-
-        // Patch all break jumps
-        let loop_ctx = self.loops.pop().unwrap();
-        for break_jump in loop_ctx.break_jumps {
-            self.bytecode.patch_jump(break_jump);
-        }
-
-        Ok(())
-    }
-
-    /// Compile a for loop (desugared to while)
-    fn compile_for(&mut self, for_stmt: &ForStmt) -> Result<(), Vec<Diagnostic>> {
-        // Enter a new scope for the loop variable
-        self.scope_depth += 1;
-
-        // Compile initializer
-        self.compile_stmt(&for_stmt.init)?;
-
-        let loop_start = self.bytecode.current_offset();
-
-        // Start loop context
-        self.loops.push(LoopContext {
-            start_offset: loop_start,
-            break_jumps: Vec::new(),
-        });
-
-        // Compile condition
-        self.compile_expr(&for_stmt.cond)?;
-
-        // Jump if false (exit loop)
-        self.bytecode.emit(Opcode::JumpIfFalse, for_stmt.span);
-        let exit_jump = self.bytecode.current_offset();
-        self.bytecode.emit_u16(0xFFFF); // Placeholder
-
-        // Compile body
-        self.compile_block(&for_stmt.body)?;
-
-        // Compile step expression
-        self.compile_stmt(&for_stmt.step)?;
-
-        // Loop back to condition
-        // Negative offset to jump backward
-        let offset = loop_start as isize - (self.bytecode.current_offset() as isize + 3);
-        self.bytecode.emit(Opcode::Loop, for_stmt.span);
-        self.bytecode.emit_i16(offset as i16);
-
-        // Patch exit jump
-        self.bytecode.patch_jump(exit_jump);
-
-        // Patch all break jumps
-        let loop_ctx = self.loops.pop().unwrap();
-        for break_jump in loop_ctx.break_jumps {
-            self.bytecode.patch_jump(break_jump);
-        }
-
-        // Exit scope and pop loop variable
-        self.scope_depth -= 1;
-        while !self.locals.is_empty() && self.locals.last().unwrap().depth > self.scope_depth {
-            self.locals.pop();
-            self.bytecode.emit(Opcode::Pop, for_stmt.span);
-        }
-
-        Ok(())
-    }
-
-    /// Compile a break statement
-    fn compile_break(&mut self, span: Span) -> Result<(), Vec<Diagnostic>> {
-        if let Some(loop_ctx) = self.loops.last_mut() {
-            // Emit jump and record it for patching later
-            self.bytecode.emit(Opcode::Jump, span);
-            let jump_offset = self.bytecode.current_offset();
-            self.bytecode.emit_u16(0xFFFF); // Placeholder
-            loop_ctx.break_jumps.push(jump_offset);
-            Ok(())
-        } else {
-            // Error: break outside loop (would be caught by typechecker)
-            Ok(())
-        }
-    }
-
-    /// Compile a continue statement
-    fn compile_continue(&mut self, span: Span) -> Result<(), Vec<Diagnostic>> {
-        if let Some(loop_ctx) = self.loops.last() {
-            // Jump back to loop start
-            // Negative offset to jump backward
-            let offset = loop_ctx.start_offset as isize - (self.bytecode.current_offset() as isize + 3);
-            self.bytecode.emit(Opcode::Loop, span);
-            self.bytecode.emit_i16(offset as i16);
-            Ok(())
-        } else {
-            // Error: continue outside loop (would be caught by typechecker)
-            Ok(())
-        }
-    }
-
-    /// Compile a block of statements
-    fn compile_block(&mut self, block: &Block) -> Result<(), Vec<Diagnostic>> {
-        self.scope_depth += 1;
-
-        for stmt in &block.statements {
-            self.compile_stmt(stmt)?;
-        }
-
-        // Pop all locals from this scope
-        self.scope_depth -= 1;
-        while !self.locals.is_empty() && self.locals.last().unwrap().depth > self.scope_depth {
-            self.locals.pop();
-            self.bytecode.emit(Opcode::Pop, block.span);
-        }
-
-        Ok(())
-    }
-
-    /// Compile an array literal
-    fn compile_array_literal(&mut self, arr: &ArrayLiteral) -> Result<(), Vec<Diagnostic>> {
-        // Compile all elements (they'll be on the stack)
-        for elem in &arr.elements {
-            self.compile_expr(elem)?;
-        }
-
-        // Emit Array opcode with element count
-        self.bytecode.emit(Opcode::Array, arr.span);
-        self.bytecode.emit_u16(arr.elements.len() as u16);
-
-        Ok(())
-    }
-
-    /// Compile an index expression
-    fn compile_index(&mut self, index: &IndexExpr) -> Result<(), Vec<Diagnostic>> {
-        // Compile target and index
-        self.compile_expr(&index.target)?;
-        self.compile_expr(&index.index)?;
-
-        // Emit GetIndex opcode
-        self.bytecode.emit(Opcode::GetIndex, index.span);
-
-        Ok(())
-    }
-
     /// Resolve a local variable by name, returning its index if found
-    fn resolve_local(&self, name: &str) -> Option<usize> {
+    pub(super) fn resolve_local(&self, name: &str) -> Option<usize> {
         // Search from most recent to oldest (for shadowing)
         for (idx, local) in self.locals.iter().enumerate().rev() {
             if local.name == name {
@@ -491,6 +100,7 @@ mod tests {
     use super::*;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
+    use crate::value::Value;
 
     fn compile_source(source: &str) -> Bytecode {
         let mut lexer = Lexer::new(source.to_string());

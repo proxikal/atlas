@@ -9,7 +9,7 @@
 ## Parser Structure
 
 ```rust
-// parser.rs
+// parser/ module (parser/mod.rs + parser/stmt.rs + parser/expr.rs)
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,

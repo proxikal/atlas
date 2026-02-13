@@ -13,17 +13,35 @@ atlas/
 │   │       ├── span.rs         # Span and source location tracking
 │   │       ├── diagnostic.rs   # Diagnostic system
 │   │       ├── token.rs        # Token types
-│   │       ├── lexer.rs        # Lexer implementation
+│   │       ├── lexer/          # Lexer implementation (modular)
+│   │       │   ├── mod.rs      # Core tokenization
+│   │       │   └── literals.rs # Literal parsing
 │   │       ├── ast.rs          # AST types
-│   │       ├── parser.rs       # Parser implementation
+│   │       ├── parser/         # Parser implementation (modular)
+│   │       │   ├── mod.rs      # Parser core
+│   │       │   ├── stmt.rs     # Statement parsing
+│   │       │   └── expr.rs     # Expression parsing
 │   │       ├── symbol.rs       # Symbol table and binding
 │   │       ├── types.rs        # Type system representation
-│   │       ├── typechecker.rs  # Type checking
+│   │       ├── typechecker/    # Type checking (modular)
+│   │       │   ├── mod.rs      # Type checker core
+│   │       │   └── expr.rs     # Expression type checking
 │   │       ├── value.rs        # Runtime value representation
-│   │       ├── interpreter.rs  # Interpreter
-│   │       ├── bytecode.rs     # Bytecode instruction set
-│   │       ├── compiler.rs     # AST to bytecode compiler
-│   │       ├── vm.rs           # Virtual machine
+│   │       ├── interpreter/    # Interpreter (modular)
+│   │       │   ├── mod.rs      # Interpreter core
+│   │       │   ├── stmt.rs     # Statement execution
+│   │       │   └── expr.rs     # Expression evaluation
+│   │       ├── bytecode/       # Bytecode instruction set (modular)
+│   │       │   ├── mod.rs      # Bytecode core
+│   │       │   ├── opcode.rs   # Opcode definitions
+│   │       │   └── serialize.rs # Serialization
+│   │       ├── compiler/       # AST to bytecode compiler (modular)
+│   │       │   ├── mod.rs      # Compiler core
+│   │       │   ├── stmt.rs     # Statement compilation
+│   │       │   └── expr.rs     # Expression compilation
+│   │       ├── vm/             # Virtual machine (modular)
+│   │       │   ├── mod.rs      # VM core
+│   │       │   └── frame.rs    # Call frames
 │   │       ├── stdlib.rs       # Standard library functions
 │   │       └── repl.rs         # REPL core (UI-agnostic)
 │   └── atlas-cli/          # Binary crate (CLI wrapper)

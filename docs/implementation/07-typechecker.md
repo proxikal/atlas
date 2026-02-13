@@ -5,7 +5,7 @@ Type checking strategy with inference and strict rules.
 ## Type Checker Structure
 
 ```rust
-// typechecker.rs
+// typechecker/ module (typechecker/mod.rs + typechecker/expr.rs)
 use std::collections::{HashMap, HashSet};
 
 pub struct TypeChecker<'a> {

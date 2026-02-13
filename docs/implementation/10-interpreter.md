@@ -5,7 +5,7 @@ Direct AST evaluation (tree-walk interpreter).
 ## Interpreter Structure
 
 ```rust
-// interpreter.rs
+// interpreter/ module (interpreter/mod.rs + interpreter/stmt.rs + interpreter/expr.rs)
 pub struct Interpreter {
     globals: HashMap<String, Value>,
     locals: Vec<HashMap<String, Value>>,

@@ -64,7 +64,7 @@ impl TokenKind {
 ## Lexer State Machine
 
 ```rust
-// lexer.rs
+// lexer/ module (lexer/mod.rs + lexer/literals.rs)
 pub struct Lexer {
     source: String,
     chars: Vec<char>,

@@ -5,7 +5,7 @@ Complete 30-opcode definition for stack-based VM.
 ## Opcode Enum
 
 ```rust
-// bytecode.rs
+// bytecode/ module (bytecode/mod.rs + bytecode/opcode.rs + bytecode/serialize.rs)
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Opcode {
