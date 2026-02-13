@@ -10,7 +10,7 @@ use rustyline::DefaultEditor;
 /// If `use_tui` is true, uses ratatui TUI mode.
 /// Otherwise, uses rustyline line-editor mode (default).
 /// If `no_history` is true, disables history persistence.
-pub fn run(use_tui: bool, no_history: bool) -> Result<()> {
+pub fn run(use_tui: bool, no_history: bool, config: &crate::config::Config) -> Result<()> {
     if use_tui {
         // Use TUI mode (ratatui)
         return super::repl_tui::run();
@@ -21,7 +21,7 @@ pub fn run(use_tui: bool, no_history: bool) -> Result<()> {
     let mut repl = ReplCore::new();
 
     // Load history from file (unless disabled)
-    let history_path = get_history_path();
+    let history_path = config.get_history_path();
     if !no_history {
         if let Some(ref path) = history_path {
             let _ = rl.load_history(path); // Ignore errors if file doesn't exist
@@ -120,13 +120,6 @@ pub fn run(use_tui: bool, no_history: bool) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Get the default history file path
-///
-/// Returns ~/.atlas/history or None if home directory cannot be determined
-fn get_history_path() -> Option<std::path::PathBuf> {
-    dirs::home_dir().map(|home| home.join(".atlas").join("history"))
 }
 
 /// Print help information

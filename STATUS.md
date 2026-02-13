@@ -7,10 +7,10 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/cli/phase-05-repl-history.md
-**Next Phase:** `phases/cli/phase-06-config-behavior.md`
+**Last Completed:** phases/cli/phase-06-config-behavior.md
+**Next Phase:** `phases/cli/phase-07-ast-typecheck-dumps.md`
 
-**What to implement:** Configuration file behavior
+**What to implement:** AST and typecheck dump commands
 
 ---
 
@@ -29,10 +29,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For CLI Phase 05:**
-- `docs/repl.md` - REPL specification
+**For CLI Phase 06:**
+- `docs/engineering.md` - Engineering guidelines
 - `Atlas-SPEC.md` - Language specification
-- `phases/cli/phase-05-repl-history.md` - Phase implementation guide
+- `phases/cli/phase-06-config-behavior.md` - Phase implementation guide
 
 ---
 
@@ -133,13 +133,14 @@
 - ✅ phase-07-prelude-binding.md
 - ✅ phase-08-prelude-tests.md
 
-### 10. CLI (5/10)
+### 10. CLI (6/10)
 - ✅ phase-01-cli.md
 - ✅ phase-02-cli-diagnostics.md
 - ✅ phase-03-repl-modes.md
 - ✅ phase-04-build-output.md (completed in phase 01)
 - ✅ phase-05-repl-history.md
-- ⬜ phase-06-config-behavior.md ⬅️ **YOU ARE HERE**
+- ✅ phase-06-config-behavior.md
+- ⬜ phase-07-ast-typecheck-dumps.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-04-build-output.md
 - ⬜ phase-05-repl-history.md
 - ⬜ phase-06-config-behavior.md
@@ -165,7 +166,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 75/93 phases (80%)
+**Total Progress:** 76/93 phases (81%)
 
 ---
 

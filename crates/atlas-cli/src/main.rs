@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 mod commands;
+mod config;
 
 #[derive(Parser)]
 #[command(name = "atlas")]
@@ -54,19 +55,28 @@ enum Commands {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let config = config::Config::from_env();
 
     match cli.command {
         Commands::Run { file, json } => {
-            commands::run::run(&file, json)?;
+            // Command-line flag overrides environment variable
+            let use_json = json || config.default_json;
+            commands::run::run(&file, use_json)?;
         }
         Commands::Check { file, json } => {
-            commands::check::run(&file, json)?;
+            // Command-line flag overrides environment variable
+            let use_json = json || config.default_json;
+            commands::check::run(&file, use_json)?;
         }
         Commands::Build { file, disasm, json } => {
-            commands::build::run(&file, disasm, json)?;
+            // Command-line flag overrides environment variable
+            let use_json = json || config.default_json;
+            commands::build::run(&file, disasm, use_json)?;
         }
         Commands::Repl { tui, no_history } => {
-            commands::repl::run(tui, no_history)?;
+            // Command-line flag overrides environment variable
+            let disable_history = no_history || config.no_history;
+            commands::repl::run(tui, disable_history, &config)?;
         }
     }
 
