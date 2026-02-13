@@ -6,8 +6,10 @@
 //! - Control flow uses jumps and loops
 
 mod frame;
+mod profiler;
 
 pub use frame::CallFrame;
+pub use profiler::Profiler;
 
 use crate::bytecode::{Bytecode, Opcode};
 use crate::value::{RuntimeError, Value};
@@ -27,6 +29,8 @@ pub struct VM {
     bytecode: Bytecode,
     /// Instruction pointer
     ip: usize,
+    /// Optional profiler for performance analysis
+    profiler: Option<Profiler>,
 }
 
 impl VM {
@@ -46,7 +50,41 @@ impl VM {
             globals: HashMap::new(),
             bytecode,
             ip: 0,
+            profiler: None, // Profiling disabled by default
         }
+    }
+
+    /// Create a new VM with profiling enabled
+    pub fn with_profiling(bytecode: Bytecode) -> Self {
+        let mut vm = Self::new(bytecode);
+        vm.profiler = Some(Profiler::enabled());
+        vm
+    }
+
+    /// Enable profiling
+    pub fn enable_profiling(&mut self) {
+        if let Some(ref mut profiler) = self.profiler {
+            profiler.enable();
+        } else {
+            self.profiler = Some(Profiler::enabled());
+        }
+    }
+
+    /// Disable profiling
+    pub fn disable_profiling(&mut self) {
+        if let Some(ref mut profiler) = self.profiler {
+            profiler.disable();
+        }
+    }
+
+    /// Get profiler reference
+    pub fn profiler(&self) -> Option<&Profiler> {
+        self.profiler.as_ref()
+    }
+
+    /// Get mutable profiler reference
+    pub fn profiler_mut(&mut self) -> Option<&mut Profiler> {
+        self.profiler.as_mut()
     }
 
     /// Execute the bytecode
@@ -58,6 +96,13 @@ impl VM {
             }
 
             let opcode = self.read_opcode()?;
+
+            // Record instruction for profiling (zero overhead when disabled)
+            if let Some(ref mut profiler) = self.profiler {
+                if profiler.is_enabled() {
+                    profiler.record_instruction(opcode);
+                }
+            }
 
             match opcode {
                 // ===== Constants =====
