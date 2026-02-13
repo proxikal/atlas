@@ -231,18 +231,18 @@ Change date at top of file to current date
 
 ## 🚨 Important Notes
 
-### Test Infrastructure Modernized (2026-02-12)
-**Atlas now uses production-grade Rust testing tools.**
+### Test Infrastructure
+**Atlas uses production-grade Rust testing tools.**
 - **rstest:** Parameterized tests (1 line per case vs 10+ lines per test)
 - **insta:** Snapshot testing with auto golden file management
 - **proptest:** Property-based testing (fuzzing, invariants)
 - **pretty_assertions:** Better test failure output
 
-**Impact:**
-- New tests: Use `tests/common/mod.rs` helpers and rstest
-- Example: See `lexer_tests_modern.rs` (193 lines vs 502 old style)
-- Documentation: `docs/TEST_MODERNIZATION_PLAN.md` has full roadmap
-- When writing tests: Prefer table-driven (#[case]) over individual #[test] functions
+**When writing tests:**
+- Use `tests/common/mod.rs` helpers (`assert_eval_number`, `assert_eval_string`, etc.)
+- Prefer table-driven tests with `#[rstest]` and `#[case]` annotations
+- Use `insta` snapshots for AST/bytecode validation
+- See existing test files for examples
 
 ### CRITICAL: VM Memory Bug Fixed (2026-02-12)
 **A critical memory explosion bug in the VM was discovered and fixed.**
@@ -265,7 +265,7 @@ Change date at top of file to current date
 2. **🚫 BLOCKING: Check CODE_ORGANIZATION.md** - Verify file sizes before and after phase
 3. **Follow BUILD-ORDER.md sequence** - Don't skip phases
 4. **⚠️ CRITICAL: Read Atlas-SPEC.md for any phase writing Atlas code** - Verify syntax (function signatures, let/var, semicolons) before implementation
-5. **📋 MODERN TESTING: Use rstest + insta** - See `docs/TEST_MODERNIZATION_PLAN.md` and `tests/common/mod.rs` for helpers
+5. **📋 TESTING: Use rstest + insta** - See `tests/common/mod.rs` for helpers and existing tests for examples
 6. **Check exit criteria** - Each phase file lists what "done" means
 7. **Update this file** - Use handoff protocol when complete
 8. **Read implementation guides** - Use mapping table above
