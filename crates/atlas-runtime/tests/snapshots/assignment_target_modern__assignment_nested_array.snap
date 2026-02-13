@@ -1,0 +1,42 @@
+---
+source: crates/atlas-runtime/tests/assignment_target_modern.rs
+expression: "program.items[0]"
+---
+Statement:
+  Assign:
+    target:
+      Index:
+        target:
+          Index:
+            target:
+              Identifier:
+                name: matrix
+                span:
+                  start: 0
+                  end: 6
+            index:
+              Identifier:
+                name: i
+                span:
+                  start: 7
+                  end: 8
+            span:
+              start: 0
+              end: 9
+        index:
+          Identifier:
+            name: j
+            span:
+              start: 10
+              end: 11
+        span:
+          start: 0
+          end: 12
+    value:
+      Literal:
+        - Number: 5
+        - start: 15
+          end: 16
+    span:
+      start: 0
+      end: 17

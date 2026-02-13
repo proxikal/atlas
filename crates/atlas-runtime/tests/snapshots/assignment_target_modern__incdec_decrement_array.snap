@@ -1,0 +1,26 @@
+---
+source: crates/atlas-runtime/tests/assignment_target_modern.rs
+expression: "program.items[0]"
+---
+Statement:
+  Decrement:
+    target:
+      Index:
+        target:
+          Identifier:
+            name: arr
+            span:
+              start: 0
+              end: 3
+        index:
+          Identifier:
+            name: i
+            span:
+              start: 4
+              end: 5
+        span:
+          start: 0
+          end: 6
+    span:
+      start: 0
+      end: 9

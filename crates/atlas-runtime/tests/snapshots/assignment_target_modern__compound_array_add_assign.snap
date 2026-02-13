@@ -1,0 +1,32 @@
+---
+source: crates/atlas-runtime/tests/assignment_target_modern.rs
+expression: "program.items[0]"
+---
+Statement:
+  CompoundAssign:
+    target:
+      Index:
+        target:
+          Identifier:
+            name: arr
+            span:
+              start: 0
+              end: 3
+        index:
+          Identifier:
+            name: i
+            span:
+              start: 4
+              end: 5
+        span:
+          start: 0
+          end: 6
+    op: AddAssign
+    value:
+      Literal:
+        - Number: 1
+        - start: 10
+          end: 11
+    span:
+      start: 0
+      end: 12

@@ -1,0 +1,43 @@
+---
+source: crates/atlas-runtime/tests/operator_precedence_tests.rs
+expression: "program.items[0]"
+---
+Statement:
+  Expr:
+    expr:
+      Binary:
+        op: Add
+        left:
+          Call:
+            callee:
+              Identifier:
+                name: foo
+                span:
+                  start: 0
+                  end: 3
+            args: []
+            span:
+              start: 0
+              end: 5
+        right:
+          Binary:
+            op: Mul
+            left:
+              Literal:
+                - Number: 2
+                - start: 8
+                  end: 9
+            right:
+              Literal:
+                - Number: 3
+                - start: 12
+                  end: 13
+            span:
+              start: 8
+              end: 13
+        span:
+          start: 0
+          end: 13
+    span:
+      start: 0
+      end: 14

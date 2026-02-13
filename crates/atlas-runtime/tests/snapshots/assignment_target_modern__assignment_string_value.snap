@@ -1,0 +1,20 @@
+---
+source: crates/atlas-runtime/tests/assignment_target_modern.rs
+expression: "program.items[0]"
+---
+Statement:
+  Assign:
+    target:
+      Name:
+        name: name
+        span:
+          start: 0
+          end: 4
+    value:
+      Literal:
+        - String: Alice
+        - start: 7
+          end: 14
+    span:
+      start: 0
+      end: 15

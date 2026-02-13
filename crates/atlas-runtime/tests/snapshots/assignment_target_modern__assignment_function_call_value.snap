@@ -1,0 +1,27 @@
+---
+source: crates/atlas-runtime/tests/assignment_target_modern.rs
+expression: "program.items[0]"
+---
+Statement:
+  Assign:
+    target:
+      Name:
+        name: result
+        span:
+          start: 0
+          end: 6
+    value:
+      Call:
+        callee:
+          Identifier:
+            name: foo
+            span:
+              start: 9
+              end: 12
+        args: []
+        span:
+          start: 9
+          end: 14
+    span:
+      start: 0
+      end: 15

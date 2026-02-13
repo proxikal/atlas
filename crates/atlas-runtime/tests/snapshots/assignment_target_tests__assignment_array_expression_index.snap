@@ -1,0 +1,42 @@
+---
+source: crates/atlas-runtime/tests/assignment_target_tests.rs
+expression: "program.items[0]"
+---
+Statement:
+  Assign:
+    target:
+      Index:
+        target:
+          Identifier:
+            name: arr
+            span:
+              start: 0
+              end: 3
+        index:
+          Binary:
+            op: Add
+            left:
+              Identifier:
+                name: i
+                span:
+                  start: 4
+                  end: 5
+            right:
+              Literal:
+                - Number: 1
+                - start: 8
+                  end: 9
+            span:
+              start: 4
+              end: 9
+        span:
+          start: 0
+          end: 10
+    value:
+      Literal:
+        - Number: 99
+        - start: 13
+          end: 15
+    span:
+      start: 0
+      end: 16
