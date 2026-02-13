@@ -17,6 +17,7 @@ pub enum Value {
     Null,
     Array(Rc<RefCell<Vec<Value>>>),
     Function(FunctionRef),
+    JsonValue(Rc<JsonValue>),  // Isolated dynamic type for JSON interop (v0.2+)
 }
 
 #[derive(Debug, Clone)]
@@ -35,6 +36,7 @@ impl Value {
             Value::Null => "null",
             Value::Array(_) => "array",
             Value::Function(_) => "function",
+            Value::JsonValue(_) => "json",
         }
     }
 
@@ -59,6 +61,7 @@ impl Value {
                 format!("[{}]", elements.join(", "))
             }
             Value::Function(f) => format!("<fn {}>", f.name),
+            Value::JsonValue(j) => j.to_string(),  // Delegates to JsonValue's Display
         }
     }
 }
@@ -72,6 +75,7 @@ impl PartialEq for Value {
             (Value::Null, Value::Null) => true,
             (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),  // Reference identity
             (Value::Function(a), Value::Function(b)) => a.name == b.name,
+            (Value::JsonValue(a), Value::JsonValue(b)) => a == b,  // Structural equality
             _ => false,
         }
     }

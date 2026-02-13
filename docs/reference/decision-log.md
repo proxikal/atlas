@@ -63,3 +63,13 @@ This log captures irreversible or high-impact design decisions. Update when a ne
   - ❌ Wait for union types (delays critical feature, union types complex)
   - ❌ Schema-based only (too rigid for dynamic APIs)
 - Trade-off: Accept controlled dynamic typing for JSON to maintain AI-friendliness while preserving strict typing elsewhere.
+
+**Implementation (v0.2):**
+- JsonValue enum: 6 variants (Null, Bool, Number, String, Array, Object)
+- Value::JsonValue(Rc<JsonValue>) variant for runtime values
+- Type::JsonValue for type system
+- Isolation enforced via Type::is_assignable_to() - only json->json allowed
+- Safe indexing: index_str() and index_num() methods return JsonValue::Null for missing/invalid
+- Both interpreter and VM support json[string|number] indexing
+- Type checker allows both string and number indices, always returns Type::JsonValue
+- 21 integration tests verify behavior and isolation

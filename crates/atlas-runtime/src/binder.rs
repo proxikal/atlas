@@ -374,6 +374,7 @@ impl Binder {
                 "bool" => Type::Bool,
                 "void" => Type::Void,
                 "null" => Type::Null,
+                "json" => Type::JsonValue,
                 _ => {
                     // Unknown type - will be caught by typechecker
                     Type::Unknown

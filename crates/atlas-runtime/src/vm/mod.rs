@@ -539,31 +539,56 @@ impl VM {
                     self.push(Value::Array(Rc::new(RefCell::new(elements))));
                 }
                 Opcode::GetIndex => {
-                    let index = self.pop_number()?;
-                    let array = self.pop();
-                    match array {
+                    let index_val = self.pop();
+                    let target = self.pop();
+                    match target {
                         Value::Array(arr) => {
-                            if index.fract() != 0.0 || index < 0.0 {
+                            // Array indexing requires number
+                            if let Value::Number(index) = index_val {
+                                if index.fract() != 0.0 || index < 0.0 {
+                                    return Err(RuntimeError::InvalidIndex {
+                                        span: self
+                                            .current_span()
+                                            .unwrap_or_else(crate::span::Span::dummy),
+                                    });
+                                }
+                                let idx = index as usize;
+                                let borrowed = arr.borrow();
+                                if idx >= borrowed.len() {
+                                    return Err(RuntimeError::OutOfBounds {
+                                        span: self
+                                            .current_span()
+                                            .unwrap_or_else(crate::span::Span::dummy),
+                                    });
+                                }
+                                self.push(borrowed[idx].clone());
+                            } else {
                                 return Err(RuntimeError::InvalidIndex {
                                     span: self
                                         .current_span()
                                         .unwrap_or_else(crate::span::Span::dummy),
                                 });
                             }
-                            let idx = index as usize;
-                            let borrowed = arr.borrow();
-                            if idx >= borrowed.len() {
-                                return Err(RuntimeError::OutOfBounds {
-                                    span: self
-                                        .current_span()
-                                        .unwrap_or_else(crate::span::Span::dummy),
-                                });
-                            }
-                            self.push(borrowed[idx].clone());
+                        }
+                        Value::JsonValue(json) => {
+                            // JSON indexing accepts string or number
+                            let result = match index_val {
+                                Value::String(key) => json.index_str(key.as_ref()),
+                                Value::Number(n) => json.index_num(n),
+                                _ => {
+                                    return Err(RuntimeError::TypeError {
+                                        msg: "JSON index must be string or number".to_string(),
+                                        span: self
+                                            .current_span()
+                                            .unwrap_or_else(crate::span::Span::dummy),
+                                    })
+                                }
+                            };
+                            self.push(Value::JsonValue(Rc::new(result)));
                         }
                         _ => {
                             return Err(RuntimeError::TypeError {
-                                msg: "Cannot index non-array".to_string(),
+                                msg: "Cannot index non-array/json".to_string(),
                                 span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
                             })
                         }

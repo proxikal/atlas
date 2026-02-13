@@ -5,7 +5,9 @@
 //! - Strings: Heap-allocated, reference-counted (Rc<String>), immutable
 //! - Arrays: Heap-allocated, reference-counted (Rc<RefCell<Vec<Value>>>), mutable
 //! - Functions: Reference to bytecode or builtin
+//! - JsonValue: Isolated dynamic type for JSON interop (Rc<JsonValue>)
 
+use crate::json_value::JsonValue;
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
@@ -26,6 +28,8 @@ pub enum Value {
     Array(Rc<RefCell<Vec<Value>>>),
     /// Function reference (bytecode or builtin)
     Function(FunctionRef),
+    /// JSON value (isolated dynamic type for JSON interop)
+    JsonValue(Rc<JsonValue>),
 }
 
 /// Function reference
@@ -62,6 +66,7 @@ impl Value {
             Value::Null => "null",
             Value::Array(_) => "array",
             Value::Function(_) => "function",
+            Value::JsonValue(_) => "json",
         }
     }
 
@@ -91,6 +96,8 @@ impl PartialEq for Value {
             (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
             // Functions are equal if they have the same name
             (Value::Function(a), Value::Function(b)) => a.name == b.name,
+            // JsonValue uses structural equality
+            (Value::JsonValue(a), Value::JsonValue(b)) => a == b,
             _ => false,
         }
     }
@@ -118,6 +125,7 @@ impl fmt::Display for Value {
                 write!(f, "[{}]", elements.join(", "))
             }
             Value::Function(func) => write!(f, "<fn {}>", func.name),
+            Value::JsonValue(json) => write!(f, "{}", json),
         }
     }
 }

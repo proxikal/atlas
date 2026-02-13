@@ -16,6 +16,7 @@ pub mod bytecode;
 pub mod compiler;
 pub mod diagnostic;
 pub mod interpreter;
+pub mod json_value;
 pub mod lexer;
 pub mod parser;
 pub mod repl;
@@ -43,6 +44,7 @@ pub use diagnostic::{
     DIAG_VERSION,
 };
 pub use interpreter::Interpreter;
+pub use json_value::JsonValue;
 pub use lexer::Lexer;
 pub use parser::Parser;
 pub use repl::{ReplCore, ReplResult};

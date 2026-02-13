@@ -36,6 +36,7 @@ These features require careful design and research before implementation:
 - Primitive: `number`, `string`, `bool`, `void`, `null`
 - Arrays: `T[]` or `Array<T>`
 - Function: `(T1, T2) -> T3`
+- JSON: `json` (isolated dynamic type for JSON interop, v0.2+)
 - Generic: `Type<T1, T2, ...>` (v0.2+)
 - Built-in generics: `Option<T>`, `Result<T, E>` (v0.2+)
 
@@ -85,6 +86,44 @@ g(5);  // 10
 - No anonymous function syntax: `fn(x) { ... }` (planned for v0.3+)
 - No closure capture: Functions can only reference globals (planned for v0.3+)
 - All function values must be named functions
+
+### JSON Type (v0.2+)
+
+The `json` type is an **isolated dynamic type** specifically for JSON interop. It is the **only exception** to Atlas's strict typing.
+
+**Type declaration:**
+```atlas
+let data: json = /* json value from API or parser */;
+```
+
+**Key features:**
+- **Natural indexing:** Supports both string keys (objects) and number indices (arrays)
+- **Safe null semantics:** Missing keys/invalid indices return `null` instead of errors
+- **Type isolation:** Cannot assign `json` to other types without explicit extraction
+- **Structural equality:** JSON values compare by content, not reference
+
+**Indexing:**
+```atlas
+// Object indexing with string keys
+let name: json = data["user"]["name"];
+
+// Array indexing with number indices
+let first: json = items[0];
+
+// Mixed indexing
+let value: json = data["users"][0]["email"];
+```
+
+**Type safety:**
+- `json` values can only be assigned to `json`-typed variables
+- Cannot use `json` in expressions: `data + 1` is a type error
+- Extraction methods required for type conversion (planned for Phase 4: JSON API)
+
+**Limitations (v0.2):**
+- No JSON literal syntax yet (planned for Phase 4: JSON API)
+- No extraction methods yet (`.as_string()`, `.as_number()`, etc.)
+- JSON values can only be created from Rust code or parsed from strings
+- Type checking enforces isolation but extraction API not yet implemented
 
 ### Generic Types (v0.2+)
 

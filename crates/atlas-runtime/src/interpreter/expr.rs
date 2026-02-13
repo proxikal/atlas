@@ -3,6 +3,7 @@
 use crate::ast::*;
 use crate::interpreter::{ControlFlow, Interpreter, UserFunction};
 use crate::value::{RuntimeError, Value};
+use std::rc::Rc;
 
 impl Interpreter {
     /// Evaluate an expression
@@ -214,8 +215,7 @@ impl Interpreter {
         let callee_value = self.eval_expr(&call.callee)?;
 
         // Evaluate arguments
-        let args: Result<Vec<Value>, _> =
-            call.args.iter().map(|arg| self.eval_expr(arg)).collect();
+        let args: Result<Vec<Value>, _> = call.args.iter().map(|arg| self.eval_expr(arg)).collect();
         let args = args?;
 
         // Callee must be a function value
@@ -237,10 +237,7 @@ impl Interpreter {
                 })
             }
             _ => Err(RuntimeError::TypeError {
-                msg: format!(
-                    "Cannot call non-function type {}",
-                    callee_value.type_name()
-                ),
+                msg: format!("Cannot call non-function type {}", callee_value.type_name()),
                 span: call.span,
             }),
         }
@@ -332,8 +329,22 @@ impl Interpreter {
                     Err(RuntimeError::InvalidIndex { span: index.span })
                 }
             }
+            Value::JsonValue(json) => {
+                // JSON indexing with string or number, returns JsonValue
+                let result = match idx {
+                    Value::String(key) => json.index_str(key.as_ref()),
+                    Value::Number(n) => json.index_num(n),
+                    _ => {
+                        return Err(RuntimeError::TypeError {
+                            msg: "JSON index must be string or number".to_string(),
+                            span: index.span,
+                        })
+                    }
+                };
+                Ok(Value::JsonValue(Rc::new(result)))
+            }
             _ => Err(RuntimeError::TypeError {
-                msg: "Cannot index non-array/string".to_string(),
+                msg: "Cannot index non-array/string/json".to_string(),
                 span: index.span,
             }),
         }

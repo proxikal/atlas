@@ -75,6 +75,7 @@ pub enum Type {
         params: Vec<Type>,
         return_type: Box<Type>,
     },
+    JsonValue,  // Isolated dynamic type for JSON interop (v0.2+)
     Unknown,  // For error recovery
 }
 
@@ -90,6 +91,7 @@ impl Type {
                 p1.iter().zip(p2.iter()).all(|(a, b)| a.is_assignable_to(b)) &&
                 r1.is_assignable_to(r2)
             }
+            (Type::JsonValue, Type::JsonValue) => true,  // JsonValue isolated - only json->json
             _ => self == other,
         }
     }
@@ -109,6 +111,7 @@ impl Type {
                     .join(", ");
                 format!("({}) -> {}", params_str, return_type.to_string())
             }
+            Type::JsonValue => "json".to_string(),
             Type::Unknown => "<unknown>".to_string(),
         }
     }

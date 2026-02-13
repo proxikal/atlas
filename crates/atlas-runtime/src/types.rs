@@ -22,6 +22,8 @@ pub enum Type {
         params: Vec<Type>,
         return_type: Box<Type>,
     },
+    /// JSON value type (isolated dynamic type for JSON interop)
+    JsonValue,
     /// Unknown type (for error recovery)
     Unknown,
 }
@@ -57,6 +59,10 @@ impl Type {
                     && r1.is_assignable_to(r2)
             }
 
+            // CRITICAL: JsonValue is isolated - only json to json
+            // Cannot assign json to non-json types (requires explicit extraction)
+            (Type::JsonValue, Type::JsonValue) => true,
+
             // No other types are assignable
             _ => false,
         }
@@ -72,6 +78,7 @@ impl Type {
             Type::Void => "void".to_string(),
             Type::Array(inner) => format!("{}[]", inner.display_name()),
             Type::Function { .. } => "function".to_string(),
+            Type::JsonValue => "json".to_string(),
             Type::Unknown => "?".to_string(),
         }
     }

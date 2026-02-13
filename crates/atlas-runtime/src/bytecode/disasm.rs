@@ -164,6 +164,7 @@ fn format_value(value: &crate::value::Value) -> String {
         Value::String(s) => format!("\"{}\"", s),
         Value::Function(f) => format!("<fn {}({})>", f.name, f.arity),
         Value::Array(_) => "<array>".to_string(),
+        Value::JsonValue(_) => "<json>".to_string(),
     }
 }
 

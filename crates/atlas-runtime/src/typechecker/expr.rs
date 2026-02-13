@@ -262,36 +262,53 @@ impl<'a> TypeChecker<'a> {
         let target_type = self.check_expr(&index.target);
         let index_type = self.check_expr(&index.index);
 
-        // Check that index is a number
-        if index_type != Type::Number && index_type != Type::Unknown {
-            self.diagnostics.push(
-                Diagnostic::error_with_code(
-                    "AT3001",
-                    format!(
-                        "Array index must be number, found {}",
-                        index_type.display_name()
-                    ),
-                    index.index.span(),
-                )
-                .with_label("type mismatch"),
-            );
-        }
-
-        // Extract element type from array
         match target_type {
-            Type::Array(elem_type) => *elem_type,
+            // Array indexing: requires number index, returns element type
+            Type::Array(elem_type) => {
+                if index_type != Type::Number && index_type != Type::Unknown {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3001",
+                            format!(
+                                "Array index must be number, found {}",
+                                index_type.display_name()
+                            ),
+                            index.index.span(),
+                        )
+                        .with_label("type mismatch"),
+                    );
+                }
+                *elem_type
+            }
+            // JSON indexing: accepts string or number, always returns json
+            Type::JsonValue => {
+                if index_type != Type::String
+                    && index_type != Type::Number
+                    && index_type != Type::Unknown
+                {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3001",
+                            format!(
+                                "JSON index must be string or number, found {}",
+                                index_type.display_name()
+                            ),
+                            index.index.span(),
+                        )
+                        .with_label("type mismatch"),
+                    );
+                }
+                Type::JsonValue
+            }
             Type::Unknown => Type::Unknown,
             _ => {
                 self.diagnostics.push(
                     Diagnostic::error_with_code(
                         "AT3001",
-                        format!(
-                            "Cannot index into non-array type {}",
-                            target_type.display_name()
-                        ),
+                        format!("Cannot index into type {}", target_type.display_name()),
                         index.target.span(),
                     )
-                    .with_label("not an array"),
+                    .with_label("not indexable"),
                 );
                 Type::Unknown
             }

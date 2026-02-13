@@ -11,8 +11,9 @@
 **Last Completed:**
 - phases/stdlib/phase-01-complete-string-api.md
 - **First-Class Functions** (prerequisite for Phase 2)
+- **BLOCKER 01:** JsonValue Type (Foundation for JSON API)
 
-**Next Phase:** phases/blockers/blocker-01-json-value-type.md
+**Next Phase:** phases/blockers/blocker-02-a-type-system-foundation.md (Generic Types - Track A)
 **⚠️ Note:** Foundation blockers MUST be completed before v0.2 phases (see tracker below)
 
 **v0.2 phase files complete - 68 comprehensive phases ready for implementation!**
@@ -102,10 +103,10 @@ v0.2 transforms Atlas into a production-ready language:
 
 **Documentation:** `phases/blockers/README.md` - Full dependency analysis and implementation order
 
-**Progress:** 0/19 blocker sub-phases complete
+**Progress:** 1/19 blocker sub-phases complete
 
-### BLOCKER 01: JSON Value Type (1-2 weeks) ✅ Single Phase
-- ⬜ blocker-01-json-value-type.md
+### BLOCKER 01: JSON Value Type ✅ COMPLETE
+- ✅ blocker-01-json-value-type.md (Completed: 2026-02-13)
 
 **Blocks:** JSON API, HTTP, 10+ phases
 

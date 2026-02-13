@@ -153,6 +153,7 @@ fn type_to_string(ty: &Type) -> String {
                 type_to_string(return_type)
             )
         }
+        Type::JsonValue => "json".to_string(),
         Type::Unknown => "unknown".to_string(),
     }
 }
