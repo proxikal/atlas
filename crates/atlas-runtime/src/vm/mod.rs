@@ -125,6 +125,22 @@ impl VM {
         self.debugger.as_mut()
     }
 
+    /// Get the source span for the current instruction pointer
+    ///
+    /// Returns the span from debug info if available.
+    /// Useful for error reporting with source location context.
+    pub fn current_span(&self) -> Option<crate::span::Span> {
+        if self.ip == 0 {
+            return None;
+        }
+        self.bytecode.get_span_for_offset(self.ip - 1)
+    }
+
+    /// Get the source span for a specific instruction offset
+    pub fn span_for_offset(&self, offset: usize) -> Option<crate::span::Span> {
+        self.bytecode.get_span_for_offset(offset)
+    }
+
     /// Execute the bytecode
     pub fn run(&mut self) -> Result<Option<Value>, RuntimeError> {
         loop {

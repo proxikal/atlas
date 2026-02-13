@@ -108,6 +108,19 @@ impl Bytecode {
         self.instructions[offset + 1] = (jump & 0xFF) as u8;
     }
 
+    /// Look up the source span for a given instruction offset
+    ///
+    /// Returns the span of the instruction at or before the given offset.
+    /// This is useful for error reporting in the VM.
+    pub fn get_span_for_offset(&self, offset: usize) -> Option<Span> {
+        // Find the most recent debug info entry at or before the offset
+        self.debug_info
+            .iter()
+            .rev()
+            .find(|debug_span| debug_span.instruction_offset <= offset)
+            .map(|debug_span| debug_span.span)
+    }
+
     /// Serialize bytecode to binary format (.atb file)
     ///
     /// Format:
@@ -599,6 +612,82 @@ mod tests {
         assert_eq!(bytecode.constants[0], Value::Number(0.0));
         assert_eq!(bytecode.constants[2], Value::Number(f64::MIN));
         assert_eq!(bytecode.constants[3], Value::Number(f64::MAX));
+    }
+
+    // ===== Debug Info Lookup Tests (Phase 14) =====
+
+    #[test]
+    fn test_get_span_for_offset_empty() {
+        let bytecode = Bytecode::new();
+        assert_eq!(bytecode.get_span_for_offset(0), None);
+        assert_eq!(bytecode.get_span_for_offset(10), None);
+    }
+
+    #[test]
+    fn test_get_span_for_offset_exact_match() {
+        let mut bytecode = Bytecode::new();
+        let span1 = Span::new(0, 10);
+        let span2 = Span::new(10, 20);
+
+        bytecode.emit(Opcode::Constant, span1);
+        bytecode.emit_u16(0);
+        bytecode.emit(Opcode::Add, span2);
+
+        // Exact match for first instruction (offset 0)
+        assert_eq!(bytecode.get_span_for_offset(0), Some(span1));
+
+        // Exact match for second instruction (offset 3)
+        assert_eq!(bytecode.get_span_for_offset(3), Some(span2));
+    }
+
+    #[test]
+    fn test_get_span_for_offset_between_instructions() {
+        let mut bytecode = Bytecode::new();
+        let span1 = Span::new(0, 10);
+        let span2 = Span::new(20, 30);
+
+        bytecode.emit(Opcode::Constant, span1);
+        bytecode.emit_u16(0); // Takes 2 more bytes (offset 1, 2)
+        bytecode.emit(Opcode::Add, span2); // At offset 3
+
+        // Offset 1 and 2 are operand bytes, should return span1
+        assert_eq!(bytecode.get_span_for_offset(1), Some(span1));
+        assert_eq!(bytecode.get_span_for_offset(2), Some(span1));
+
+        // Offset 3 is next instruction, should return span2
+        assert_eq!(bytecode.get_span_for_offset(3), Some(span2));
+
+        // Offset beyond last instruction, should return last span
+        assert_eq!(bytecode.get_span_for_offset(10), Some(span2));
+    }
+
+    #[test]
+    fn test_get_span_for_offset_complex_sequence() {
+        let mut bytecode = Bytecode::new();
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(6, 11);
+        let span3 = Span::new(12, 17);
+
+        // Instruction at offset 0
+        bytecode.emit(Opcode::Constant, span1);
+        bytecode.emit_u16(0);
+
+        // Instruction at offset 3
+        bytecode.emit(Opcode::Constant, span2);
+        bytecode.emit_u16(1);
+
+        // Instruction at offset 6
+        bytecode.emit(Opcode::Add, span3);
+
+        // Test various offsets
+        assert_eq!(bytecode.get_span_for_offset(0), Some(span1));
+        assert_eq!(bytecode.get_span_for_offset(1), Some(span1));
+        assert_eq!(bytecode.get_span_for_offset(2), Some(span1));
+        assert_eq!(bytecode.get_span_for_offset(3), Some(span2));
+        assert_eq!(bytecode.get_span_for_offset(4), Some(span2));
+        assert_eq!(bytecode.get_span_for_offset(5), Some(span2));
+        assert_eq!(bytecode.get_span_for_offset(6), Some(span3));
+        assert_eq!(bytecode.get_span_for_offset(100), Some(span3));
     }
 
     // ===== Serialization Tests (Phase 10) =====
