@@ -72,6 +72,140 @@ impl SymbolTable {
             },
         );
 
+        // String functions - Core Operations
+        table.define_builtin(
+            "split",
+            Type::Function {
+                params: vec![Type::String, Type::String],
+                return_type: Box::new(Type::Array(Box::new(Type::String))),
+            },
+        );
+        table.define_builtin(
+            "join",
+            Type::Function {
+                params: vec![Type::Array(Box::new(Type::String)), Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "trim",
+            Type::Function {
+                params: vec![Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "trimStart",
+            Type::Function {
+                params: vec![Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "trimEnd",
+            Type::Function {
+                params: vec![Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+
+        // String functions - Search Operations
+        table.define_builtin(
+            "indexOf",
+            Type::Function {
+                params: vec![Type::String, Type::String],
+                return_type: Box::new(Type::Number),
+            },
+        );
+        table.define_builtin(
+            "lastIndexOf",
+            Type::Function {
+                params: vec![Type::String, Type::String],
+                return_type: Box::new(Type::Number),
+            },
+        );
+        table.define_builtin(
+            "includes",
+            Type::Function {
+                params: vec![Type::String, Type::String],
+                return_type: Box::new(Type::Bool),
+            },
+        );
+
+        // String functions - Transformation
+        table.define_builtin(
+            "toUpperCase",
+            Type::Function {
+                params: vec![Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "toLowerCase",
+            Type::Function {
+                params: vec![Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "substring",
+            Type::Function {
+                params: vec![Type::String, Type::Number, Type::Number],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "charAt",
+            Type::Function {
+                params: vec![Type::String, Type::Number],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "repeat",
+            Type::Function {
+                params: vec![Type::String, Type::Number],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "replace",
+            Type::Function {
+                params: vec![Type::String, Type::String, Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+
+        // String functions - Formatting
+        table.define_builtin(
+            "padStart",
+            Type::Function {
+                params: vec![Type::String, Type::Number, Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "padEnd",
+            Type::Function {
+                params: vec![Type::String, Type::Number, Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "startsWith",
+            Type::Function {
+                params: vec![Type::String, Type::String],
+                return_type: Box::new(Type::Bool),
+            },
+        );
+        table.define_builtin(
+            "endsWith",
+            Type::Function {
+                params: vec![Type::String, Type::String],
+                return_type: Box::new(Type::Bool),
+            },
+        );
+
         table
     }
 

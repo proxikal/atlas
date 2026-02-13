@@ -1,10 +1,44 @@
 //! Standard library functions
 
+pub mod string;
+
 use crate::value::{RuntimeError, Value};
 
 /// Check if a function name is a builtin
 pub fn is_builtin(name: &str) -> bool {
-    matches!(name, "print" | "len" | "str")
+    matches!(
+        name,
+        "print" | "len" | "str"
+            // String functions
+            | "split" | "join" | "trim" | "trimStart" | "trimEnd"
+            | "indexOf" | "lastIndexOf" | "includes"
+            | "toUpperCase" | "toLowerCase" | "substring" | "charAt" | "repeat" | "replace"
+            | "padStart" | "padEnd" | "startsWith" | "endsWith"
+    )
+}
+
+/// Extract string from value
+fn extract_string(value: &Value, span: crate::span::Span) -> Result<&str, RuntimeError> {
+    match value {
+        Value::String(s) => Ok(s.as_ref()),
+        _ => Err(RuntimeError::InvalidStdlibArgument { span }),
+    }
+}
+
+/// Extract number from value
+fn extract_number(value: &Value, span: crate::span::Span) -> Result<f64, RuntimeError> {
+    match value {
+        Value::Number(n) => Ok(*n),
+        _ => Err(RuntimeError::InvalidStdlibArgument { span }),
+    }
+}
+
+/// Extract array from value
+fn extract_array(value: &Value, span: crate::span::Span) -> Result<Vec<Value>, RuntimeError> {
+    match value {
+        Value::Array(arr) => Ok(arr.borrow().clone()),
+        _ => Err(RuntimeError::InvalidStdlibArgument { span }),
+    }
 }
 
 /// Call a builtin function
@@ -38,6 +72,164 @@ pub fn call_builtin(
             let s = str(&args[0], call_span)?;
             Ok(Value::string(s))
         }
+
+        // String functions - Core Operations
+        "split" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let sep = extract_string(&args[1], call_span)?;
+            string::split(s, sep, call_span)
+        }
+        "join" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let arr = extract_array(&args[0], call_span)?;
+            let sep = extract_string(&args[1], call_span)?;
+            let result = string::join(&arr, sep, call_span)?;
+            Ok(Value::string(result))
+        }
+        "trim" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            Ok(Value::string(string::trim(s)))
+        }
+        "trimStart" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            Ok(Value::string(string::trim_start(s)))
+        }
+        "trimEnd" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            Ok(Value::string(string::trim_end(s)))
+        }
+
+        // String functions - Search Operations
+        "indexOf" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let search = extract_string(&args[1], call_span)?;
+            Ok(Value::Number(string::index_of(s, search)))
+        }
+        "lastIndexOf" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let search = extract_string(&args[1], call_span)?;
+            Ok(Value::Number(string::last_index_of(s, search)))
+        }
+        "includes" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let search = extract_string(&args[1], call_span)?;
+            Ok(Value::Bool(string::includes(s, search)))
+        }
+
+        // String functions - Transformation
+        "toUpperCase" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            Ok(Value::string(string::to_upper_case(s)))
+        }
+        "toLowerCase" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            Ok(Value::string(string::to_lower_case(s)))
+        }
+        "substring" => {
+            if args.len() != 3 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let start = extract_number(&args[1], call_span)?;
+            let end = extract_number(&args[2], call_span)?;
+            let result = string::substring(s, start, end, call_span)?;
+            Ok(Value::string(result))
+        }
+        "charAt" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let index = extract_number(&args[1], call_span)?;
+            let result = string::char_at(s, index, call_span)?;
+            Ok(Value::string(result))
+        }
+        "repeat" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let count = extract_number(&args[1], call_span)?;
+            let result = string::repeat(s, count, call_span)?;
+            Ok(Value::string(result))
+        }
+        "replace" => {
+            if args.len() != 3 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let search = extract_string(&args[1], call_span)?;
+            let replacement = extract_string(&args[2], call_span)?;
+            Ok(Value::string(string::replace(s, search, replacement)))
+        }
+
+        // String functions - Formatting
+        "padStart" => {
+            if args.len() != 3 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let length = extract_number(&args[1], call_span)?;
+            let fill = extract_string(&args[2], call_span)?;
+            let result = string::pad_start(s, length, fill, call_span)?;
+            Ok(Value::string(result))
+        }
+        "padEnd" => {
+            if args.len() != 3 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let length = extract_number(&args[1], call_span)?;
+            let fill = extract_string(&args[2], call_span)?;
+            let result = string::pad_end(s, length, fill, call_span)?;
+            Ok(Value::string(result))
+        }
+        "startsWith" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let prefix = extract_string(&args[1], call_span)?;
+            Ok(Value::Bool(string::starts_with(s, prefix)))
+        }
+        "endsWith" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let s = extract_string(&args[0], call_span)?;
+            let suffix = extract_string(&args[1], call_span)?;
+            Ok(Value::Bool(string::ends_with(s, suffix)))
+        }
+
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),
             span: call_span,
