@@ -36,6 +36,9 @@ pub struct FunctionRef {
     pub arity: usize,
     /// Bytecode offset (for VM) or builtin ID
     pub bytecode_offset: usize,
+    /// Total number of local variables (parameters + locals)
+    /// Used by VM to properly allocate stack space
+    pub local_count: usize,
 }
 
 impl Value {
@@ -226,7 +229,8 @@ mod tests {
             Value::Function(FunctionRef {
                 name: "test".to_string(),
                 arity: 0,
-                bytecode_offset: 0
+                bytecode_offset: 0,
+                local_count: 0,
             })
             .type_name(),
             "function"
@@ -284,6 +288,7 @@ mod tests {
             name: "test".to_string(),
             arity: 2,
             bytecode_offset: 0,
+            local_count: 0,
         });
         assert_eq!(func.to_string(), "<fn test>");
     }
@@ -349,16 +354,19 @@ mod tests {
             name: "test".to_string(),
             arity: 0,
             bytecode_offset: 0,
+            local_count: 0,
         });
         let func2 = Value::Function(FunctionRef {
             name: "test".to_string(),
             arity: 1,
             bytecode_offset: 100,
+            local_count: 0,
         });
         let func3 = Value::Function(FunctionRef {
             name: "other".to_string(),
             arity: 0,
             bytecode_offset: 0,
+            local_count: 0,
         });
 
         assert_eq!(func1, func2); // Same name, different arity/offset

@@ -33,34 +33,44 @@ impl Compiler {
             }
         };
 
-        // Check if it's a builtin function
+        // Load the function (either builtin or user-defined)
+        // For builtins, we create a FunctionRef; for user-defined, we load from globals
         if crate::stdlib::is_builtin(func_name) {
             // Create a Function value for the builtin with bytecode_offset = 0
             let func_ref = crate::value::FunctionRef {
                 name: func_name.to_string(),
                 arity: call.args.len(),
                 bytecode_offset: 0, // Builtins have offset 0
+                local_count: 0,     // Builtins don't use local variables
             };
             let func_value = crate::value::Value::Function(func_ref);
             let const_idx = self.bytecode.add_constant(func_value);
 
-            // Load the function constant FIRST (before arguments)
-            self.bytecode.emit(crate::bytecode::Opcode::Constant, call.span);
+            // Load the function constant
+            self.bytecode.emit(Opcode::Constant, call.span);
             self.bytecode.emit_u16(const_idx);
-
-            // Compile all arguments (they'll be pushed on top of the function)
-            for arg in &call.args {
-                self.compile_expr(arg)?;
-            }
-
-            // Emit call instruction with argument count
-            self.bytecode.emit(crate::bytecode::Opcode::Call, call.span);
-            self.bytecode.emit_u8(call.args.len() as u8);
         } else {
-            // User-defined function (TODO: implement later)
-            // For now, just emit a placeholder
-            return Ok(());
+            // User-defined function - load from global
+            // Try local first (for nested functions in the future)
+            if let Some(local_idx) = self.resolve_local(func_name) {
+                self.bytecode.emit(Opcode::GetLocal, call.span);
+                self.bytecode.emit_u16(local_idx as u16);
+            } else {
+                // Load from global
+                let name_idx = self.bytecode.add_constant(crate::value::Value::string(func_name));
+                self.bytecode.emit(Opcode::GetGlobal, call.span);
+                self.bytecode.emit_u16(name_idx);
+            }
         }
+
+        // Compile all arguments (they'll be pushed on top of the function)
+        for arg in &call.args {
+            self.compile_expr(arg)?;
+        }
+
+        // Emit call instruction with argument count
+        self.bytecode.emit(Opcode::Call, call.span);
+        self.bytecode.emit_u8(call.args.len() as u8);
 
         Ok(())
     }
@@ -106,28 +116,75 @@ impl Compiler {
 
     /// Compile a binary expression
     fn compile_binary(&mut self, bin: &BinaryExpr) -> Result<(), Vec<Diagnostic>> {
-        // Compile left and right operands
-        self.compile_expr(&bin.left)?;
-        self.compile_expr(&bin.right)?;
+        // Handle short-circuit evaluation for && and ||
+        match bin.op {
+            BinaryOp::And => {
+                // For &&: if left is false, result is false (don't eval right)
+                // Compile left
+                self.compile_expr(&bin.left)?;
+                // Duplicate for the check
+                self.bytecode.emit(Opcode::Dup, bin.span);
+                // Jump to end if false (keeping false on stack)
+                self.bytecode.emit(Opcode::JumpIfFalse, bin.span);
+                let end_jump = self.bytecode.current_offset();
+                self.bytecode.emit_u16(0xFFFF); // Placeholder
 
-        // Emit the appropriate opcode
-        let opcode = match bin.op {
-            BinaryOp::Add => Opcode::Add,
-            BinaryOp::Sub => Opcode::Sub,
-            BinaryOp::Mul => Opcode::Mul,
-            BinaryOp::Div => Opcode::Div,
-            BinaryOp::Mod => Opcode::Mod,
-            BinaryOp::Eq => Opcode::Equal,
-            BinaryOp::Ne => Opcode::NotEqual,
-            BinaryOp::Lt => Opcode::Less,
-            BinaryOp::Le => Opcode::LessEqual,
-            BinaryOp::Gt => Opcode::Greater,
-            BinaryOp::Ge => Opcode::GreaterEqual,
-            BinaryOp::And => Opcode::And,
-            BinaryOp::Or => Opcode::Or,
-        };
-        self.bytecode.emit(opcode, bin.span);
-        Ok(())
+                // Left was true, pop it and eval right
+                self.bytecode.emit(Opcode::Pop, bin.span);
+                self.compile_expr(&bin.right)?;
+
+                // Patch jump
+                self.bytecode.patch_jump(end_jump);
+                Ok(())
+            }
+            BinaryOp::Or => {
+                // For ||: if left is true, result is true (don't eval right)
+                // Compile left
+                self.compile_expr(&bin.left)?;
+                // Duplicate for the check
+                self.bytecode.emit(Opcode::Dup, bin.span);
+                // If true, jump to end (keeping true on stack)
+                // We need "jump if true" but we only have "jump if false"
+                // So: if NOT false, jump to end
+                // Actually, we need to negate the logic:
+                // Dup, Not, JumpIfFalse (jumps if original was true)
+                self.bytecode.emit(Opcode::Not, bin.span);
+                self.bytecode.emit(Opcode::JumpIfFalse, bin.span);
+                let end_jump = self.bytecode.current_offset();
+                self.bytecode.emit_u16(0xFFFF); // Placeholder
+
+                // Left was false, pop it and eval right
+                self.bytecode.emit(Opcode::Pop, bin.span);
+                self.compile_expr(&bin.right)?;
+
+                // Patch jump
+                self.bytecode.patch_jump(end_jump);
+                Ok(())
+            }
+            _ => {
+                // For all other operators, evaluate both sides
+                self.compile_expr(&bin.left)?;
+                self.compile_expr(&bin.right)?;
+
+                // Emit the appropriate opcode
+                let opcode = match bin.op {
+                    BinaryOp::Add => Opcode::Add,
+                    BinaryOp::Sub => Opcode::Sub,
+                    BinaryOp::Mul => Opcode::Mul,
+                    BinaryOp::Div => Opcode::Div,
+                    BinaryOp::Mod => Opcode::Mod,
+                    BinaryOp::Eq => Opcode::Equal,
+                    BinaryOp::Ne => Opcode::NotEqual,
+                    BinaryOp::Lt => Opcode::Less,
+                    BinaryOp::Le => Opcode::LessEqual,
+                    BinaryOp::Gt => Opcode::Greater,
+                    BinaryOp::Ge => Opcode::GreaterEqual,
+                    BinaryOp::And | BinaryOp::Or => unreachable!(), // Handled above
+                };
+                self.bytecode.emit(opcode, bin.span);
+                Ok(())
+            }
+        }
     }
 
     /// Compile a unary expression

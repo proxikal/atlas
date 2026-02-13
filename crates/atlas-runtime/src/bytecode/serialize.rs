@@ -98,6 +98,7 @@ pub(super) fn deserialize_value(bytes: &[u8]) -> Result<(Value, usize), String> 
                     name,
                     arity,
                     bytecode_offset: offset,
+                    local_count: 0, // Deserialized from old format, will be set correctly on recompile
                 }),
                 10 + name_len,
             ))

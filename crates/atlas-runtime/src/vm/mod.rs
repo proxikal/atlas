@@ -210,11 +210,28 @@ impl VM {
                 Opcode::SetLocal => {
                     let index = self.read_u16() as usize;
                     let base = self.current_frame().stack_base;
+                    let local_count = self.current_frame().local_count;
                     let absolute_index = base + index;
                     let value = self.peek(0).clone();
+
+                    // SAFETY CHECK: Prevent unbounded stack growth
+                    // This prevents memory explosion from invalid bytecode or compiler bugs
+                    if index >= local_count {
+                        return Err(RuntimeError::StackUnderflow {
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        });
+                    }
+
+                    // Extend stack if needed (for local variables not yet initialized)
                     if absolute_index >= self.stack.len() {
-                        // Need to extend stack
-                        while self.stack.len() <= absolute_index {
+                        // Bounded extension: only up to the declared local_count
+                        let needed = absolute_index - self.stack.len() + 1;
+                        if base + local_count > self.stack.len() + needed {
+                            return Err(RuntimeError::StackUnderflow {
+                                span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                            });
+                        }
+                        for _ in 0..needed {
                             self.stack.push(Value::Null);
                         }
                     }
@@ -434,7 +451,7 @@ impl VM {
                                     function_name: func.name.clone(),
                                     return_ip: self.ip,
                                     stack_base: self.stack.len() - arg_count,
-                                    local_count: func.arity,
+                                    local_count: func.local_count, // Use total locals, not just arity
                                 };
 
                                 // Verify argument count matches
@@ -998,6 +1015,7 @@ mod tests {
             name: "test_func".to_string(),
             arity: 0,
             bytecode_offset: function_offset,
+            local_count: 1,
         };
         let func_idx = bytecode.add_constant(Value::Function(func_ref));
 
@@ -1042,6 +1060,7 @@ mod tests {
             name: "add".to_string(),
             arity: 2,
             bytecode_offset: function_offset,
+            local_count: 1,
         };
         let func_idx = bytecode.add_constant(Value::Function(func_ref));
 
@@ -1092,6 +1111,7 @@ mod tests {
             name: "test".to_string(),
             arity: 2, // Expects 2 args
             bytecode_offset: 10,
+            local_count: 2,
         };
         let func_idx = bytecode.add_constant(Value::Function(func_ref));
 
@@ -1152,6 +1172,7 @@ mod tests {
             name: "f1".to_string(),
             arity: 0,
             bytecode_offset: f1_offset,
+            local_count: 0,
         };
         let f1_idx = bytecode.add_constant(Value::Function(f1_ref));
 
@@ -1171,6 +1192,7 @@ mod tests {
             name: "f2".to_string(),
             arity: 0,
             bytecode_offset: f2_offset,
+            local_count: 1,
         };
         let f2_idx = bytecode.add_constant(Value::Function(f2_ref));
 

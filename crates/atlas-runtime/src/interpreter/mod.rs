@@ -76,6 +76,7 @@ impl Interpreter {
                         name: func.name.name.clone(),
                         arity: func.params.len(),
                         bytecode_offset: 0, // Not used in interpreter
+                        local_count: 0,     // Not used in interpreter
                     });
                     self.globals.insert(func.name.name.clone(), func_value);
                 }

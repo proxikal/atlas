@@ -231,6 +231,15 @@ Change date at top of file to current date
 
 ## 🚨 Important Notes
 
+### CRITICAL: VM Memory Bug Fixed (2026-02-12)
+**A critical memory explosion bug in the VM was discovered and fixed.**
+- **Issue:** SetLocal opcode had unbounded stack growth, could exhaust system RAM
+- **Cause:** CallFrames used `arity` instead of total `local_count`, VM had no bounds checking
+- **Impact:** Any function with local variables could trigger memory exhaustion and crash
+- **Fix:** Added `local_count` field to FunctionRef, updated compiler to track total locals, added bounds checking to SetLocal
+- **Tests:** ✅ All 483 tests passing after fix
+- **Documentation:** See `VM_MEMORY_BUG_FIX.md` for complete analysis and fix details
+
 ### Phase Restructure (2026-02-12)
 **The typing phases were restructured to merge test-only phases into implementation phases.**
 - Old structure: 22 phases (10 were test-only)

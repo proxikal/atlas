@@ -897,6 +897,7 @@ mod tests {
             name: "test_func".to_string(),
             arity: 2,
             bytecode_offset: 100,
+            local_count: 0,
         }));
 
         let bytes = bytecode.to_bytes();
@@ -1219,6 +1220,7 @@ mod tests {
             name: "myFunc".to_string(),
             arity: 3,
             bytecode_offset: 42,
+            local_count: 0,
         }));
 
         let bytes = bytecode.to_bytes();

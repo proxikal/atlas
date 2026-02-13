@@ -38,10 +38,9 @@ impl Compiler {
             Stmt::For(for_stmt) => self.compile_for(for_stmt),
             Stmt::Break(span) => self.compile_break(*span),
             Stmt::Continue(span) => self.compile_continue(*span),
-            Stmt::CompoundAssign(_) | Stmt::Increment(_) | Stmt::Decrement(_) => {
-                // TODO: Compound assignment and increment/decrement
-                Ok(())
-            }
+            Stmt::CompoundAssign(compound) => self.compile_compound_assign(compound),
+            Stmt::Increment(inc) => self.compile_increment(inc),
+            Stmt::Decrement(dec) => self.compile_decrement(dec),
         }
     }
 
@@ -74,11 +73,11 @@ impl Compiler {
 
     /// Compile an assignment
     fn compile_assign(&mut self, assign: &Assign) -> Result<(), Vec<Diagnostic>> {
-        // Compile the value
-        self.compile_expr(&assign.value)?;
-
         match &assign.target {
             AssignTarget::Name(ident) => {
+                // For name assignment: compile value first, then set
+                self.compile_expr(&assign.value)?;
+
                 // Try to find local first
                 if let Some(local_idx) = self.resolve_local(&ident.name) {
                     self.bytecode.emit(Opcode::SetLocal, assign.span);
@@ -90,8 +89,20 @@ impl Compiler {
                     self.bytecode.emit_u16(name_idx);
                 }
             }
-            AssignTarget::Index { .. } => {
-                // TODO: Array index assignment
+            AssignTarget::Index { target, index, .. } => {
+                // For array index assignment: compile array, index, value (in that order)
+                // SetIndex pops: value (top), index, array (bottom)
+                // So we need stack: [array, index, value]
+
+                // Compile the array target
+                self.compile_expr(target)?;
+                // Compile the index
+                self.compile_expr(index)?;
+                // Compile the value
+                self.compile_expr(&assign.value)?;
+
+                // Emit SetIndex
+                self.bytecode.emit(Opcode::SetIndex, assign.span);
             }
         }
 
@@ -212,6 +223,296 @@ impl Compiler {
         let loop_ctx = self.loops.pop().unwrap();
         for break_jump in loop_ctx.break_jumps {
             self.bytecode.patch_jump(break_jump);
+        }
+
+        Ok(())
+    }
+
+    /// Compile a compound assignment (+=, -=, *=, /=, %=)
+    fn compile_compound_assign(&mut self, compound: &CompoundAssign) -> Result<(), Vec<Diagnostic>> {
+        match &compound.target {
+            AssignTarget::Name(ident) => {
+                // Get current value
+                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                    self.bytecode.emit(Opcode::GetLocal, compound.span);
+                    self.bytecode.emit_u16(local_idx as u16);
+                } else {
+                    let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
+                    self.bytecode.emit(Opcode::GetGlobal, compound.span);
+                    self.bytecode.emit_u16(name_idx);
+                }
+
+                // Compile the value to apply
+                self.compile_expr(&compound.value)?;
+
+                // Emit the operation
+                let opcode = match compound.op {
+                    CompoundOp::AddAssign => Opcode::Add,
+                    CompoundOp::SubAssign => Opcode::Sub,
+                    CompoundOp::MulAssign => Opcode::Mul,
+                    CompoundOp::DivAssign => Opcode::Div,
+                    CompoundOp::ModAssign => Opcode::Mod,
+                };
+                self.bytecode.emit(opcode, compound.span);
+
+                // Store the result
+                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                    self.bytecode.emit(Opcode::SetLocal, compound.span);
+                    self.bytecode.emit_u16(local_idx as u16);
+                } else {
+                    let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
+                    self.bytecode.emit(Opcode::SetGlobal, compound.span);
+                    self.bytecode.emit_u16(name_idx);
+                }
+
+                // Pop the result (statement context)
+                self.bytecode.emit(Opcode::Pop, compound.span);
+            }
+            AssignTarget::Index { target, index, span } => {
+                // Get array[index]
+                self.compile_expr(target)?;
+                self.compile_expr(index)?;
+                // Duplicate array and index for later SetIndex
+                // Stack: [array, index]
+                // We need: [array, index] for GetIndex, then [array, index, new_value] for SetIndex
+                // But we don't have a good way to duplicate both values
+                // We'd need: [array, index, array, index] -> GetIndex -> [array, index, old_value]
+                // Then: [array, index, old_value, new_operand] -> Op -> [array, index, result]
+                // Then: SetIndex
+
+                // Since we don't have Dup2, we need to recompile:
+                // Option 1: Recompile array and index twice
+                // Option 2: Use locals to save them
+                // For simplicity, let's recompile (not optimal but works):
+
+                // First get the current value
+                self.compile_expr(target)?; // Recompile array
+                self.compile_expr(index)?; // Recompile index
+                self.bytecode.emit(Opcode::GetIndex, *span);
+
+                // Now apply the operation
+                self.compile_expr(&compound.value)?;
+                let opcode = match compound.op {
+                    CompoundOp::AddAssign => Opcode::Add,
+                    CompoundOp::SubAssign => Opcode::Sub,
+                    CompoundOp::MulAssign => Opcode::Mul,
+                    CompoundOp::DivAssign => Opcode::Div,
+                    CompoundOp::ModAssign => Opcode::Mod,
+                };
+                self.bytecode.emit(opcode, compound.span);
+
+                // Now set it back: need array, index, value
+                self.compile_expr(target)?; // Recompile array again
+                self.compile_expr(index)?; // Recompile index again
+                // Stack is now: [result, array, index]
+                // But we need: [array, index, result]
+                // We need to rotate... but we don't have that opcode
+
+                // Let's use a different approach with a temp on stack
+                // Actually, this is getting complex. Let me use locals.
+                // For now, let's just note this limitation and use a simpler approach:
+
+                // Save result to a temporary by using the stack
+                // We have: [result] from the operation
+                // We need: [array, index, result]
+                // Compile array: [result, array]
+                // Compile index: [result, array, index]
+                // Now we need to get result to top: we need [array, index, result]
+
+                // Without rotate/swap, this is tricky. Let me think...
+                // Actually, we can store result in a temp local if in local scope
+                // Or just do multiple GetIndex/SetIndex sequences
+
+                // Simplest working solution: compute result, then do full set sequence:
+                // Current stack: [result]
+                // We'll emit: array, index, result (by using stack manipulation)
+
+                // You know what, let me just restructure to compute things in right order:
+                // We'll compute: array, index, then old_value, then operation, giving new_value
+                // But that puts new_value on top with array and index buried
+
+                // Cleanest approach: emit array and index first, dup them, getindex, operate, setindex
+                // But we don't have dup2 to dup both array and index
+
+                // For MVP, let's just recompile array and index multiple times (inefficient but correct):
+                // Get current: arr[idx]
+                // Compute: old_value op new_value = result
+                // Set: arr[idx] = result
+
+                // But the issue remains: after computing result, we need array and index under it
+
+                // Let me try a different approach: save to temp local if possible
+                // Check scope depth and use a local
+
+                // Actually, let's just accept the limitation for now and not support
+                // compound assignment on array indices in v0.1, or implement correctly:
+
+                // CORRECT IMPLEMENTATION using recompilation:
+                // Step 1: Push array, index, get value
+                // Step 2: Compute operation (old_value on stack, push operand, apply op)
+                // Step 3: Push array, index again, then rotate/swap to get value on top
+                //
+                // Since we don't have rotate, we need to structure it as:
+                // Push array, index (will be consumed by SetIndex)
+                // Push array, index again (will be consumed by GetIndex)
+                // GetIndex (leaves old_value)
+                // Push operand
+                // Apply operation (leaves result)
+                // Now stack is [array_for_set, index_for_set, result] - PERFECT!
+
+                // Let's implement that:
+
+                // For SetIndex at the end (push array and index first)
+                self.compile_expr(target)?;
+                self.compile_expr(index)?;
+                // Stack: [array, index]
+
+                // For GetIndex (push array and index again)
+                self.compile_expr(target)?;
+                self.compile_expr(index)?;
+                // Stack: [array_set, index_set, array_get, index_get]
+
+                self.bytecode.emit(Opcode::GetIndex, *span);
+                // Stack: [array_set, index_set, old_value]
+
+                // Apply operation
+                self.compile_expr(&compound.value)?;
+                // Stack: [array_set, index_set, old_value, operand]
+
+                let opcode = match compound.op {
+                    CompoundOp::AddAssign => Opcode::Add,
+                    CompoundOp::SubAssign => Opcode::Sub,
+                    CompoundOp::MulAssign => Opcode::Mul,
+                    CompoundOp::DivAssign => Opcode::Div,
+                    CompoundOp::ModAssign => Opcode::Mod,
+                };
+                self.bytecode.emit(opcode, compound.span);
+                // Stack: [array_set, index_set, result]
+
+                // Now SetIndex
+                self.bytecode.emit(Opcode::SetIndex, *span);
+                // Stack: [] (SetIndex consumes all three)
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Compile an increment statement (++)
+    fn compile_increment(&mut self, inc: &IncrementStmt) -> Result<(), Vec<Diagnostic>> {
+        match &inc.target {
+            AssignTarget::Name(ident) => {
+                // Get current value
+                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                    self.bytecode.emit(Opcode::GetLocal, inc.span);
+                    self.bytecode.emit_u16(local_idx as u16);
+                } else {
+                    let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
+                    self.bytecode.emit(Opcode::GetGlobal, inc.span);
+                    self.bytecode.emit_u16(name_idx);
+                }
+
+                // Push 1
+                let one_idx = self.bytecode.add_constant(Value::Number(1.0));
+                self.bytecode.emit(Opcode::Constant, inc.span);
+                self.bytecode.emit_u16(one_idx);
+
+                // Add
+                self.bytecode.emit(Opcode::Add, inc.span);
+
+                // Store back
+                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                    self.bytecode.emit(Opcode::SetLocal, inc.span);
+                    self.bytecode.emit_u16(local_idx as u16);
+                } else {
+                    let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
+                    self.bytecode.emit(Opcode::SetGlobal, inc.span);
+                    self.bytecode.emit_u16(name_idx);
+                }
+
+                // Pop the result (statement context)
+                self.bytecode.emit(Opcode::Pop, inc.span);
+            }
+            AssignTarget::Index { target, index, span } => {
+                // Same pattern as compound assign for index
+                // Push array, index for SetIndex
+                self.compile_expr(target)?;
+                self.compile_expr(index)?;
+
+                // Push array, index for GetIndex
+                self.compile_expr(target)?;
+                self.compile_expr(index)?;
+                self.bytecode.emit(Opcode::GetIndex, *span);
+
+                // Push 1 and add
+                let one_idx = self.bytecode.add_constant(Value::Number(1.0));
+                self.bytecode.emit(Opcode::Constant, inc.span);
+                self.bytecode.emit_u16(one_idx);
+                self.bytecode.emit(Opcode::Add, inc.span);
+
+                // SetIndex
+                self.bytecode.emit(Opcode::SetIndex, *span);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Compile a decrement statement (--)
+    fn compile_decrement(&mut self, dec: &DecrementStmt) -> Result<(), Vec<Diagnostic>> {
+        match &dec.target {
+            AssignTarget::Name(ident) => {
+                // Get current value
+                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                    self.bytecode.emit(Opcode::GetLocal, dec.span);
+                    self.bytecode.emit_u16(local_idx as u16);
+                } else {
+                    let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
+                    self.bytecode.emit(Opcode::GetGlobal, dec.span);
+                    self.bytecode.emit_u16(name_idx);
+                }
+
+                // Push 1
+                let one_idx = self.bytecode.add_constant(Value::Number(1.0));
+                self.bytecode.emit(Opcode::Constant, dec.span);
+                self.bytecode.emit_u16(one_idx);
+
+                // Subtract
+                self.bytecode.emit(Opcode::Sub, dec.span);
+
+                // Store back
+                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                    self.bytecode.emit(Opcode::SetLocal, dec.span);
+                    self.bytecode.emit_u16(local_idx as u16);
+                } else {
+                    let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
+                    self.bytecode.emit(Opcode::SetGlobal, dec.span);
+                    self.bytecode.emit_u16(name_idx);
+                }
+
+                // Pop the result (statement context)
+                self.bytecode.emit(Opcode::Pop, dec.span);
+            }
+            AssignTarget::Index { target, index, span } => {
+                // Same pattern as increment for index
+                // Push array, index for SetIndex
+                self.compile_expr(target)?;
+                self.compile_expr(index)?;
+
+                // Push array, index for GetIndex
+                self.compile_expr(target)?;
+                self.compile_expr(index)?;
+                self.bytecode.emit(Opcode::GetIndex, *span);
+
+                // Push 1 and subtract
+                let one_idx = self.bytecode.add_constant(Value::Number(1.0));
+                self.bytecode.emit(Opcode::Constant, dec.span);
+                self.bytecode.emit_u16(one_idx);
+                self.bytecode.emit(Opcode::Sub, dec.span);
+
+                // SetIndex
+                self.bytecode.emit(Opcode::SetIndex, *span);
+            }
         }
 
         Ok(())

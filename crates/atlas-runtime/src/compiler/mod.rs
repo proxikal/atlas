@@ -102,12 +102,90 @@ impl Compiler {
     /// Compile a top-level item
     fn compile_item(&mut self, item: &Item) -> Result<(), Vec<Diagnostic>> {
         match item {
-            Item::Function(_func) => {
-                // TODO: Function compilation in later iteration
-                Ok(())
-            }
+            Item::Function(func) => self.compile_function(func),
             Item::Statement(stmt) => self.compile_stmt(stmt),
         }
+    }
+
+    /// Compile a function declaration
+    fn compile_function(&mut self, func: &FunctionDecl) -> Result<(), Vec<Diagnostic>> {
+        // Record the start offset for this function
+        let function_offset = self.bytecode.current_offset();
+
+        // We'll update the function ref after compiling the body to get accurate local_count
+        // For now, create a placeholder
+        let placeholder_ref = crate::value::FunctionRef {
+            name: func.name.name.clone(),
+            arity: func.params.len(),
+            bytecode_offset: function_offset,
+            local_count: 0, // Will be updated after compiling body
+        };
+        let placeholder_value = crate::value::Value::Function(placeholder_ref);
+
+        // Add placeholder to constant pool
+        let const_idx = self.bytecode.add_constant(placeholder_value);
+        self.bytecode.emit(Opcode::Constant, func.span);
+        self.bytecode.emit_u16(const_idx);
+
+        // Store function as a global variable (so it can be called)
+        let name_idx = self.bytecode.add_constant(crate::value::Value::string(&func.name.name));
+        self.bytecode.emit(Opcode::SetGlobal, func.span);
+        self.bytecode.emit_u16(name_idx);
+        self.bytecode.emit(Opcode::Pop, func.span);
+
+        // Jump over the function body (so it's not executed during program init)
+        self.bytecode.emit(Opcode::Jump, func.span);
+        let skip_jump = self.bytecode.current_offset();
+        self.bytecode.emit_u16(0xFFFF); // Placeholder
+
+        // Now compile the function body at function_offset
+        // The function body is compiled inline in the bytecode
+        // When called, the VM will jump here
+
+        // Set up parameters as local variables
+        // Parameters are expected to be on the stack when the function is called
+        // They're already there from the CALL instruction
+        // We just need to track them as locals
+        let old_locals_len = self.locals.len();
+        let old_scope = self.scope_depth;
+        self.scope_depth += 1;
+
+        // Add parameters as locals
+        for param in &func.params {
+            self.locals.push(Local {
+                name: param.name.name.clone(),
+                depth: self.scope_depth,
+                mutable: true, // Parameters are always mutable
+            });
+        }
+
+        // Compile function body
+        self.compile_block(&func.body)?;
+
+        // Calculate total local count (all locals added during function compilation)
+        let total_local_count = self.locals.len() - old_locals_len;
+
+        // If function doesn't end with explicit return, add implicit "return null"
+        self.bytecode.emit(Opcode::Null, func.span);
+        self.bytecode.emit(Opcode::Return, func.span);
+
+        // Restore scope and locals
+        self.scope_depth = old_scope;
+        self.locals.truncate(old_locals_len);
+
+        // Update the FunctionRef in constants with accurate local_count
+        let updated_ref = crate::value::FunctionRef {
+            name: func.name.name.clone(),
+            arity: func.params.len(),
+            bytecode_offset: function_offset,
+            local_count: total_local_count,
+        };
+        self.bytecode.constants[const_idx as usize] = crate::value::Value::Function(updated_ref);
+
+        // Patch the skip jump to go past the function body
+        self.bytecode.patch_jump(skip_jump);
+
+        Ok(())
     }
 
     /// Resolve a local variable by name, returning its index if found
@@ -344,11 +422,86 @@ mod tests {
     }
 
     #[test]
+    fn test_compile_user_function_basic() {
+        let bytecode = compile_source("fn add(a: number, b: number) -> number { return a + b; }");
+        // Should have instructions for function definition
+        assert!(bytecode.instructions.len() > 0);
+        // Should have function in constants
+        let has_function = bytecode.constants.iter().any(|c| matches!(c, Value::Function(_)));
+        assert!(has_function, "Should have function in constants");
+    }
+
+    #[test]
+    fn test_compile_function_call_user_defined() {
+        let bytecode = compile_source(r#"
+            fn double(x: number) -> number { return x * 2; }
+            double(21);
+        "#);
+        // Should have Call opcode
+        let has_call = bytecode.instructions.iter().any(|&b| b == Opcode::Call as u8);
+        assert!(has_call, "Should have Call opcode");
+    }
+
+    #[test]
+    fn test_compile_array_index_assignment() {
+        let bytecode = compile_source("let arr = [1, 2, 3]; arr[0] = 42;");
+        // Should have SetIndex opcode
+        let has_setindex = bytecode.instructions.iter().any(|&b| b == Opcode::SetIndex as u8);
+        assert!(has_setindex, "Should have SetIndex opcode");
+    }
+
+    #[test]
+    fn test_compile_compound_assignment_add() {
+        let bytecode = compile_source("let x = 10; x += 5;");
+        // Should have GetGlobal, Constant(5), Add, SetGlobal
+        let add_pos = bytecode.instructions.iter().position(|&b| b == Opcode::Add as u8);
+        assert!(add_pos.is_some(), "Should have Add opcode for +=");
+    }
+
+    #[test]
+    fn test_compile_increment() {
+        let bytecode = compile_source("let x = 5; x++;");
+        // Should have GetGlobal, Constant(1), Add, SetGlobal
+        let add_pos = bytecode.instructions.iter().position(|&b| b == Opcode::Add as u8);
+        assert!(add_pos.is_some(), "Should have Add opcode for ++");
+    }
+
+    #[test]
+    fn test_compile_decrement() {
+        let bytecode = compile_source("let x = 5; x--;");
+        // Should have GetGlobal, Constant(1), Sub, SetGlobal
+        let sub_pos = bytecode.instructions.iter().position(|&b| b == Opcode::Sub as u8);
+        assert!(sub_pos.is_some(), "Should have Sub opcode for --");
+    }
+
+    #[test]
+    fn test_compile_short_circuit_and() {
+        let bytecode = compile_source("let result = false && true;");
+        // Should have Dup and JumpIfFalse for short-circuit
+        let has_dup = bytecode.instructions.iter().any(|&b| b == Opcode::Dup as u8);
+        let has_jump = bytecode.instructions.iter().any(|&b| b == Opcode::JumpIfFalse as u8);
+        assert!(has_dup, "Should have Dup for short-circuit");
+        assert!(has_jump, "Should have JumpIfFalse for short-circuit");
+    }
+
+    #[test]
+    fn test_compile_short_circuit_or() {
+        let bytecode = compile_source("let result = true || false;");
+        // Should have Dup, Not, and JumpIfFalse for short-circuit
+        let has_dup = bytecode.instructions.iter().any(|&b| b == Opcode::Dup as u8);
+        let has_not = bytecode.instructions.iter().any(|&b| b == Opcode::Not as u8);
+        let has_jump = bytecode.instructions.iter().any(|&b| b == Opcode::JumpIfFalse as u8);
+        assert!(has_dup, "Should have Dup for short-circuit");
+        assert!(has_not, "Should have Not for || short-circuit");
+        assert!(has_jump, "Should have JumpIfFalse for short-circuit");
+    }
+
+    #[test]
     fn test_compile_return_statement() {
         let bytecode = compile_source("fn test() -> number { return 42; }");
-        // Function compilation is TODO, but we should handle the syntax
-        // For now, just make sure it doesn't crash
-        assert!(bytecode.instructions.len() > 0);
+        // Should have Return opcode
+        let has_return = bytecode.instructions.iter().any(|&b| b == Opcode::Return as u8);
+        assert!(has_return, "Should have Return opcode");
     }
 
     #[test]
