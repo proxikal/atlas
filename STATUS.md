@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM In Progress (Phase 15 Complete)
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM In Progress (Phase 16 Complete)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/bytecode-vm/phase-15-debug-info-defaults.md
-**Next Phase:** `phases/bytecode-vm/phase-16-bytecode-format-tests.md`
+**Last Completed:** phases/bytecode-vm/phase-16-bytecode-format-tests.md
+**Next Phase:** `phases/bytecode-vm/phase-17-runtime-numeric-errors.md`
 
-**What to implement:** Comprehensive tests for bytecode format edge cases and validation
+**What to implement:** Ensure VM mirrors interpreter numeric error behavior (AT0005, AT0007)
 
 ---
 
@@ -29,9 +29,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Bytecode & VM Phase 16:**
-- `docs/implementation/11-bytecode.md` - Bytecode format specification
-- `phases/bytecode-vm/phase-16-bytecode-format-tests.md` - Phase implementation guide
+**For Bytecode & VM Phase 17:**
+- `docs/implementation/12-vm.md` - VM implementation guide
+- `docs/numeric-edge-cases.md` - Numeric error specifications
+- `phases/bytecode-vm/phase-17-runtime-numeric-errors.md` - Phase implementation guide
 
 ---
 
@@ -103,7 +104,7 @@
 ### 7. REPL (1/1) ✅ COMPLETE
 - ✅ phases/interpreter/phase-02-repl.md
 
-### 8. Bytecode & VM (15/17)
+### 8. Bytecode & VM (16/17)
 - ✅ phase-03-bytecode-format.md
 - ✅ phase-01-bytecode-compiler.md
 - ✅ phase-02-vm.md
@@ -119,8 +120,8 @@
 - ✅ phase-13-debugger-hooks.md
 - ✅ phase-14-debug-info.md
 - ✅ phase-15-debug-info-defaults.md
-- ⬜ phase-16-bytecode-format-tests.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-17-runtime-numeric-errors.md
+- ✅ phase-16-bytecode-format-tests.md
+- ⬜ phase-17-runtime-numeric-errors.md ⬅️ **YOU ARE HERE**
 
 ### 9. Standard Library (0/8)
 - ⬜ phase-01-stdlib.md
@@ -161,7 +162,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 60/93 phases (65%)
+**Total Progress:** 61/93 phases (66%)
 
 ---
 

@@ -1059,4 +1059,361 @@ mod tests {
         let flags = u16::from_be_bytes([bytes[6], bytes[7]]);
         assert_eq!(flags & 1, 1, "Debug flag should be set when using emit()");
     }
+
+    // ===== Bytecode Format Tests (Phase 16) =====
+
+    #[test]
+    fn test_bytecode_format_header() {
+        // Test that header format matches specification
+        let bytecode = Bytecode::new();
+        let bytes = bytecode.to_bytes();
+
+        // Magic number: "ATB\0" (4 bytes)
+        assert_eq!(&bytes[0..4], b"ATB\0", "Magic number should be ATB\\0");
+
+        // Version: u16 (bytes 4-5)
+        let version = u16::from_be_bytes([bytes[4], bytes[5]]);
+        assert_eq!(version, BYTECODE_VERSION, "Version should match BYTECODE_VERSION");
+
+        // Flags: u16 (bytes 6-7)
+        let flags = u16::from_be_bytes([bytes[6], bytes[7]]);
+        assert_eq!(flags, 0, "Empty bytecode should have flags = 0");
+    }
+
+    #[test]
+    fn test_bytecode_format_minimal() {
+        // Test minimal valid bytecode (just Halt instruction)
+        let mut bytecode = Bytecode::new();
+        bytecode.instructions.push(Opcode::Halt as u8);
+
+        let bytes = bytecode.to_bytes();
+
+        // Header (8 bytes)
+        assert_eq!(&bytes[0..4], b"ATB\0");
+        assert_eq!(u16::from_be_bytes([bytes[4], bytes[5]]), BYTECODE_VERSION);
+        assert_eq!(u16::from_be_bytes([bytes[6], bytes[7]]), 0); // No debug info
+
+        // Constants count (4 bytes) = 0
+        assert_eq!(u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]), 0);
+
+        // Instructions length (4 bytes) = 1
+        assert_eq!(u32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]), 1);
+
+        // Halt opcode
+        assert_eq!(bytes[16], Opcode::Halt as u8);
+
+        // Total size should be 8 (header) + 4 (const count) + 4 (instr len) + 1 (halt) = 17
+        assert_eq!(bytes.len(), 17);
+    }
+
+    #[test]
+    fn test_bytecode_format_with_constants() {
+        // Test bytecode with constant pool
+        let mut bytecode = Bytecode::new();
+        bytecode.add_constant(Value::Number(42.0));
+        bytecode.add_constant(Value::string("hello"));
+        bytecode.add_constant(Value::Bool(true));
+        bytecode.add_constant(Value::Null);
+
+        let bytes = bytecode.to_bytes();
+
+        // Skip header (8 bytes)
+        let mut offset = 8;
+
+        // Constants count should be 4
+        let const_count = u32::from_be_bytes([bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]]);
+        assert_eq!(const_count, 4);
+        offset += 4;
+
+        // Verify each constant format
+        // Constant 0: Number (tag 0x02 + f64)
+        assert_eq!(bytes[offset], 0x02); // Number tag
+        offset += 1;
+        let num = f64::from_be_bytes([
+            bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
+            bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7],
+        ]);
+        assert_eq!(num, 42.0);
+        offset += 8;
+
+        // Constant 1: String (tag 0x03 + u32 len + bytes)
+        assert_eq!(bytes[offset], 0x03); // String tag
+        offset += 1;
+        let str_len = u32::from_be_bytes([bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]]) as usize;
+        assert_eq!(str_len, 5);
+        offset += 4;
+        assert_eq!(&bytes[offset..offset + 5], b"hello");
+        offset += 5;
+
+        // Constant 2: Bool (tag 0x01 + u8)
+        assert_eq!(bytes[offset], 0x01); // Bool tag
+        offset += 1;
+        assert_eq!(bytes[offset], 1); // true
+        offset += 1;
+
+        // Constant 3: Null (tag 0x00)
+        assert_eq!(bytes[offset], 0x00); // Null tag
+    }
+
+    #[test]
+    fn test_bytecode_format_roundtrip_instructions() {
+        // Test that various instruction patterns survive roundtrip
+        let mut bytecode = Bytecode::new();
+
+        // Add some constants
+        let idx0 = bytecode.add_constant(Value::Number(10.0));
+        let idx1 = bytecode.add_constant(Value::Number(20.0));
+
+        // Emit various instructions
+        bytecode.emit(Opcode::Constant, Span::new(0, 2));
+        bytecode.emit_u16(idx0);
+        bytecode.emit(Opcode::Constant, Span::new(3, 5));
+        bytecode.emit_u16(idx1);
+        bytecode.emit(Opcode::Add, Span::new(6, 7));
+        bytecode.emit(Opcode::Dup, Span::new(8, 9));
+        bytecode.emit(Opcode::Pop, Span::new(10, 11));
+        bytecode.emit(Opcode::Halt, Span::new(12, 13));
+
+        // Serialize and deserialize
+        let bytes = bytecode.to_bytes();
+        let loaded = Bytecode::from_bytes(&bytes).unwrap();
+
+        // Verify instructions match exactly
+        assert_eq!(loaded.instructions, bytecode.instructions);
+        assert_eq!(loaded.constants.len(), bytecode.constants.len());
+        assert_eq!(loaded.debug_info.len(), bytecode.debug_info.len());
+    }
+
+    #[test]
+    fn test_bytecode_format_large_constant_pool() {
+        // Test bytecode with many constants
+        let mut bytecode = Bytecode::new();
+
+        for i in 0..1000 {
+            bytecode.add_constant(Value::Number(i as f64));
+        }
+
+        let bytes = bytecode.to_bytes();
+        let loaded = Bytecode::from_bytes(&bytes).unwrap();
+
+        assert_eq!(loaded.constants.len(), 1000);
+        assert_eq!(loaded.constants[500], Value::Number(500.0));
+        assert_eq!(loaded.constants[999], Value::Number(999.0));
+    }
+
+    #[test]
+    fn test_bytecode_format_all_value_types() {
+        use std::rc::Rc;
+        // Test that all serializable value types work
+        let mut bytecode = Bytecode::new();
+
+        bytecode.add_constant(Value::Null);
+        bytecode.add_constant(Value::Bool(true));
+        bytecode.add_constant(Value::Bool(false));
+        bytecode.add_constant(Value::Number(3.14159));
+        bytecode.add_constant(Value::Number(-273.15));
+        bytecode.add_constant(Value::Number(0.0));
+        bytecode.add_constant(Value::String(Rc::new("".to_string())));
+        bytecode.add_constant(Value::String(Rc::new("test".to_string())));
+        bytecode.add_constant(Value::Function(crate::value::FunctionRef {
+            name: "myFunc".to_string(),
+            arity: 3,
+            bytecode_offset: 42,
+        }));
+
+        let bytes = bytecode.to_bytes();
+        let loaded = Bytecode::from_bytes(&bytes).unwrap();
+
+        assert_eq!(loaded.constants.len(), 9);
+        assert_eq!(loaded.constants[0], Value::Null);
+        assert_eq!(loaded.constants[1], Value::Bool(true));
+        assert_eq!(loaded.constants[2], Value::Bool(false));
+        assert_eq!(loaded.constants[3], Value::Number(3.14159));
+        assert_eq!(loaded.constants[4], Value::Number(-273.15));
+        assert_eq!(loaded.constants[5], Value::Number(0.0));
+        assert_eq!(loaded.constants[6], Value::string(""));
+        assert_eq!(loaded.constants[7], Value::string("test"));
+
+        if let Value::Function(f) = &loaded.constants[8] {
+            assert_eq!(f.name, "myFunc");
+            assert_eq!(f.arity, 3);
+            assert_eq!(f.bytecode_offset, 42);
+        } else {
+            panic!("Expected function constant");
+        }
+    }
+
+    #[test]
+    fn test_bytecode_format_version_check() {
+        // Test that version checking works correctly
+        let bytecode = Bytecode::new();
+        let mut bytes = bytecode.to_bytes();
+
+        // Modify version to something else
+        bytes[4] = 0xFF;
+        bytes[5] = 0xFF;
+
+        let result = Bytecode::from_bytes(&bytes);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("version mismatch"));
+        assert!(err.contains("65535")); // 0xFFFF in decimal
+    }
+
+    #[test]
+    fn test_bytecode_format_version_too_old() {
+        // Simulate bytecode from version 0 (too old)
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"ATB\0");
+        bytes.extend_from_slice(&0u16.to_be_bytes()); // Version 0
+        bytes.extend_from_slice(&0u16.to_be_bytes()); // Flags
+        bytes.extend_from_slice(&0u32.to_be_bytes()); // Constants count
+        bytes.extend_from_slice(&0u32.to_be_bytes()); // Instructions length
+
+        let result = Bytecode::from_bytes(&bytes);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("version mismatch"));
+        assert!(err.contains("file has version 0"));
+    }
+
+    #[test]
+    fn test_bytecode_format_corrupted_magic() {
+        // Test various corrupted magic numbers
+        let test_cases = vec![
+            b"XTB\0", // Wrong first byte
+            b"AXB\0", // Wrong second byte
+            b"ATX\0", // Wrong third byte
+            b"ATB1", // Wrong fourth byte (should be null)
+            b"atb\0", // Wrong case
+        ];
+
+        for &magic in &test_cases {
+            let mut bytes = Vec::new();
+            bytes.extend_from_slice(magic);
+            bytes.extend_from_slice(&1u16.to_be_bytes());
+            bytes.extend_from_slice(&0u16.to_be_bytes());
+            bytes.extend_from_slice(&0u32.to_be_bytes());
+            bytes.extend_from_slice(&0u32.to_be_bytes());
+
+            let result = Bytecode::from_bytes(&bytes);
+            assert!(result.is_err(), "Should reject magic {:?}", magic);
+            assert!(result.unwrap_err().contains("bad magic number"));
+        }
+    }
+
+    #[test]
+    fn test_bytecode_format_truncated_header() {
+        // Test various truncated headers
+        for len in 0..8 {
+            let bytes = vec![0u8; len];
+            let result = Bytecode::from_bytes(&bytes);
+            assert!(result.is_err(), "Should reject {} byte header", len);
+            assert!(result.unwrap_err().contains("too short"));
+        }
+    }
+
+    #[test]
+    fn test_bytecode_format_truncated_constants() {
+        // Header is valid, but constants section is truncated
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"ATB\0");
+        bytes.extend_from_slice(&BYTECODE_VERSION.to_be_bytes());
+        bytes.extend_from_slice(&0u16.to_be_bytes());
+        bytes.extend_from_slice(&2u32.to_be_bytes()); // Claims 2 constants
+        // But no constant data follows
+
+        let result = Bytecode::from_bytes(&bytes);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unexpected end of data"));
+    }
+
+    #[test]
+    fn test_bytecode_format_truncated_instructions() {
+        // Constants section is valid, but instructions section is truncated
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"ATB\0");
+        bytes.extend_from_slice(&BYTECODE_VERSION.to_be_bytes());
+        bytes.extend_from_slice(&0u16.to_be_bytes());
+        bytes.extend_from_slice(&0u32.to_be_bytes()); // 0 constants
+        bytes.extend_from_slice(&10u32.to_be_bytes()); // Claims 10 instruction bytes
+        bytes.extend_from_slice(&[0x01, 0x02]); // But only 2 bytes follow
+
+        let result = Bytecode::from_bytes(&bytes);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("truncated"));
+    }
+
+    #[test]
+    fn test_bytecode_format_exact_size_validation() {
+        // Test that deserializer requires exact byte count
+        let mut bytecode = Bytecode::new();
+        bytecode.emit(Opcode::Halt, Span::new(0, 1));
+
+        let mut bytes = bytecode.to_bytes();
+
+        // Add extra garbage bytes
+        bytes.push(0xFF);
+        bytes.push(0xEE);
+
+        let result = Bytecode::from_bytes(&bytes);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("expected") && err.contains("consumed"));
+    }
+
+    #[test]
+    fn test_bytecode_format_complex_program() {
+        // Test a realistic complex program
+        let mut bytecode = Bytecode::new();
+
+        // Add constants for: let x = 10; let y = 20; let z = x + y;
+        let num10 = bytecode.add_constant(Value::Number(10.0));
+        let var_x = bytecode.add_constant(Value::string("x"));
+        let num20 = bytecode.add_constant(Value::Number(20.0));
+        let var_y = bytecode.add_constant(Value::string("y"));
+        let var_z = bytecode.add_constant(Value::string("z"));
+
+        // let x = 10
+        bytecode.emit(Opcode::Constant, Span::new(0, 10));
+        bytecode.emit_u16(num10);
+        bytecode.emit(Opcode::SetGlobal, Span::new(0, 10));
+        bytecode.emit_u16(var_x);
+        bytecode.emit(Opcode::Pop, Span::new(0, 10));
+
+        // let y = 20
+        bytecode.emit(Opcode::Constant, Span::new(11, 21));
+        bytecode.emit_u16(num20);
+        bytecode.emit(Opcode::SetGlobal, Span::new(11, 21));
+        bytecode.emit_u16(var_y);
+        bytecode.emit(Opcode::Pop, Span::new(11, 21));
+
+        // let z = x + y
+        bytecode.emit(Opcode::GetGlobal, Span::new(22, 32));
+        bytecode.emit_u16(var_x);
+        bytecode.emit(Opcode::GetGlobal, Span::new(22, 32));
+        bytecode.emit_u16(var_y);
+        bytecode.emit(Opcode::Add, Span::new(22, 32));
+        bytecode.emit(Opcode::SetGlobal, Span::new(22, 32));
+        bytecode.emit_u16(var_z);
+        bytecode.emit(Opcode::Pop, Span::new(22, 32));
+
+        bytecode.emit(Opcode::Halt, Span::new(33, 34));
+
+        // Round-trip test
+        let bytes = bytecode.to_bytes();
+        let loaded = Bytecode::from_bytes(&bytes).unwrap();
+
+        // Verify all components match
+        assert_eq!(loaded.instructions, bytecode.instructions);
+        assert_eq!(loaded.constants.len(), bytecode.constants.len());
+        assert_eq!(loaded.debug_info.len(), bytecode.debug_info.len());
+
+        // Verify specific constants
+        assert_eq!(loaded.constants[0], Value::Number(10.0));
+        assert_eq!(loaded.constants[1], Value::string("x"));
+        assert_eq!(loaded.constants[2], Value::Number(20.0));
+        assert_eq!(loaded.constants[3], Value::string("y"));
+        assert_eq!(loaded.constants[4], Value::string("z"));
+    }
 }
