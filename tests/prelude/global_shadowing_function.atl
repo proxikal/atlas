@@ -1,0 +1,2 @@
+// AT1012: Cannot shadow prelude builtin 'print' in global scope
+fn print() -> void {}

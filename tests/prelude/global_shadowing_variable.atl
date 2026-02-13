@@ -1,0 +1,2 @@
+// AT1012: Cannot shadow prelude builtin 'len' in global scope
+let len = 42;

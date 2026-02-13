@@ -1,0 +1,4 @@
+// Prelude functions should be available without imports
+print("hello");
+let l = len("world");
+let s = str(42);

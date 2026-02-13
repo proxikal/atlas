@@ -1,0 +1,4 @@
+// AT1012: Cannot shadow prelude builtins in global scope
+fn print() -> void {}
+let len = 42;
+var str = "test";

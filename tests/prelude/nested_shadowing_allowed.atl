@@ -1,0 +1,6 @@
+// Shadowing prelude in nested scopes should be allowed
+fn test() -> void {
+    let print = 42;
+    let len = "hello";
+    let str = true;
+}
