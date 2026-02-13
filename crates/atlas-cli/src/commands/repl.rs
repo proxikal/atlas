@@ -6,7 +6,16 @@ use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
 /// Run the interactive REPL
-pub fn run() -> Result<()> {
+///
+/// If `use_tui` is true, uses ratatui TUI mode.
+/// Otherwise, uses rustyline line-editor mode (default).
+pub fn run(use_tui: bool) -> Result<()> {
+    if use_tui {
+        // Use TUI mode (ratatui)
+        return super::repl_tui::run();
+    }
+
+    // Use line-editor mode (rustyline) - default
     let mut rl = DefaultEditor::new()?;
     let mut repl = ReplCore::new();
 

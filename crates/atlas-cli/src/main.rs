@@ -33,7 +33,11 @@ enum Commands {
         disasm: bool,
     },
     /// Start an interactive REPL
-    Repl,
+    Repl {
+        /// Use TUI mode (ratatui) instead of line editor
+        #[arg(long)]
+        tui: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -41,18 +45,16 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Run { file } => {
-            println!("Running: {}", file);
-            println!("(Not yet implemented)");
+            commands::run::run(&file)?;
         }
         Commands::Check { file } => {
-            println!("Checking: {}", file);
-            println!("(Not yet implemented)");
+            commands::check::run(&file)?;
         }
         Commands::Build { file, disasm } => {
             commands::build::run(&file, disasm)?;
         }
-        Commands::Repl => {
-            commands::repl::run()?;
+        Commands::Repl { tui } => {
+            commands::repl::run(tui)?;
         }
     }
 
@@ -69,5 +71,15 @@ mod tests {
         // This test ensures the binary compiles and basic structure works
         let _cli = Cli::parse_from(["atlas", "repl"]);
         // If we get here without panicking, the CLI structure is valid
+    }
+
+    #[test]
+    fn test_cli_repl_tui_flag() {
+        // Verify TUI flag is parsed correctly
+        let cli = Cli::parse_from(["atlas", "repl", "--tui"]);
+        match cli.command {
+            Commands::Repl { tui } => assert!(tui),
+            _ => panic!("Expected Repl command"),
+        }
     }
 }

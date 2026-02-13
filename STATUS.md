@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM Complete + Stdlib Complete ✅
+**Last Updated:** 2026-02-13
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM Complete + Stdlib Complete + CLI Phase 01 Complete ✅
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/stdlib/phase-08-prelude-tests.md
-**Next Phase:** `phases/cli/phase-01-cli.md`
+**Last Completed:** phases/cli/phase-01-cli.md
+**Next Phase:** `phases/cli/phase-02-cli-diagnostics.md`
 
-**What to implement:** Build CLI with run/repl/check commands
+**What to implement:** Improve CLI diagnostic formatting and error display
 
 ---
 
@@ -29,11 +29,10 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For CLI Phase 01:**
-- `docs/cli.md` - CLI specification
+**For CLI Phase 02:**
+- `docs/diagnostics.md` - Diagnostic specification
 - `Atlas-SPEC.md` - Language specification
-- `docs/implementation/14-repl.md` - REPL implementation
-- `phases/cli/phase-01-cli.md` - Phase implementation guide
+- `phases/cli/phase-02-cli-diagnostics.md` - Phase implementation guide
 
 ---
 
@@ -134,9 +133,9 @@
 - ✅ phase-07-prelude-binding.md
 - ✅ phase-08-prelude-tests.md
 
-### 10. CLI (0/10)
-- ⬜ phase-01-cli.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-02-cli-diagnostics.md
+### 10. CLI (1/10)
+- ✅ phase-01-cli.md
+- ⬜ phase-02-cli-diagnostics.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-03-repl-modes.md
 - ⬜ phase-04-build-output.md
 - ⬜ phase-05-repl-history.md
@@ -163,7 +162,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 70/93 phases (75%)
+**Total Progress:** 71/93 phases (76%)
 
 ---
 
