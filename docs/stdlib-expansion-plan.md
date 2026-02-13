@@ -93,8 +93,10 @@ This document defines the roadmap for growing the Atlas standard library beyond 
 - `readLines(path: string) -> string[]` - Read file as lines
 
 **JSON Module (`json::*`):**
-- `parse(s: string) -> any` - Parse JSON string (requires `any` type or dynamic values)
-- `stringify(value: any) -> string` - Convert value to JSON
+- `parse(s: string) -> JsonValue` - Parse JSON string (returns JsonValue type)
+- `stringify(value: JsonValue) -> string` - Convert JsonValue to JSON
+- JsonValue indexing: `data["key"]` or `data[0]` (returns JsonValue)
+- Type extraction: `.as_string()`, `.as_number()`, `.as_bool()`, `.is_null()`, `.as_array()`
 
 **Security Considerations:**
 - Sandbox mode by default (see `docs/io-security-model.md`)
@@ -106,7 +108,8 @@ This document defines the roadmap for growing the Atlas standard library beyond 
 - Most-requested feature for scripting
 - Enables real-world automation
 - JSON critical for AI agent workflows
-- Security model must be designed first (Phase 05)
+- Follows Rust's `serde_json` pattern (ergonomic + type-safe)
+- Security model designed first (Phase 05)
 
 **Exit Criteria:**
 - Security model documented and implemented
