@@ -912,4 +912,151 @@ mod tests {
             _ => panic!("Expected Function value"),
         }
     }
+
+    // ===== Debug Info Default Tests (Phase 15) =====
+
+    #[test]
+    fn test_bytecode_with_debug_info_sets_flag() {
+        // Verify that bytecode with debug info sets the flag correctly
+        let mut bytecode = Bytecode::new();
+        bytecode.emit(Opcode::Constant, Span::new(0, 5));
+        bytecode.emit_u16(0);
+        bytecode.emit(Opcode::Halt, Span::new(6, 7));
+
+        assert!(!bytecode.debug_info.is_empty(), "Should have debug info");
+
+        let bytes = bytecode.to_bytes();
+
+        // Check header flags (bytes 6-7)
+        let flags = u16::from_be_bytes([bytes[6], bytes[7]]);
+        assert_eq!(flags & 1, 1, "Bit 0 should be set when debug info is present");
+    }
+
+    #[test]
+    fn test_bytecode_without_debug_info_clears_flag() {
+        // Verify that bytecode without debug info has flag cleared
+        let mut bytecode = Bytecode::new();
+        // Use lower-level operations that don't track debug info
+        bytecode.instructions.push(Opcode::Halt as u8);
+
+        assert!(bytecode.debug_info.is_empty(), "Should have no debug info");
+
+        let bytes = bytecode.to_bytes();
+
+        // Check header flags (bytes 6-7)
+        let flags = u16::from_be_bytes([bytes[6], bytes[7]]);
+        assert_eq!(flags & 1, 0, "Bit 0 should be clear when debug info is absent");
+    }
+
+    #[test]
+    fn test_serialized_debug_info_section_present() {
+        // Test that the debug info section is present in serialized bytecode
+        let mut bytecode = Bytecode::new();
+        bytecode.emit(Opcode::Constant, Span::new(10, 20));
+        bytecode.emit_u16(0);
+        bytecode.emit(Opcode::Pop, Span::new(21, 22));
+
+        let bytes = bytecode.to_bytes();
+
+        // Deserialize and verify debug info is present
+        let loaded = Bytecode::from_bytes(&bytes).unwrap();
+        assert_eq!(loaded.debug_info.len(), 2, "Should have 2 debug spans");
+        assert_eq!(loaded.debug_info[0].span, Span::new(10, 20));
+        assert_eq!(loaded.debug_info[1].span, Span::new(21, 22));
+    }
+
+    #[test]
+    fn test_debug_info_instruction_offsets_accurate() {
+        // Verify that debug info instruction offsets are accurate
+        let mut bytecode = Bytecode::new();
+
+        // Emit several instructions and track expected offsets
+        bytecode.emit(Opcode::Constant, Span::new(0, 1)); // Offset 0
+        bytecode.emit_u16(0); // Operands at 1-2
+        bytecode.emit(Opcode::Constant, Span::new(2, 3)); // Offset 3
+        bytecode.emit_u16(1); // Operands at 4-5
+        bytecode.emit(Opcode::Add, Span::new(4, 5)); // Offset 6
+        bytecode.emit(Opcode::Halt, Span::new(6, 7)); // Offset 7
+
+        // Verify debug info offsets
+        assert_eq!(bytecode.debug_info[0].instruction_offset, 0);
+        assert_eq!(bytecode.debug_info[1].instruction_offset, 3);
+        assert_eq!(bytecode.debug_info[2].instruction_offset, 6);
+        assert_eq!(bytecode.debug_info[3].instruction_offset, 7);
+
+        // Verify these offsets survive serialization
+        let bytes = bytecode.to_bytes();
+        let loaded = Bytecode::from_bytes(&bytes).unwrap();
+
+        assert_eq!(loaded.debug_info[0].instruction_offset, 0);
+        assert_eq!(loaded.debug_info[1].instruction_offset, 3);
+        assert_eq!(loaded.debug_info[2].instruction_offset, 6);
+        assert_eq!(loaded.debug_info[3].instruction_offset, 7);
+    }
+
+    #[test]
+    fn test_debug_info_with_many_instructions() {
+        // Test that debug info works with many instructions
+        let mut bytecode = Bytecode::new();
+
+        for i in 0..100 {
+            bytecode.emit(Opcode::Constant, Span::new(i * 10, i * 10 + 5));
+            bytecode.emit_u16(i as u16);
+            bytecode.emit(Opcode::Pop, Span::new(i * 10 + 6, i * 10 + 7));
+        }
+        bytecode.emit(Opcode::Halt, Span::dummy());
+
+        // Should have 201 debug spans (100 Constants + 100 Pops + 1 Halt)
+        assert_eq!(bytecode.debug_info.len(), 201);
+
+        // Serialize and verify
+        let bytes = bytecode.to_bytes();
+        let loaded = Bytecode::from_bytes(&bytes).unwrap();
+
+        assert_eq!(loaded.debug_info.len(), 201);
+        // Spot check a few spans
+        assert_eq!(loaded.debug_info[0].span, Span::new(0, 5));
+        assert_eq!(loaded.debug_info[1].span, Span::new(6, 7));
+        assert_eq!(loaded.debug_info[100].span, Span::new(500, 505));
+    }
+
+    #[test]
+    fn test_debug_info_span_lookup_after_deserialization() {
+        // Test that span lookup works correctly after deserialization
+        let mut bytecode = Bytecode::new();
+        let span1 = Span::new(0, 10);
+        let span2 = Span::new(20, 30);
+
+        bytecode.emit(Opcode::Constant, span1);
+        bytecode.emit_u16(0); // Takes bytes 1-2
+        bytecode.emit(Opcode::Add, span2); // At offset 3
+
+        // Serialize and deserialize
+        let bytes = bytecode.to_bytes();
+        let loaded = Bytecode::from_bytes(&bytes).unwrap();
+
+        // Test span lookup on deserialized bytecode
+        assert_eq!(loaded.get_span_for_offset(0), Some(span1));
+        assert_eq!(loaded.get_span_for_offset(1), Some(span1)); // Operand byte
+        assert_eq!(loaded.get_span_for_offset(2), Some(span1)); // Operand byte
+        assert_eq!(loaded.get_span_for_offset(3), Some(span2));
+    }
+
+    #[test]
+    fn test_debug_info_default_emit_behavior() {
+        // Test that using emit() automatically tracks debug info
+        let mut bytecode = Bytecode::new();
+
+        // emit() should automatically add debug info
+        bytecode.emit(Opcode::True, Span::new(5, 9));
+
+        assert_eq!(bytecode.debug_info.len(), 1);
+        assert_eq!(bytecode.debug_info[0].instruction_offset, 0);
+        assert_eq!(bytecode.debug_info[0].span, Span::new(5, 9));
+
+        // Verify it's included in serialization by default
+        let bytes = bytecode.to_bytes();
+        let flags = u16::from_be_bytes([bytes[6], bytes[7]]);
+        assert_eq!(flags & 1, 1, "Debug flag should be set when using emit()");
+    }
 }

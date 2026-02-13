@@ -526,4 +526,191 @@ mod tests {
         // Should have at least 100 constants
         assert!(bytecode.constants.len() >= 100);
     }
+
+    // ===== Debug Info Default Tests (Phase 15) =====
+
+    #[test]
+    fn test_debug_info_present_by_default() {
+        // Verify that compiled code contains debug info by default
+        let bytecode = compile_source("let x = 42;");
+
+        // Debug info should not be empty
+        assert!(!bytecode.debug_info.is_empty(), "Debug info should be present by default");
+
+        // Should have debug info for each emitted opcode
+        // At minimum: Constant, SetGlobal, Pop, Halt
+        assert!(bytecode.debug_info.len() >= 3, "Should have debug spans for multiple instructions");
+    }
+
+    #[test]
+    fn test_debug_info_for_expressions() {
+        // Test that expressions preserve debug info
+        let bytecode = compile_source("1 + 2 * 3;");
+
+        // Should have debug info for: Constant(1), Constant(2), Constant(3), Mul, Add, Pop, Halt
+        assert!(bytecode.debug_info.len() >= 5, "Expression should generate debug info");
+
+        // Verify all debug spans have valid instruction offsets
+        for debug_span in &bytecode.debug_info {
+            assert!(debug_span.instruction_offset < bytecode.instructions.len(),
+                    "Debug span offset should be within instruction bounds");
+        }
+    }
+
+    #[test]
+    fn test_debug_info_for_control_flow() {
+        // Test that control flow statements preserve debug info
+        let bytecode = compile_source("if (true) { 42; }");
+
+        // Should have debug info for: True, JumpIfFalse, Constant, Pop, Halt
+        assert!(bytecode.debug_info.len() >= 3, "Control flow should generate debug info");
+
+        // Check that we have a JumpIfFalse instruction with debug info
+        let has_jump = bytecode.instructions.iter().any(|&b| b == Opcode::JumpIfFalse as u8);
+        assert!(has_jump, "Should have JumpIfFalse instruction");
+    }
+
+    #[test]
+    fn test_debug_info_for_loops() {
+        // Test that loops preserve debug info
+        let bytecode = compile_source("while (true) { 1; }");
+
+        // Should have debug info for loop instructions (True, JumpIfFalse, Constant, Pop, Loop, ...)
+        assert!(bytecode.debug_info.len() >= 4, "Loops should generate debug info");
+
+        // Verify we have Loop opcode with debug info
+        let has_loop = bytecode.instructions.iter().any(|&b| b == Opcode::Loop as u8);
+        assert!(has_loop, "Should have Loop instruction");
+    }
+
+    #[test]
+    fn test_debug_info_for_arrays() {
+        // Test that array operations preserve debug info
+        let bytecode = compile_source("[1, 2, 3];");
+
+        // Should have debug info for: Constant(1), Constant(2), Constant(3), Array, Pop, Halt
+        assert!(bytecode.debug_info.len() >= 4, "Array operations should generate debug info");
+
+        // Verify we have Array opcode
+        let has_array = bytecode.instructions.iter().any(|&b| b == Opcode::Array as u8);
+        assert!(has_array, "Should have Array instruction");
+    }
+
+    #[test]
+    fn test_debug_info_spans_not_dummy() {
+        // Verify that most debug spans are not dummy spans (have real source positions)
+        let bytecode = compile_source("let x = 1 + 2;");
+
+        // Count non-dummy spans (dummy spans have start == end == 0)
+        let non_dummy_count = bytecode.debug_info.iter()
+            .filter(|ds| ds.span.start != 0 || ds.span.end != 0)
+            .count();
+
+        // Most spans should be real (only Halt uses Span::dummy())
+        assert!(non_dummy_count >= bytecode.debug_info.len() - 1,
+                "Most debug spans should have real source positions");
+    }
+
+    #[test]
+    fn test_debug_info_serialization_flag() {
+        // Test that serialized bytecode has the debug info flag set
+        let bytecode = compile_source("42;");
+
+        let bytes = bytecode.to_bytes();
+
+        // Extract flags from header (bytes 6-7)
+        assert!(bytes.len() >= 8, "Bytecode should have valid header");
+        let flags = u16::from_be_bytes([bytes[6], bytes[7]]);
+
+        // Bit 0 should be set (debug info present)
+        assert_eq!(flags & 1, 1, "Debug info flag should be set in serialized bytecode");
+    }
+
+    #[test]
+    fn test_debug_info_roundtrip_preserves_spans() {
+        // Test that debug info survives serialization roundtrip
+        let bytecode = compile_source("let x = 10; x + 5;");
+
+        let original_debug_count = bytecode.debug_info.len();
+        assert!(original_debug_count > 0, "Should have debug info before serialization");
+
+        // Serialize and deserialize
+        let bytes = bytecode.to_bytes();
+        let loaded = Bytecode::from_bytes(&bytes).expect("Deserialization should succeed");
+
+        // Debug info should be preserved
+        assert_eq!(loaded.debug_info.len(), original_debug_count,
+                   "Debug info count should match after roundtrip");
+
+        // Verify each debug span matches
+        for (i, debug_span) in loaded.debug_info.iter().enumerate() {
+            assert_eq!(debug_span.instruction_offset, bytecode.debug_info[i].instruction_offset,
+                       "Instruction offset should match for debug span {}", i);
+            assert_eq!(debug_span.span, bytecode.debug_info[i].span,
+                       "Span should match for debug span {}", i);
+        }
+    }
+
+    #[test]
+    fn test_debug_info_for_complex_program() {
+        // Test a more complex program to ensure debug info scales
+        let source = r#"
+            let a = 1;
+            let b = 2;
+            let c = a + b;
+            if (c > 0) {
+                let d = c * 2;
+                d;
+            }
+        "#;
+
+        let bytecode = compile_source(source);
+
+        // Should have substantial debug info for all these operations
+        assert!(bytecode.debug_info.len() >= 10,
+                "Complex program should generate substantial debug info");
+
+        // Verify debug info is monotonically increasing in instruction offsets
+        // (each new instruction should have an offset >= the previous)
+        for i in 1..bytecode.debug_info.len() {
+            assert!(bytecode.debug_info[i].instruction_offset >= bytecode.debug_info[i-1].instruction_offset,
+                    "Debug spans should be in instruction order");
+        }
+    }
+
+    #[test]
+    fn test_empty_program_has_minimal_debug_info() {
+        // Empty program should have debug info only for Halt
+        let mut compiler = Compiler::new();
+        let program = Program { items: Vec::new() };
+        let bytecode = compiler.compile(&program).unwrap();
+
+        // Should have just one debug span for Halt
+        assert_eq!(bytecode.debug_info.len(), 1, "Empty program should have debug info for Halt only");
+        assert_eq!(bytecode.debug_info[0].instruction_offset, 0, "Halt should be at offset 0");
+    }
+
+    #[test]
+    fn test_debug_info_with_optimization() {
+        // Test that debug info is preserved even with optimization enabled
+        let mut lexer = Lexer::new("1 + 2;".to_string());
+        let (tokens, lex_diags) = lexer.tokenize();
+        assert!(lex_diags.is_empty());
+
+        let mut parser = Parser::new(tokens);
+        let (program, parse_diags) = parser.parse();
+        assert!(parse_diags.is_empty());
+
+        let mut compiler = Compiler::with_optimization();
+        let bytecode = compiler.compile(&program).expect("Compilation failed");
+
+        // Even with optimization, debug info should be present
+        assert!(!bytecode.debug_info.is_empty(),
+                "Debug info should be present even with optimization");
+
+        // Serialization should still include debug info
+        let bytes = bytecode.to_bytes();
+        let flags = u16::from_be_bytes([bytes[6], bytes[7]]);
+        assert_eq!(flags & 1, 1, "Debug info flag should be set with optimization");
+    }
 }

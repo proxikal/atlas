@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-12
-**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM In Progress (Phase 14 Complete)
+**Status:** Frontend Complete + Typing & Binding Complete + Runtime Values Complete + Interpreter Complete + REPL Complete + Bytecode & VM In Progress (Phase 15 Complete)
 
 ---
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/bytecode-vm/phase-14-debug-info.md
-**Next Phase:** `phases/bytecode-vm/phase-15-debug-info-defaults.md`
+**Last Completed:** phases/bytecode-vm/phase-15-debug-info-defaults.md
+**Next Phase:** `phases/bytecode-vm/phase-16-bytecode-format-tests.md`
 
-**What to implement:** Ensure debug info is enabled by default and test with various code patterns
+**What to implement:** Comprehensive tests for bytecode format edge cases and validation
 
 ---
 
@@ -29,9 +29,9 @@
 
 ## 📚 Implementation Files Needed for Current Phase
 
-**For Bytecode & VM Phase 15:**
+**For Bytecode & VM Phase 16:**
 - `docs/implementation/11-bytecode.md` - Bytecode format specification
-- `phases/bytecode-vm/phase-15-debug-info-defaults.md` - Phase implementation guide
+- `phases/bytecode-vm/phase-16-bytecode-format-tests.md` - Phase implementation guide
 
 ---
 
@@ -103,7 +103,7 @@
 ### 7. REPL (1/1) ✅ COMPLETE
 - ✅ phases/interpreter/phase-02-repl.md
 
-### 8. Bytecode & VM (14/15)
+### 8. Bytecode & VM (15/17)
 - ✅ phase-03-bytecode-format.md
 - ✅ phase-01-bytecode-compiler.md
 - ✅ phase-02-vm.md
@@ -118,12 +118,8 @@
 - ✅ phase-12-profiling-hooks.md
 - ✅ phase-13-debugger-hooks.md
 - ✅ phase-14-debug-info.md
-- ⬜ phase-15-debug-info-defaults.md ⬅️ **YOU ARE HERE**
-- ⬜ phase-12-profiling-hooks.md
-- ⬜ phase-13-debugger-hooks.md
-- ⬜ phase-14-debug-info.md
-- ⬜ phase-15-debug-info-defaults.md
-- ⬜ phase-16-bytecode-format-tests.md
+- ✅ phase-15-debug-info-defaults.md
+- ⬜ phase-16-bytecode-format-tests.md ⬅️ **YOU ARE HERE**
 - ⬜ phase-17-runtime-numeric-errors.md
 
 ### 9. Standard Library (0/8)
@@ -148,7 +144,15 @@
 - ⬜ phase-09-json-dump-stability-tests.md
 - ⬜ phase-10-cli-e2e-tests.md
 
-### 11. Polish (0/7)
+### 11. LSP (0/6)
+- ⬜ phase-01-lsp-foundation.md
+- ⬜ phase-02-lsp-diagnostics.md
+- ⬜ phase-03-lsp-navigation.md
+- ⬜ phase-04-lsp-completion.md
+- ⬜ phase-05-lsp-formatting.md
+- ⬜ phase-06-lsp-testing.md
+
+### 12. Polish (0/7)
 - ⬜ phase-01-polish.md
 - ⬜ phase-02-regression-suite.md
 - ⬜ phase-03-docs-pass.md
@@ -157,7 +161,7 @@
 - ⬜ phase-06-cross-platform-check.md
 - ⬜ phase-07-interpreter-vm-parity-tests.md
 
-**Total Progress:** 59/86 phases (69%)
+**Total Progress:** 60/93 phases (65%)
 
 ---
 
