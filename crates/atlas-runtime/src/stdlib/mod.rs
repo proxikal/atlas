@@ -1,6 +1,7 @@
 //! Standard library functions
 
 pub mod string;
+pub mod types;
 
 use crate::value::{RuntimeError, Value};
 
@@ -14,6 +15,12 @@ pub fn is_builtin(name: &str) -> bool {
             | "indexOf" | "lastIndexOf" | "includes"
             | "toUpperCase" | "toLowerCase" | "substring" | "charAt" | "repeat" | "replace"
             | "padStart" | "padEnd" | "startsWith" | "endsWith"
+            // Option functions
+            | "Some" | "None" | "is_some" | "is_none"
+            // Result functions
+            | "Ok" | "Err" | "is_ok" | "is_err"
+            // Generic unwrap functions (work with both Option and Result)
+            | "unwrap" | "unwrap_or"
     )
 }
 
@@ -228,6 +235,94 @@ pub fn call_builtin(
             let s = extract_string(&args[0], call_span)?;
             let suffix = extract_string(&args[1], call_span)?;
             Ok(Value::Bool(string::ends_with(s, suffix)))
+        }
+
+        // Option<T> constructors
+        "Some" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            Ok(types::some(args[0].clone()))
+        }
+        "None" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            Ok(types::none())
+        }
+
+        // Option<T> helpers
+        "is_some" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let is_some = types::is_some(&args[0], call_span)?;
+            Ok(Value::Bool(is_some))
+        }
+        "is_none" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let is_none = types::is_none(&args[0], call_span)?;
+            Ok(Value::Bool(is_none))
+        }
+
+        // Result<T,E> constructors
+        "Ok" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            Ok(types::ok(args[0].clone()))
+        }
+        "Err" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            Ok(types::err(args[0].clone()))
+        }
+
+        // Result<T,E> helpers
+        "is_ok" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let is_ok = types::is_ok(&args[0], call_span)?;
+            Ok(Value::Bool(is_ok))
+        }
+        "is_err" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let is_err = types::is_err(&args[0], call_span)?;
+            Ok(Value::Bool(is_err))
+        }
+
+        // Generic unwrap (works with both Option and Result)
+        "unwrap" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            match &args[0] {
+                Value::Option(_) => types::unwrap_option(&args[0], call_span),
+                Value::Result(_) => types::unwrap_result(&args[0], call_span),
+                _ => Err(RuntimeError::TypeError {
+                    msg: "unwrap() requires Option or Result value".to_string(),
+                    span: call_span,
+                }),
+            }
+        }
+        "unwrap_or" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            match &args[0] {
+                Value::Option(_) => types::unwrap_or_option(&args[0], args[1].clone(), call_span),
+                Value::Result(_) => types::unwrap_or_result(&args[0], args[1].clone(), call_span),
+                _ => Err(RuntimeError::TypeError {
+                    msg: "unwrap_or() requires Option or Result value".to_string(),
+                    span: call_span,
+                }),
+            }
         }
 
         _ => Err(RuntimeError::UnknownFunction {

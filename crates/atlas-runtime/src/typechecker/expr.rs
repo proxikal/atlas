@@ -313,7 +313,7 @@ impl<'a> TypeChecker<'a> {
             let uninferred: Vec<String> = type_params
                 .iter()
                 .filter(|param| inferer.get_substitution(param).is_none())
-                .map(|s| s.clone())
+                .cloned()
                 .collect();
 
             self.diagnostics.push(

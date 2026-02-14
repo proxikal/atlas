@@ -153,13 +153,24 @@ impl Interpreter {
         }
 
         // Check globals
-        self.globals
-            .get(name)
-            .cloned()
-            .ok_or_else(|| RuntimeError::UndefinedVariable {
+        if let Some(value) = self.globals.get(name) {
+            return Ok(value.clone());
+        }
+
+        // Check builtins - return a function value for builtin functions
+        if crate::stdlib::is_builtin(name) {
+            return Ok(Value::Function(crate::value::FunctionRef {
                 name: name.to_string(),
-                span,
-            })
+                arity: 0, // Arity not used for builtins
+                bytecode_offset: 0,
+                local_count: 0,
+            }));
+        }
+
+        Err(RuntimeError::UndefinedVariable {
+            name: name.to_string(),
+            span,
+        })
     }
 
     /// Set a variable value

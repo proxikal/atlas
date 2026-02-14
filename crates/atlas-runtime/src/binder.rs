@@ -107,7 +107,8 @@ impl Binder {
             span: func.name.span,
         };
 
-        if let Err((msg, existing)) = self.symbol_table.define_function(symbol) {
+        if let Err(err) = self.symbol_table.define_function(symbol) {
+            let (msg, existing) = *err;
             let mut diag = Diagnostic::error_with_code("AT2003", &msg, func.name.span)
                 .with_label("redeclaration");
 
@@ -156,7 +157,8 @@ impl Binder {
                 span: param.name.span,
             };
 
-            if let Err((msg, existing)) = self.symbol_table.define(symbol) {
+            if let Err(err) = self.symbol_table.define(symbol) {
+                let (msg, existing) = *err;
                 let mut diag = Diagnostic::error_with_code("AT2003", &msg, param.name.span)
                     .with_label("parameter redeclaration");
 
@@ -238,7 +240,8 @@ impl Binder {
                     span: var.name.span,
                 };
 
-                if let Err((msg, existing)) = self.symbol_table.define(symbol) {
+                if let Err(err) = self.symbol_table.define(symbol) {
+                    let (msg, existing) = *err;
                     let mut diag = Diagnostic::error_with_code("AT2003", &msg, var.name.span)
                         .with_label("variable redeclaration");
 
@@ -343,8 +346,10 @@ impl Binder {
                 // Literals don't need binding
             }
             Expr::Identifier(id) => {
-                // Check if identifier is defined
-                if self.symbol_table.lookup(&id.name).is_none() {
+                // Check if identifier is defined (in symbol table or as builtin)
+                if self.symbol_table.lookup(&id.name).is_none()
+                    && !crate::stdlib::is_builtin(&id.name)
+                {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT2002",

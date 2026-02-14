@@ -30,6 +30,10 @@ pub enum Value {
     Function(FunctionRef),
     /// JSON value (isolated dynamic type for JSON interop)
     JsonValue(Rc<JsonValue>),
+    /// Option value (Some(value) or None)
+    Option(Option<Box<Value>>),
+    /// Result value (Ok(value) or Err(error))
+    Result(Result<Box<Value>, Box<Value>>),
 }
 
 /// Function reference
@@ -67,6 +71,8 @@ impl Value {
             Value::Array(_) => "array",
             Value::Function(_) => "function",
             Value::JsonValue(_) => "json",
+            Value::Option(_) => "Option",
+            Value::Result(_) => "Result",
         }
     }
 
@@ -98,6 +104,10 @@ impl PartialEq for Value {
             (Value::Function(a), Value::Function(b)) => a.name == b.name,
             // JsonValue uses structural equality
             (Value::JsonValue(a), Value::JsonValue(b)) => a == b,
+            // Option uses deep equality
+            (Value::Option(a), Value::Option(b)) => a == b,
+            // Result uses deep equality
+            (Value::Result(a), Value::Result(b)) => a == b,
             _ => false,
         }
     }
@@ -126,6 +136,14 @@ impl fmt::Display for Value {
             }
             Value::Function(func) => write!(f, "<fn {}>", func.name),
             Value::JsonValue(json) => write!(f, "{}", json),
+            Value::Option(opt) => match opt {
+                Some(val) => write!(f, "Some({})", val),
+                None => write!(f, "None"),
+            },
+            Value::Result(res) => match res {
+                Ok(val) => write!(f, "Ok({})", val),
+                Err(err) => write!(f, "Err({})", err),
+            },
         }
     }
 }

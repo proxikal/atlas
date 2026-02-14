@@ -1,7 +1,7 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-13
-**Status:** 🚀 Generic Runtime Implementation Complete (BLOCKER 02-C)
+**Status:** 🚀 Built-in Generic Types Complete (BLOCKER 02-D)
 
 ---
 
@@ -15,8 +15,9 @@
 - **BLOCKER 02-A:** Generic Type System Foundation (Syntax & AST)
 - **BLOCKER 02-B:** Generic Type Checking & Inference
 - **BLOCKER 02-C:** Generic Runtime Implementation (Monomorphization)
+- **BLOCKER 02-D:** Built-in Generic Types (Option<T>, Result<T,E>)
 
-**Next Phase:** phases/blockers/blocker-02-d-builtin-types.md (Option<T>, Result<T,E>)
+**Next Phase:** phases/blockers/blocker-03-a-pattern-syntax-typechecking.md (Pattern Matching)
 **⚠️ Note:** Foundation blockers MUST be completed before v0.2 phases (see tracker below)
 
 **v0.2 phase files complete - 68 comprehensive phases ready for implementation!**
@@ -115,18 +116,18 @@ v0.2 transforms Atlas into a production-ready language:
 
 **Documentation:** `phases/blockers/README.md` - Full dependency analysis and implementation order
 
-**Progress:** 4/19 blocker sub-phases complete
+**Progress:** 5/19 blocker sub-phases complete
 
 ### BLOCKER 01: JSON Value Type ✅ COMPLETE
 - ✅ blocker-01-json-value-type.md (Completed: 2026-02-13)
 
 **Blocks:** JSON API, HTTP, 10+ phases
 
-### BLOCKER 02: Generic Type Parameters (4-6 weeks) - 4 Sub-Phases
+### BLOCKER 02: Generic Type Parameters ✅ COMPLETE
 - ✅ blocker-02-a-type-system-foundation.md (Completed: 2026-02-13 - Syntax & AST)
 - ✅ blocker-02-b-type-checker-inference.md (Completed: 2026-02-13 - Type checking & inference)
 - ✅ blocker-02-c-runtime-implementation.md (Completed: 2026-02-13 - Monomorphization & infrastructure)
-- ⬜ blocker-02-d-builtin-types.md (Week 6: Option<T>, Result<T,E>)
+- ✅ blocker-02-d-builtin-types.md (Completed: 2026-02-13 - Option<T>, Result<T,E>)
 
 **Blocks:** Pattern matching, Result<T,E>, HashMap<K,V>, 15+ phases
 

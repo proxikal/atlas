@@ -44,6 +44,16 @@ pub(super) fn serialize_value(value: &Value, bytes: &mut Vec<u8>) {
             // They are runtime-only values
             panic!("Cannot serialize JSON values in bytecode constants");
         }
+        Value::Option(_) => {
+            // Option values cannot be serialized in constant pool
+            // They are runtime-only values
+            panic!("Cannot serialize Option values in bytecode constants");
+        }
+        Value::Result(_) => {
+            // Result values cannot be serialized in constant pool
+            // They are runtime-only values
+            panic!("Cannot serialize Result values in bytecode constants");
+        }
     }
 }
 
