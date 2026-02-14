@@ -124,6 +124,11 @@ impl Lexer {
 
         let lexeme: String = self.chars[start..self.current].iter().collect();
 
+        // Check for standalone underscore (wildcard pattern)
+        if lexeme == "_" {
+            return self.make_token(TokenKind::Underscore, "_");
+        }
+
         // Check if it's a keyword
         let kind = TokenKind::is_keyword(&lexeme).unwrap_or(TokenKind::Identifier);
 

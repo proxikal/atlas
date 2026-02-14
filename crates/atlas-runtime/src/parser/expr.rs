@@ -33,6 +33,7 @@ impl Parser {
             TokenKind::LeftParen => self.parse_group(),
             TokenKind::LeftBracket => self.parse_array_literal(),
             TokenKind::Minus | TokenKind::Bang => self.parse_unary(),
+            TokenKind::Match => self.parse_match_expr(),
             _ => {
                 self.error("Expected expression");
                 Err(())
@@ -367,6 +368,182 @@ impl Parser {
             params,
             return_type: Box::new(return_type),
             span: full_span,
+        })
+    }
+
+    /// Parse match expression
+    fn parse_match_expr(&mut self) -> Result<Expr, ()> {
+        use crate::ast::MatchExpr;
+
+        let start_span = self.consume(TokenKind::Match, "Expected 'match'")?.span;
+
+        // Parse scrutinee (the expression being matched)
+        let scrutinee = self.parse_expression()?;
+
+        // Parse match block
+        self.consume(TokenKind::LeftBrace, "Expected '{' after match expression")?;
+
+        // Parse match arms
+        let mut arms = Vec::new();
+        while !self.check(TokenKind::RightBrace) && !self.is_at_end() {
+            arms.push(self.parse_match_arm()?);
+
+            // Arms are separated by commas, trailing comma is optional
+            if !self.check(TokenKind::RightBrace) {
+                self.consume(TokenKind::Comma, "Expected ',' after match arm")?;
+                // Allow trailing comma
+                if self.check(TokenKind::RightBrace) {
+                    break;
+                }
+            }
+        }
+
+        let end_span = self
+            .consume(TokenKind::RightBrace, "Expected '}' after match arms")?
+            .span;
+
+        if arms.is_empty() {
+            self.error("Match expression must have at least one arm");
+            return Err(());
+        }
+
+        Ok(Expr::Match(MatchExpr {
+            scrutinee: Box::new(scrutinee),
+            arms,
+            span: start_span.merge(end_span),
+        }))
+    }
+
+    /// Parse match arm (pattern => expression)
+    fn parse_match_arm(&mut self) -> Result<MatchArm, ()> {
+        use crate::ast::MatchArm;
+
+        let pattern = self.parse_pattern()?;
+        let pattern_span = pattern.span();
+
+        self.consume(TokenKind::FatArrow, "Expected '=>' after pattern")?;
+
+        let body = self.parse_expression()?;
+        let body_span = body.span();
+
+        Ok(MatchArm {
+            pattern,
+            body,
+            span: pattern_span.merge(body_span),
+        })
+    }
+
+    /// Parse pattern
+    fn parse_pattern(&mut self) -> Result<crate::ast::Pattern, ()> {
+        use crate::ast::Pattern;
+
+        match self.peek().kind {
+            // Literal patterns: numbers, strings, bools, null
+            TokenKind::Number => {
+                let token = self.advance();
+                let value: f64 = token.lexeme.parse().unwrap_or(0.0);
+                Ok(Pattern::Literal(Literal::Number(value), token.span))
+            }
+            TokenKind::String => {
+                let token = self.advance();
+                Ok(Pattern::Literal(
+                    Literal::String(token.lexeme.clone()),
+                    token.span,
+                ))
+            }
+            TokenKind::True => {
+                let token = self.advance();
+                Ok(Pattern::Literal(Literal::Bool(true), token.span))
+            }
+            TokenKind::False => {
+                let token = self.advance();
+                Ok(Pattern::Literal(Literal::Bool(false), token.span))
+            }
+            TokenKind::Null => {
+                let token = self.advance();
+                Ok(Pattern::Literal(Literal::Null, token.span))
+            }
+
+            // Wildcard pattern: _
+            TokenKind::Underscore => {
+                let token = self.advance();
+                Ok(Pattern::Wildcard(token.span))
+            }
+
+            // Array pattern: [...]
+            TokenKind::LeftBracket => self.parse_array_pattern(),
+
+            // Constructor pattern or variable binding: Identifier or Identifier(...)
+            TokenKind::Identifier => {
+                let id_token = self.advance();
+                let id = Identifier {
+                    name: id_token.lexeme.clone(),
+                    span: id_token.span,
+                };
+
+                // Check if this is a constructor pattern (has arguments)
+                if self.check(TokenKind::LeftParen) {
+                    self.parse_constructor_pattern(id)
+                } else {
+                    // Variable binding pattern
+                    Ok(Pattern::Variable(id))
+                }
+            }
+
+            _ => {
+                self.error("Expected pattern");
+                Err(())
+            }
+        }
+    }
+
+    /// Parse array pattern: [pattern, pattern, ...]
+    fn parse_array_pattern(&mut self) -> Result<crate::ast::Pattern, ()> {
+        use crate::ast::Pattern;
+
+        let start_span = self.consume(TokenKind::LeftBracket, "Expected '['")?.span;
+        let mut elements = Vec::new();
+
+        if !self.check(TokenKind::RightBracket) {
+            loop {
+                elements.push(self.parse_pattern()?);
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
+        }
+
+        let end_span = self.consume(TokenKind::RightBracket, "Expected ']'")?.span;
+
+        Ok(Pattern::Array {
+            elements,
+            span: start_span.merge(end_span),
+        })
+    }
+
+    /// Parse constructor pattern: Name(pattern, pattern, ...)
+    fn parse_constructor_pattern(&mut self, name: Identifier) -> Result<crate::ast::Pattern, ()> {
+        use crate::ast::Pattern;
+
+        let name_span = name.span;
+        self.consume(TokenKind::LeftParen, "Expected '('")?;
+
+        let mut args = Vec::new();
+        if !self.check(TokenKind::RightParen) {
+            loop {
+                args.push(self.parse_pattern()?);
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
+        }
+
+        let end_span = self.consume(TokenKind::RightParen, "Expected ')'")?.span;
+
+        Ok(Pattern::Constructor {
+            name,
+            args,
+            span: name_span.merge(end_span),
         })
     }
 }

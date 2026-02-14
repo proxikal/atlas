@@ -385,7 +385,67 @@ impl Binder {
             Expr::Group(group) => {
                 self.bind_expr(&group.expr);
             }
+            Expr::Match(match_expr) => {
+                // Bind scrutinee
+                self.bind_expr(&match_expr.scrutinee);
+                // Bind each arm
+                for arm in &match_expr.arms {
+                    // Collect pattern variables
+                    let pattern_vars = self.collect_pattern_variables(&arm.pattern);
+
+                    // Enter scope and add pattern variables
+                    self.symbol_table.enter_scope();
+                    for (var_name, var_span) in &pattern_vars {
+                        let symbol = Symbol {
+                            name: var_name.clone(),
+                            ty: Type::Unknown, // Type will be determined during type checking
+                            mutable: false,
+                            kind: SymbolKind::Variable,
+                            span: *var_span,
+                        };
+                        let _ = self.symbol_table.define(symbol);
+                    }
+
+                    // Bind arm body with pattern variables in scope
+                    self.bind_expr(&arm.body);
+
+                    // Exit scope
+                    self.symbol_table.exit_scope();
+                }
+            }
         }
+    }
+
+    /// Collect all variable bindings from a pattern
+    fn collect_pattern_variables(
+        &self,
+        pattern: &crate::ast::Pattern,
+    ) -> Vec<(String, crate::span::Span)> {
+        use crate::ast::Pattern;
+        let mut vars = Vec::new();
+
+        match pattern {
+            Pattern::Literal(_, _) | Pattern::Wildcard(_) => {
+                // No variables
+            }
+            Pattern::Variable(id) => {
+                vars.push((id.name.clone(), id.span));
+            }
+            Pattern::Constructor { args, .. } => {
+                // Collect from nested patterns
+                for arg in args {
+                    vars.extend(self.collect_pattern_variables(arg));
+                }
+            }
+            Pattern::Array { elements, .. } => {
+                // Collect from all element patterns
+                for elem in elements {
+                    vars.extend(self.collect_pattern_variables(elem));
+                }
+            }
+        }
+
+        vars
     }
 
     /// Get the expected arity for a built-in generic type

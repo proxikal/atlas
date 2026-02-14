@@ -228,6 +228,7 @@ pub enum Expr {
     Index(IndexExpr),
     ArrayLiteral(ArrayLiteral),
     Group(GroupExpr),
+    Match(MatchExpr),
 }
 
 /// Unary expression
@@ -275,6 +276,41 @@ pub struct ArrayLiteral {
 pub struct GroupExpr {
     pub expr: Box<Expr>,
     pub span: Span,
+}
+
+/// Match expression
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MatchExpr {
+    pub scrutinee: Box<Expr>,
+    pub arms: Vec<MatchArm>,
+    pub span: Span,
+}
+
+/// Match arm (pattern => expression)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MatchArm {
+    pub pattern: Pattern,
+    pub body: Expr,
+    pub span: Span,
+}
+
+/// Pattern for match expressions
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Pattern {
+    /// Literal pattern: 42, "hello", true, false, null
+    Literal(Literal, Span),
+    /// Wildcard pattern: _
+    Wildcard(Span),
+    /// Variable binding pattern: x, value, etc.
+    Variable(Identifier),
+    /// Constructor pattern: Ok(x), Err(e), Some(value), None
+    Constructor {
+        name: Identifier,
+        args: Vec<Pattern>,
+        span: Span,
+    },
+    /// Array pattern: [], [x], [x, y]
+    Array { elements: Vec<Pattern>, span: Span },
 }
 
 /// Literal value
@@ -353,6 +389,7 @@ impl Expr {
             Expr::Index(i) => i.span,
             Expr::ArrayLiteral(a) => a.span,
             Expr::Group(g) => g.span,
+            Expr::Match(m) => m.span,
         }
     }
 }
@@ -384,6 +421,19 @@ impl TypeRef {
             TypeRef::Array(_, span) => *span,
             TypeRef::Function { span, .. } => *span,
             TypeRef::Generic { span, .. } => *span,
+        }
+    }
+}
+
+impl Pattern {
+    /// Get the span of this pattern
+    pub fn span(&self) -> Span {
+        match self {
+            Pattern::Literal(_, span) => *span,
+            Pattern::Wildcard(span) => *span,
+            Pattern::Variable(id) => id.span,
+            Pattern::Constructor { span, .. } => *span,
+            Pattern::Array { span, .. } => *span,
         }
     }
 }

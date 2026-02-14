@@ -143,6 +143,10 @@ pub enum TokenKind {
     Colon,
     /// `->` (arrow for function return type)
     Arrow,
+    /// `=>` (fat arrow for match arms)
+    FatArrow,
+    /// `_` (underscore for wildcard patterns)
+    Underscore,
 
     // Special
     /// End of file
@@ -227,6 +231,8 @@ impl TokenKind {
             TokenKind::Comma => ",",
             TokenKind::Colon => ":",
             TokenKind::Arrow => "->",
+            TokenKind::FatArrow => "=>",
+            TokenKind::Underscore => "_",
             TokenKind::Eof => "EOF",
             TokenKind::Error => "error",
         }

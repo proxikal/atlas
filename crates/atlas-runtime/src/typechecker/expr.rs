@@ -2,6 +2,7 @@
 
 use crate::ast::*;
 use crate::diagnostic::Diagnostic;
+use crate::span::Span;
 use crate::typechecker::TypeChecker;
 use crate::types::Type;
 
@@ -32,6 +33,7 @@ impl<'a> TypeChecker<'a> {
             Expr::Index(index) => self.check_index(index),
             Expr::ArrayLiteral(arr) => self.check_array_literal(arr),
             Expr::Group(group) => self.check_expr(&group.expr),
+            Expr::Match(match_expr) => self.check_match(match_expr),
         }
     }
 
@@ -420,5 +422,486 @@ impl<'a> TypeChecker<'a> {
         }
 
         Type::Array(Box::new(first_type))
+    }
+
+    /// Check a match expression
+    fn check_match(&mut self, match_expr: &crate::ast::MatchExpr) -> Type {
+        // 1. Check scrutinee type
+        let scrutinee_type = self.check_expr(&match_expr.scrutinee);
+
+        if scrutinee_type == Type::Unknown {
+            // Error in scrutinee, skip match checking
+            return Type::Unknown;
+        }
+
+        // 2. Check each arm and collect result types
+        let mut arm_types = Vec::new();
+
+        for (arm_idx, arm) in match_expr.arms.iter().enumerate() {
+            // Check pattern against scrutinee type
+            let pattern_bindings = self.check_pattern(&arm.pattern, &scrutinee_type);
+
+            // Enter a new scope for pattern bindings
+            self.symbol_table.enter_scope();
+
+            // Add pattern bindings to symbol table for this arm's scope
+            for (var_name, var_type, var_span) in &pattern_bindings {
+                let symbol = crate::symbol::Symbol {
+                    name: var_name.clone(),
+                    ty: var_type.clone(),
+                    mutable: false, // Pattern bindings are immutable
+                    kind: crate::symbol::SymbolKind::Variable,
+                    span: *var_span,
+                };
+                // Ignore if binding fails (duplicate names in pattern - will be caught separately)
+                let _ = self.symbol_table.define(symbol);
+            }
+
+            // Check arm body with bindings in scope
+            let arm_type = self.check_expr(&arm.body);
+            arm_types.push((arm_type.clone(), arm.body.span(), arm_idx));
+
+            // Exit scope (removes pattern bindings)
+            self.symbol_table.exit_scope();
+        }
+
+        // 3. Ensure all arms return compatible types
+        if arm_types.is_empty() {
+            // Empty match (parser should prevent this, but handle gracefully)
+            self.diagnostics.push(
+                Diagnostic::error_with_code(
+                    "AT3020",
+                    "Match expression must have at least one arm",
+                    match_expr.span,
+                )
+                .with_label("empty match"),
+            );
+            return Type::Unknown;
+        }
+
+        // Get the first arm's type as the expected type
+        let (first_type, _, _) = &arm_types[0];
+
+        // Check that all other arms have compatible types
+        for (arm_type, arm_span, arm_idx) in &arm_types[1..] {
+            if !arm_type.is_assignable_to(first_type) && *arm_type != Type::Unknown {
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        "AT3021",
+                        format!(
+                            "Match arm {} returns incompatible type: expected {}, found {}",
+                            arm_idx + 1,
+                            first_type.display_name(),
+                            arm_type.display_name()
+                        ),
+                        *arm_span,
+                    )
+                    .with_label("type mismatch"),
+                );
+            }
+        }
+
+        // 4. Check exhaustiveness
+        self.check_exhaustiveness(&match_expr.arms, &scrutinee_type, match_expr.span);
+
+        // 5. Return the unified type (first arm's type)
+        first_type.clone()
+    }
+
+    /// Check exhaustiveness of match arms
+    fn check_exhaustiveness(
+        &mut self,
+        arms: &[crate::ast::MatchArm],
+        scrutinee_type: &Type,
+        match_span: Span,
+    ) {
+        use crate::ast::Pattern;
+
+        // Check if there's a catch-all pattern (wildcard or variable binding)
+        let has_catch_all = arms
+            .iter()
+            .any(|arm| matches!(arm.pattern, Pattern::Wildcard(_) | Pattern::Variable(_)));
+
+        if has_catch_all {
+            // Wildcard or variable catches everything - exhaustive
+            return;
+        }
+
+        // Check exhaustiveness based on scrutinee type
+        match scrutinee_type {
+            Type::Generic { name, .. } if name == "Option" => {
+                // Option<T> requires Some and None to be covered
+                let has_some = arms.iter().any(|arm| {
+                    if let Pattern::Constructor {
+                        name: ctor_name, ..
+                    } = &arm.pattern
+                    {
+                        ctor_name.name == "Some"
+                    } else {
+                        false
+                    }
+                });
+
+                let has_none = arms.iter().any(|arm| {
+                    if let Pattern::Constructor {
+                        name: ctor_name, ..
+                    } = &arm.pattern
+                    {
+                        ctor_name.name == "None"
+                    } else {
+                        false
+                    }
+                });
+
+                if !has_some || !has_none {
+                    let missing = if !has_some && !has_none {
+                        "Some(_), None".to_string()
+                    } else if !has_some {
+                        "Some(_)".to_string()
+                    } else {
+                        "None".to_string()
+                    };
+
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3027",
+                            format!("Non-exhaustive match on Option: missing {}", missing),
+                            match_span,
+                        )
+                        .with_label("non-exhaustive")
+                        .with_help(format!("Add arm: {} => ...", missing)),
+                    );
+                }
+            }
+
+            Type::Generic { name, .. } if name == "Result" => {
+                // Result<T,E> requires Ok and Err to be covered
+                let has_ok = arms.iter().any(|arm| {
+                    if let Pattern::Constructor {
+                        name: ctor_name, ..
+                    } = &arm.pattern
+                    {
+                        ctor_name.name == "Ok"
+                    } else {
+                        false
+                    }
+                });
+
+                let has_err = arms.iter().any(|arm| {
+                    if let Pattern::Constructor {
+                        name: ctor_name, ..
+                    } = &arm.pattern
+                    {
+                        ctor_name.name == "Err"
+                    } else {
+                        false
+                    }
+                });
+
+                if !has_ok || !has_err {
+                    let missing = if !has_ok && !has_err {
+                        "Ok(_), Err(_)".to_string()
+                    } else if !has_ok {
+                        "Ok(_)".to_string()
+                    } else {
+                        "Err(_)".to_string()
+                    };
+
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3027",
+                            format!("Non-exhaustive match on Result: missing {}", missing),
+                            match_span,
+                        )
+                        .with_label("non-exhaustive")
+                        .with_help(format!("Add arm: {} => ...", missing)),
+                    );
+                }
+            }
+
+            Type::Bool => {
+                // Bool requires true and false to be covered (or wildcard)
+                let has_true = arms
+                    .iter()
+                    .any(|arm| matches!(arm.pattern, Pattern::Literal(Literal::Bool(true), _)));
+
+                let has_false = arms
+                    .iter()
+                    .any(|arm| matches!(arm.pattern, Pattern::Literal(Literal::Bool(false), _)));
+
+                if !has_true || !has_false {
+                    let missing = if !has_true && !has_false {
+                        "true, false".to_string()
+                    } else if !has_true {
+                        "true".to_string()
+                    } else {
+                        "false".to_string()
+                    };
+
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3027",
+                            format!("Non-exhaustive match on bool: missing {}", missing),
+                            match_span,
+                        )
+                        .with_label("non-exhaustive")
+                        .with_help(format!("Add arm: {} => ... or use wildcard _", missing)),
+                    );
+                }
+            }
+
+            Type::Number | Type::String | Type::Array(_) | Type::Null => {
+                // These types have infinite values - require wildcard
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        "AT3027",
+                        format!(
+                            "Non-exhaustive match on {}: patterns must cover all possible values",
+                            scrutinee_type.display_name()
+                        ),
+                        match_span,
+                    )
+                    .with_label("non-exhaustive")
+                    .with_help("Add wildcard pattern: _ => ..."),
+                );
+            }
+
+            _ => {
+                // For other types, warn but don't error (conservative approach)
+            }
+        }
+    }
+
+    /// Check a pattern and return variable bindings (name, type, span)
+    fn check_pattern(
+        &mut self,
+        pattern: &Pattern,
+        expected_type: &Type,
+    ) -> Vec<(String, Type, Span)> {
+        let mut bindings = Vec::new();
+
+        match pattern {
+            Pattern::Literal(lit, span) => {
+                // Check literal type matches expected type
+                let lit_type = match lit {
+                    Literal::Number(_) => Type::Number,
+                    Literal::String(_) => Type::String,
+                    Literal::Bool(_) => Type::Bool,
+                    Literal::Null => Type::Null,
+                };
+
+                if !lit_type.is_assignable_to(expected_type) {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3022",
+                            format!(
+                                "Pattern type mismatch: expected {}, found {}",
+                                expected_type.display_name(),
+                                lit_type.display_name()
+                            ),
+                            *span,
+                        )
+                        .with_label("type mismatch"),
+                    );
+                }
+            }
+
+            Pattern::Wildcard(_) => {
+                // Wildcard matches anything, no bindings
+            }
+
+            Pattern::Variable(id) => {
+                // Variable binding - binds the entire scrutinee value
+                bindings.push((id.name.clone(), expected_type.clone(), id.span));
+            }
+
+            Pattern::Constructor { name, args, span } => {
+                // Check constructor pattern (Ok, Err, Some, None)
+                bindings.extend(self.check_constructor_pattern(name, args, expected_type, *span));
+            }
+
+            Pattern::Array { elements, span } => {
+                // Check array pattern
+                bindings.extend(self.check_array_pattern(elements, expected_type, *span));
+            }
+        }
+
+        bindings
+    }
+
+    /// Check constructor pattern (Ok, Err, Some, None)
+    fn check_constructor_pattern(
+        &mut self,
+        name: &Identifier,
+        args: &[Pattern],
+        expected_type: &Type,
+        span: Span,
+    ) -> Vec<(String, Type, Span)> {
+        let mut bindings = Vec::new();
+
+        match expected_type {
+            Type::Generic {
+                name: type_name,
+                type_args,
+            } => {
+                match type_name.as_str() {
+                    "Option" if type_args.len() == 1 => {
+                        // Option<T> has constructors: Some(T), None
+                        match name.name.as_str() {
+                            "Some" => {
+                                if args.len() != 1 {
+                                    self.diagnostics.push(
+                                        Diagnostic::error_with_code(
+                                            "AT3023",
+                                            format!(
+                                                "Some expects 1 argument, found {}",
+                                                args.len()
+                                            ),
+                                            span,
+                                        )
+                                        .with_label("wrong arity"),
+                                    );
+                                } else {
+                                    // Check inner pattern against T
+                                    bindings.extend(self.check_pattern(&args[0], &type_args[0]));
+                                }
+                            }
+                            "None" => {
+                                if !args.is_empty() {
+                                    self.diagnostics.push(
+                                        Diagnostic::error_with_code(
+                                            "AT3023",
+                                            format!(
+                                                "None expects 0 arguments, found {}",
+                                                args.len()
+                                            ),
+                                            span,
+                                        )
+                                        .with_label("wrong arity"),
+                                    );
+                                }
+                            }
+                            _ => {
+                                self.diagnostics.push(
+                                    Diagnostic::error_with_code(
+                                        "AT3024",
+                                        format!("Unknown Option constructor: {}", name.name),
+                                        name.span,
+                                    )
+                                    .with_label("unknown constructor"),
+                                );
+                            }
+                        }
+                    }
+                    "Result" if type_args.len() == 2 => {
+                        // Result<T, E> has constructors: Ok(T), Err(E)
+                        match name.name.as_str() {
+                            "Ok" => {
+                                if args.len() != 1 {
+                                    self.diagnostics.push(
+                                        Diagnostic::error_with_code(
+                                            "AT3023",
+                                            format!("Ok expects 1 argument, found {}", args.len()),
+                                            span,
+                                        )
+                                        .with_label("wrong arity"),
+                                    );
+                                } else {
+                                    // Check inner pattern against T
+                                    bindings.extend(self.check_pattern(&args[0], &type_args[0]));
+                                }
+                            }
+                            "Err" => {
+                                if args.len() != 1 {
+                                    self.diagnostics.push(
+                                        Diagnostic::error_with_code(
+                                            "AT3023",
+                                            format!("Err expects 1 argument, found {}", args.len()),
+                                            span,
+                                        )
+                                        .with_label("wrong arity"),
+                                    );
+                                } else {
+                                    // Check inner pattern against E
+                                    bindings.extend(self.check_pattern(&args[0], &type_args[1]));
+                                }
+                            }
+                            _ => {
+                                self.diagnostics.push(
+                                    Diagnostic::error_with_code(
+                                        "AT3024",
+                                        format!("Unknown Result constructor: {}", name.name),
+                                        name.span,
+                                    )
+                                    .with_label("unknown constructor"),
+                                );
+                            }
+                        }
+                    }
+                    _ => {
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3025",
+                                format!(
+                                    "Constructor patterns not supported for type {}",
+                                    expected_type.display_name()
+                                ),
+                                span,
+                            )
+                            .with_label("unsupported type"),
+                        );
+                    }
+                }
+            }
+            _ => {
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        "AT3025",
+                        format!(
+                            "Constructor patterns not supported for type {}",
+                            expected_type.display_name()
+                        ),
+                        span,
+                    )
+                    .with_label("unsupported type"),
+                );
+            }
+        }
+
+        bindings
+    }
+
+    /// Check array pattern
+    fn check_array_pattern(
+        &mut self,
+        elements: &[Pattern],
+        expected_type: &Type,
+        span: Span,
+    ) -> Vec<(String, Type, Span)> {
+        let mut bindings = Vec::new();
+
+        match expected_type {
+            Type::Array(elem_type) => {
+                // Check each pattern element against the array element type
+                for pattern in elements {
+                    bindings.extend(self.check_pattern(pattern, elem_type));
+                }
+            }
+            _ => {
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        "AT3026",
+                        format!(
+                            "Array pattern used on non-array type: {}",
+                            expected_type.display_name()
+                        ),
+                        span,
+                    )
+                    .with_label("type mismatch"),
+                );
+            }
+        }
+
+        bindings
     }
 }

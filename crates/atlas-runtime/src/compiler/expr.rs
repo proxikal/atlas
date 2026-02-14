@@ -19,6 +19,16 @@ impl Compiler {
             Expr::ArrayLiteral(arr) => self.compile_array_literal(arr),
             Expr::Index(index) => self.compile_index(index),
             Expr::Call(call) => self.compile_call(call),
+            Expr::Match(_match_expr) => {
+                // Pattern matching runtime execution is BLOCKER 03-B
+                // This is BLOCKER 03-A (syntax & type checking only)
+                Err(vec![Diagnostic::error_with_code(
+                    "AT9999",
+                    "Pattern matching runtime execution not yet implemented (BLOCKER 03-B)",
+                    expr.span(),
+                )
+                .with_label("not implemented")])
+            }
         }
     }
 

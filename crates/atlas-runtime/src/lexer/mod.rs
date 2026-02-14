@@ -138,6 +138,8 @@ impl Lexer {
             '=' => {
                 if self.match_char('=') {
                     self.make_token(TokenKind::EqualEqual, "==")
+                } else if self.match_char('>') {
+                    self.make_token(TokenKind::FatArrow, "=>")
                 } else {
                     self.make_token(TokenKind::Equal, "=")
                 }

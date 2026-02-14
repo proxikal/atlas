@@ -17,6 +17,15 @@ impl Interpreter {
             Expr::Index(index) => self.eval_index(index),
             Expr::ArrayLiteral(arr) => self.eval_array_literal(arr),
             Expr::Group(group) => self.eval_expr(&group.expr),
+            Expr::Match(match_expr) => {
+                // Pattern matching runtime execution is BLOCKER 03-B
+                // This is BLOCKER 03-A (syntax & type checking only)
+                Err(RuntimeError::TypeError {
+                    msg: "Pattern matching runtime execution not yet implemented (BLOCKER 03-B)"
+                        .to_string(),
+                    span: match_expr.span,
+                })
+            }
         }
     }
 
