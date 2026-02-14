@@ -9,12 +9,13 @@
 ## Table of Contents
 1. [Overview](#overview)
 2. [Diagnostic Schema](#diagnostic-schema)
-3. [Output Formats](#output-formats)
-4. [Error Codes](#error-codes)
-5. [Warning Codes](#warning-codes)
-6. [Emission Policy](#emission-policy)
-7. [Ordering Rules](#ordering-rules)
-8. [Normalization Rules](#normalization-rules)
+3. [Help Text Standards](#help-text-standards)
+4. [Output Formats](#output-formats)
+5. [Error Codes](#error-codes)
+6. [Warning Codes](#warning-codes)
+7. [Emission Policy](#emission-policy)
+8. [Ordering Rules](#ordering-rules)
+9. [Normalization Rules](#normalization-rules)
 
 ---
 
@@ -60,7 +61,9 @@ All diagnostics follow this schema:
 |-------|------|-------------|
 | `notes` | string[] | Additional explanatory notes |
 | `related` | object[] | Secondary locations providing context |
-| `help` | string | Suggested fix or resolution |
+| `help` | string | **Actionable suggestion for fixing the error** |
+
+**Note:** While `help` is technically optional in the schema, **all diagnostics should provide help text** whenever possible. See [Help Text Standards](#help-text-standards) for guidelines.
 
 ### Related Location Schema
 
@@ -74,6 +77,283 @@ Each entry in `related` array:
   "message": "context message"
 }
 ```
+
+---
+
+## Help Text Standards
+
+**Philosophy:** Every diagnostic should guide the user toward a solution. Help text transforms errors from "what's wrong" to "how to fix it."
+
+### Requirements
+
+**All diagnostics SHOULD include help text that:**
+- ✅ Provides specific, actionable guidance (not generic advice)
+- ✅ Uses imperative voice ("change X to Y", "add Z", "remove W")
+- ✅ References actual symbols/types from the error context
+- ✅ Offers concrete next steps the user can take immediately
+
+**Help text is REQUIRED for:**
+- Type mismatches (suggest type conversion or annotation change)
+- Undefined symbols (suggest declaration or check for typos)
+- Syntax errors (show correct syntax)
+- Semantic errors (explain what needs to change)
+
+**Help text may be OMITTED only when:**
+- The error message is completely self-explanatory (rare)
+- There is genuinely no actionable fix (extremely rare)
+
+### Quality Guidelines
+
+#### ✅ Good Help Text (Specific and Actionable)
+
+**Type Mismatch:**
+```
+❌ Bad:  "fix the type error"
+✅ Good: "ensure both operands are numbers (for addition) or both are strings (for concatenation)"
+```
+
+**Undefined Symbol:**
+```
+❌ Bad:  "declare the variable first"
+✅ Good: "declare 'foo' before using it, or check for typos"
+```
+
+**Function Arguments:**
+```
+❌ Bad:  "wrong number of arguments"
+✅ Good: "provide exactly 2 arguments (expected 2, found 3)"
+```
+
+**Mutability:**
+```
+❌ Bad:  "variable is immutable"
+✅ Good: "declare 'x' as mutable: var x = ... (or use let mut x = ...)"
+```
+
+**Import Errors:**
+```
+❌ Bad:  "module not found"
+✅ Good: "ensure the module exists and has been loaded before importing from it"
+```
+
+**Pattern Matching:**
+```
+❌ Bad:  "invalid pattern"
+✅ Good: "use 'Some(value)' to match and extract the inner value from Option"
+```
+
+#### ❌ Anti-Patterns to Avoid
+
+**Vague Advice:**
+```
+❌ "check your code"
+❌ "fix the syntax"
+❌ "see documentation"
+❌ "invalid input"
+```
+
+**Generic Statements:**
+```
+❌ "types must match"
+❌ "variable must be declared"
+❌ "invalid syntax"
+```
+
+**Passive Voice:**
+```
+❌ "the type should be changed"
+✅ "change the type to number"
+```
+
+**Missing Context:**
+```
+❌ "provide the correct type"
+✅ "the value must be of type number (found string)"
+```
+
+### Help Text Patterns by Error Category
+
+#### Type Errors
+
+**Pattern:** `"<operation> requires <type>, found <actual>"`
+- Include what operation triggered the error
+- State expected type explicitly
+- Show actual type found
+- Suggest conversion or type annotation change
+
+**Examples:**
+```
+"arithmetic operators (-, *, /, %) only work with numbers"
+"both operands must have the same type for equality comparison"
+"argument 2 must be of type string (found number)"
+```
+
+#### Symbol Resolution Errors
+
+**Pattern:** Reference the symbol name and suggest fixes
+- Always mention the symbol name
+- Suggest declaration syntax
+- Offer typo check when relevant
+
+**Examples:**
+```
+"declare 'count' with 'let' or 'const' before assigning to it"
+"define 'helper' before exporting it"
+"rename this parameter to avoid conflict with 'index'"
+```
+
+#### Import/Module Errors
+
+**Pattern:** Explain resolution and suggest path corrections
+- Reference module paths explicitly
+- Suggest path format when applicable
+- Explain dependency requirements
+
+**Examples:**
+```
+"check the module's exports or import a different symbol"
+"refactor your modules to remove circular imports - modules cannot import each other in a cycle"
+"Use './file' for same directory, '../file' for parent, or '/src/file' for absolute paths"
+```
+
+#### Pattern Matching Errors
+
+**Pattern:** Show correct pattern syntax
+- Display the exact syntax needed
+- Explain what the pattern does
+- Reference the type being matched
+
+**Examples:**
+```
+"use 'None' without arguments to match empty Option values"
+"Add arm: Some(_) => ... or use wildcard _"
+"valid constructor patterns are: Some, None (for Option) and Ok, Err (for Result)"
+```
+
+#### Syntax Errors
+
+**Pattern:** Show correct syntax directly
+- Don't just say "invalid syntax"
+- Show the expected token or structure
+- Give a concrete example when possible
+
+**Examples:**
+```
+"check your syntax for typos or missing tokens"
+"add '*/' to close the multi-line comment"
+"use named imports instead: import { name } from \"...\""
+```
+
+### Context-Aware Help Text
+
+**Use variable/type names from the error:**
+```rust
+// Don't:
+.with_help("rename the variable")
+
+// Do:
+.with_help(format!("rename '{}' or remove the previous declaration", var_name))
+```
+
+**Reference specific types:**
+```rust
+// Don't:
+.with_help("fix the type")
+
+// Do:
+.with_help(format!(
+    "change the variable type to {} or use a {} value",
+    init_type.display_name(),
+    declared_type.display_name()
+))
+```
+
+**Provide exact counts:**
+```rust
+// Don't:
+.with_help("provide correct number of arguments")
+
+// Do:
+.with_help(format!(
+    "provide exactly {} argument{}",
+    expected,
+    if expected == 1 { "" } else { "s" }
+))
+```
+
+### Help Text Style Guide
+
+**Voice:** Imperative, direct
+- "change X to Y" ✅
+- "X should be changed to Y" ❌
+
+**Tone:** Helpful, not condescending
+- "check for typos" ✅
+- "you made a mistake" ❌
+
+**Length:** Concise but complete
+- One sentence preferred
+- Two sentences maximum
+- Avoid paragraphs
+
+**Terminology:** Match user's code
+- Use actual symbol names from error
+- Use Atlas terminology (not Rust/other languages)
+- Be consistent with language documentation
+
+### Examples from Atlas Codebase
+
+**Excellent Help Text Examples:**
+```rust
+// Binder - undefined symbol
+.with_help(format!("declare '{}' before using it, or check for typos", id.name))
+
+// Typechecker - type mismatch
+.with_help("ensure both operands are numbers (for addition) or both are strings (for concatenation)")
+
+// Typechecker - unused variable
+.with_help(format!("remove the variable or prefix with underscore: _{}", name))
+
+// Module loader - circular dependency
+.with_help("refactor your modules to remove circular imports - modules cannot import each other in a cycle")
+
+// Compiler - pattern matching
+.with_help("use 'Some(value)' to match and extract the inner value from Option")
+
+// Typechecker - mutability
+.with_help(format!("declare '{}' as mutable: var {} = ...", id.name, id.name))
+```
+
+### Implementation Checklist
+
+When adding a new diagnostic:
+
+- [ ] Error has clear, specific message
+- [ ] Error has appropriate error code
+- [ ] Error includes precise span information
+- [ ] Error has descriptive label for caret
+- [ ] **Error includes actionable help text**
+- [ ] Help text is specific to the error context
+- [ ] Help text uses imperative voice
+- [ ] Help text references actual symbols/types when applicable
+- [ ] Related locations added if context helps understanding
+- [ ] Error tested with snapshot tests
+
+### Coverage Goal
+
+**Target:** 100% of diagnostics should have help text
+
+**Current Coverage:** 59+ diagnostics with comprehensive help text across:
+- Typechecker (38 errors)
+- Binder (9 errors)
+- Compiler (5 errors)
+- Module loader (2 errors)
+- Lexer (1 error)
+- Parser (1 error)
+- Module executor (1 error)
+- Resolver (3 errors)
+
+**Verification:** Review diagnostic emissions during development to ensure help text is present and high-quality.
 
 ---
 
@@ -417,16 +697,22 @@ insta::assert_json_snapshot!(diagnostics);
 
 **DO:**
 - ✅ Always include precise span information
-- ✅ Provide helpful error messages
-- ✅ Include `help` text when possible
+- ✅ Provide clear, specific error messages
+- ✅ **Include actionable `help` text for every diagnostic** (see [Help Text Standards](#help-text-standards))
+- ✅ Use imperative voice in help text ("change X", "add Y", "remove Z")
+- ✅ Reference actual symbols/types from error context in help text
 - ✅ Use `related` locations to show context
 - ✅ Follow ordering rules consistently
+- ✅ Test diagnostics with snapshot tests
 
 **DON'T:**
 - ❌ Create new error codes without spec update
 - ❌ Skip span information
-- ❌ Write vague error messages
+- ❌ Write vague error messages ("fix your code", "invalid syntax")
+- ❌ Write generic help text ("see documentation", "check the manual")
+- ❌ Omit help text unless absolutely no fix is possible
 - ❌ Emit diagnostics with invalid fields
+- ❌ Use passive voice in help text ("should be changed" → "change")
 
 ### For AI Agents
 
