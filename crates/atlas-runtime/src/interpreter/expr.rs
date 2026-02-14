@@ -17,15 +17,7 @@ impl Interpreter {
             Expr::Index(index) => self.eval_index(index),
             Expr::ArrayLiteral(arr) => self.eval_array_literal(arr),
             Expr::Group(group) => self.eval_expr(&group.expr),
-            Expr::Match(match_expr) => {
-                // Pattern matching runtime execution is BLOCKER 03-B
-                // This is BLOCKER 03-A (syntax & type checking only)
-                Err(RuntimeError::TypeError {
-                    msg: "Pattern matching runtime execution not yet implemented (BLOCKER 03-B)"
-                        .to_string(),
-                    span: match_expr.span,
-                })
-            }
+            Expr::Match(match_expr) => self.eval_match(match_expr),
         }
     }
 
@@ -367,5 +359,171 @@ impl Interpreter {
         let elements: Result<Vec<Value>, _> =
             arr.elements.iter().map(|e| self.eval_expr(e)).collect();
         Ok(Value::array(elements?))
+    }
+
+    /// Evaluate match expression
+    fn eval_match(&mut self, match_expr: &crate::ast::MatchExpr) -> Result<Value, RuntimeError> {
+        // Evaluate scrutinee
+        let scrutinee = self.eval_expr(&match_expr.scrutinee)?;
+
+        // Try each arm in order
+        for arm in &match_expr.arms {
+            // Try to match pattern against scrutinee
+            if let Some(bindings) = self.try_match_pattern(&arm.pattern, &scrutinee) {
+                // Pattern matched! Create new scope and bind variables
+                self.push_scope();
+
+                // Bind pattern variables
+                for (name, value) in bindings {
+                    let scope = self.locals.last_mut().unwrap();
+                    scope.insert(name, value);
+                }
+
+                // Evaluate arm body with bindings in scope
+                let result = self.eval_expr(&arm.body)?;
+
+                // Pop scope (remove bindings)
+                self.pop_scope();
+
+                // Return result
+                return Ok(result);
+            }
+        }
+
+        // No pattern matched - this should be prevented by exhaustiveness checking
+        // but provide a fallback error just in case
+        Err(RuntimeError::TypeError {
+            msg: "Non-exhaustive pattern match - no arm matched".to_string(),
+            span: match_expr.span,
+        })
+    }
+
+    /// Try to match a pattern against a value
+    /// Returns Some(bindings) if match succeeds, None if match fails
+    fn try_match_pattern(&self, pattern: &Pattern, value: &Value) -> Option<Vec<(String, Value)>> {
+        match pattern {
+            // Literal patterns: must match exactly
+            Pattern::Literal(lit, _) => {
+                let pattern_value = self.eval_literal(lit);
+                if self.values_equal(&pattern_value, value) {
+                    Some(Vec::new()) // Match, no bindings
+                } else {
+                    None // No match
+                }
+            }
+
+            // Wildcard: matches anything, no bindings
+            Pattern::Wildcard(_) => Some(Vec::new()),
+
+            // Variable: matches anything, binds to name
+            Pattern::Variable(id) => Some(vec![(id.name.clone(), value.clone())]),
+
+            // Constructor patterns: Some(x), None, Ok(x), Err(e)
+            Pattern::Constructor { name, args, .. } => {
+                self.try_match_constructor(name, args, value)
+            }
+
+            // Array patterns: [x, y, z]
+            Pattern::Array { elements, .. } => self.try_match_array(elements, value),
+        }
+    }
+
+    /// Try to match constructor pattern
+    fn try_match_constructor(
+        &self,
+        name: &crate::ast::Identifier,
+        args: &[Pattern],
+        value: &Value,
+    ) -> Option<Vec<(String, Value)>> {
+        match name.name.as_str() {
+            "Some" => {
+                // Match Option::Some
+                if let Value::Option(Some(inner)) = value {
+                    if args.len() != 1 {
+                        return None; // Type checker should prevent this
+                    }
+                    self.try_match_pattern(&args[0], inner)
+                } else {
+                    None
+                }
+            }
+            "None" => {
+                // Match Option::None
+                if let Value::Option(None) = value {
+                    if args.is_empty() {
+                        Some(Vec::new())
+                    } else {
+                        None // Type checker should prevent this
+                    }
+                } else {
+                    None
+                }
+            }
+            "Ok" => {
+                // Match Result::Ok
+                if let Value::Result(Ok(inner)) = value {
+                    if args.len() != 1 {
+                        return None; // Type checker should prevent this
+                    }
+                    self.try_match_pattern(&args[0], inner)
+                } else {
+                    None
+                }
+            }
+            "Err" => {
+                // Match Result::Err
+                if let Value::Result(Err(inner)) = value {
+                    if args.len() != 1 {
+                        return None; // Type checker should prevent this
+                    }
+                    self.try_match_pattern(&args[0], inner)
+                } else {
+                    None
+                }
+            }
+            _ => None, // Unknown constructor
+        }
+    }
+
+    /// Try to match array pattern
+    fn try_match_array(
+        &self,
+        pattern_elements: &[Pattern],
+        value: &Value,
+    ) -> Option<Vec<(String, Value)>> {
+        if let Value::Array(arr) = value {
+            let arr_borrow = arr.borrow();
+
+            // Array patterns must have exact length match
+            if arr_borrow.len() != pattern_elements.len() {
+                return None;
+            }
+
+            let mut all_bindings = Vec::new();
+
+            // Match each element
+            for (pattern, element) in pattern_elements.iter().zip(arr_borrow.iter()) {
+                if let Some(bindings) = self.try_match_pattern(pattern, element) {
+                    all_bindings.extend(bindings);
+                } else {
+                    return None; // One element didn't match
+                }
+            }
+
+            Some(all_bindings)
+        } else {
+            None // Not an array
+        }
+    }
+
+    /// Check if two values are equal (for pattern matching)
+    fn values_equal(&self, a: &Value, b: &Value) -> bool {
+        match (a, b) {
+            (Value::Number(x), Value::Number(y)) => x == y,
+            (Value::String(x), Value::String(y)) => x == y,
+            (Value::Bool(x), Value::Bool(y)) => x == y,
+            (Value::Null, Value::Null) => true,
+            _ => false,
+        }
     }
 }
