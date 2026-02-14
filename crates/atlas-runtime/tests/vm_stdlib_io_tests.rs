@@ -354,7 +354,10 @@ fn vm_test_file_info_directory() {
     let test_dir = temp_dir.path().join("infodir");
     fs::create_dir(&test_dir).unwrap();
 
-    let code = format!(r#"let result = fileInfo("{}"); result;"#, test_dir.display());
+    let code = format!(
+        r#"let result = fileInfo("{}"); result;"#,
+        test_dir.display()
+    );
     let result = execute_with_io(&code, &temp_dir);
 
     assert!(result.is_ok());

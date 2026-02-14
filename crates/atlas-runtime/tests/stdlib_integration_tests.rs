@@ -87,7 +87,7 @@ fn test_substring_map_concat() {
 }
 
 #[test]
-fn test_indexOf_filter_slice() {
+fn test_index_of_filter_slice() {
     let code = r#"
         fn hasA(s: string): bool {
             return indexOf(s, "a") != -1;
@@ -116,7 +116,7 @@ fn test_replace_all_in_array() {
 }
 
 #[test]
-fn test_padStart_alignment() {
+fn test_pad_start_alignment() {
     let code = r#"
         fn pad5(s: string): string {
             return padStart(s, 5, " ");
@@ -145,7 +145,7 @@ fn test_split_flatten_join() {
 }
 
 #[test]
-fn test_startsWith_filter_count() {
+fn test_starts_with_filter_count() {
     let code = r#"
         fn startsWithHttp(url: string): bool {
             return startsWith(url, "http");
@@ -396,7 +396,7 @@ fn test_json_nested_extraction() {
 }
 
 #[test]
-fn test_parseFloat_parseInt_json_mix() {
+fn test_parse_float_parse_int_json_mix() {
     let code = r#"
         let strNum: string = "42.7";
         let asFloat: number = parseFloat(strNum);
@@ -407,7 +407,7 @@ fn test_parseFloat_parseInt_json_mix() {
 }
 
 #[test]
-fn test_toBool_json_boolean() {
+fn test_to_bool_json_boolean() {
     let code = r#"
         let json: json = parseJSON('{"active": true, "deleted": false}');
         let active: bool = json["active"].as_bool();
@@ -418,7 +418,7 @@ fn test_toBool_json_boolean() {
 }
 
 #[test]
-fn test_toJSON_parse_roundtrip() {
+fn test_to_json_parse_roundtrip() {
     let code = r#"
         let original: json = parseJSON('{"x": 10}');
         let serialized: string = toJSON(original);
@@ -430,7 +430,7 @@ fn test_toJSON_parse_roundtrip() {
 }
 
 #[test]
-fn test_isValidJSON_filter_strings() {
+fn test_is_valid_json_filter_strings() {
     let code = r#"
         fn isValid(s: string): bool {
             return isValidJSON(s);

@@ -4,7 +4,9 @@
 //! Tests verify that patterns match correctly, variables bind properly, and both
 //! engines produce identical results (100% parity).
 
-use atlas_runtime::{Binder, Compiler, Interpreter, Lexer, Parser, SecurityContext, TypeChecker, VM};
+use atlas_runtime::{
+    Binder, Compiler, Interpreter, Lexer, Parser, SecurityContext, TypeChecker, VM,
+};
 
 /// Helper to run code in interpreter
 fn run_interpreter(source: &str) -> Result<String, String> {
