@@ -75,8 +75,22 @@ impl<'a> TypeChecker<'a> {
         self.declared_symbols.clear();
         self.used_symbols.clear();
 
-        // Track parameters
+        // Enter function scope and define parameters
+        self.symbol_table.enter_scope();
+
         for param in &func.params {
+            let ty = self.resolve_type_ref(&param.type_ref);
+            let symbol = crate::symbol::Symbol {
+                name: param.name.name.clone(),
+                ty,
+                mutable: false,
+                kind: SymbolKind::Parameter,
+                span: param.name.span,
+            };
+            // Define parameter in symbol table for type checking
+            let _ = self.symbol_table.define(symbol);
+
+            // Also track for unused warnings
             self.declared_symbols.insert(
                 param.name.name.clone(),
                 (param.name.span, SymbolKind::Parameter),
@@ -102,6 +116,9 @@ impl<'a> TypeChecker<'a> {
 
         // Emit warnings for unused variables/parameters
         self.emit_unused_warnings();
+
+        // Exit function scope
+        self.symbol_table.exit_scope();
 
         self.current_function_return_type = None;
         self.current_function_info = None;

@@ -485,8 +485,19 @@ impl Parser {
                 if self.check(TokenKind::LeftParen) {
                     self.parse_constructor_pattern(id)
                 } else {
-                    // Variable binding pattern
-                    Ok(Pattern::Variable(id))
+                    // Check if this is a zero-argument constructor (None, unit-like variants)
+                    // For now, recognize built-in constructors: None
+                    if id.name == "None" {
+                        // Zero-argument constructor
+                        Ok(Pattern::Constructor {
+                            name: id.clone(),
+                            args: Vec::new(),
+                            span: id.span,
+                        })
+                    } else {
+                        // Variable binding pattern
+                        Ok(Pattern::Variable(id))
+                    }
                 }
             }
 
