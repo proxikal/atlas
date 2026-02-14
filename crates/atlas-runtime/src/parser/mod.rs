@@ -299,8 +299,11 @@ impl Parser {
     /// Record an error
     pub(super) fn error(&mut self, message: &str) {
         let span = self.peek().span;
-        self.diagnostics
-            .push(Diagnostic::error_with_code("AT1000", message, span).with_label("syntax error"));
+        self.diagnostics.push(
+            Diagnostic::error_with_code("AT1000", message, span)
+                .with_label("syntax error")
+                .with_help("check your syntax for typos or missing tokens"),
+        );
     }
 
     /// Check if a token kind is a reserved keyword

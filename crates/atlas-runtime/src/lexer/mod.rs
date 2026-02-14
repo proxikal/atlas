@@ -252,7 +252,8 @@ impl Lexer {
                                 )
                                 .with_line(comment_start_line as usize)
                                 .with_snippet(snippet)
-                                .with_label("comment starts here"),
+                                .with_label("comment starts here")
+                                .with_help("add '*/' to close the multi-line comment"),
                             );
                         }
                     } else {

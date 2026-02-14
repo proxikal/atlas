@@ -90,7 +90,11 @@ impl<'a> TypeChecker<'a> {
                             format!("Duplicate export: '{}' is exported more than once", name),
                             export_decl.span,
                         )
-                        .with_label("duplicate export"),
+                        .with_label("duplicate export")
+                        .with_help(format!(
+                            "remove one of the export statements for '{}'",
+                            name
+                        )),
                     );
                 } else {
                     exported_names.insert(name.clone());
@@ -173,7 +177,11 @@ impl<'a> TypeChecker<'a> {
                     "Not all code paths return a value",
                     func.span,
                 )
-                .with_label("function body"),
+                .with_label("function body")
+                .with_help(format!(
+                    "ensure all code paths return a value of type {}",
+                    return_type.display_name()
+                )),
             );
         }
 
@@ -209,7 +217,16 @@ impl<'a> TypeChecker<'a> {
 
             self.diagnostics.push(
                 Diagnostic::warning_with_code("AT2001", &message, *span)
-                    .with_label("declared here but never used"),
+                    .with_label("declared here but never used")
+                    .with_help(format!(
+                        "remove the {} or prefix with underscore: _{}",
+                        match kind {
+                            SymbolKind::Variable => "variable",
+                            SymbolKind::Parameter => "parameter",
+                            _ => "symbol",
+                        },
+                        name
+                    )),
             );
         }
     }
@@ -222,7 +239,8 @@ impl<'a> TypeChecker<'a> {
                 // Code after return is unreachable
                 self.diagnostics.push(
                     Diagnostic::warning_with_code("AT2002", "Unreachable code", stmt.span())
-                        .with_label("this code will never execute"),
+                        .with_label("this code will never execute")
+                        .with_help("remove this code or restructure your control flow"),
                 );
             }
 
@@ -284,7 +302,12 @@ impl<'a> TypeChecker<'a> {
                                 ),
                                 var.span,
                             )
-                            .with_label("type mismatch"),
+                            .with_label("type mismatch")
+                            .with_help(format!(
+                                "change the variable type to {} or use a {} value",
+                                init_type.display_name(),
+                                declared_type.display_name()
+                            )),
                         );
                     }
                 } else {
@@ -311,7 +334,11 @@ impl<'a> TypeChecker<'a> {
                             ),
                             assign.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help(format!(
+                            "the value must be of type {}",
+                            target_type.display_name()
+                        )),
                     );
                 }
 
@@ -325,18 +352,17 @@ impl<'a> TypeChecker<'a> {
                                 id.span,
                             )
                             .with_label("immutable variable")
-                            .with_related_location(
-                                crate::diagnostic::RelatedLocation {
-                                    file: "<input>".to_string(),
-                                    line: 1,
-                                    column: symbol.span.start + 1,
-                                    length: symbol.span.end.saturating_sub(symbol.span.start),
-                                    message: format!(
-                                        "'{}' declared here as immutable",
-                                        symbol.name
-                                    ),
-                                },
-                            );
+                            .with_related_location(crate::diagnostic::RelatedLocation {
+                                file: "<input>".to_string(),
+                                line: 1,
+                                column: symbol.span.start + 1,
+                                length: symbol.span.end.saturating_sub(symbol.span.start),
+                                message: format!("'{}' declared here as immutable", symbol.name),
+                            })
+                            .with_help(format!(
+                                "declare '{}' as mutable: var {} = ...",
+                                id.name, id.name
+                            ));
 
                             self.diagnostics.push(diag);
                         }
@@ -358,7 +384,10 @@ impl<'a> TypeChecker<'a> {
                             ),
                             compound.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help(
+                            "compound assignment operators (+=, -=, etc.) only work with numbers",
+                        ),
                     );
                 }
 
@@ -372,7 +401,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             compound.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("the value must be a number for compound assignment"),
                     );
                 }
 

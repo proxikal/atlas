@@ -75,7 +75,8 @@ impl Binder {
                             format!("Cannot export '{}': symbol not found", name),
                             export_decl.span,
                         )
-                        .with_label("export declaration"),
+                        .with_label("export declaration")
+                        .with_help(format!("define '{}' before exporting it", name)),
                     );
                 }
             }
@@ -134,7 +135,8 @@ impl Binder {
                             format!("Cannot export '{}': symbol not found", name),
                             export_decl.span,
                         )
-                        .with_label("export declaration"),
+                        .with_label("export declaration")
+                        .with_help(format!("define '{}' before exporting it", name)),
                     );
                 }
             }
@@ -198,7 +200,11 @@ impl Binder {
         if let Err(err) = self.symbol_table.define_function(symbol) {
             let (msg, existing) = *err;
             let mut diag = Diagnostic::error_with_code("AT2003", &msg, func.name.span)
-                .with_label("redeclaration");
+                .with_label("redeclaration")
+                .with_help(format!(
+                    "rename or remove one of the '{}' declarations",
+                    func.name.name
+                ));
 
             // Add related location if we have the existing symbol
             if let Some(existing_symbol) = existing {
@@ -291,7 +297,10 @@ impl Binder {
                         format!("Cannot find module '{}'", import_decl.source),
                         import_decl.span,
                     )
-                    .with_label("import statement"),
+                    .with_label("import statement")
+                    .with_help(
+                        "ensure the module exists and has been loaded before importing from it",
+                    ),
                 );
                 return;
             }
@@ -322,7 +331,8 @@ impl Binder {
                                 let (msg, _) = *err;
                                 self.diagnostics.push(
                                     Diagnostic::error_with_code("AT2003", &msg, *span)
-                                        .with_label("imported symbol"),
+                                        .with_label("imported symbol")
+                                        .with_help("rename the import or remove the conflicting local declaration"),
                                 );
                             }
                         }
@@ -337,7 +347,10 @@ impl Binder {
                                     ),
                                     *span,
                                 )
-                                .with_label("imported name"),
+                                .with_label("imported name")
+                                .with_help(
+                                    "check the module's exports or import a different symbol",
+                                ),
                             );
                         }
                     }
@@ -385,7 +398,11 @@ impl Binder {
             if let Err(err) = self.symbol_table.define(symbol) {
                 let (msg, existing) = *err;
                 let mut diag = Diagnostic::error_with_code("AT2003", &msg, param.name.span)
-                    .with_label("parameter redeclaration");
+                    .with_label("parameter redeclaration")
+                    .with_help(format!(
+                        "rename this parameter to avoid conflict with '{}'",
+                        param.name.name
+                    ));
 
                 // Add related location if we have the existing symbol
                 if let Some(existing_symbol) = existing {
@@ -469,7 +486,11 @@ impl Binder {
                 if let Err(err) = self.symbol_table.define(symbol) {
                     let (msg, existing) = *err;
                     let mut diag = Diagnostic::error_with_code("AT2003", &msg, var.name.span)
-                        .with_label("variable redeclaration");
+                        .with_label("variable redeclaration")
+                        .with_help(format!(
+                            "rename this variable or remove the previous declaration of '{}'",
+                            var.name.name
+                        ));
 
                     // Add related location if we have the existing symbol
                     if let Some(existing_symbol) = existing {
@@ -554,7 +575,11 @@ impl Binder {
                             format!("Unknown symbol '{}'", id.name),
                             id.span,
                         )
-                        .with_label("undefined variable"),
+                        .with_label("undefined variable")
+                        .with_help(format!(
+                            "declare '{}' with 'let' or 'const' before assigning to it",
+                            id.name
+                        )),
                     );
                 }
             }
@@ -582,7 +607,11 @@ impl Binder {
                             format!("Unknown symbol '{}'", id.name),
                             id.span,
                         )
-                        .with_label("undefined variable"),
+                        .with_label("undefined variable")
+                        .with_help(format!(
+                            "declare '{}' before using it, or check for typos",
+                            id.name
+                        )),
                     );
                 }
             }
@@ -740,7 +769,11 @@ impl Binder {
                                 ),
                                 *span,
                             )
-                            .with_label("incorrect number of type arguments"),
+                            .with_label("incorrect number of type arguments")
+                            .with_help(format!(
+                                "provide exactly {} type argument(s) for '{}'",
+                                arity, name
+                            )),
                         );
                         return Type::Unknown;
                     }
@@ -748,7 +781,8 @@ impl Binder {
                     // Unknown generic type
                     self.diagnostics.push(
                         Diagnostic::error(format!("Unknown generic type '{}'", name), *span)
-                            .with_label("unknown type"),
+                            .with_label("unknown type")
+                            .with_help("valid generic types are: Option, Result, Array"),
                     );
                     return Type::Unknown;
                 }
@@ -789,7 +823,11 @@ impl Binder {
                         format!("Duplicate type parameter '{}'", type_param.name),
                         type_param.span,
                     )
-                    .with_label("duplicate type parameter"),
+                    .with_label("duplicate type parameter")
+                    .with_help(format!(
+                        "remove the duplicate '{}' or rename it to a unique name",
+                        type_param.name
+                    )),
                 );
                 return;
             }

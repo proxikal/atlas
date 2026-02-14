@@ -267,15 +267,68 @@ pub fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
 
 /// Error code registry
 pub mod error_codes {
-    /// Generic unspecified error
-    pub const GENERIC_ERROR: &str = "AT9999";
-    /// Generic unspecified warning
-    pub const GENERIC_WARNING: &str = "AW9999";
+    // AT0xxx - Type and Runtime Errors
+    pub const TYPE_MISMATCH: &str = "AT0001";
+    pub const UNDEFINED_SYMBOL: &str = "AT0002";
+    pub const DIVIDE_BY_ZERO: &str = "AT0005";
+    pub const ARRAY_OUT_OF_BOUNDS: &str = "AT0006";
+    pub const INVALID_NUMERIC_RESULT: &str = "AT0007";
+    pub const STDLIB_ARG_ERROR: &str = "AT0102";
+    pub const STDLIB_VALUE_ERROR: &str = "AT0103";
 
-    // Future error codes will be added here as needed
-    // Example:
-    // pub const TYPE_MISMATCH: &str = "AT0001";
-    // pub const UNDEFINED_VARIABLE: &str = "AT0002";
+    // AT03xx - Permission Errors
+    pub const FILESYSTEM_PERMISSION_DENIED: &str = "AT0300";
+    pub const NETWORK_PERMISSION_DENIED: &str = "AT0301";
+    pub const PROCESS_PERMISSION_DENIED: &str = "AT0302";
+    pub const ENVIRONMENT_PERMISSION_DENIED: &str = "AT0303";
+
+    // AT1xxx - Syntax Errors
+    pub const SYNTAX_ERROR: &str = "AT1000";
+    pub const UNEXPECTED_TOKEN: &str = "AT1001";
+    pub const UNTERMINATED_STRING: &str = "AT1002";
+    pub const INVALID_ESCAPE: &str = "AT1003";
+    pub const UNTERMINATED_COMMENT: &str = "AT1004";
+    pub const SHADOWING_PRELUDE: &str = "AT1012";
+
+    // AT2xxx - Warnings
+    pub const UNUSED_VARIABLE: &str = "AT2001";
+    pub const UNREACHABLE_CODE: &str = "AT2002";
+    pub const DUPLICATE_DECLARATION: &str = "AT2003";
+
+    // AT3xxx - Semantic and Type Checking Errors
+    pub const TYPE_ERROR: &str = "AT3001";
+    pub const BINARY_OP_TYPE_ERROR: &str = "AT3002";
+    pub const IMMUTABLE_ASSIGNMENT: &str = "AT3003";
+    pub const MISSING_RETURN: &str = "AT3004";
+    pub const ARITY_MISMATCH: &str = "AT3005";
+    pub const NOT_CALLABLE: &str = "AT3006";
+    pub const INVALID_INDEX_TYPE: &str = "AT3010";
+    pub const NOT_INDEXABLE: &str = "AT3011";
+    pub const MATCH_EMPTY: &str = "AT3020";
+    pub const MATCH_ARM_TYPE_MISMATCH: &str = "AT3021";
+    pub const PATTERN_TYPE_MISMATCH: &str = "AT3022";
+    pub const CONSTRUCTOR_ARITY: &str = "AT3023";
+    pub const UNKNOWN_CONSTRUCTOR: &str = "AT3024";
+    pub const UNSUPPORTED_PATTERN_TYPE: &str = "AT3025";
+    pub const ARRAY_PATTERN_TYPE_MISMATCH: &str = "AT3026";
+    pub const NON_EXHAUSTIVE_MATCH: &str = "AT3027";
+
+    // AT5xxx - Module System Errors
+    pub const INVALID_MODULE_PATH: &str = "AT5001";
+    pub const MODULE_NOT_FOUND: &str = "AT5002";
+    pub const CIRCULAR_DEPENDENCY: &str = "AT5003";
+    pub const EXPORT_NOT_FOUND: &str = "AT5004";
+    pub const IMPORT_RESOLUTION_FAILED: &str = "AT5005";
+    pub const MODULE_NOT_EXPORTED: &str = "AT5006";
+    pub const NAMESPACE_IMPORT_UNSUPPORTED: &str = "AT5007";
+    pub const DUPLICATE_EXPORT: &str = "AT5008";
+
+    // AT9xxx - Internal Errors
+    pub const INTERNAL_ERROR: &str = "AT9995";
+    pub const STACK_UNDERFLOW: &str = "AT9997";
+    pub const UNKNOWN_OPCODE: &str = "AT9998";
+    pub const GENERIC_ERROR: &str = "AT9999";
+    pub const GENERIC_WARNING: &str = "AW9999";
 }
 
 #[cfg(test)]

@@ -157,7 +157,8 @@ impl ModuleExecutor {
                             "AT5004",
                             format!("'{}' is not exported from module", name.name),
                             *span,
-                        )]
+                        )
+                        .with_help("check the module's exports or import a different symbol")]
                     })?;
                     self.interpreter
                         .define_global(name.name.clone(), value.clone());

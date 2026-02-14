@@ -408,6 +408,9 @@ impl Compiler {
                         "AT9995",
                         "None pattern should not have arguments",
                         span,
+                    )
+                    .with_help(
+                        "use 'None' without arguments to match empty Option values",
                     )]);
                 }
 
@@ -431,6 +434,9 @@ impl Compiler {
                         "AT9995",
                         "Some pattern requires exactly one argument",
                         span,
+                    )
+                    .with_help(
+                        "use 'Some(value)' to match and extract the inner value from Option",
                     )]);
                 }
 
@@ -475,6 +481,9 @@ impl Compiler {
                         "AT9995",
                         "Ok pattern requires exactly one argument",
                         span,
+                    )
+                    .with_help(
+                        "use 'Ok(value)' to match and extract the success value from Result",
                     )]);
                 }
 
@@ -506,6 +515,9 @@ impl Compiler {
                         "AT9995",
                         "Err pattern requires exactly one argument",
                         span,
+                    )
+                    .with_help(
+                        "use 'Err(error)' to match and extract the error value from Result",
                     )]);
                 }
 
@@ -534,6 +546,9 @@ impl Compiler {
                 "AT9995",
                 format!("Unknown constructor pattern: {}", name.name),
                 span,
+            )
+            .with_help(
+                "valid constructor patterns are: Some, None (for Option) and Ok, Err (for Result)",
             )]),
         }
     }

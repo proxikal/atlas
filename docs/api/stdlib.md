@@ -321,7 +321,147 @@
 **Implementation:** `crates/atlas-runtime/src/stdlib/math.rs`
 **Phase:** phases/stdlib/phase-03-complete-math-api.md
 
-_Phases will populate this section with math functions and constants_
+**Note:** All functions follow IEEE 754 semantics (NaN propagates, infinities handled, signed zero preserved).
+
+### Constants
+
+#### PI
+**Value:** `3.141592653589793`
+**Behavior:** Mathematical constant π
+
+#### E
+**Value:** `2.718281828459045`
+**Behavior:** Mathematical constant e (Euler's number)
+
+#### SQRT2
+**Value:** `1.4142135623730951`
+**Behavior:** Square root of 2
+
+#### LN2
+**Value:** `0.6931471805599453`
+**Behavior:** Natural logarithm of 2
+
+#### LN10
+**Value:** `2.302585092994046`
+**Behavior:** Natural logarithm of 10
+
+### Basic Operations
+
+#### abs
+**Signature:** `abs(x: number) -> number`
+**Behavior:** Returns absolute value (handles signed zero and infinities)
+**Example:** `abs(-5)` returns `5`
+**Errors:** AT0102 if wrong type
+
+#### floor
+**Signature:** `floor(x: number) -> number`
+**Behavior:** Returns largest integer ≤ x (preserves special values)
+**Example:** `floor(3.7)` returns `3`
+**Errors:** AT0102 if wrong type
+
+#### ceil
+**Signature:** `ceil(x: number) -> number`
+**Behavior:** Returns smallest integer ≥ x (preserves special values)
+**Example:** `ceil(3.2)` returns `4`
+**Errors:** AT0102 if wrong type
+
+#### round
+**Signature:** `round(x: number) -> number`
+**Behavior:** Returns nearest integer using ties-to-even (banker's rounding)
+**Example:** `round(2.5)` returns `2`, `round(3.5)` returns `4`
+**Errors:** AT0102 if wrong type
+
+#### min
+**Signature:** `min(a: number, b: number) -> number`
+**Behavior:** Returns smaller value (NaN propagates correctly)
+**Example:** `min(5, 3)` returns `3`
+**Errors:** AT0102 if wrong types
+
+#### max
+**Signature:** `max(a: number, b: number) -> number`
+**Behavior:** Returns larger value (NaN propagates correctly)
+**Example:** `max(5, 3)` returns `5`
+**Errors:** AT0102 if wrong types
+
+### Exponential & Power
+
+#### sqrt
+**Signature:** `sqrt(x: number) -> number`
+**Behavior:** Returns square root (negative input returns NaN)
+**Example:** `sqrt(16)` returns `4`, `sqrt(-1)` returns `NaN`
+**Errors:** AT0102 if wrong type
+
+#### pow
+**Signature:** `pow(base: number, exponent: number) -> number`
+**Behavior:** Returns base raised to exponent power
+**Example:** `pow(2, 3)` returns `8`
+**Errors:** AT0102 if wrong types
+
+#### log
+**Signature:** `log(x: number) -> number`
+**Behavior:** Returns natural logarithm (negative/zero input returns NaN/-Infinity)
+**Example:** `log(E)` returns `1`
+**Errors:** AT0102 if wrong type
+
+### Trigonometry
+
+**Note:** All trigonometric functions use radians.
+
+#### sin
+**Signature:** `sin(x: number) -> number`
+**Behavior:** Returns sine of x (radians)
+**Example:** `sin(0)` returns `0`
+**Errors:** AT0102 if wrong type
+
+#### cos
+**Signature:** `cos(x: number) -> number`
+**Behavior:** Returns cosine of x (radians)
+**Example:** `cos(0)` returns `1`
+**Errors:** AT0102 if wrong type
+
+#### tan
+**Signature:** `tan(x: number) -> number`
+**Behavior:** Returns tangent of x (radians)
+**Example:** `tan(0)` returns `0`
+**Errors:** AT0102 if wrong type
+
+#### asin
+**Signature:** `asin(x: number) -> number`
+**Behavior:** Returns arcsine of x in radians (domain: [-1, 1], returns NaN outside)
+**Example:** `asin(0.5)` returns approx `0.5236` (π/6)
+**Errors:** AT0102 if wrong type
+
+#### acos
+**Signature:** `acos(x: number) -> number`
+**Behavior:** Returns arccosine of x in radians (domain: [-1, 1], returns NaN outside)
+**Example:** `acos(0.5)` returns approx `1.0472` (π/3)
+**Errors:** AT0102 if wrong type
+
+#### atan
+**Signature:** `atan(x: number) -> number`
+**Behavior:** Returns arctangent of x in radians
+**Example:** `atan(1)` returns approx `0.7854` (π/4)
+**Errors:** AT0102 if wrong type
+
+### Utilities
+
+#### clamp
+**Signature:** `clamp(value: number, min: number, max: number) -> number`
+**Behavior:** Restricts value to range [min, max] (validates min ≤ max)
+**Example:** `clamp(15, 0, 10)` returns `10`
+**Errors:** AT0102 if wrong types, AT0105 if min > max
+
+#### sign
+**Signature:** `sign(x: number) -> number`
+**Behavior:** Returns -1 for negative, 0 for zero, 1 for positive (preserves signed zero)
+**Example:** `sign(-5)` returns `-1`
+**Errors:** AT0102 if wrong type
+
+#### random
+**Signature:** `random() -> number`
+**Behavior:** Returns random number in [0, 1) with uniform distribution
+**Example:** `random()` returns e.g. `0.723...`
+**Errors:** None
 
 ---
 

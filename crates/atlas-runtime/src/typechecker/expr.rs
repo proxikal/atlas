@@ -64,7 +64,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             binary.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("ensure both operands are numbers (for addition) or both are strings (for concatenation)"),
                     );
                     Type::Unknown
                 }
@@ -83,7 +84,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             binary.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("arithmetic operators (-, *, /, %) only work with numbers"),
                     );
                     Type::Unknown
                 }
@@ -101,7 +103,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             binary.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("both operands must have the same type for equality comparison"),
                     );
                 }
                 Type::Bool
@@ -120,7 +123,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             binary.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("comparison operators (<, <=, >, >=) only work with numbers"),
                     );
                     Type::Bool // Still return bool for error recovery
                 }
@@ -137,7 +141,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             binary.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("logical operators (and, or) only work with bool values"),
                     );
                 }
                 Type::Bool
@@ -161,7 +166,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             unary.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("negation (-) only works with numbers"),
                     );
                     Type::Unknown
                 } else {
@@ -179,7 +185,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             unary.span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("logical not (!) only works with bool values"),
                     );
                     Type::Unknown
                 } else {
@@ -211,7 +218,12 @@ impl<'a> TypeChecker<'a> {
                             ),
                             call.span,
                         )
-                        .with_label("argument count mismatch"),
+                        .with_label("argument count mismatch")
+                        .with_help(format!(
+                            "provide exactly {} argument{}",
+                            params.len(),
+                            if params.len() == 1 { "" } else { "s" }
+                        )),
                     );
                 }
 
@@ -241,7 +253,12 @@ impl<'a> TypeChecker<'a> {
                                     ),
                                     arg.span(),
                                 )
-                                .with_label("type mismatch"),
+                                .with_label("type mismatch")
+                                .with_help(format!(
+                                    "argument {} must be of type {}",
+                                    i + 1,
+                                    expected_type.display_name()
+                                )),
                             );
                         }
                     }
@@ -351,7 +368,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             index.index.span(),
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("array indices must be numbers"),
                     );
                 }
                 *elem_type
@@ -371,7 +389,8 @@ impl<'a> TypeChecker<'a> {
                             ),
                             index.index.span(),
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help("use a string key or numeric index to access JSON values"),
                     );
                 }
                 Type::JsonValue
@@ -384,7 +403,8 @@ impl<'a> TypeChecker<'a> {
                         format!("Cannot index into type {}", target_type.display_name()),
                         index.target.span(),
                     )
-                    .with_label("not indexable"),
+                    .with_label("not indexable")
+                    .with_help("only arrays and json values can be indexed"),
                 );
                 Type::Unknown
             }
@@ -416,7 +436,11 @@ impl<'a> TypeChecker<'a> {
                         ),
                         elem.span(),
                     )
-                    .with_label("type mismatch"),
+                    .with_label("type mismatch")
+                    .with_help(format!(
+                        "all array elements must be type {} (inferred from first element)",
+                        first_type.display_name()
+                    )),
                 );
             }
         }
@@ -475,7 +499,8 @@ impl<'a> TypeChecker<'a> {
                     "Match expression must have at least one arm",
                     match_expr.span,
                 )
-                .with_label("empty match"),
+                .with_label("empty match")
+                .with_help("add at least one match arm with a pattern and expression"),
             );
             return Type::Unknown;
         }
@@ -497,7 +522,11 @@ impl<'a> TypeChecker<'a> {
                         ),
                         *arm_span,
                     )
-                    .with_label("type mismatch"),
+                    .with_label("type mismatch")
+                    .with_help(format!(
+                        "all match arms must return the same type ({})",
+                        first_type.display_name()
+                    )),
                 );
             }
         }
@@ -702,7 +731,11 @@ impl<'a> TypeChecker<'a> {
                             ),
                             *span,
                         )
-                        .with_label("type mismatch"),
+                        .with_label("type mismatch")
+                        .with_help(format!(
+                            "use a {} literal or wildcard pattern",
+                            expected_type.display_name()
+                        )),
                     );
                 }
             }
@@ -760,7 +793,8 @@ impl<'a> TypeChecker<'a> {
                                             ),
                                             span,
                                         )
-                                        .with_label("wrong arity"),
+                                        .with_label("wrong arity")
+                                        .with_help("Some requires exactly 1 argument: Some(value)"),
                                     );
                                 } else {
                                     // Check inner pattern against T
@@ -778,7 +812,8 @@ impl<'a> TypeChecker<'a> {
                                             ),
                                             span,
                                         )
-                                        .with_label("wrong arity"),
+                                        .with_label("wrong arity")
+                                        .with_help("None requires no arguments: None"),
                                     );
                                 }
                             }
@@ -789,7 +824,10 @@ impl<'a> TypeChecker<'a> {
                                         format!("Unknown Option constructor: {}", name.name),
                                         name.span,
                                     )
-                                    .with_label("unknown constructor"),
+                                    .with_label("unknown constructor")
+                                    .with_help(
+                                        "Option only has constructors: Some(value) and None",
+                                    ),
                                 );
                             }
                         }
@@ -805,7 +843,8 @@ impl<'a> TypeChecker<'a> {
                                             format!("Ok expects 1 argument, found {}", args.len()),
                                             span,
                                         )
-                                        .with_label("wrong arity"),
+                                        .with_label("wrong arity")
+                                        .with_help("Ok requires exactly 1 argument: Ok(value)"),
                                     );
                                 } else {
                                     // Check inner pattern against T
@@ -820,7 +859,8 @@ impl<'a> TypeChecker<'a> {
                                             format!("Err expects 1 argument, found {}", args.len()),
                                             span,
                                         )
-                                        .with_label("wrong arity"),
+                                        .with_label("wrong arity")
+                                        .with_help("Err requires exactly 1 argument: Err(error)"),
                                     );
                                 } else {
                                     // Check inner pattern against E
@@ -834,7 +874,10 @@ impl<'a> TypeChecker<'a> {
                                         format!("Unknown Result constructor: {}", name.name),
                                         name.span,
                                     )
-                                    .with_label("unknown constructor"),
+                                    .with_label("unknown constructor")
+                                    .with_help(
+                                        "Result only has constructors: Ok(value) and Err(error)",
+                                    ),
                                 );
                             }
                         }
@@ -849,7 +892,10 @@ impl<'a> TypeChecker<'a> {
                                 ),
                                 span,
                             )
-                            .with_label("unsupported type"),
+                            .with_label("unsupported type")
+                            .with_help(
+                                "constructor patterns only work with Option and Result types",
+                            ),
                         );
                     }
                 }
@@ -898,7 +944,8 @@ impl<'a> TypeChecker<'a> {
                         ),
                         span,
                     )
-                    .with_label("type mismatch"),
+                    .with_label("type mismatch")
+                    .with_help("array patterns can only match array types"),
                 );
             }
         }

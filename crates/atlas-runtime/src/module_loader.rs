@@ -123,7 +123,12 @@ impl ModuleLoader {
         // Convert paths to loaded modules
         let modules = ordered
             .into_iter()
-            .map(|path| self.cache.get(&path).unwrap().clone())
+            .map(|path| {
+                self.cache
+                    .get(&path)
+                    .expect("module should exist in cache after loading")
+                    .clone()
+            })
             .collect();
 
         Ok(modules)
@@ -204,7 +209,8 @@ impl ModuleLoader {
                 format!("Failed to read module file: {}", e),
                 Span::dummy(),
             )
-            .with_label(format!("path: {}", path.display()))]
+            .with_label(format!("path: {}", path.display()))
+            .with_help("ensure the file exists and you have read permissions")]
         })?;
 
         // Lex
@@ -271,7 +277,9 @@ impl ModuleLoader {
             if let Some(deps) = self.dependencies.get(from) {
                 for _dep in deps {
                     if reachable.contains(_dep) {
-                        *in_degree.get_mut(from).unwrap() += 1;
+                        *in_degree
+                            .get_mut(from)
+                            .expect("in_degree should contain all reachable nodes") += 1;
                     }
                 }
             }
@@ -295,7 +303,9 @@ impl ModuleLoader {
                 if let Some(deps) = self.dependencies.get(from) {
                     if deps.contains(&node) {
                         // Decrease in-degree
-                        let degree = in_degree.get_mut(from).unwrap();
+                        let degree = in_degree
+                            .get_mut(from)
+                            .expect("in_degree should contain all reachable nodes");
                         *degree -= 1;
 
                         // If no more dependencies, add to queue
@@ -313,7 +323,8 @@ impl ModuleLoader {
                 "AT5003",
                 "Circular dependency detected during topological sort",
                 Span::dummy(),
-            )]);
+            )
+            .with_help("refactor your modules to remove circular imports - modules cannot import each other in a cycle")]);
         }
 
         Ok(sorted)

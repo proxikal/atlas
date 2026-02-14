@@ -268,7 +268,26 @@ fn runtime_error_to_diagnostic(error: RuntimeError) -> Diagnostic {
         ),
     };
 
-    Diagnostic::error_with_code(code, message, span)
+    let help = match error {
+        RuntimeError::DivideByZero { .. } => "division by zero is undefined",
+        RuntimeError::OutOfBounds { .. } => "check array bounds before accessing",
+        RuntimeError::InvalidNumericResult { .. } => "ensure the number is finite and not NaN",
+        RuntimeError::FilesystemPermissionDenied { .. } => {
+            "enable file permissions with --allow-file or adjust security settings"
+        }
+        RuntimeError::NetworkPermissionDenied { .. } => {
+            "enable network permissions with --allow-network or adjust security settings"
+        }
+        RuntimeError::ProcessPermissionDenied { .. } => {
+            "enable process permissions with --allow-process or adjust security settings"
+        }
+        RuntimeError::EnvironmentPermissionDenied { .. } => {
+            "enable environment permissions with --allow-env or adjust security settings"
+        }
+        _ => "check the error message for details",
+    };
+
+    Diagnostic::error_with_code(code, message, span).with_help(help)
 }
 
 #[cfg(test)]

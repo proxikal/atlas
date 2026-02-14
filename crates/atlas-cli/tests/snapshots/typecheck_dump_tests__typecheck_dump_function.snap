@@ -6,6 +6,46 @@ expression: json
   "typecheck_version": 1,
   "symbols": [
     {
+      "name": "E",
+      "kind": "builtin",
+      "start": 0,
+      "end": 0,
+      "type": "number",
+      "mutable": false
+    },
+    {
+      "name": "LN10",
+      "kind": "builtin",
+      "start": 0,
+      "end": 0,
+      "type": "number",
+      "mutable": false
+    },
+    {
+      "name": "LN2",
+      "kind": "builtin",
+      "start": 0,
+      "end": 0,
+      "type": "number",
+      "mutable": false
+    },
+    {
+      "name": "PI",
+      "kind": "builtin",
+      "start": 0,
+      "end": 0,
+      "type": "number",
+      "mutable": false
+    },
+    {
+      "name": "SQRT2",
+      "kind": "builtin",
+      "start": 0,
+      "end": 0,
+      "type": "number",
+      "mutable": false
+    },
+    {
       "name": "add",
       "kind": "function",
       "start": 4,
