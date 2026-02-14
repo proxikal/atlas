@@ -56,11 +56,53 @@ impl From<Program> for VersionedProgram {
     }
 }
 
-/// Top-level item (function or statement)
+/// Top-level item (function, statement, import, or export)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Item {
     Function(FunctionDecl),
     Statement(Stmt),
+    Import(ImportDecl),
+    Export(ExportDecl),
+}
+
+/// Import declaration
+///
+/// Syntax: `import { x, y } from "./path"` or `import * as ns from "./path"`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImportDecl {
+    /// What to import (named imports or namespace)
+    pub specifiers: Vec<ImportSpecifier>,
+    /// Module path (e.g., "./math", "/src/utils")
+    pub source: String,
+    pub span: Span,
+}
+
+/// Import specifier (what to import)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ImportSpecifier {
+    /// Named import: `{ x }`
+    Named { name: Identifier, span: Span },
+    /// Namespace import: `* as ns`
+    Namespace { alias: Identifier, span: Span },
+}
+
+/// Export declaration
+///
+/// Syntax: `export fn foo()` or `export let x = 5`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExportDecl {
+    /// What is being exported
+    pub item: ExportItem,
+    pub span: Span,
+}
+
+/// Exportable items
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ExportItem {
+    /// Export function: `export fn foo() {}`
+    Function(FunctionDecl),
+    /// Export variable: `export let x = 5`
+    Variable(VarDecl),
 }
 
 /// Function declaration

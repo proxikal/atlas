@@ -62,6 +62,19 @@ impl<'a> TypeChecker<'a> {
         match item {
             Item::Function(func) => self.check_function(func),
             Item::Statement(stmt) => self.check_statement(stmt),
+            Item::Import(_) => {
+                // Import type checking handled in BLOCKER 04-C (cross-module types)
+                // For now, just skip - imports are syntactically valid but not yet functional
+            }
+            Item::Export(export_decl) => {
+                // Export wraps an item - check the inner item
+                match &export_decl.item {
+                    crate::ast::ExportItem::Function(func) => self.check_function(func),
+                    crate::ast::ExportItem::Variable(var) => {
+                        self.check_statement(&crate::ast::Stmt::VarDecl(var.clone()));
+                    }
+                }
+            }
         }
     }
 

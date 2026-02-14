@@ -133,6 +133,37 @@ impl Interpreter {
                         break;
                     }
                 }
+                Item::Import(_) => {
+                    // Import execution handled in BLOCKER 04-D (module loading)
+                    // For now, just skip - imports are syntactically valid but not yet functional
+                }
+                Item::Export(export_decl) => {
+                    // Export wraps an item - evaluate the inner item
+                    match &export_decl.item {
+                        crate::ast::ExportItem::Function(func) => {
+                            // Same as Function case above
+                            self.function_bodies.insert(
+                                func.name.name.clone(),
+                                UserFunction {
+                                    name: func.name.name.clone(),
+                                    params: func.params.clone(),
+                                    body: func.body.clone(),
+                                },
+                            );
+                            let func_value = Value::Function(FunctionRef {
+                                name: func.name.name.clone(),
+                                arity: func.params.len(),
+                                bytecode_offset: 0,
+                                local_count: 0,
+                            });
+                            self.globals.insert(func.name.name.clone(), func_value);
+                        }
+                        crate::ast::ExportItem::Variable(var) => {
+                            last_value =
+                                self.eval_statement(&crate::ast::Stmt::VarDecl(var.clone()))?;
+                        }
+                    }
+                }
             }
         }
 

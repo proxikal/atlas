@@ -58,9 +58,13 @@ impl Parser {
 
     // === Top-level parsing ===
 
-    /// Parse a top-level item (function or statement)
+    /// Parse a top-level item (function, statement, import, or export)
     fn parse_item(&mut self) -> Result<Item, ()> {
-        if self.check(TokenKind::Fn) {
+        if self.check(TokenKind::Import) {
+            Ok(Item::Import(self.parse_import()?))
+        } else if self.check(TokenKind::Export) {
+            Ok(Item::Export(self.parse_export()?))
+        } else if self.check(TokenKind::Fn) {
             Ok(Item::Function(self.parse_function()?))
         } else {
             Ok(Item::Statement(self.parse_statement()?))
@@ -147,6 +151,100 @@ impl Parser {
             return_type,
             body,
             span: fn_span.merge(end_span),
+        })
+    }
+
+    /// Parse an import declaration
+    ///
+    /// Syntax: `import { x, y } from "./path"` or `import * as ns from "./path"`
+    fn parse_import(&mut self) -> Result<ImportDecl, ()> {
+        let import_span = self.consume(TokenKind::Import, "Expected 'import'")?.span;
+
+        let mut specifiers = Vec::new();
+
+        if self.match_token(TokenKind::Star) {
+            // Namespace import: import * as ns from "./path"
+            self.consume(TokenKind::As, "Expected 'as' after '*'")?;
+            let alias_token = self.consume_identifier("namespace alias")?;
+            let alias = Identifier {
+                name: alias_token.lexeme.clone(),
+                span: alias_token.span,
+            };
+            specifiers.push(ImportSpecifier::Namespace {
+                alias,
+                span: import_span,
+            });
+        } else {
+            // Named imports: import { x, y } from "./path"
+            self.consume(TokenKind::LeftBrace, "Expected '{' for named imports")?;
+
+            loop {
+                let name_token = self.consume_identifier("import name")?;
+                let name = Identifier {
+                    name: name_token.lexeme.clone(),
+                    span: name_token.span,
+                };
+                specifiers.push(ImportSpecifier::Named {
+                    name,
+                    span: name_token.span,
+                });
+
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+
+                // Handle trailing comma
+                if self.check(TokenKind::RightBrace) {
+                    break;
+                }
+            }
+
+            self.consume(TokenKind::RightBrace, "Expected '}' after imports")?;
+        }
+
+        self.consume(TokenKind::From, "Expected 'from' after imports")?;
+
+        let source_token = self.consume(TokenKind::String, "Expected module path string")?;
+        // Remove quotes from string literal
+        let source = source_token.lexeme[1..source_token.lexeme.len() - 1].to_string();
+
+        let end_span = self.peek().span;
+
+        Ok(ImportDecl {
+            specifiers,
+            source,
+            span: import_span.merge(end_span),
+        })
+    }
+
+    /// Parse an export declaration
+    ///
+    /// Syntax: `export fn foo() {}` or `export let x = 5`
+    fn parse_export(&mut self) -> Result<ExportDecl, ()> {
+        let export_span = self.consume(TokenKind::Export, "Expected 'export'")?.span;
+
+        let item = if self.check(TokenKind::Fn) {
+            ExportItem::Function(self.parse_function()?)
+        } else if self.check(TokenKind::Let) || self.check(TokenKind::Var) {
+            // Parse variable declaration
+            let stmt = self.parse_statement()?;
+            match stmt {
+                Stmt::VarDecl(var) => ExportItem::Variable(var),
+                _ => {
+                    self.error("Expected variable declaration after 'export'");
+                    return Err(());
+                }
+            }
+        } else {
+            self.error("Expected 'fn', 'let', or 'var' after 'export'");
+            return Err(());
+        };
+
+        let end_span = self.peek().span;
+
+        Ok(ExportDecl {
+            item,
+            span: export_span.merge(end_span),
         })
     }
 

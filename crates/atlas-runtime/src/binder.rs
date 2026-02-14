@@ -135,6 +135,20 @@ impl Binder {
         match item {
             Item::Function(func) => self.bind_function(func),
             Item::Statement(stmt) => self.bind_statement(stmt),
+            Item::Import(_) => {
+                // Import binding handled in BLOCKER 04-C (cross-module binding)
+                // For now, just skip - imports are syntactically valid but not yet functional
+            }
+            Item::Export(export_decl) => {
+                // Export wraps an item - bind the inner item
+                match &export_decl.item {
+                    crate::ast::ExportItem::Function(func) => self.bind_function(func),
+                    crate::ast::ExportItem::Variable(var) => {
+                        // Bind variable by treating it as a statement
+                        self.bind_statement(&crate::ast::Stmt::VarDecl(var.clone()));
+                    }
+                }
+            }
         }
     }
 

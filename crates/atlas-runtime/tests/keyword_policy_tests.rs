@@ -114,21 +114,12 @@ fn test_active_keywords_as_identifiers(#[case] source: &str) {
 }
 
 // ============================================================================
-// Future Feature Keywords - Statements not supported
+// Future Feature Keywords - Statements not supported (v0.1)
+// Note: Imports ARE supported as of v0.2 (BLOCKER 04-A)
 // ============================================================================
 
-#[rstest]
-#[case("import foo from 'bar';", "import")]
-#[case("import { x, y } from './module';", "import")]
-fn test_import_statements_not_supported(#[case] source: &str, #[case] keyword: &str) {
-    let (_program, diagnostics) = parse_source(source);
-    assert!(
-        !diagnostics.is_empty(),
-        "Expected error for '{}' statement",
-        keyword
-    );
-    // Should have some error since import is not supported
-}
+// Import statements now supported - removed outdated tests
+// See module_syntax_tests.rs for valid import syntax tests
 
 #[rstest]
 #[case("match x { 1 => 2 }", "match")]
@@ -226,41 +217,8 @@ fn test_error_message_for_future_keyword_mentions_future() {
     );
 }
 
-#[test]
-fn test_import_statement_error_message_mentions_not_supported() {
-    let (_program, diagnostics) = parse_source("import foo;");
-
-    assert!(!diagnostics.is_empty(), "Expected error");
-    assert_has_parser_error(&diagnostics);
-
-    // Error message should mention import is not supported
-    assert!(
-        diagnostics
-            .iter()
-            .any(|d| d.message.to_lowercase().contains("import")
-                && (d.message.contains("not supported") || d.message.contains("v0.1"))),
-        "Expected error message to mention import is not supported, got: {:?}",
-        diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
-    );
-}
-
-// ============================================================================
-// Additional Import Statement Tests
-// ============================================================================
-
-#[rstest]
-#[case("import math;")]
-#[case("import std.math;")]
-fn test_import_with_various_syntax(#[case] source: &str) {
-    let (_program, diagnostics) = parse_source(source);
-
-    // Import statements should produce errors as they're not supported
-    assert!(
-        !diagnostics.is_empty(),
-        "Expected error for unsupported import statement"
-    );
-    assert_has_parser_error(&diagnostics);
-}
+// Import syntax tests moved to module_syntax_tests.rs (BLOCKER 04-A)
+// Imports are now fully supported as of v0.2
 
 // ============================================================================
 // Contextual Tests

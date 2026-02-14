@@ -109,6 +109,19 @@ impl Compiler {
         match item {
             Item::Function(func) => self.compile_function(func),
             Item::Statement(stmt) => self.compile_stmt(stmt),
+            Item::Import(_) => {
+                // Imports don't generate code - they're resolved at compile time
+                Ok(())
+            }
+            Item::Export(export_decl) => {
+                // Export wraps an item - compile the inner item
+                match &export_decl.item {
+                    crate::ast::ExportItem::Function(func) => self.compile_function(func),
+                    crate::ast::ExportItem::Variable(var) => {
+                        self.compile_stmt(&crate::ast::Stmt::VarDecl(var.clone()))
+                    }
+                }
+            }
         }
     }
 

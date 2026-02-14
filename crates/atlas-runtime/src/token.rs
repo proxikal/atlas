@@ -66,11 +66,19 @@ pub enum TokenKind {
     /// `continue` keyword
     Continue,
 
-    // Reserved for future
-    /// `import` keyword (reserved, not in v0.1)
+    // Module system (v0.2+)
+    /// `import` keyword
     Import,
-    /// `match` keyword (reserved, not in v0.1)
+    /// `export` keyword
+    Export,
+    /// `from` keyword (used in import statements)
+    From,
+
+    // Pattern matching (v0.2+)
+    /// `match` keyword
     Match,
+    /// `as` keyword (used in imports and patterns)
+    As,
 
     // Operators
     /// `+` (addition)
@@ -173,7 +181,10 @@ impl TokenKind {
             "false" => Some(TokenKind::False),
             "null" => Some(TokenKind::Null),
             "import" => Some(TokenKind::Import),
+            "export" => Some(TokenKind::Export),
+            "from" => Some(TokenKind::From),
             "match" => Some(TokenKind::Match),
+            "as" => Some(TokenKind::As),
             _ => None,
         }
     }
@@ -198,7 +209,10 @@ impl TokenKind {
             TokenKind::Break => "break",
             TokenKind::Continue => "continue",
             TokenKind::Import => "import",
+            TokenKind::Export => "export",
+            TokenKind::From => "from",
             TokenKind::Match => "match",
+            TokenKind::As => "as",
             TokenKind::Plus => "+",
             TokenKind::Minus => "-",
             TokenKind::Star => "*",
