@@ -159,7 +159,8 @@ impl ModuleExecutor {
                             *span,
                         )]
                     })?;
-                    self.interpreter.define_global(name.name.clone(), value.clone());
+                    self.interpreter
+                        .define_global(name.name.clone(), value.clone());
                 }
                 ImportSpecifier::Namespace { alias: _, span } => {
                     // Namespace imports not yet supported in v0.2
@@ -227,11 +228,7 @@ mod tests {
     #[test]
     fn test_single_module_no_imports() {
         let temp_dir = TempDir::new().unwrap();
-        let module_path = create_test_module(
-            temp_dir.path(),
-            "main",
-            "let x: number = 42;\nx;",
-        );
+        let module_path = create_test_module(temp_dir.path(), "main", "let x: number = 42;\nx;");
 
         let mut executor = ModuleExecutor::new(temp_dir.path().to_path_buf());
         let result = executor.execute_module(&module_path);

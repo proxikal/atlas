@@ -436,17 +436,17 @@ mod tests {
         create_module(
             &root,
             "a",
-            "import { x } from \"./shared\"\nexport let a = x + 1;",
+            "import { x } from \"./shared\";\nexport let a = x + 1;",
         );
         create_module(
             &root,
             "b",
-            "import { x } from \"./shared\"\nexport let b = x + 2;",
+            "import { x } from \"./shared\";\nexport let b = x + 2;",
         );
         create_module(
             &root,
             "main",
-            "import { a } from \"./a\"\nimport { b } from \"./b\"",
+            "import { a } from \"./a\";\nimport { b } from \"./b\";",
         );
 
         let mut loader = ModuleLoader::new(root.clone());
@@ -469,8 +469,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let root = temp_dir.path().to_path_buf();
 
-        create_module(&root, "a", "import { b } from \"./b\"\nexport let a = 1;");
-        create_module(&root, "b", "import { a } from \"./a\"\nexport let b = 2;");
+        create_module(&root, "a", "import { b } from \"./b\";\nexport let a = 1;");
+        create_module(&root, "b", "import { a } from \"./a\";\nexport let b = 2;");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = root.join("a.atl");
@@ -490,12 +490,12 @@ mod tests {
         create_module(
             &root,
             "b",
-            "import { c } from \"./c\"\nexport fn b() -> number { return c(); }",
+            "import { c } from \"./c\";\nexport fn b() -> number { return c(); }",
         );
         create_module(
             &root,
             "a",
-            "import { b } from \"./b\"\nexport fn a() -> number { return b(); }",
+            "import { b } from \"./b\";\nexport fn a() -> number { return b(); }",
         );
 
         let mut loader = ModuleLoader::new(root.clone());
@@ -515,12 +515,12 @@ mod tests {
         let root = temp_dir.path().to_path_buf();
 
         create_module(&root, "d", "export let x = 1;");
-        create_module(&root, "b", "import { x } from \"./d\"\nexport let b = x;");
-        create_module(&root, "c", "import { x } from \"./d\"\nexport let c = x;");
+        create_module(&root, "b", "import { x } from \"./d\";\nexport let b = x;");
+        create_module(&root, "c", "import { x } from \"./d\";\nexport let c = x;");
         create_module(
             &root,
             "a",
-            "import { b } from \"./b\"\nimport { c } from \"./c\"\nexport let a = b + c;",
+            "import { b } from \"./b\";\nimport { c } from \"./c\";\nexport let a = b + c;",
         );
 
         let mut loader = ModuleLoader::new(root.clone());
@@ -539,7 +539,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let root = temp_dir.path().to_path_buf();
 
-        create_module(&root, "main", "import { x } from \"./missing\"");
+        create_module(&root, "main", "import { x } from \"./missing\";");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = root.join("main.atl");
@@ -592,7 +592,7 @@ mod tests {
         let root = temp_dir.path().to_path_buf();
 
         create_module(&root, "lib", "export fn foo() -> void {}");
-        create_module(&root, "main", "import * as lib from \"./lib\"");
+        create_module(&root, "main", "import * as lib from \"./lib\";");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = root.join("main.atl");
@@ -614,7 +614,7 @@ mod tests {
         create_module(
             &root,
             "main",
-            "import { a } from \"./lib\"\nimport { b } from \"./lib\"",
+            "import { a } from \"./lib\";\nimport { b } from \"./lib\";",
         );
 
         let mut loader = ModuleLoader::new(root.clone());
@@ -634,7 +634,7 @@ mod tests {
         fs::create_dir(&lib_dir).unwrap();
         create_module(&lib_dir, "util", "export fn helper() -> void {}");
 
-        create_module(&root, "main", "import { helper } from \"/lib/util\"");
+        create_module(&root, "main", "import { helper } from \"/lib/util\";");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = root.join("main.atl");
@@ -652,7 +652,7 @@ mod tests {
 
         let sub_dir = root.join("sub");
         fs::create_dir(&sub_dir).unwrap();
-        create_module(&sub_dir, "main", "import { helper } from \"../util\"");
+        create_module(&sub_dir, "main", "import { helper } from \"../util\";");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = sub_dir.join("main.atl");
@@ -679,13 +679,13 @@ mod tests {
         create_module(
             &root,
             "b",
-            "import { d } from \"./d\"\nimport { e } from \"./e\"\nexport let b = d + e;",
+            "import { d } from \"./d\";\nimport { e } from \"./e\";\nexport let b = d + e;",
         );
-        create_module(&root, "c", "import { e } from \"./e\"\nexport let c = e;");
+        create_module(&root, "c", "import { e } from \"./e\";\nexport let c = e;");
         create_module(
             &root,
             "a",
-            "import { b } from \"./b\"\nimport { c } from \"./c\"\nexport let a = b + c;",
+            "import { b } from \"./b\";\nimport { c } from \"./c\";\nexport let a = b + c;",
         );
 
         let mut loader = ModuleLoader::new(root.clone());
@@ -726,7 +726,7 @@ mod tests {
         create_module(
             &root,
             "main",
-            "import { x } from \"./main\"\nexport let x = 1;",
+            "import { x } from \"./main\";\nexport let x = 1;",
         );
 
         let mut loader = ModuleLoader::new(root.clone());
@@ -760,7 +760,7 @@ mod tests {
         let root = temp_dir.path().to_path_buf();
 
         create_module(&root, "lib", "export fn foo() -> void {}");
-        create_module(&root, "consumer", "import { foo } from \"./lib\"");
+        create_module(&root, "consumer", "import { foo } from \"./lib\";");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = root.join("consumer.atl");
@@ -801,7 +801,7 @@ mod tests {
                 "export let value = 1;".to_string()
             } else {
                 format!(
-                    "import {{ value }} from \"./a{}\"\nexport let value = value;",
+                    "import {{ value }} from \"./a{}\";\nexport let value = value;",
                     i + 1
                 )
             };
@@ -831,7 +831,7 @@ mod tests {
 
         // Create main that imports from all of them
         let imports: Vec<String> = (0..10)
-            .map(|i| format!("import {{ value }} from \"./lib{}\"", i))
+            .map(|i| format!("import {{ value }} from \"./lib{}\";", i))
             .collect();
         create_module(&root, "main", &imports.join("\n"));
 
@@ -850,11 +850,11 @@ mod tests {
         let root = temp_dir.path().to_path_buf();
 
         // Create a cycle: a -> b -> c -> d -> e -> a
-        create_module(&root, "a", "import { e } from \"./e\"\nexport let a = 1;");
-        create_module(&root, "b", "import { a } from \"./a\"\nexport let b = 1;");
-        create_module(&root, "c", "import { b } from \"./b\"\nexport let c = 1;");
-        create_module(&root, "d", "import { c } from \"./c\"\nexport let d = 1;");
-        create_module(&root, "e", "import { d } from \"./d\"\nexport let e = 1;");
+        create_module(&root, "a", "import { e } from \"./e\";\nexport let a = 1;");
+        create_module(&root, "b", "import { a } from \"./a\";\nexport let b = 1;");
+        create_module(&root, "c", "import { b } from \"./b\";\nexport let c = 1;");
+        create_module(&root, "d", "import { c } from \"./c\";\nexport let d = 1;");
+        create_module(&root, "e", "import { d } from \"./d\";\nexport let e = 1;");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = root.join("b.atl");
@@ -871,9 +871,9 @@ mod tests {
         let root = temp_dir.path().to_path_buf();
 
         // a -> b, b -> c, c -> a (indirect cycle)
-        create_module(&root, "a", "import { b } from \"./b\"\nexport let a = 1;");
-        create_module(&root, "b", "import { c } from \"./c\"\nexport let b = 1;");
-        create_module(&root, "c", "import { a } from \"./a\"\nexport let c = 1;");
+        create_module(&root, "a", "import { b } from \"./b\";\nexport let a = 1;");
+        create_module(&root, "b", "import { c } from \"./c\";\nexport let b = 1;");
+        create_module(&root, "c", "import { a } from \"./a\";\nexport let c = 1;");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = root.join("a.atl");
@@ -899,7 +899,7 @@ mod tests {
         create_module(
             &root,
             "main",
-            "import { valueA } from \"/a/utils\"\nimport { valueB } from \"/b/utils\"",
+            "import { valueA } from \"/a/utils\";\nimport { valueB } from \"/b/utils\";",
         );
 
         let mut loader = ModuleLoader::new(root.clone());
@@ -915,7 +915,7 @@ mod tests {
         let root = temp_dir.path().to_path_buf();
 
         create_module(&root, "lib", "export let value = 1;");
-        create_module(&root, "main", "import { value } from \"./lib.atl\"");
+        create_module(&root, "main", "import { value } from \"./lib.atl\";");
 
         let mut loader = ModuleLoader::new(root.clone());
         let entry = root.join("main.atl");
@@ -972,12 +972,12 @@ mod tests {
         create_module(
             &root,
             "a",
-            "import { shared } from \"./shared\"\nexport let a = 1;",
+            "import { shared } from \"./shared\";\nexport let a = 1;",
         );
         create_module(
             &root,
             "b",
-            "import { shared } from \"./shared\"\nexport let b = 2;",
+            "import { shared } from \"./shared\";\nexport let b = 2;",
         );
 
         let mut loader = ModuleLoader::new(root.clone());
@@ -1011,7 +1011,7 @@ mod tests {
         create_module(
             &root,
             "main",
-            "import { a } from \"./lib\"\nimport { b } from \"./lib\"\nimport * as lib from \"./lib\"",
+            "import { a } from \"./lib\";\nimport { b } from \"./lib\";\nimport * as lib from \"./lib\";",
         );
 
         let mut loader = ModuleLoader::new(root.clone());

@@ -71,7 +71,11 @@ fn test_module_with_export_function() {
 #[test]
 fn test_module_with_export_variable() {
     let temp_dir = TempDir::new().unwrap();
-    let constants = create_module(temp_dir.path(), "constants", "export let PI: number = 3.14159;");
+    let constants = create_module(
+        temp_dir.path(),
+        "constants",
+        "export let PI: number = 3.14159;",
+    );
 
     let mut executor = ModuleExecutor::new(temp_dir.path().to_path_buf());
     let result = executor.execute_module(&constants);
@@ -215,11 +219,7 @@ scale(5);
 fn test_dependency_chain_two_levels() {
     let temp_dir = TempDir::new().unwrap();
 
-    create_module(
-        temp_dir.path(),
-        "base",
-        "export let VALUE: number = 100;",
-    );
+    create_module(temp_dir.path(), "base", "export let VALUE: number = 100;");
 
     create_module(
         temp_dir.path(),
@@ -297,11 +297,7 @@ fn test_diamond_dependency() {
     let temp_dir = TempDir::new().unwrap();
 
     // Base module
-    create_module(
-        temp_dir.path(),
-        "base",
-        "export let VALUE: number = 10;",
-    );
+    create_module(temp_dir.path(), "base", "export let VALUE: number = 10;");
 
     // Left branch
     create_module(

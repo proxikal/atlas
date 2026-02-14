@@ -209,7 +209,9 @@ impl Parser {
         let source = source_token.lexeme.clone();
 
         // Consume the semicolon
-        let end_span = self.consume(TokenKind::Semicolon, "Expected ';' after import")?.span;
+        let end_span = self
+            .consume(TokenKind::Semicolon, "Expected ';' after import")?
+            .span;
 
         Ok(ImportDecl {
             specifiers,

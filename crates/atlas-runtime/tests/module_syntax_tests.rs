@@ -27,49 +27,49 @@ fn parse(source: &str) -> (bool, Vec<String>) {
 
 #[test]
 fn test_parse_named_import_single() {
-    let source = r#"import { add } from "./math""#;
+    let source = r#"import { add } from "./math";"#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse single named import: {:?}", msgs);
 }
 
 #[test]
 fn test_parse_named_import_multiple() {
-    let source = r#"import { add, sub, mul } from "./math""#;
+    let source = r#"import { add, sub, mul } from "./math";"#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse multiple named imports: {:?}", msgs);
 }
 
 #[test]
 fn test_parse_namespace_import() {
-    let source = r#"import * as math from "./math""#;
+    let source = r#"import * as math from "./math";"#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse namespace import: {:?}", msgs);
 }
 
 #[test]
 fn test_parse_import_relative_path() {
-    let source = r#"import { x } from "./sibling""#;
+    let source = r#"import { x } from "./sibling";"#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse relative path: {:?}", msgs);
 }
 
 #[test]
 fn test_parse_import_parent_path() {
-    let source = r#"import { x } from "../parent""#;
+    let source = r#"import { x } from "../parent";"#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse parent path: {:?}", msgs);
 }
 
 #[test]
 fn test_parse_import_absolute_path() {
-    let source = r#"import { x } from "/src/utils""#;
+    let source = r#"import { x } from "/src/utils";"#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse absolute path: {:?}", msgs);
 }
 
 #[test]
 fn test_parse_import_with_extension() {
-    let source = r#"import { x } from "./mod.atl""#;
+    let source = r#"import { x } from "./mod.atl";"#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse path with .atl extension: {:?}", msgs);
 }
@@ -77,8 +77,8 @@ fn test_parse_import_with_extension() {
 #[test]
 fn test_parse_multiple_imports() {
     let source = r#"
-        import { add } from "./math"
-        import { log } from "./logger"
+        import { add } from "./math";
+        import { log } from "./logger";
     "#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse multiple imports: {:?}", msgs);
@@ -143,7 +143,7 @@ fn test_parse_multiple_exports() {
 #[test]
 fn test_parse_module_with_import_and_export() {
     let source = r#"
-        import { log } from "./logger"
+        import { log } from "./logger";
 
         export fn greet(name: string) -> string {
             log("greeting " + name);
@@ -161,8 +161,8 @@ fn test_parse_module_with_import_and_export() {
 #[test]
 fn test_parse_module_with_multiple_imports_exports() {
     let source = r#"
-        import { add, sub } from "./math"
-        import * as logger from "./logger"
+        import { add, sub } from "./math";
+        import * as logger from "./logger";
 
         export fn calculate(a: number, b: number) -> number {
             return add(a, b);
@@ -216,7 +216,7 @@ fn test_export_without_item() {
 
 #[test]
 fn test_import_with_trailing_comma() {
-    let source = r#"import { x, y, } from "./mod""#;
+    let source = r#"import { x, y, } from "./mod";"#;
     let (success, msgs) = parse(source);
     assert!(
         success,
@@ -236,7 +236,7 @@ fn test_import_empty_list() {
 
 #[test]
 fn test_complex_nested_paths() {
-    let source = r#"import { x } from "../../utils/helpers/math""#;
+    let source = r#"import { x } from "../../utils/helpers/math";"#;
     let (success, msgs) = parse(source);
     assert!(success, "Should parse complex nested paths: {:?}", msgs);
 }

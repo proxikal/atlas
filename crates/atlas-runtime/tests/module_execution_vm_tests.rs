@@ -105,11 +105,7 @@ PI * 2;
 fn test_vm_dependency_chain() {
     let temp_dir = TempDir::new().unwrap();
 
-    create_module(
-        temp_dir.path(),
-        "base",
-        "export let VALUE: number = 100;",
-    );
+    create_module(temp_dir.path(), "base", "export let VALUE: number = 100;");
 
     create_module(
         temp_dir.path(),
@@ -207,11 +203,7 @@ scale(5);
 fn test_vm_diamond_dependency() {
     let temp_dir = TempDir::new().unwrap();
 
-    create_module(
-        temp_dir.path(),
-        "base",
-        "export let VALUE: number = 10;",
-    );
+    create_module(temp_dir.path(), "base", "export let VALUE: number = 10;");
 
     create_module(
         temp_dir.path(),
