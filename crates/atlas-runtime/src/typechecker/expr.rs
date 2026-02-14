@@ -215,7 +215,12 @@ impl<'a> TypeChecker<'a> {
 
                 // If function has type parameters, use type inference
                 if !type_params.is_empty() {
-                    return self.check_call_with_inference(&type_params, &params, &return_type, call);
+                    return self.check_call_with_inference(
+                        &type_params,
+                        &params,
+                        &return_type,
+                        call,
+                    );
                 }
 
                 // Non-generic function - check argument types normally
@@ -313,10 +318,7 @@ impl<'a> TypeChecker<'a> {
 
             self.diagnostics.push(
                 Diagnostic::error(
-                    format!(
-                        "Cannot infer type parameter(s): {}",
-                        uninferred.join(", ")
-                    ),
+                    format!("Cannot infer type parameter(s): {}", uninferred.join(", ")),
                     call.span,
                 )
                 .with_label("type inference failed")

@@ -408,9 +408,7 @@ impl Binder {
                 _ => {
                     // Check if it's a type parameter
                     if let Some(_type_param) = self.lookup_type_parameter(name) {
-                        return Type::TypeParameter {
-                            name: name.clone(),
-                        };
+                        return Type::TypeParameter { name: name.clone() };
                     }
                     // Unknown type - will be caught by typechecker
                     Type::Unknown
@@ -457,11 +455,8 @@ impl Binder {
                 } else {
                     // Unknown generic type
                     self.diagnostics.push(
-                        Diagnostic::error(
-                            format!("Unknown generic type '{}'", name),
-                            *span,
-                        )
-                        .with_label("unknown type"),
+                        Diagnostic::error(format!("Unknown generic type '{}'", name), *span)
+                            .with_label("unknown type"),
                     );
                     return Type::Unknown;
                 }

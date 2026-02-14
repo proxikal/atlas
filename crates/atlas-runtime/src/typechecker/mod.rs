@@ -623,11 +623,8 @@ impl<'a> TypeChecker<'a> {
                 } else {
                     // Unknown generic type
                     self.diagnostics.push(
-                        Diagnostic::error(
-                            format!("Unknown generic type '{}'", name),
-                            *span,
-                        )
-                        .with_label("unknown type"),
+                        Diagnostic::error(format!("Unknown generic type '{}'", name), *span)
+                            .with_label("unknown type"),
                     );
                     return Type::Unknown;
                 }
@@ -768,9 +765,8 @@ mod tests {
     #[test]
     fn test_generic_type_nested() {
         // Nested generic types with correct arity
-        let diagnostics = typecheck_source(
-            "fn test_nested(_x: Option<Result<number, string>>) -> void {}",
-        );
+        let diagnostics =
+            typecheck_source("fn test_nested(_x: Option<Result<number, string>>) -> void {}");
         assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
     }
 

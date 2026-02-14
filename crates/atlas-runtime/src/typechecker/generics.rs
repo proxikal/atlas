@@ -1,7 +1,9 @@
-//! Generic type inference engine
+//! Generic type inference and monomorphization
 //!
-//! Implements Hindley-Milner style type inference for generic functions.
-//! Supports unification, occurs check, and type parameter substitution.
+//! Implements:
+//! - Hindley-Milner style type inference for generic functions
+//! - Monomorphization (generating specialized versions for each type instantiation)
+//! - Unification, occurs check, and type parameter substitution
 
 use crate::types::Type;
 use std::collections::HashMap;
@@ -10,15 +12,9 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq)]
 pub enum InferenceError {
     /// Type mismatch during unification
-    TypeMismatch {
-        expected: Type,
-        actual: Type,
-    },
+    TypeMismatch { expected: Type, actual: Type },
     /// Infinite type detected (occurs check failed)
-    InfiniteType {
-        param: String,
-        ty: Type,
-    },
+    InfiniteType { param: String, ty: Type },
     /// Insufficient information to infer type
     CannotInfer,
 }
@@ -239,11 +235,130 @@ impl TypeInferer {
 
     /// Check if all type parameters have been inferred
     pub fn all_inferred(&self, type_params: &[String]) -> bool {
-        type_params.iter().all(|param| self.substitutions.contains_key(param))
+        type_params
+            .iter()
+            .all(|param| self.substitutions.contains_key(param))
     }
 }
 
 impl Default for TypeInferer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// Monomorphization
+// ============================================================================
+
+/// Monomorphization error
+#[derive(Debug, Clone, PartialEq)]
+pub enum MonomorphizeError {
+    /// Type parameter count mismatch
+    ArityMismatch { expected: usize, actual: usize },
+    /// Failed to substitute types
+    SubstitutionFailed(String),
+}
+
+/// Key for caching monomorphized function instances
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct MonomorphicKey {
+    function_name: String,
+    /// Concrete types for each type parameter (using display names for hashing)
+    type_args: Vec<String>,
+}
+
+/// Monomorphization engine
+///
+/// Generates specialized versions of generic functions for each unique
+/// set of type arguments (Rust-style monomorphization).
+///
+/// For runtime execution, we primarily need to track type substitutions
+/// rather than generate completely new AST nodes.
+pub struct Monomorphizer {
+    /// Cache of type substitutions for each monomorphic instance
+    /// Maps (function_name, type_args) -> substitution map
+    type_substitutions: HashMap<MonomorphicKey, HashMap<String, Type>>,
+}
+
+impl Monomorphizer {
+    /// Create a new monomorphizer
+    pub fn new() -> Self {
+        Self {
+            type_substitutions: HashMap::new(),
+        }
+    }
+
+    /// Get or create type substitutions for a monomorphic instance
+    ///
+    /// Returns the substitution map for type parameters. This is used by
+    /// the interpreter and VM to properly type-check values during execution.
+    pub fn get_substitutions(
+        &mut self,
+        function_name: &str,
+        type_params: &[String],
+        type_args: &[Type],
+    ) -> Result<HashMap<String, Type>, MonomorphizeError> {
+        // Verify arity
+        if type_params.len() != type_args.len() {
+            return Err(MonomorphizeError::ArityMismatch {
+                expected: type_params.len(),
+                actual: type_args.len(),
+            });
+        }
+
+        // Build cache key
+        let key = MonomorphicKey {
+            function_name: function_name.to_string(),
+            type_args: type_args.iter().map(|t| t.display_name()).collect(),
+        };
+
+        // Check cache
+        if let Some(subst) = self.type_substitutions.get(&key) {
+            return Ok(subst.clone());
+        }
+
+        // Build substitution map
+        let mut subst = HashMap::new();
+        for (param_name, concrete_type) in type_params.iter().zip(type_args.iter()) {
+            subst.insert(param_name.clone(), concrete_type.clone());
+        }
+
+        // Cache and return
+        self.type_substitutions.insert(key, subst.clone());
+        Ok(subst)
+    }
+
+    /// Generate mangled name for a monomorphic instance
+    ///
+    /// Example: identity<number> -> "identity$number"
+    /// Example: map<string, number> -> "map$string$number"
+    pub fn mangle_name(function_name: &str, type_args: &[Type]) -> String {
+        if type_args.is_empty() {
+            return function_name.to_string();
+        }
+
+        let args_str = type_args
+            .iter()
+            .map(|t| t.display_name())
+            .collect::<Vec<_>>()
+            .join("$");
+
+        format!("{}${}", function_name, args_str)
+    }
+
+    /// Get the number of cached monomorphic instances
+    pub fn instance_count(&self) -> usize {
+        self.type_substitutions.len()
+    }
+
+    /// Clear the cache (mainly for testing)
+    pub fn clear_cache(&mut self) {
+        self.type_substitutions.clear();
+    }
+}
+
+impl Default for Monomorphizer {
     fn default() -> Self {
         Self::new()
     }
@@ -276,10 +391,7 @@ mod tests {
         assert!(inferer.unify(&t, &Type::Number).is_ok());
 
         // Check substitution was recorded
-        assert_eq!(
-            inferer.get_substitution("T"),
-            Some(&Type::Number)
-        );
+        assert_eq!(inferer.get_substitution("T"), Some(&Type::Number));
     }
 
     #[test]
@@ -350,5 +462,101 @@ mod tests {
         // Applying substitutions to T should give number
         let result = inferer.apply_substitutions(&t);
         assert_eq!(result, Type::Number);
+    }
+
+    // Monomorphizer tests
+    #[test]
+    fn test_monomorphizer_get_substitutions() {
+        let mut mono = Monomorphizer::new();
+
+        let type_params = vec!["T".to_string()];
+        let type_args = vec![Type::Number];
+
+        let subst = mono
+            .get_substitutions("identity", &type_params, &type_args)
+            .unwrap();
+
+        assert_eq!(subst.len(), 1);
+        assert_eq!(subst.get("T"), Some(&Type::Number));
+    }
+
+    #[test]
+    fn test_monomorphizer_multiple_params() {
+        let mut mono = Monomorphizer::new();
+
+        let type_params = vec!["T".to_string(), "E".to_string()];
+        let type_args = vec![Type::String, Type::Number];
+
+        let subst = mono
+            .get_substitutions("map", &type_params, &type_args)
+            .unwrap();
+
+        assert_eq!(subst.len(), 2);
+        assert_eq!(subst.get("T"), Some(&Type::String));
+        assert_eq!(subst.get("E"), Some(&Type::Number));
+    }
+
+    #[test]
+    fn test_monomorphizer_arity_mismatch() {
+        let mut mono = Monomorphizer::new();
+
+        let type_params = vec!["T".to_string()];
+        let type_args = vec![Type::Number, Type::String]; // Too many
+
+        let result = mono.get_substitutions("foo", &type_params, &type_args);
+
+        assert!(matches!(
+            result,
+            Err(MonomorphizeError::ArityMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn test_monomorphizer_caching() {
+        let mut mono = Monomorphizer::new();
+
+        let type_params = vec!["T".to_string()];
+        let type_args = vec![Type::Number];
+
+        // First call
+        mono.get_substitutions("identity", &type_params, &type_args)
+            .unwrap();
+        assert_eq!(mono.instance_count(), 1);
+
+        // Second call with same args - should hit cache
+        mono.get_substitutions("identity", &type_params, &type_args)
+            .unwrap();
+        assert_eq!(mono.instance_count(), 1); // Still 1
+
+        // Different type args - new instance
+        let type_args2 = vec![Type::String];
+        mono.get_substitutions("identity", &type_params, &type_args2)
+            .unwrap();
+        assert_eq!(mono.instance_count(), 2);
+    }
+
+    #[test]
+    fn test_mangle_name_no_args() {
+        let name = Monomorphizer::mangle_name("foo", &[]);
+        assert_eq!(name, "foo");
+    }
+
+    #[test]
+    fn test_mangle_name_one_arg() {
+        let name = Monomorphizer::mangle_name("identity", &[Type::Number]);
+        assert_eq!(name, "identity$number");
+    }
+
+    #[test]
+    fn test_mangle_name_multiple_args() {
+        let name = Monomorphizer::mangle_name("map", &[Type::String, Type::Number]);
+        assert_eq!(name, "map$string$number");
+    }
+
+    #[test]
+    fn test_mangle_name_complex_types() {
+        let array_type = Type::Array(Box::new(Type::Number));
+        let name = Monomorphizer::mangle_name("process", &[array_type]);
+        assert_eq!(name, "process$number[]");
     }
 }

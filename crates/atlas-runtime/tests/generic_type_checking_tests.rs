@@ -124,9 +124,7 @@ fn test_duplicate_type_parameter() {
     "#,
     );
     assert!(diagnostics.len() > 0);
-    assert!(diagnostics[0]
-        .message
-        .contains("Duplicate type parameter"));
+    assert!(diagnostics[0].message.contains("Duplicate type parameter"));
 }
 
 // ============================================================================

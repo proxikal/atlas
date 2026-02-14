@@ -45,6 +45,9 @@ pub struct Compiler {
     pub(super) loops: Vec<LoopContext>,
     /// Bytecode optimizer (optional)
     optimizer: Option<Optimizer>,
+    /// Monomorphizer for generic functions
+    #[allow(dead_code)] // Will be used when generic runtime support is fully integrated
+    pub(super) monomorphizer: crate::typechecker::generics::Monomorphizer,
 }
 
 impl Compiler {
@@ -56,6 +59,7 @@ impl Compiler {
             scope_depth: 0,
             loops: Vec::new(),
             optimizer: None, // Optimization disabled by default
+            monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
         }
     }
 
@@ -70,6 +74,7 @@ impl Compiler {
             scope_depth: 0,
             loops: Vec::new(),
             optimizer: Some(Optimizer::with_default_passes()),
+            monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
         }
     }
 

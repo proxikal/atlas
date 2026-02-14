@@ -41,6 +41,9 @@ pub struct Interpreter {
     pub(super) function_bodies: HashMap<String, UserFunction>,
     /// Current control flow state
     pub(super) control_flow: ControlFlow,
+    /// Monomorphizer for generic functions (tracks type substitutions)
+    #[allow(dead_code)] // Will be used when generic runtime support is fully integrated
+    pub(super) monomorphizer: crate::typechecker::generics::Monomorphizer,
 }
 
 impl Interpreter {
@@ -51,6 +54,7 @@ impl Interpreter {
             locals: vec![HashMap::new()],
             function_bodies: HashMap::new(),
             control_flow: ControlFlow::None,
+            monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
         };
 
         // Register builtin functions in globals

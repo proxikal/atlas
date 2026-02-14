@@ -73,3 +73,23 @@ This log captures irreversible or high-impact design decisions. Update when a ne
 - Both interpreter and VM support json[string|number] indexing
 - Type checker allows both string and number indices, always returns Type::JsonValue
 - 21 integration tests verify behavior and isolation
+
+## Generic Types - Monomorphization (v0.2)
+- **Strategy:** Monomorphization (Rust-style) - generate specialized code for each type instantiation
+- **Rationale:** Performance and type safety. Follows Rust's proven approach.
+- **Alternative approaches rejected:**
+  - ❌ Type erasure (Java-style) - loses type information at runtime, worse performance
+  - ❌ Runtime dispatch (Go-style) - requires interface boxing, slower execution
+  - ❌ Template-only (C++-style) - code bloat without caching, harder to debug
+- **Implementation (BLOCKER 02-C):**
+  - Monomorphizer caches specialized instances: `(function_name, type_args) -> substitution_map`
+  - Name mangling for VM dispatch: `identity<number>` → `identity$number`
+  - Type inference (BLOCKER 02-B) determines concrete types at compile time
+  - Both interpreter and VM use same monomorphization infrastructure
+  - Interpreter can stay polymorphic (tracks values), VM requires bytecode generation per instance
+- **Trade-offs:**
+  - **Pro:** Zero runtime overhead, full type safety, proven in production (Rust, C++)
+  - **Pro:** Easy debugging - each specialization is standalone code
+  - **Con:** Code bloat for many instantiations (mitigated by caching)
+  - **Con:** Longer compile times for generic-heavy code
+- **Status:** Infrastructure complete (BLOCKER 02-C). Full pipeline in BLOCKER 02-D (Option<T>, Result<T,E>).
