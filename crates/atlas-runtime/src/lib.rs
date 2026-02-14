@@ -56,6 +56,7 @@ pub use parser::Parser;
 pub use repl::{ReplCore, ReplResult};
 pub use resolver::ModuleResolver;
 pub use runtime::{Atlas, RuntimeResult};
+pub use security::{Permission, PermissionSet, SecurityContext, SecurityError};
 pub use span::Span;
 pub use symbol::{Symbol, SymbolKind, SymbolTable};
 pub use token::{Token, TokenKind};

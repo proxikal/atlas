@@ -190,6 +190,31 @@ pub enum RuntimeError {
     /// Invalid index (non-integer)
     #[error("Invalid index: expected number")]
     InvalidIndex { span: crate::span::Span },
+    /// Permission denied - filesystem
+    #[error("Permission denied: {operation} access to {path}")]
+    FilesystemPermissionDenied {
+        operation: String,
+        path: String,
+        span: crate::span::Span,
+    },
+    /// Permission denied - network
+    #[error("Permission denied: network access to {host}")]
+    NetworkPermissionDenied {
+        host: String,
+        span: crate::span::Span,
+    },
+    /// Permission denied - process
+    #[error("Permission denied: process execution of {command}")]
+    ProcessPermissionDenied {
+        command: String,
+        span: crate::span::Span,
+    },
+    /// Permission denied - environment
+    #[error("Permission denied: environment variable {var}")]
+    EnvironmentPermissionDenied {
+        var: String,
+        span: crate::span::Span,
+    },
 }
 
 impl RuntimeError {
@@ -206,6 +231,10 @@ impl RuntimeError {
             RuntimeError::UnknownFunction { span, .. } => *span,
             RuntimeError::InvalidStdlibArgument { span } => *span,
             RuntimeError::InvalidIndex { span } => *span,
+            RuntimeError::FilesystemPermissionDenied { span, .. } => *span,
+            RuntimeError::NetworkPermissionDenied { span, .. } => *span,
+            RuntimeError::ProcessPermissionDenied { span, .. } => *span,
+            RuntimeError::EnvironmentPermissionDenied { span, .. } => *span,
         }
     }
 }

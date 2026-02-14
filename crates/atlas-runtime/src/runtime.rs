@@ -6,6 +6,7 @@ use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::module_executor::ModuleExecutor;
 use crate::parser::Parser;
+use crate::security::SecurityContext;
 use crate::span::Span;
 use crate::typechecker::TypeChecker;
 use crate::value::{RuntimeError, Value};
@@ -29,10 +30,12 @@ pub type RuntimeResult<T> = Result<T, Vec<Diagnostic>>;
 pub struct Atlas {
     /// Interpreter for executing code (using interior mutability)
     interpreter: RefCell<Interpreter>,
+    /// Security context for permission checks
+    security: SecurityContext,
 }
 
 impl Atlas {
-    /// Create a new Atlas runtime instance
+    /// Create a new Atlas runtime instance with default (deny-all) security
     ///
     /// # Examples
     ///
@@ -44,6 +47,24 @@ impl Atlas {
     pub fn new() -> Self {
         Self {
             interpreter: RefCell::new(Interpreter::new()),
+            security: SecurityContext::new(),
+        }
+    }
+
+    /// Create a new Atlas runtime instance with custom security context
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use atlas_runtime::{Atlas, SecurityContext};
+    ///
+    /// let security = SecurityContext::allow_all();
+    /// let runtime = Atlas::new_with_security(security);
+    /// ```
+    pub fn new_with_security(security: SecurityContext) -> Self {
+        Self {
+            interpreter: RefCell::new(Interpreter::new()),
+            security,
         }
     }
 
@@ -150,6 +171,19 @@ impl Atlas {
             )]
         })?;
 
+        // Check filesystem read permission
+        self.security
+            .check_filesystem_read(&abs_path)
+            .map_err(|_| {
+                vec![runtime_error_to_diagnostic(
+                    RuntimeError::FilesystemPermissionDenied {
+                        operation: "file read".to_string(),
+                        path: abs_path.display().to_string(),
+                        span: Span::dummy(),
+                    },
+                )]
+            })?;
+
         // Quick check: does the file contain imports?
         // If so, use module executor. If not, use simple eval.
         let source = std::fs::read_to_string(&abs_path).map_err(|e| {
@@ -213,6 +247,25 @@ fn runtime_error_to_diagnostic(error: RuntimeError) -> Diagnostic {
         // VM-specific errors
         RuntimeError::UnknownOpcode { .. } => ("AT9998", "Unknown bytecode opcode".to_string()),
         RuntimeError::StackUnderflow { .. } => ("AT9997", "Stack underflow".to_string()),
+        // Permission errors
+        RuntimeError::FilesystemPermissionDenied {
+            operation, path, ..
+        } => (
+            "AT0300",
+            format!("Permission denied: {} access to {}", operation, path),
+        ),
+        RuntimeError::NetworkPermissionDenied { host, .. } => (
+            "AT0301",
+            format!("Permission denied: network access to {}", host),
+        ),
+        RuntimeError::ProcessPermissionDenied { command, .. } => (
+            "AT0302",
+            format!("Permission denied: process execution of {}", command),
+        ),
+        RuntimeError::EnvironmentPermissionDenied { var, .. } => (
+            "AT0303",
+            format!("Permission denied: environment variable {}", var),
+        ),
     };
 
     Diagnostic::error_with_code(code, message, span)
