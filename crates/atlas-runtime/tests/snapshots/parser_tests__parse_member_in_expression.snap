@@ -1,0 +1,45 @@
+---
+source: crates/atlas-runtime/tests/parser_tests.rs
+expression: program
+---
+items:
+  - Statement:
+      VarDecl:
+        mutable: false
+        name:
+          name: x
+          span:
+            start: 4
+            end: 5
+        type_ref: ~
+        init:
+          Binary:
+            op: Add
+            left:
+              Member:
+                target:
+                  Identifier:
+                    name: obj
+                    span:
+                      start: 8
+                      end: 11
+                member:
+                  name: method
+                  span:
+                    start: 12
+                    end: 18
+                args: []
+                span:
+                  start: 8
+                  end: 20
+            right:
+              Literal:
+                - Number: 5
+                - start: 23
+                  end: 24
+            span:
+              start: 8
+              end: 24
+        span:
+          start: 0
+          end: 25

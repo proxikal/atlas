@@ -59,6 +59,7 @@ impl Parser {
             | TokenKind::PipePipe => self.parse_binary(left),
             TokenKind::LeftParen => self.parse_call(left),
             TokenKind::LeftBracket => self.parse_index(left),
+            TokenKind::Dot => self.parse_member(left),
             _ => Ok(left),
         }
     }
@@ -80,7 +81,7 @@ impl Parser {
             | TokenKind::GreaterEqual => Precedence::Comparison,
             TokenKind::Plus | TokenKind::Minus => Precedence::Term,
             TokenKind::Star | TokenKind::Slash | TokenKind::Percent => Precedence::Factor,
-            TokenKind::LeftParen | TokenKind::LeftBracket => Precedence::Call,
+            TokenKind::LeftParen | TokenKind::LeftBracket | TokenKind::Dot => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }
@@ -260,6 +261,48 @@ impl Parser {
         Ok(Expr::Index(IndexExpr {
             target: Box::new(target),
             index: Box::new(index),
+            span: target_span.merge(end_span),
+        }))
+    }
+
+    /// Parse member expression (method call or property access)
+    fn parse_member(&mut self, target: Expr) -> Result<Expr, ()> {
+        let target_span = target.span();
+        self.consume(TokenKind::Dot, "Expected '.'")?;
+
+        // Member name must be an identifier
+        let member_token = self.consume_identifier("a method or property name")?;
+        let member = Identifier {
+            name: member_token.lexeme.clone(),
+            span: member_token.span,
+        };
+
+        // Check for method call (with parentheses)
+        let (args, end_span) = if self.check(TokenKind::LeftParen) {
+            self.consume(TokenKind::LeftParen, "Expected '('")?;
+            let mut args_vec = Vec::new();
+
+            if !self.check(TokenKind::RightParen) {
+                loop {
+                    args_vec.push(self.parse_expression()?);
+                    if !self.match_token(TokenKind::Comma) {
+                        break;
+                    }
+                }
+            }
+
+            let end = self.consume(TokenKind::RightParen, "Expected ')'")?.span;
+            (Some(args_vec), end)
+        } else {
+            // No parentheses - property access (for now, treat as method call with no args)
+            // Phase 16 only supports method calls, but parser can handle both
+            (None, member.span)
+        };
+
+        Ok(Expr::Member(MemberExpr {
+            target: Box::new(target),
+            member,
+            args,
             span: target_span.merge(end_span),
         }))
     }

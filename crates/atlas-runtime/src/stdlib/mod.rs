@@ -30,6 +30,8 @@ pub fn is_builtin(name: &str) -> bool {
             | "clamp" | "sign" | "random"
             // JSON functions
             | "parseJSON" | "toJSON" | "isValidJSON" | "prettifyJSON" | "minifyJSON"
+            // JSON extraction functions (called via method syntax)
+            | "jsonAsString" | "jsonAsNumber" | "jsonAsBool" | "jsonIsNull"
             // Type checking functions
             | "typeof" | "isString" | "isNumber" | "isBool" | "isNull" | "isArray" | "isFunction"
             // Type conversion functions
@@ -391,6 +393,12 @@ pub fn call_builtin(
         "isValidJSON" => json::is_valid_json(args, call_span),
         "prettifyJSON" => json::prettify_json(args, call_span),
         "minifyJSON" => json::minify_json(args, call_span),
+
+        // JSON extraction functions (called via method syntax)
+        "jsonAsString" => json::json_as_string(args, call_span),
+        "jsonAsNumber" => json::json_as_number(args, call_span),
+        "jsonAsBool" => json::json_as_bool(args, call_span),
+        "jsonIsNull" => json::json_is_null(args, call_span),
 
         // Type checking functions
         "typeof" => types::type_of(args, call_span),

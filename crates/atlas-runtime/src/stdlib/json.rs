@@ -187,14 +187,119 @@ pub fn minify_json(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 // ============================================================================
 // JSON Extraction Functions (Phase 17)
 // ============================================================================
-// NOTE: These functions will be implemented in Phase 17 after method call
-// syntax is complete. They will be called via method syntax:
+// These functions extract typed values from JsonValue.
+// Called via method syntax (desugared at runtime):
 //   json.as_string()  → jsonAsString(json)
 //   json.as_number()  → jsonAsNumber(json)
 //   json.as_bool()    → jsonAsBool(json)
 //   json.is_null()    → jsonIsNull(json)
-//
-// See: phases/foundation/phase-17-method-call-syntax-backend.md
+
+/// Extract string from JsonValue
+///
+/// Returns error if JsonValue is not a string.
+pub fn json_as_string(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    match &args[0] {
+        Value::JsonValue(json) => match json.as_ref() {
+            JsonValue::String(s) => Ok(Value::string(s.clone())),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!(
+                    "Cannot extract string from JSON value of type '{}'",
+                    json_type_name(json.as_ref())
+                ),
+                span,
+            }),
+        },
+        _ => Err(RuntimeError::TypeError {
+            msg: "as_string() requires json argument".to_string(),
+            span,
+        }),
+    }
+}
+
+/// Extract number from JsonValue
+///
+/// Returns error if JsonValue is not a number.
+pub fn json_as_number(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    match &args[0] {
+        Value::JsonValue(json) => match json.as_ref() {
+            JsonValue::Number(n) => Ok(Value::Number(*n)),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!(
+                    "Cannot extract number from JSON value of type '{}'",
+                    json_type_name(json.as_ref())
+                ),
+                span,
+            }),
+        },
+        _ => Err(RuntimeError::TypeError {
+            msg: "as_number() requires json argument".to_string(),
+            span,
+        }),
+    }
+}
+
+/// Extract boolean from JsonValue
+///
+/// Returns error if JsonValue is not a boolean.
+pub fn json_as_bool(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    match &args[0] {
+        Value::JsonValue(json) => match json.as_ref() {
+            JsonValue::Bool(b) => Ok(Value::Bool(*b)),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!(
+                    "Cannot extract bool from JSON value of type '{}'",
+                    json_type_name(json.as_ref())
+                ),
+                span,
+            }),
+        },
+        _ => Err(RuntimeError::TypeError {
+            msg: "as_bool() requires json argument".to_string(),
+            span,
+        }),
+    }
+}
+
+/// Check if JsonValue is null
+///
+/// Returns true if JsonValue is null, false otherwise.
+pub fn json_is_null(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    match &args[0] {
+        Value::JsonValue(json) => Ok(Value::Bool(matches!(json.as_ref(), JsonValue::Null))),
+        _ => Err(RuntimeError::TypeError {
+            msg: "is_null() requires json argument".to_string(),
+            span,
+        }),
+    }
+}
+
+/// Helper: Get type name of JsonValue for error messages
+fn json_type_name(json: &JsonValue) -> &'static str {
+    match json {
+        JsonValue::Null => "null",
+        JsonValue::Bool(_) => "bool",
+        JsonValue::Number(_) => "number",
+        JsonValue::String(_) => "string",
+        JsonValue::Array(_) => "array",
+        JsonValue::Object(_) => "object",
+    }
+}
 
 // ============================================================================
 // Helper Functions

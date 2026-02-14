@@ -250,6 +250,64 @@ fn factorial(n: number) -> number {
 }
 
 // ============================================================================
+// Member Expressions (Method Calls)
+// ============================================================================
+
+#[rstest]
+#[case::simple_method("obj.method();", "simple_method_call")]
+#[case::method_with_one_arg("obj.method(x);", "method_with_one_arg")]
+#[case::method_with_multiple_args("obj.method(a, b, c);", "method_with_multiple_args")]
+#[case::json_as_string(r#"json["user"].as_string();"#, "json_extraction_as_string")]
+#[case::json_as_number("data.as_number();", "json_as_number")]
+fn test_parse_member_expressions(#[case] source: &str, #[case] snapshot_name: &str) {
+    let (program, diagnostics) = parse_source(source);
+    assert_eq!(diagnostics.len(), 0, "Expected no errors for: {}", source);
+    insta::assert_yaml_snapshot!(snapshot_name, program);
+}
+
+#[test]
+fn test_parse_chained_member_calls() {
+    let (program, diagnostics) = parse_source("a.b().c();");
+    assert_eq!(diagnostics.len(), 0);
+    insta::assert_yaml_snapshot!(program);
+}
+
+#[test]
+fn test_parse_member_after_index() {
+    let (program, diagnostics) = parse_source("arr[0].method();");
+    assert_eq!(diagnostics.len(), 0);
+    insta::assert_yaml_snapshot!(program);
+}
+
+#[test]
+fn test_parse_complex_member_chain() {
+    let (program, diagnostics) = parse_source(r#"json["data"]["items"][0].as_string();"#);
+    assert_eq!(diagnostics.len(), 0);
+    insta::assert_yaml_snapshot!(program);
+}
+
+#[test]
+fn test_parse_member_in_expression() {
+    let (program, diagnostics) = parse_source("let x = obj.method() + 5;");
+    assert_eq!(diagnostics.len(), 0);
+    insta::assert_yaml_snapshot!(program);
+}
+
+#[test]
+fn test_parse_member_as_function_arg() {
+    let (program, diagnostics) = parse_source("print(data.as_string());");
+    assert_eq!(diagnostics.len(), 0);
+    insta::assert_yaml_snapshot!(program);
+}
+
+#[test]
+fn test_parse_nested_member_calls() {
+    let (program, diagnostics) = parse_source("outer.method(inner.method());");
+    assert_eq!(diagnostics.len(), 0);
+    insta::assert_yaml_snapshot!(program);
+}
+
+// ============================================================================
 // Complex Programs
 // ============================================================================
 

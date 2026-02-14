@@ -669,6 +669,16 @@ impl Binder {
                     self.symbol_table.exit_scope();
                 }
             }
+            Expr::Member(member) => {
+                // Bind target expression
+                self.bind_expr(&member.target);
+                // Bind arguments if present
+                if let Some(args) = &member.args {
+                    for arg in args {
+                        self.bind_expr(arg);
+                    }
+                }
+            }
         }
     }
 

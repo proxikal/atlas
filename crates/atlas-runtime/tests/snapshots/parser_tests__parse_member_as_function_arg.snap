@@ -1,0 +1,38 @@
+---
+source: crates/atlas-runtime/tests/parser_tests.rs
+expression: program
+---
+items:
+  - Statement:
+      Expr:
+        expr:
+          Call:
+            callee:
+              Identifier:
+                name: print
+                span:
+                  start: 0
+                  end: 5
+            args:
+              - Member:
+                  target:
+                    Identifier:
+                      name: data
+                      span:
+                        start: 6
+                        end: 10
+                  member:
+                    name: as_string
+                    span:
+                      start: 11
+                      end: 20
+                  args: []
+                  span:
+                    start: 6
+                    end: 22
+            span:
+              start: 0
+              end: 23
+        span:
+          start: 0
+          end: 24

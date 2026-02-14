@@ -34,6 +34,7 @@ impl<'a> TypeChecker<'a> {
             Expr::ArrayLiteral(arr) => self.check_array_literal(arr),
             Expr::Group(group) => self.check_expr(&group.expr),
             Expr::Match(match_expr) => self.check_match(match_expr),
+            Expr::Member(member) => self.check_member(member),
         }
     }
 
@@ -348,6 +349,99 @@ impl<'a> TypeChecker<'a> {
 
         // Apply substitutions to return type
         inferer.apply_substitutions(return_type)
+    }
+
+    /// Check a member expression (method call)
+    fn check_member(&mut self, member: &MemberExpr) -> Type {
+        // Type-check the target expression
+        let target_type = self.check_expr(&member.target);
+
+        // Skip error recovery cases
+        if target_type == Type::Unknown {
+            return Type::Unknown;
+        }
+
+        // Look up the method in the method table and clone the signature to avoid borrow issues
+        let method_name = &member.member.name;
+        let method_sig = self.method_table.lookup(&target_type, method_name).cloned();
+
+        if let Some(method_sig) = method_sig {
+            // Check argument count
+            let provided_args = member.args.as_ref().map(|args| args.len()).unwrap_or(0);
+            let expected_args = method_sig.arg_types.len();
+
+            if provided_args != expected_args {
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        "AT3005",
+                        format!(
+                            "Method '{}' expects {} arguments, found {}",
+                            method_name, expected_args, provided_args
+                        ),
+                        member.span,
+                    )
+                    .with_label("argument count mismatch")
+                    .with_help(format!(
+                        "method '{}' requires exactly {} argument{}",
+                        method_name,
+                        expected_args,
+                        if expected_args == 1 { "" } else { "s" }
+                    )),
+                );
+            }
+
+            // Check argument types if present
+            if let Some(args) = &member.args {
+                for (i, arg) in args.iter().enumerate() {
+                    let arg_type = self.check_expr(arg);
+                    if let Some(expected_type) = method_sig.arg_types.get(i) {
+                        if !arg_type.is_assignable_to(expected_type) && arg_type != Type::Unknown {
+                            self.diagnostics.push(
+                                Diagnostic::error_with_code(
+                                    "AT3001",
+                                    format!(
+                                        "Argument {} has wrong type: expected {}, found {}",
+                                        i + 1,
+                                        expected_type.display_name(),
+                                        arg_type.display_name()
+                                    ),
+                                    arg.span(),
+                                )
+                                .with_label("type mismatch")
+                                .with_help(format!(
+                                    "argument {} must be of type {}",
+                                    i + 1,
+                                    expected_type.display_name()
+                                )),
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Return the method's return type
+            method_sig.return_type
+        } else {
+            // Method not found for this type
+            self.diagnostics.push(
+                Diagnostic::error_with_code(
+                    "AT3010",
+                    format!(
+                        "Type '{}' has no method named '{}'",
+                        target_type.display_name(),
+                        method_name
+                    ),
+                    member.member.span,
+                )
+                .with_label("method not found")
+                .with_help(format!(
+                    "type '{}' does not support method '{}'",
+                    target_type.display_name(),
+                    method_name
+                )),
+            );
+            Type::Unknown
+        }
     }
 
     /// Check an index expression

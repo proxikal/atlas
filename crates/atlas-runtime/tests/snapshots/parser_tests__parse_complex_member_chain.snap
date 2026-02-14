@@ -1,0 +1,57 @@
+---
+source: crates/atlas-runtime/tests/parser_tests.rs
+expression: program
+---
+items:
+  - Statement:
+      Expr:
+        expr:
+          Member:
+            target:
+              Index:
+                target:
+                  Index:
+                    target:
+                      Index:
+                        target:
+                          Identifier:
+                            name: json
+                            span:
+                              start: 0
+                              end: 4
+                        index:
+                          Literal:
+                            - String: data
+                            - start: 5
+                              end: 11
+                        span:
+                          start: 0
+                          end: 12
+                    index:
+                      Literal:
+                        - String: items
+                        - start: 13
+                          end: 20
+                    span:
+                      start: 0
+                      end: 21
+                index:
+                  Literal:
+                    - Number: 0
+                    - start: 22
+                      end: 23
+                span:
+                  start: 0
+                  end: 24
+            member:
+              name: as_string
+              span:
+                start: 25
+                end: 34
+            args: []
+            span:
+              start: 0
+              end: 36
+        span:
+          start: 0
+          end: 37

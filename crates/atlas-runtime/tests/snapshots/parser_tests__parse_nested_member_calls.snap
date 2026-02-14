@@ -1,0 +1,43 @@
+---
+source: crates/atlas-runtime/tests/parser_tests.rs
+expression: program
+---
+items:
+  - Statement:
+      Expr:
+        expr:
+          Member:
+            target:
+              Identifier:
+                name: outer
+                span:
+                  start: 0
+                  end: 5
+            member:
+              name: method
+              span:
+                start: 6
+                end: 12
+            args:
+              - Member:
+                  target:
+                    Identifier:
+                      name: inner
+                      span:
+                        start: 13
+                        end: 18
+                  member:
+                    name: method
+                    span:
+                      start: 19
+                      end: 25
+                  args: []
+                  span:
+                    start: 13
+                    end: 27
+            span:
+              start: 0
+              end: 28
+        span:
+          start: 0
+          end: 29

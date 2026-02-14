@@ -20,6 +20,7 @@ impl Compiler {
             Expr::Index(index) => self.compile_index(index),
             Expr::Call(call) => self.compile_call(call),
             Expr::Match(match_expr) => self.compile_match(match_expr),
+            Expr::Member(member) => self.compile_member(member),
         }
     }
 
@@ -74,6 +75,49 @@ impl Compiler {
         // Emit call instruction with argument count
         self.bytecode.emit(Opcode::Call, call.span);
         self.bytecode.emit_u8(call.args.len() as u8);
+
+        Ok(())
+    }
+
+    /// Compile a member expression (method call)
+    ///
+    /// Desugars method calls to stdlib function calls at compile time.
+    /// The function name is determined from the method name using a standard mapping:
+    ///   value.as_string() → jsonAsString(value)
+    fn compile_member(&mut self, member: &MemberExpr) -> Result<(), Vec<Diagnostic>> {
+        // Determine the desugared function name from the method name
+        // Since we don't have runtime type info, we use the method name pattern
+        // Type checker has already validated this is a valid method
+        let func_name = method_name_to_function(&member.member.name);
+
+        // Load the stdlib function
+        let func_ref = crate::value::FunctionRef {
+            name: func_name.clone(),
+            arity: 1 + member.args.as_ref().map(|a| a.len()).unwrap_or(0),
+            bytecode_offset: 0, // Builtins have offset 0
+            local_count: 0,
+        };
+        let func_value = crate::value::Value::Function(func_ref);
+        let const_idx = self.bytecode.add_constant(func_value);
+
+        // Load the function constant
+        self.bytecode.emit(Opcode::Constant, member.span);
+        self.bytecode.emit_u16(const_idx);
+
+        // Compile target (becomes first argument)
+        self.compile_expr(&member.target)?;
+
+        // Compile method arguments
+        if let Some(args) = &member.args {
+            for arg in args {
+                self.compile_expr(arg)?;
+            }
+        }
+
+        // Emit call instruction with total argument count (target + args)
+        let arg_count = 1 + member.args.as_ref().map(|a| a.len()).unwrap_or(0);
+        self.bytecode.emit(Opcode::Call, member.span);
+        self.bytecode.emit_u8(arg_count as u8);
 
         Ok(())
     }
@@ -649,4 +693,39 @@ impl Compiler {
 
         Ok(Some(final_jump))
     }
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Convert method name to stdlib function name
+///
+/// Maps method names to their corresponding stdlib functions:
+///   "as_string" → "jsonAsString"
+///   "as_number" → "jsonAsNumber"
+///   "as_bool" → "jsonAsBool"
+///   "is_null" → "jsonIsNull"
+///
+/// This mapping must match the method table in typechecker/methods.rs
+fn method_name_to_function(method: &str) -> String {
+    // All currently supported methods are JSON methods
+    // Type checker ensures only valid methods reach here
+    format!("json{}", capitalize_first(method))
+}
+
+/// Capitalize first letter and convert to camelCase
+///
+/// "as_string" → "AsString"
+/// "is_null" → "IsNull"
+fn capitalize_first(s: &str) -> String {
+    s.split('_')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().chain(chars).collect(),
+                None => String::new(),
+            }
+        })
+        .collect()
 }

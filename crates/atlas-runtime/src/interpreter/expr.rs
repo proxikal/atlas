@@ -18,6 +18,7 @@ impl Interpreter {
             Expr::ArrayLiteral(arr) => self.eval_array_literal(arr),
             Expr::Group(group) => self.eval_expr(&group.expr),
             Expr::Match(match_expr) => self.eval_match(match_expr),
+            Expr::Member(member) => self.eval_member(member),
         }
     }
 
@@ -260,6 +261,30 @@ impl Interpreter {
                 span: call.span,
             }),
         }
+    }
+
+    /// Evaluate a member expression (method call)
+    ///
+    /// Desugars method calls to stdlib function calls:
+    ///   value.method(args) → Type_method(value, args)
+    pub(super) fn eval_member(&mut self, member: &MemberExpr) -> Result<Value, RuntimeError> {
+        // 1. Evaluate target expression
+        let target_value = self.eval_expr(&member.target)?;
+
+        // 2. Build desugared function name from target type and method name
+        let func_name = method_to_function_name(&target_value, &member.member.name);
+
+        // 3. Build argument list (target + method args)
+        let mut args = vec![target_value];
+        if let Some(method_args) = &member.args {
+            for arg in method_args {
+                args.push(self.eval_expr(arg)?);
+            }
+        }
+
+        // 4. Call stdlib function
+        let security = unsafe { &*self.current_security.expect("Security context not set") };
+        crate::stdlib::call_builtin(&func_name, &args, member.span, security)
     }
 
     /// Call a user-defined function
@@ -1127,4 +1152,46 @@ impl Interpreter {
             }),
         }
     }
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Convert method call to stdlib function name
+///
+/// Maps (type, method) pairs to function names:
+///   (JsonValue, "as_string") → "jsonAsString"
+///   (JsonValue, "as_number") → "jsonAsNumber"
+///   (JsonValue, "as_bool") → "jsonAsBool"
+///   (JsonValue, "is_null") → "jsonIsNull"
+fn method_to_function_name(target: &Value, method: &str) -> String {
+    match target {
+        Value::JsonValue(_) => {
+            // JSON methods: json.as_string() → jsonAsString()
+            format!("json{}", capitalize_first(method))
+        }
+        // Future: Add more types here (String, Array, etc.)
+        _ => {
+            // Fallback (should not happen due to type checking)
+            format!("unknown_{}", method)
+        }
+    }
+}
+
+/// Capitalize first letter and convert to camelCase
+///
+/// "as_string" → "AsString"
+/// "is_null" → "IsNull"
+fn capitalize_first(s: &str) -> String {
+    // Handle snake_case methods
+    s.split('_')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().chain(chars).collect(),
+                None => String::new(),
+            }
+        })
+        .collect()
 }

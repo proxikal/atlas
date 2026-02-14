@@ -8,6 +8,7 @@
 
 mod expr;
 pub mod generics;
+mod methods;
 
 use crate::ast::*;
 use crate::diagnostic::Diagnostic;
@@ -34,6 +35,8 @@ pub struct TypeChecker<'a> {
     pub(super) declared_symbols: HashMap<String, (Span, SymbolKind)>,
     /// Used symbols in current function
     pub(super) used_symbols: HashSet<String>,
+    /// Method table for method resolution
+    pub(super) method_table: methods::MethodTable,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -47,6 +50,7 @@ impl<'a> TypeChecker<'a> {
             in_loop: false,
             declared_symbols: HashMap::new(),
             used_symbols: HashSet::new(),
+            method_table: methods::MethodTable::new(),
         }
     }
 
