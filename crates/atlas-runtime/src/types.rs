@@ -19,6 +19,8 @@ pub enum Type {
     Array(Box<Type>),
     /// Function type
     Function {
+        /// Type parameters (empty for non-generic functions)
+        type_params: Vec<String>,
         params: Vec<Type>,
         return_type: Box<Type>,
     },
@@ -52,10 +54,12 @@ impl Type {
                 Type::Function {
                     params: p1,
                     return_type: r1,
+                    ..
                 },
                 Type::Function {
                     params: p2,
                     return_type: r2,
+                    ..
                 },
             ) => {
                 p1.len() == p2.len()
@@ -119,6 +123,7 @@ mod tests {
     #[test]
     fn test_function_type() {
         let func_type = Type::Function {
+            type_params: vec![],
             params: vec![Type::Number, Type::String],
             return_type: Box::new(Type::Bool),
         };

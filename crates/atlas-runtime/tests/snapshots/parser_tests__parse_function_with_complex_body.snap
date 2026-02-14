@@ -9,6 +9,7 @@ items:
         span:
           start: 4
           end: 13
+      type_params: []
       params:
         - name:
             name: n

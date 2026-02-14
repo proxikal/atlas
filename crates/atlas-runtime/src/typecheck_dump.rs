@@ -145,6 +145,7 @@ fn type_to_string(ty: &Type) -> String {
         Type::Function {
             params,
             return_type,
+            ..
         } => {
             let param_types: Vec<String> = params.iter().map(type_to_string).collect();
             format!(
@@ -177,6 +178,7 @@ fn collect_types(ty: &Type, types: &mut std::collections::HashSet<String>) {
         Type::Function {
             params,
             return_type,
+            ..
         } => {
             for param in params {
                 collect_types(param, types);
@@ -286,6 +288,7 @@ mod tests {
     #[test]
     fn test_type_to_string_function() {
         let func_type = Type::Function {
+            type_params: vec![],
             params: vec![Type::Number, Type::String],
             return_type: Box::new(Type::Bool),
         };

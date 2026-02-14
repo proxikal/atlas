@@ -193,6 +193,7 @@ impl<'a> TypeChecker<'a> {
 
         match callee_type {
             Type::Function {
+                type_params,
                 params,
                 return_type,
             } => {
@@ -212,7 +213,12 @@ impl<'a> TypeChecker<'a> {
                     );
                 }
 
-                // Check argument types
+                // If function has type parameters, use type inference
+                if !type_params.is_empty() {
+                    return self.check_call_with_inference(&type_params, &params, &return_type, call);
+                }
+
+                // Non-generic function - check argument types normally
                 for (i, arg) in call.args.iter().enumerate() {
                     let arg_type = self.check_expr(arg);
                     if let Some(expected_type) = params.get(i) {
@@ -255,6 +261,72 @@ impl<'a> TypeChecker<'a> {
                 Type::Unknown
             }
         }
+    }
+
+    /// Check a generic function call with type inference
+    fn check_call_with_inference(
+        &mut self,
+        type_params: &[String],
+        params: &[Type],
+        return_type: &Type,
+        call: &CallExpr,
+    ) -> Type {
+        use crate::typechecker::generics::TypeInferer;
+
+        let mut inferer = TypeInferer::new();
+
+        // Check each argument and try to infer type parameters
+        for (i, arg) in call.args.iter().enumerate() {
+            let arg_type = self.check_expr(arg);
+
+            if let Some(param_type) = params.get(i) {
+                // Try to unify parameter type with argument type
+                if let Err(e) = inferer.unify(param_type, &arg_type) {
+                    // Inference failed - report error
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3001",
+                            format!(
+                                "Type inference failed: cannot match argument {} of type {} with parameter of type {}",
+                                i + 1,
+                                arg_type.display_name(),
+                                param_type.display_name()
+                            ),
+                            arg.span(),
+                        )
+                        .with_label("type mismatch")
+                        .with_help(format!("Inference error: {:?}", e)),
+                    );
+                    return Type::Unknown;
+                }
+            }
+        }
+
+        // Check if all type parameters were inferred
+        if !inferer.all_inferred(type_params) {
+            // Some type parameters couldn't be inferred
+            let uninferred: Vec<String> = type_params
+                .iter()
+                .filter(|param| inferer.get_substitution(param).is_none())
+                .map(|s| s.clone())
+                .collect();
+
+            self.diagnostics.push(
+                Diagnostic::error(
+                    format!(
+                        "Cannot infer type parameter(s): {}",
+                        uninferred.join(", ")
+                    ),
+                    call.span,
+                )
+                .with_label("type inference failed")
+                .with_help("Try providing explicit type arguments".to_string()),
+            );
+            return Type::Unknown;
+        }
+
+        // Apply substitutions to return type
+        inferer.apply_substitutions(return_type)
     }
 
     /// Check an index expression

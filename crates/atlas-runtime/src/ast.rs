@@ -67,9 +67,18 @@ pub enum Item {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FunctionDecl {
     pub name: Identifier,
+    /// Type parameters (e.g., <T, E> in fn foo<T, E>(...))
+    pub type_params: Vec<TypeParam>,
     pub params: Vec<Param>,
     pub return_type: TypeRef,
     pub body: Block,
+    pub span: Span,
+}
+
+/// Type parameter declaration (e.g., T in fn foo<T>(...))
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeParam {
+    pub name: String,
     pub span: Span,
 }
 
@@ -452,6 +461,7 @@ mod tests {
                 name: "test".to_string(),
                 span: Span::new(5, 9),
             },
+            type_params: vec![],
             params: vec![],
             return_type: TypeRef::Named("void".to_string(), Span::new(14, 18)),
             body: Block {

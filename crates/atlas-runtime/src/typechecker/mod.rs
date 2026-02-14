@@ -7,6 +7,7 @@
 //! - Strict equality - == requires same-type operands
 
 mod expr;
+pub mod generics;
 
 use crate::ast::*;
 use crate::diagnostic::Diagnostic;
@@ -558,8 +559,20 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
+    /// Get the expected arity for a built-in generic type
+    fn get_generic_type_arity(&self, name: &str) -> Option<usize> {
+        match name {
+            "Option" => Some(1),
+            "Result" => Some(2),
+            "Array" => Some(1), // Array<T> is sugar for T[]
+            "HashMap" => Some(2),
+            "HashSet" => Some(1),
+            _ => None, // Unknown generic type
+        }
+    }
+
     /// Resolve a type reference to a Type
-    pub(super) fn resolve_type_ref(&self, type_ref: &TypeRef) -> Type {
+    pub(super) fn resolve_type_ref(&mut self, type_ref: &TypeRef) -> Type {
         match type_ref {
             TypeRef::Named(name, _) => match name.as_str() {
                 "number" => Type::Number,
@@ -578,19 +591,53 @@ impl<'a> TypeChecker<'a> {
                 let param_types = params.iter().map(|p| self.resolve_type_ref(p)).collect();
                 let ret_type = Box::new(self.resolve_type_ref(return_type));
                 Type::Function {
+                    type_params: vec![], // Function types don't have type params (only decls do)
                     params: param_types,
                     return_type: ret_type,
                 }
             }
             TypeRef::Generic {
-                name, type_args, ..
+                name,
+                type_args,
+                span,
             } => {
-                // BLOCKER 02-A: Just parse syntax, don't validate yet
-                // Full type checking will be in BLOCKER 02-B
+                // Validate generic type arity
+                let expected_arity = self.get_generic_type_arity(name);
+
+                if let Some(arity) = expected_arity {
+                    if type_args.len() != arity {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                format!(
+                                    "Generic type '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    arity,
+                                    type_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments"),
+                        );
+                        return Type::Unknown;
+                    }
+                } else {
+                    // Unknown generic type
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            format!("Unknown generic type '{}'", name),
+                            *span,
+                        )
+                        .with_label("unknown type"),
+                    );
+                    return Type::Unknown;
+                }
+
+                // Resolve type arguments
                 let resolved_args = type_args
                     .iter()
                     .map(|arg| self.resolve_type_ref(arg))
                     .collect();
+
                 Type::Generic {
                     name: name.clone(),
                     type_args: resolved_args,
@@ -614,10 +661,14 @@ mod tests {
         let (program, _) = parser.parse();
 
         let mut binder = Binder::new();
-        let (mut table, _) = binder.bind(&program);
+        let (mut table, mut bind_diagnostics) = binder.bind(&program);
 
         let mut checker = TypeChecker::new(&mut table);
-        checker.check(&program)
+        let mut check_diagnostics = checker.check(&program);
+
+        // Combine diagnostics from both binding and type checking
+        bind_diagnostics.append(&mut check_diagnostics);
+        bind_diagnostics
     }
 
     #[test]
@@ -671,5 +722,137 @@ mod tests {
         let diagnostics = typecheck_source("return 5;");
         assert!(diagnostics.len() > 0);
         assert_eq!(diagnostics[0].code, "AT3011");
+    }
+
+    #[test]
+    fn test_generic_type_valid_arity() {
+        // Valid generic types - test arity validation only
+        // Use in function parameters to avoid needing valid values
+        let diagnostics = typecheck_source(
+            r#"
+            fn test_option(_x: Option<number>) -> void {}
+            fn test_result(_x: Result<number, string>) -> void {}
+        "#,
+        );
+        assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
+    }
+
+    #[test]
+    fn test_generic_type_wrong_arity_too_few() {
+        // Result expects 2 type arguments, got 1
+        let diagnostics = typecheck_source("fn test(_x: Result<number>) -> void {}");
+        assert!(diagnostics.len() > 0);
+        assert!(diagnostics[0]
+            .message
+            .contains("expects 2 type argument(s), found 1"));
+    }
+
+    #[test]
+    fn test_generic_type_wrong_arity_too_many() {
+        // Option expects 1 type argument, got 2
+        let diagnostics = typecheck_source("fn test(_x: Option<number, string>) -> void {}");
+        assert!(diagnostics.len() > 0);
+        assert!(diagnostics[0]
+            .message
+            .contains("expects 1 type argument(s), found 2"));
+    }
+
+    #[test]
+    fn test_generic_type_unknown() {
+        // Unknown generic type
+        let diagnostics = typecheck_source("fn test(_x: UnknownGeneric<number>) -> void {}");
+        assert!(diagnostics.len() > 0);
+        assert!(diagnostics[0].message.contains("Unknown generic type"));
+    }
+
+    #[test]
+    fn test_generic_type_nested() {
+        // Nested generic types with correct arity
+        let diagnostics = typecheck_source(
+            "fn test_nested(_x: Option<Result<number, string>>) -> void {}",
+        );
+        assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
+    }
+
+    // ============================================================================
+    // Type Inference Tests
+    // ============================================================================
+
+    #[test]
+    fn test_generic_function_inference_simple() {
+        // Simple type inference: T=number
+        let diagnostics = typecheck_source(
+            r#"
+            fn identity<T>(x: T) -> T {
+                return x;
+            }
+            let _result = identity(42);
+        "#,
+        );
+        assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
+    }
+
+    #[test]
+    fn test_generic_function_inference_string() {
+        // Type inference: T=string
+        let diagnostics = typecheck_source(
+            r#"
+            fn identity<T>(x: T) -> T {
+                return x;
+            }
+            let _result = identity("hello");
+        "#,
+        );
+        assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
+    }
+
+    #[test]
+    fn test_generic_function_multiple_params() {
+        // Multiple type parameters: A=number, B=string
+        let diagnostics = typecheck_source(
+            r#"
+            fn pair<A, B>(first: A, _second: B) -> A {
+                return first;
+            }
+            let _result = pair(42, "hello");
+        "#,
+        );
+        assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
+    }
+
+    #[test]
+    fn test_generic_function_inference_array() {
+        // Type inference with arrays: T=number
+        let diagnostics = typecheck_source(
+            r#"
+            fn first<T>(arr: T[]) -> T {
+                return arr[0];
+            }
+            let numbers = [1, 2, 3];
+            let _result = first(numbers);
+        "#,
+        );
+        assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
+    }
+
+    #[test]
+    fn test_generic_function_type_mismatch() {
+        // Type inference should fail when types don't match
+        let diagnostics = typecheck_source(
+            r#"
+            fn both_same<T>(_a: T, _b: T) -> T {
+                return _a;
+            }
+            let _result = both_same(42, "hello");
+        "#,
+        );
+        // Should have error: cannot unify number with string for T
+        assert!(diagnostics.len() > 0, "Expected errors but got none");
+        assert!(
+            diagnostics[0].message.contains("Type inference failed")
+                || diagnostics[0].message.contains("cannot match"),
+            "Unexpected error message: {}",
+            diagnostics[0].message
+        );
     }
 }

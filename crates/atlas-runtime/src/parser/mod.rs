@@ -77,6 +77,25 @@ impl Parser {
             span: name_token.span,
         };
 
+        // Parse optional type parameters: <T, E, ...>
+        let mut type_params = Vec::new();
+        if self.match_token(TokenKind::Less) {
+            loop {
+                let type_param_start = self.peek().span;
+                let type_param_tok = self.consume_identifier("a type parameter name")?;
+
+                type_params.push(TypeParam {
+                    name: type_param_tok.lexeme.clone(),
+                    span: type_param_start.merge(type_param_tok.span),
+                });
+
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
+            self.consume(TokenKind::Greater, "Expected '>' after type parameters")?;
+        }
+
         self.consume(TokenKind::LeftParen, "Expected '(' after function name")?;
 
         // Parse parameters
@@ -123,6 +142,7 @@ impl Parser {
 
         Ok(FunctionDecl {
             name,
+            type_params,
             params,
             return_type,
             body,

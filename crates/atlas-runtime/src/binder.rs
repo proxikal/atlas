@@ -8,6 +8,7 @@ use crate::ast::*;
 use crate::diagnostic::Diagnostic;
 use crate::symbol::{Symbol, SymbolKind, SymbolTable};
 use crate::types::Type;
+use std::collections::HashMap;
 
 /// Binder for name resolution and scope management
 pub struct Binder {
@@ -15,6 +16,8 @@ pub struct Binder {
     symbol_table: SymbolTable,
     /// Collected diagnostics
     diagnostics: Vec<Diagnostic>,
+    /// Type parameter scopes (stack of scopes, each scope maps param name -> TypeParam)
+    type_param_scopes: Vec<HashMap<String, TypeParam>>,
 }
 
 impl Binder {
@@ -23,6 +26,7 @@ impl Binder {
         Self {
             symbol_table: SymbolTable::new(),
             diagnostics: Vec::new(),
+            type_param_scopes: Vec::new(),
         }
     }
 
@@ -31,6 +35,7 @@ impl Binder {
         Self {
             symbol_table,
             diagnostics: Vec::new(),
+            type_param_scopes: Vec::new(),
         }
     }
 
@@ -73,6 +78,12 @@ impl Binder {
             return;
         }
 
+        // Enter type parameter scope to resolve generic types
+        self.enter_type_param_scope();
+        for type_param in &func.type_params {
+            self.register_type_parameter(type_param);
+        }
+
         let param_types: Vec<Type> = func
             .params
             .iter()
@@ -81,9 +92,13 @@ impl Binder {
 
         let return_type = self.resolve_type_ref(&func.return_type);
 
+        // Exit type parameter scope
+        self.exit_type_param_scope();
+
         let symbol = Symbol {
             name: func.name.name.clone(),
             ty: Type::Function {
+                type_params: func.type_params.iter().map(|tp| tp.name.clone()).collect(),
                 params: param_types,
                 return_type: Box::new(return_type),
             },
@@ -126,6 +141,9 @@ impl Binder {
     fn bind_function(&mut self, func: &FunctionDecl) {
         // Enter function scope
         self.symbol_table.enter_scope();
+
+        // Note: Type parameter scope was already handled in hoist_function
+        // when we resolved the function signature types
 
         // Bind parameters
         for param in &func.params {
@@ -365,8 +383,20 @@ impl Binder {
         }
     }
 
+    /// Get the expected arity for a built-in generic type
+    fn get_generic_type_arity(&self, name: &str) -> Option<usize> {
+        match name {
+            "Option" => Some(1),
+            "Result" => Some(2),
+            "Array" => Some(1), // Array<T> is sugar for T[]
+            "HashMap" => Some(2),
+            "HashSet" => Some(1),
+            _ => None, // Unknown generic type
+        }
+    }
+
     /// Resolve a type reference to a Type
-    fn resolve_type_ref(&self, type_ref: &TypeRef) -> Type {
+    fn resolve_type_ref(&mut self, type_ref: &TypeRef) -> Type {
         match type_ref {
             TypeRef::Named(name, _) => match name.as_str() {
                 "number" => Type::Number,
@@ -376,6 +406,12 @@ impl Binder {
                 "null" => Type::Null,
                 "json" => Type::JsonValue,
                 _ => {
+                    // Check if it's a type parameter
+                    if let Some(_type_param) = self.lookup_type_parameter(name) {
+                        return Type::TypeParameter {
+                            name: name.clone(),
+                        };
+                    }
                     // Unknown type - will be caught by typechecker
                     Type::Unknown
                 }
@@ -389,25 +425,101 @@ impl Binder {
                 let param_types = params.iter().map(|p| self.resolve_type_ref(p)).collect();
                 let ret_type = Box::new(self.resolve_type_ref(return_type));
                 Type::Function {
+                    type_params: vec![], // Function types don't have type params (only decls do)
                     params: param_types,
                     return_type: ret_type,
                 }
             }
             TypeRef::Generic {
-                name, type_args, ..
+                name,
+                type_args,
+                span,
             } => {
-                // BLOCKER 02-A: Just parse syntax, don't resolve yet
-                // Full type checking and resolution will be in BLOCKER 02-B
+                // BLOCKER 02-B: Validate generic type arity
+                let expected_arity = self.get_generic_type_arity(name);
+
+                if let Some(arity) = expected_arity {
+                    if type_args.len() != arity {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                format!(
+                                    "Generic type '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    arity,
+                                    type_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments"),
+                        );
+                        return Type::Unknown;
+                    }
+                } else {
+                    // Unknown generic type
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            format!("Unknown generic type '{}'", name),
+                            *span,
+                        )
+                        .with_label("unknown type"),
+                    );
+                    return Type::Unknown;
+                }
+
+                // Resolve type arguments
                 let resolved_args = type_args
                     .iter()
                     .map(|arg| self.resolve_type_ref(arg))
                     .collect();
+
                 Type::Generic {
                     name: name.clone(),
                     type_args: resolved_args,
                 }
             }
         }
+    }
+
+    // === Type Parameter Scope Management ===
+
+    /// Enter a new type parameter scope
+    fn enter_type_param_scope(&mut self) {
+        self.type_param_scopes.push(HashMap::new());
+    }
+
+    /// Exit the current type parameter scope
+    fn exit_type_param_scope(&mut self) {
+        self.type_param_scopes.pop();
+    }
+
+    /// Register a type parameter in the current scope
+    fn register_type_parameter(&mut self, type_param: &TypeParam) {
+        if let Some(current_scope) = self.type_param_scopes.last_mut() {
+            // Check for duplicate type parameter in this scope
+            if current_scope.contains_key(&type_param.name) {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        format!("Duplicate type parameter '{}'", type_param.name),
+                        type_param.span,
+                    )
+                    .with_label("duplicate type parameter"),
+                );
+                return;
+            }
+
+            current_scope.insert(type_param.name.clone(), type_param.clone());
+        }
+    }
+
+    /// Look up a type parameter in the scope stack
+    fn lookup_type_parameter(&self, name: &str) -> Option<&TypeParam> {
+        // Search from innermost to outermost scope
+        for scope in self.type_param_scopes.iter().rev() {
+            if let Some(type_param) = scope.get(name) {
+                return Some(type_param);
+            }
+        }
+        None
     }
 }
 
@@ -597,5 +709,75 @@ mod tests {
         // Should have 3 errors (one for each prelude builtin)
         assert_eq!(diagnostics.len(), 3);
         assert!(diagnostics.iter().all(|d| d.code == "AT1012"));
+    }
+
+    #[test]
+    fn test_type_parameter_binding() {
+        // Test that type parameters are correctly registered and resolved
+        let (table, diagnostics) = bind_source(
+            r#"
+            fn identity<T>(x: T) -> T {
+                return x;
+            }
+        "#,
+        );
+
+        // Should have no errors
+        assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
+
+        // Function should be bound
+        let identity_symbol = table.lookup("identity");
+        assert!(identity_symbol.is_some());
+
+        // Check function type has type parameters
+        if let Type::Function { type_params, .. } = &identity_symbol.unwrap().ty {
+            assert_eq!(type_params.len(), 1);
+            assert_eq!(type_params[0], "T");
+        } else {
+            panic!("Expected Function type");
+        }
+    }
+
+    #[test]
+    fn test_multiple_type_parameters() {
+        // Test multiple type parameters
+        let (table, diagnostics) = bind_source(
+            r#"
+            fn pair<A, B>(first: A, second: B) -> number {
+                return 42;
+            }
+        "#,
+        );
+
+        assert_eq!(diagnostics.len(), 0, "Diagnostics: {:?}", diagnostics);
+
+        let pair_symbol = table.lookup("pair");
+        assert!(pair_symbol.is_some());
+
+        if let Type::Function { type_params, .. } = &pair_symbol.unwrap().ty {
+            assert_eq!(type_params.len(), 2);
+            assert_eq!(type_params[0], "A");
+            assert_eq!(type_params[1], "B");
+        } else {
+            panic!("Expected Function type");
+        }
+    }
+
+    #[test]
+    fn test_duplicate_type_parameter() {
+        // Test that duplicate type parameters are rejected
+        let (_table, diagnostics) = bind_source(
+            r#"
+            fn bad<T, T>(x: T) -> T {
+                return x;
+            }
+        "#,
+        );
+
+        // Should have 1 error for duplicate type parameter
+        assert_eq!(diagnostics.len(), 1);
+        assert!(diagnostics[0]
+            .message
+            .contains("Duplicate type parameter 'T'"));
     }
 }

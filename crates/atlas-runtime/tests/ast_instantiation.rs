@@ -17,6 +17,7 @@ fn test_complete_program_construction() {
                     name: "add".to_string(),
                     span: Span::new(5, 8),
                 },
+                type_params: vec![],
                 params: vec![
                     Param {
                         name: Identifier {

@@ -53,6 +53,7 @@ impl SymbolTable {
         table.define_builtin(
             "print",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::Unknown], // Accepts any type
                 return_type: Box::new(Type::Void),
             },
@@ -60,6 +61,7 @@ impl SymbolTable {
         table.define_builtin(
             "len",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::Unknown], // String or Array
                 return_type: Box::new(Type::Number),
             },
@@ -67,6 +69,7 @@ impl SymbolTable {
         table.define_builtin(
             "str",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::Unknown], // Converts any type to string
                 return_type: Box::new(Type::String),
             },
@@ -76,6 +79,7 @@ impl SymbolTable {
         table.define_builtin(
             "split",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::String],
                 return_type: Box::new(Type::Array(Box::new(Type::String))),
             },
@@ -83,6 +87,7 @@ impl SymbolTable {
         table.define_builtin(
             "join",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::Array(Box::new(Type::String)), Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -90,6 +95,7 @@ impl SymbolTable {
         table.define_builtin(
             "trim",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -97,6 +103,7 @@ impl SymbolTable {
         table.define_builtin(
             "trimStart",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -104,6 +111,7 @@ impl SymbolTable {
         table.define_builtin(
             "trimEnd",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -113,6 +121,7 @@ impl SymbolTable {
         table.define_builtin(
             "indexOf",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::String],
                 return_type: Box::new(Type::Number),
             },
@@ -120,6 +129,7 @@ impl SymbolTable {
         table.define_builtin(
             "lastIndexOf",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::String],
                 return_type: Box::new(Type::Number),
             },
@@ -127,6 +137,7 @@ impl SymbolTable {
         table.define_builtin(
             "includes",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::String],
                 return_type: Box::new(Type::Bool),
             },
@@ -136,6 +147,7 @@ impl SymbolTable {
         table.define_builtin(
             "toUpperCase",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -143,6 +155,7 @@ impl SymbolTable {
         table.define_builtin(
             "toLowerCase",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -150,6 +163,7 @@ impl SymbolTable {
         table.define_builtin(
             "substring",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::Number, Type::Number],
                 return_type: Box::new(Type::String),
             },
@@ -157,6 +171,7 @@ impl SymbolTable {
         table.define_builtin(
             "charAt",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::Number],
                 return_type: Box::new(Type::String),
             },
@@ -164,6 +179,7 @@ impl SymbolTable {
         table.define_builtin(
             "repeat",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::Number],
                 return_type: Box::new(Type::String),
             },
@@ -171,6 +187,7 @@ impl SymbolTable {
         table.define_builtin(
             "replace",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::String, Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -180,6 +197,7 @@ impl SymbolTable {
         table.define_builtin(
             "padStart",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::Number, Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -187,6 +205,7 @@ impl SymbolTable {
         table.define_builtin(
             "padEnd",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::Number, Type::String],
                 return_type: Box::new(Type::String),
             },
@@ -194,6 +213,7 @@ impl SymbolTable {
         table.define_builtin(
             "startsWith",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::String],
                 return_type: Box::new(Type::Bool),
             },
@@ -201,6 +221,7 @@ impl SymbolTable {
         table.define_builtin(
             "endsWith",
             Type::Function {
+                type_params: vec![],
                 params: vec![Type::String, Type::String],
                 return_type: Box::new(Type::Bool),
             },
@@ -423,6 +444,7 @@ mod tests {
             .define_function(Symbol {
                 name: "foo".to_string(),
                 ty: Type::Function {
+                    type_params: vec![],
                     params: vec![],
                     return_type: Box::new(Type::Void),
                 },
@@ -439,6 +461,7 @@ mod tests {
         let result = table.define_function(Symbol {
             name: "foo".to_string(),
             ty: Type::Function {
+                type_params: vec![],
                 params: vec![],
                 return_type: Box::new(Type::Void),
             },
