@@ -65,28 +65,34 @@ enum Commands {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let config = config::Config::from_env();
+    let cli_config = config::Config::from_env();
+
+    // Load project configuration (atlas.toml) if in a project directory
+    // This is available for commands that need project-level settings
+    let _project_config = atlas_config::ConfigLoader::new()
+        .load_from_directory(&std::env::current_dir()?)
+        .ok(); // Optional - not all commands run in a project
 
     match cli.command {
         Commands::Run { file, json } => {
             // Command-line flag overrides environment variable
-            let use_json = json || config.default_json;
+            let use_json = json || cli_config.default_json;
             commands::run::run(&file, use_json)?;
         }
         Commands::Check { file, json } => {
             // Command-line flag overrides environment variable
-            let use_json = json || config.default_json;
+            let use_json = json || cli_config.default_json;
             commands::check::run(&file, use_json)?;
         }
         Commands::Build { file, disasm, json } => {
             // Command-line flag overrides environment variable
-            let use_json = json || config.default_json;
+            let use_json = json || cli_config.default_json;
             commands::build::run(&file, disasm, use_json)?;
         }
         Commands::Repl { tui, no_history } => {
             // Command-line flag overrides environment variable
-            let disable_history = no_history || config.no_history;
-            commands::repl::run(tui, disable_history, &config)?;
+            let disable_history = no_history || cli_config.no_history;
+            commands::repl::run(tui, disable_history, &cli_config)?;
         }
         Commands::Ast { file } => {
             commands::ast::run(&file)?;

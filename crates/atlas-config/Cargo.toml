@@ -1,0 +1,17 @@
+[package]
+name = "atlas-config"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.70"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+dirs = "5.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3.14"
+insta = { workspace = true }
+rstest = { workspace = true }
+pretty_assertions = { workspace = true }
