@@ -94,6 +94,24 @@ pub enum Opcode {
     /// Duplicate top of stack
     Dup = 0x81,
 
+    // ===== Pattern matching (0x90-0x9F) =====
+    /// Pop value, push true if Option::Some, false otherwise
+    IsOptionSome = 0x90,
+    /// Pop value, push true if Option::None, false otherwise
+    IsOptionNone = 0x91,
+    /// Pop value, push true if Result::Ok, false otherwise
+    IsResultOk = 0x92,
+    /// Pop value, push true if Result::Err, false otherwise
+    IsResultErr = 0x93,
+    /// Pop Option::Some(x), push x (or error if not Some)
+    ExtractOptionValue = 0x94,
+    /// Pop Result::Ok(x) or Result::Err(e), push inner value
+    ExtractResultValue = 0x95,
+    /// Pop value, push true if Array, false otherwise
+    IsArray = 0x96,
+    /// Pop array, push length (number)
+    GetArrayLen = 0x97,
+
     // ===== Special (0xF0-0xFF) =====
     /// End of bytecode
     Halt = 0xFF,
@@ -137,6 +155,14 @@ impl TryFrom<u8> for Opcode {
             0x72 => Ok(Opcode::SetIndex),
             0x80 => Ok(Opcode::Pop),
             0x81 => Ok(Opcode::Dup),
+            0x90 => Ok(Opcode::IsOptionSome),
+            0x91 => Ok(Opcode::IsOptionNone),
+            0x92 => Ok(Opcode::IsResultOk),
+            0x93 => Ok(Opcode::IsResultErr),
+            0x94 => Ok(Opcode::ExtractOptionValue),
+            0x95 => Ok(Opcode::ExtractResultValue),
+            0x96 => Ok(Opcode::IsArray),
+            0x97 => Ok(Opcode::GetArrayLen),
             0xFF => Ok(Opcode::Halt),
             _ => Err(()),
         }

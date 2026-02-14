@@ -14,6 +14,7 @@ pub use frame::CallFrame;
 pub use profiler::Profiler;
 
 use crate::bytecode::{Bytecode, Opcode};
+use crate::span::Span;
 use crate::value::{RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -643,6 +644,73 @@ impl VM {
                 Opcode::Dup => {
                     let value = self.peek(0).clone();
                     self.push(value);
+                }
+
+                // ===== Pattern Matching =====
+                Opcode::IsOptionSome => {
+                    let value = self.pop();
+                    let is_some = matches!(value, Value::Option(Some(_)));
+                    self.push(Value::Bool(is_some));
+                }
+                Opcode::IsOptionNone => {
+                    let value = self.pop();
+                    let is_none = matches!(value, Value::Option(None));
+                    self.push(Value::Bool(is_none));
+                }
+                Opcode::IsResultOk => {
+                    let value = self.pop();
+                    let is_ok = matches!(value, Value::Result(Ok(_)));
+                    self.push(Value::Bool(is_ok));
+                }
+                Opcode::IsResultErr => {
+                    let value = self.pop();
+                    let is_err = matches!(value, Value::Result(Err(_)));
+                    self.push(Value::Bool(is_err));
+                }
+                Opcode::ExtractOptionValue => {
+                    let value = self.pop();
+                    match value {
+                        Value::Option(Some(inner)) => self.push(*inner),
+                        _ => {
+                            return Err(RuntimeError::TypeError {
+                                msg: "ExtractOptionValue requires Option::Some".to_string(),
+                                span: Span::dummy(),
+                            })
+                        }
+                    }
+                }
+                Opcode::ExtractResultValue => {
+                    let value = self.pop();
+                    match value {
+                        Value::Result(Ok(inner)) => self.push(*inner),
+                        Value::Result(Err(inner)) => self.push(*inner),
+                        _ => {
+                            return Err(RuntimeError::TypeError {
+                                msg: "ExtractResultValue requires Result".to_string(),
+                                span: Span::dummy(),
+                            })
+                        }
+                    }
+                }
+                Opcode::IsArray => {
+                    let value = self.pop();
+                    let is_array = matches!(value, Value::Array(_));
+                    self.push(Value::Bool(is_array));
+                }
+                Opcode::GetArrayLen => {
+                    let value = self.pop();
+                    match value {
+                        Value::Array(arr) => {
+                            let len = arr.borrow().len();
+                            self.push(Value::Number(len as f64));
+                        }
+                        _ => {
+                            return Err(RuntimeError::TypeError {
+                                msg: "GetArrayLen requires Array".to_string(),
+                                span: Span::dummy(),
+                            })
+                        }
+                    }
                 }
 
                 // ===== Special =====

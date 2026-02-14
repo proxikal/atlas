@@ -70,7 +70,10 @@ fn run_vm(source: &str) -> Result<String, String> {
         Ok(bytecode) => {
             let mut vm = VM::new(bytecode);
             match vm.run() {
-                Ok(value) => Ok(format!("{:?}", value)),
+                Ok(opt_value) => match opt_value {
+                    Some(value) => Ok(format!("{:?}", value)),
+                    None => Ok("None".to_string()),
+                },
                 Err(e) => Err(format!("Runtime error: {:?}", e)),
             }
         }

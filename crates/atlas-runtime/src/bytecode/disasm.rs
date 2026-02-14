@@ -88,6 +88,14 @@ fn disassemble_instruction(bytecode: &Bytecode, offset: &mut usize) -> String {
         | Opcode::SetIndex
         | Opcode::Pop
         | Opcode::Dup
+        | Opcode::IsOptionSome
+        | Opcode::IsOptionNone
+        | Opcode::IsResultOk
+        | Opcode::IsResultErr
+        | Opcode::ExtractOptionValue
+        | Opcode::ExtractResultValue
+        | Opcode::IsArray
+        | Opcode::GetArrayLen
         | Opcode::Halt => {
             format!("{:04}  {:?}", start_offset, opcode)
         }
