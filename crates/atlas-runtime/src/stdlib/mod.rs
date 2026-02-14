@@ -1,6 +1,7 @@
 //! Standard library functions
 
 pub mod array;
+pub mod json;
 pub mod math;
 pub mod string;
 pub mod types;
@@ -25,6 +26,12 @@ pub fn is_builtin(name: &str) -> bool {
             | "sqrt" | "pow" | "log"
             | "sin" | "cos" | "tan" | "asin" | "acos" | "atan"
             | "clamp" | "sign" | "random"
+            // JSON functions
+            | "parseJSON" | "toJSON" | "isValidJSON" | "prettifyJSON" | "minifyJSON"
+            // Type checking functions
+            | "typeof" | "isString" | "isNumber" | "isBool" | "isNull" | "isArray" | "isFunction"
+            // Type conversion functions
+            | "toString" | "toNumber" | "toBool" | "parseInt" | "parseFloat"
             // Option functions
             | "Some" | "None" | "is_some" | "is_none"
             // Result functions
@@ -369,6 +376,29 @@ pub fn call_builtin(
         "clamp" => math::clamp(args, call_span),
         "sign" => math::sign(args, call_span),
         "random" => math::random(args, call_span),
+
+        // JSON functions
+        "parseJSON" => json::parse_json(args, call_span),
+        "toJSON" => json::to_json(args, call_span),
+        "isValidJSON" => json::is_valid_json(args, call_span),
+        "prettifyJSON" => json::prettify_json(args, call_span),
+        "minifyJSON" => json::minify_json(args, call_span),
+
+        // Type checking functions
+        "typeof" => types::type_of(args, call_span),
+        "isString" => types::is_string(args, call_span),
+        "isNumber" => types::is_number(args, call_span),
+        "isBool" => types::is_bool(args, call_span),
+        "isNull" => types::is_null(args, call_span),
+        "isArray" => types::is_array(args, call_span),
+        "isFunction" => types::is_function(args, call_span),
+
+        // Type conversion functions
+        "toString" => types::to_string(args, call_span),
+        "toNumber" => types::to_number(args, call_span),
+        "toBool" => types::to_bool(args, call_span),
+        "parseInt" => types::parse_int(args, call_span),
+        "parseFloat" => types::parse_float(args, call_span),
 
         // Option<T> constructors
         "Some" => {

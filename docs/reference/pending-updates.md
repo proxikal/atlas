@@ -12,7 +12,11 @@
 ## docs/api/stdlib.md
 **Trigger:** All stdlib category phases complete
 
-(No updates queued yet)
+**Phase 04 - JSON & Type Utilities (2026-02-14):**
+- Add 5 JSON functions: parseJSON, toJSON, isValidJSON, prettifyJSON, minifyJSON
+- Add 7 type guard functions: typeof, isString, isNumber, isBool, isNull, isArray, isFunction
+- Add 5 type conversion functions: toString, toNumber, toBool, parseInt, parseFloat
+- Total: 17 new stdlib functions
 
 ---
 

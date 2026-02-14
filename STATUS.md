@@ -8,8 +8,8 @@
 ## 🎯 Current Phase
 
 **Version:** v0.2 (adding depth to v0.1 foundation)
-**Last Completed:** phases/stdlib/phase-03-complete-math-api.md
-**Next Phase:** phases/stdlib/phase-04-json-type-utilities.md
+**Last Completed:** phases/stdlib/phase-04-json-type-utilities.md
+**Next Phase:** phases/stdlib/phase-05-complete-file-io-api.md
 
 **v0.2 phase files complete - 68 comprehensive phases ready for implementation!**
 
@@ -119,11 +119,11 @@ v0.2 transforms Atlas into a production-ready language:
 - ⬜ phase-14-documentation-generator.md **[NEW]**
 - ⬜ phase-15-security-permissions.md **[NEW - Capability-based security]**
 
-### 1. Standard Library (3/15) - Complete API (150+ functions)
+### 1. Standard Library (4/15) - Complete API (150+ functions)
 - ✅ phase-01-complete-string-api.md (18 functions)
 - ✅ phase-02-complete-array-api.md (21 functions)
 - ✅ phase-03-complete-math-api.md (18 functions + 5 constants)
-- ⬜ phase-04-json-type-utilities.md (17 functions)
+- ✅ phase-04-json-type-utilities.md (17 functions)
 - ⬜ phase-05-complete-file-io-api.md (10 functions)
 - ⬜ phase-06-stdlib-integration-tests.md
 - ⬜ phase-07-collections.md **[NEW - HashMap, HashSet, Queue, Stack]**
@@ -188,7 +188,7 @@ v0.2 transforms Atlas into a production-ready language:
 - ⬜ phase-04-stability-verification.md
 - ⬜ phase-05-v02-milestone-completion.md
 
-**Total v0.2 Progress:** 2/68 phases (2.9%)
+**Total v0.2 Progress:** 4/68 phases (5.9%)
 
 ---
 
