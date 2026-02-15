@@ -132,6 +132,10 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
             }
+            Item::Extern(_) => {
+                // Extern type checking handled in phase-10b (FFI infrastructure)
+                // For now, just skip - full implementation pending
+            }
         }
     }
 

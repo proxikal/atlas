@@ -311,6 +311,10 @@ impl Binder {
                     }
                 }
             }
+            Item::Extern(_) => {
+                // Extern binding handled in phase-10b (FFI infrastructure)
+                // For now, just skip - full implementation pending
+            }
         }
     }
 
@@ -336,6 +340,10 @@ impl Binder {
                         self.bind_statement(&crate::ast::Stmt::VarDecl(var.clone()));
                     }
                 }
+            }
+            Item::Extern(_) => {
+                // Extern binding handled in phase-10b (FFI infrastructure)
+                // For now, just skip - full implementation pending
             }
         }
     }

@@ -58,12 +58,14 @@ impl Parser {
 
     // === Top-level parsing ===
 
-    /// Parse a top-level item (function, statement, import, or export)
+    /// Parse a top-level item (function, statement, import, export, or extern)
     fn parse_item(&mut self) -> Result<Item, ()> {
         if self.check(TokenKind::Import) {
             Ok(Item::Import(self.parse_import()?))
         } else if self.check(TokenKind::Export) {
             Ok(Item::Export(self.parse_export()?))
+        } else if self.check(TokenKind::Extern) {
+            Ok(Item::Extern(self.parse_extern()?))
         } else if self.check(TokenKind::Fn) {
             Ok(Item::Function(self.parse_function()?))
         } else {
@@ -249,6 +251,96 @@ impl Parser {
             item,
             span: export_span.merge(end_span),
         })
+    }
+
+    /// Parse an extern declaration (FFI function)
+    ///
+    /// Syntax: `extern "library" fn foo(x: CInt) -> CDouble;`
+    ///         `extern "library" fn foo as "symbol_name"(x: CInt) -> CDouble;`
+    fn parse_extern(&mut self) -> Result<ExternDecl, ()> {
+        let extern_span = self.consume(TokenKind::Extern, "Expected 'extern'")?.span;
+
+        // Parse library name (required string literal)
+        let library_token = self.consume(TokenKind::String, "Expected library name string")?;
+        let library = library_token.lexeme.clone();
+
+        // Expect 'fn' keyword
+        self.consume(TokenKind::Fn, "Expected 'fn' after library name")?;
+
+        // Parse function name
+        let name_token = self.consume_identifier("a function name")?;
+        let name = name_token.lexeme.clone();
+
+        // Optional symbol renaming: as "actual_symbol"
+        let symbol = if self.match_token(TokenKind::As) {
+            let symbol_token = self.consume(TokenKind::String, "Expected symbol name string after 'as'")?;
+            Some(symbol_token.lexeme.clone())
+        } else {
+            None
+        };
+
+        // Parse parameters
+        self.consume(TokenKind::LeftParen, "Expected '(' after function name")?;
+
+        let mut params = Vec::new();
+        if !self.check(TokenKind::RightParen) {
+            loop {
+                let param_name_tok = self.consume_identifier("a parameter name")?;
+                let param_name = param_name_tok.lexeme.clone();
+
+                self.consume(TokenKind::Colon, "Expected ':' after parameter name")?;
+
+                // Parse extern type annotation (CInt, CDouble, etc.)
+                let type_annotation = self.parse_extern_type()?;
+
+                params.push((param_name, type_annotation));
+
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
+        }
+
+        self.consume(TokenKind::RightParen, "Expected ')' after parameters")?;
+
+        // Parse return type (required)
+        self.consume(TokenKind::Arrow, "Expected '->' for return type")?;
+        let return_type = self.parse_extern_type()?;
+
+        // Consume the semicolon
+        let end_span = self
+            .consume(TokenKind::Semicolon, "Expected ';' after extern declaration")?
+            .span;
+
+        Ok(ExternDecl {
+            name,
+            library,
+            symbol,
+            params,
+            return_type,
+            span: extern_span.merge(end_span),
+        })
+    }
+
+    /// Parse an extern type annotation (CInt, CDouble, CVoid, etc.)
+    fn parse_extern_type(&mut self) -> Result<ExternTypeAnnotation, ()> {
+        let type_token = self.consume_identifier("an extern type")?;
+
+        let extern_type = match type_token.lexeme.as_str() {
+            "CInt" => ExternTypeAnnotation::CInt,
+            "CLong" => ExternTypeAnnotation::CLong,
+            "CDouble" => ExternTypeAnnotation::CDouble,
+            "CCharPtr" => ExternTypeAnnotation::CCharPtr,
+            "CVoid" => ExternTypeAnnotation::CVoid,
+            "CBool" => ExternTypeAnnotation::CBool,
+            other => {
+                let error_msg = format!("Unknown extern type '{}'. Valid types: CInt, CLong, CDouble, CCharPtr, CVoid, CBool", other);
+                self.error(&error_msg);
+                return Err(());
+            }
+        };
+
+        Ok(extern_type)
     }
 
     // === Helper methods ===

@@ -56,13 +56,14 @@ impl From<Program> for VersionedProgram {
     }
 }
 
-/// Top-level item (function, statement, import, or export)
+/// Top-level item (function, statement, import, export, or extern)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Item {
     Function(FunctionDecl),
     Statement(Stmt),
     Import(ImportDecl),
     Export(ExportDecl),
+    Extern(ExternDecl),
 }
 
 /// Import declaration
@@ -103,6 +104,30 @@ pub enum ExportItem {
     Function(FunctionDecl),
     /// Export variable: `export let x = 5`
     Variable(VarDecl),
+}
+
+/// Extern function declaration (FFI)
+///
+/// Syntax: `extern fn name(param: c_type, ...) -> c_type from "library"`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExternDecl {
+    pub name: String,
+    pub library: String,
+    pub symbol: Option<String>,  // Optional symbol name (if different from name)
+    pub params: Vec<(String, ExternTypeAnnotation)>,
+    pub return_type: ExternTypeAnnotation,
+    pub span: Span,
+}
+
+/// Extern type annotation for FFI signatures
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ExternTypeAnnotation {
+    CInt,
+    CLong,
+    CDouble,
+    CCharPtr,
+    CVoid,
+    CBool,
 }
 
 /// Function declaration

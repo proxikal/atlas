@@ -134,6 +134,11 @@ impl Compiler {
                     }
                 }
             }
+            Item::Extern(_) => {
+                // Extern declarations don't generate bytecode - they're loaded at runtime
+                // Full implementation in phase-10b (FFI infrastructure)
+                Ok(())
+            }
         }
     }
 

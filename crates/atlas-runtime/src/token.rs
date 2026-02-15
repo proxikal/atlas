@@ -73,6 +73,8 @@ pub enum TokenKind {
     Export,
     /// `from` keyword (used in import statements)
     From,
+    /// `extern` keyword (FFI declarations)
+    Extern,
 
     // Pattern matching (v0.2+)
     /// `match` keyword
@@ -187,6 +189,7 @@ impl TokenKind {
             "import" => Some(TokenKind::Import),
             "export" => Some(TokenKind::Export),
             "from" => Some(TokenKind::From),
+            "extern" => Some(TokenKind::Extern),
             "match" => Some(TokenKind::Match),
             "as" => Some(TokenKind::As),
             _ => None,
@@ -215,6 +218,7 @@ impl TokenKind {
             TokenKind::Import => "import",
             TokenKind::Export => "export",
             TokenKind::From => "from",
+            TokenKind::Extern => "extern",
             TokenKind::Match => "match",
             TokenKind::As => "as",
             TokenKind::Plus => "+",

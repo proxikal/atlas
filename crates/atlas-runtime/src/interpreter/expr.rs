@@ -273,6 +273,15 @@ impl Interpreter {
                     _ => {}
                 }
 
+                // Extern function - check if it's an FFI function
+                if let Some(extern_fn) = self.extern_functions.get(&func_ref.name) {
+                    // Call the extern function using FFI
+                    return unsafe { extern_fn.call(&args) }.map_err(|e| RuntimeError::TypeError {
+                        msg: format!("FFI call error: {}", e),
+                        span: call.span,
+                    });
+                }
+
                 // User-defined function - look up body
                 if let Some(func) = self.function_bodies.get(&func_ref.name).cloned() {
                     return self.call_user_function(&func, args, call.span);

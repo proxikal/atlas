@@ -11,6 +11,7 @@ mod expr;
 mod stmt;
 
 use crate::ast::{Block, Item, Param, Program};
+use crate::ffi::{ExternFunction, LibraryLoader};
 use crate::value::{FunctionRef, RuntimeError, Value};
 use std::collections::HashMap;
 
@@ -48,6 +49,10 @@ pub struct Interpreter {
     pub(super) current_security: Option<*const crate::security::SecurityContext>,
     /// Counter for generating unique nested function names
     next_func_id: usize,
+    /// FFI library loader (phase-10b)
+    library_loader: LibraryLoader,
+    /// Loaded extern functions (phase-10b)
+    extern_functions: HashMap<String, ExternFunction>,
 }
 
 impl Interpreter {
@@ -61,6 +66,8 @@ impl Interpreter {
             monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
             current_security: None,
             next_func_id: 0,
+            library_loader: LibraryLoader::new(),
+            extern_functions: HashMap::new(),
         };
 
         // Register builtin functions in globals
@@ -180,10 +187,81 @@ impl Interpreter {
                         }
                     }
                 }
+                Item::Extern(extern_decl) => {
+                    // Load the dynamic library
+                    self.library_loader
+                        .load(&extern_decl.library)
+                        .map_err(|e| RuntimeError::TypeError {
+                            msg: format!("Failed to load library '{}': {}", extern_decl.library, e),
+                            span: extern_decl.span,
+                        })?;
+
+                    // Determine the symbol name (use 'as' name if provided, otherwise function name)
+                    let symbol_name = extern_decl
+                        .symbol
+                        .as_ref()
+                        .unwrap_or(&extern_decl.name);
+
+                    // Look up the function symbol
+                    let fn_ptr = unsafe {
+                        self.library_loader
+                            .lookup_symbol::<*const ()>(&extern_decl.library, symbol_name)
+                            .map_err(|e| RuntimeError::TypeError {
+                                msg: format!(
+                                    "Failed to find symbol '{}' in library '{}': {}",
+                                    symbol_name, extern_decl.library, e
+                                ),
+                                span: extern_decl.span,
+                            })?
+                    };
+
+                    // Convert parameter types from AST to FFI types
+                    let param_types: Vec<crate::ffi::ExternType> = extern_decl
+                        .params
+                        .iter()
+                        .map(|(_, ty)| Self::convert_extern_type_annotation(ty))
+                        .collect();
+
+                    let return_type = Self::convert_extern_type_annotation(&extern_decl.return_type);
+
+                    // Create ExternFunction
+                    let extern_fn = unsafe {
+                        ExternFunction::new(*fn_ptr, param_types, return_type)
+                    };
+
+                    // Store the extern function
+                    self.extern_functions
+                        .insert(extern_decl.name.clone(), extern_fn);
+
+                    // Register as a callable global
+                    let func_value = Value::Function(FunctionRef {
+                        name: extern_decl.name.clone(),
+                        arity: extern_decl.params.len(),
+                        bytecode_offset: 0, // Not used for extern functions
+                        local_count: 0,     // Not used for extern functions
+                    });
+                    self.globals.insert(extern_decl.name.clone(), func_value);
+                    last_value = Value::Null;
+                }
             }
         }
 
         Ok(last_value)
+    }
+
+    /// Convert ExternTypeAnnotation (AST) to ExternType (FFI runtime)
+    fn convert_extern_type_annotation(annotation: &crate::ast::ExternTypeAnnotation) -> crate::ffi::ExternType {
+        use crate::ast::ExternTypeAnnotation;
+        use crate::ffi::ExternType;
+
+        match annotation {
+            ExternTypeAnnotation::CInt => ExternType::CInt,
+            ExternTypeAnnotation::CLong => ExternType::CLong,
+            ExternTypeAnnotation::CDouble => ExternType::CDouble,
+            ExternTypeAnnotation::CCharPtr => ExternType::CCharPtr,
+            ExternTypeAnnotation::CVoid => ExternType::CVoid,
+            ExternTypeAnnotation::CBool => ExternType::CBool,
+        }
     }
 
     /// Get a variable value
