@@ -2,11 +2,11 @@
 
 # Build binary
 build:
-	go build -o bin/status-manager ./cmd/status-manager
+	CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/atlas-dev ./cmd/atlas-dev
 
 # Install to PATH
 install:
-	go install ./cmd/status-manager
+	CGO_ENABLED=0 go install -ldflags="-w -s" ./cmd/atlas-dev
 
 # Run tests
 test:
@@ -18,7 +18,7 @@ clean:
 
 # Development: build and run
 dev: build
-	./bin/status-manager
+	./bin/atlas-dev
 
 # Format code
 fmt:
@@ -30,4 +30,4 @@ lint:
 
 # Show version
 version:
-	@echo "status-manager v1.0.0"
+	@echo "atlas-dev v1.0.0"
