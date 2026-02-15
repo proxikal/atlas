@@ -8,13 +8,13 @@
 ## 🎯 Current Phase
 
 **Version:** v0.2 (building production infrastructure)
-**Last Completed:** phases/foundation/phase-17-method-call-syntax-backend.md
-**Next Phase:** phases/foundation/phase-01-runtime-api-expansion.md
+**Last Completed:** phases/foundation/phase-01-runtime-api-expansion.md
+**Next Phase:** phases/foundation/phase-04-configuration-system.md
 
 **🚨 CRITICAL: Foundation must be completed before continuing stdlib/frontend/CLI**
 
-**Real Progress:** 2/68 phases complete (3%)
-- Foundation: 2/17 (only method call syntax - was emergency blocker fix)
+**Real Progress:** 3/68 phases complete (4%)
+- Foundation: 3/17 (method call syntax + runtime API)
 - Stdlib: 5/15 (will hit foundation blockers at phase 10)
 - Everything else: Blocked by foundation
 
@@ -113,9 +113,9 @@ v0.2 transforms Atlas into a production-ready language:
 **Completed:**
 - ✅ phase-16-method-call-syntax-frontend.md **[Emergency blocker fix - not planned foundation]**
 - ✅ phase-17-method-call-syntax-backend.md **[Emergency blocker fix - not planned foundation]**
+- ✅ phase-01-runtime-api-expansion.md **[Runtime API with conversion traits, 151 tests]**
 
 **Critical Path (do in this order to unblock v0.2):**
-- ⬜ phase-01-runtime-api-expansion.md **[NEXT - No blockers]**
 - ⬜ phase-04-configuration-system.md **[No blockers]**
 - ⬜ phase-06-module-system-core.md **[No blockers]**
 - ⬜ phase-09-error-handling-primitives.md **[No blockers - Result types]**
@@ -202,9 +202,9 @@ v0.2 transforms Atlas into a production-ready language:
 - ⬜ phase-04-stability-verification.md
 - ⬜ phase-05-v02-milestone-completion.md
 
-**Total v0.2 Progress:** 7/68 phases (10.3%) - **MISLEADING: 5 stdlib phases will hit blockers**
-**Real Progress:** 2/68 phases (3%) - Only foundation phases 16-17 truly complete
-**Foundation Status:** 2/17 phases (12%) - **MUST complete before v0.2 can proceed**
+**Total v0.2 Progress:** 8/68 phases (11.8%) - **MISLEADING: 5 stdlib phases will hit blockers**
+**Real Progress:** 3/68 phases (4%) - Foundation phases 01, 16-17 complete
+**Foundation Status:** 3/17 phases (18%) - **MUST complete before v0.2 can proceed**
 **Next Critical Path:** Complete foundation phases 01, 04, 06, 09 to unblock most of v0.2
 
 ---
