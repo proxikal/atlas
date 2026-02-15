@@ -11,7 +11,7 @@ mod expr;
 mod stmt;
 
 use crate::ast::{Block, Item, Param, Program};
-use crate::ffi::{ExternFunction, LibraryLoader};
+use crate::ffi::{CallbackHandle, ExternFunction, LibraryLoader};
 use crate::value::{FunctionRef, RuntimeError, Value};
 use std::collections::HashMap;
 
@@ -53,6 +53,8 @@ pub struct Interpreter {
     library_loader: LibraryLoader,
     /// Loaded extern functions (phase-10b)
     extern_functions: HashMap<String, ExternFunction>,
+    /// Registered callbacks for C→Atlas calls (phase-10c)
+    callbacks: Vec<CallbackHandle>,
 }
 
 impl Interpreter {
@@ -68,6 +70,7 @@ impl Interpreter {
             next_func_id: 0,
             library_loader: LibraryLoader::new(),
             extern_functions: HashMap::new(),
+            callbacks: Vec::new(),
         };
 
         // Register builtin functions in globals
@@ -421,6 +424,114 @@ impl Interpreter {
     /// Define a global variable (for testing/REPL)
     pub fn define_global(&mut self, name: String, value: Value) {
         self.globals.insert(name, value);
+    }
+
+    /// Create a C-callable callback for an Atlas function (phase-10c)
+    ///
+    /// Returns a function pointer that C code can call. The callback will:
+    /// 1. Receive C arguments
+    /// 2. Marshal them to Atlas values
+    /// 3. Call the Atlas function
+    /// 4. Marshal the result back to C
+    /// 5. Return to C code
+    ///
+    /// # Errors
+    ///
+    /// Returns error if:
+    /// - Function doesn't exist
+    /// - Signature is invalid or unsupported
+    /// - Marshaling fails
+    pub fn create_callback(
+        &mut self,
+        function_name: &str,
+        param_types: Vec<crate::ffi::ExternType>,
+        return_type: crate::ffi::ExternType,
+    ) -> Result<*const (), RuntimeError> {
+        use crate::ffi::create_callback;
+
+        // Verify function exists
+        if !self.function_bodies.contains_key(function_name) {
+            return Err(RuntimeError::TypeError {
+                msg: format!("Function '{}' not found", function_name),
+                span: crate::span::Span::dummy(),
+            });
+        }
+
+        // Get function for closure
+        let fn_name = function_name.to_string();
+        let function_bodies = self.function_bodies.clone();
+        let globals = self.globals.clone();
+
+        // Create callback that calls interpreter
+        let callback_fn = move |args: &[Value]| -> Result<Value, RuntimeError> {
+            // Create a temporary interpreter for callback execution
+            let mut temp_interp = Interpreter {
+                globals: globals.clone(),
+                locals: vec![HashMap::new()],
+                function_bodies: function_bodies.clone(),
+                control_flow: ControlFlow::None,
+                monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
+                current_security: None,
+                next_func_id: 0,
+                library_loader: LibraryLoader::new(),
+                extern_functions: HashMap::new(),
+                callbacks: Vec::new(),
+            };
+
+            // Get function body
+            let func = temp_interp
+                .function_bodies
+                .get(&fn_name)
+                .ok_or_else(|| RuntimeError::TypeError {
+                    msg: format!("Function '{}' not found", fn_name),
+                    span: crate::span::Span::dummy(),
+                })?
+                .clone();
+
+            // Create new scope for function call
+            temp_interp.push_scope();
+
+            // Bind parameters
+            for (i, param) in func.params.iter().enumerate() {
+                if let Some(arg) = args.get(i) {
+                    temp_interp
+                        .locals
+                        .last_mut()
+                        .unwrap()
+                        .insert(param.name.name.clone(), arg.clone());
+                }
+            }
+
+            // Execute function body
+            let result = temp_interp.eval_block(&func.body)?;
+
+            // Pop scope
+            temp_interp.pop_scope();
+
+            // Handle return value
+            match temp_interp.control_flow {
+                ControlFlow::Return(val) => Ok(val),
+                _ => Ok(result),
+            }
+        };
+
+        // Create callback handle
+        let handle = create_callback(callback_fn, param_types, return_type).map_err(|e| {
+            RuntimeError::TypeError {
+                msg: format!("Failed to create callback: {}", e),
+                span: crate::span::Span::dummy(),
+            }
+        })?;
+
+        let fn_ptr = handle.fn_ptr();
+        self.callbacks.push(handle);
+
+        Ok(fn_ptr)
+    }
+
+    /// Get the number of registered callbacks
+    pub fn callback_count(&self) -> usize {
+        self.callbacks.len()
     }
 }
 

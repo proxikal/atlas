@@ -1,0 +1,175 @@
+//! FFI Examples: Calling C Library Functions
+//!
+//! Demonstrates using extern declarations to call C standard library
+//! and math library functions from Atlas code.
+
+// ===== Example 1: Basic Math Functions =====
+
+extern "m" fn sqrt(x: CDouble) -> CDouble;
+extern "m" fn pow(base: CDouble, exp: CDouble) -> CDouble;
+extern "m" fn ceil(x: CDouble) -> CDouble;
+extern "m" fn floor(x: CDouble) -> CDouble;
+
+fn example_basic_math() -> void {
+    print("=== Example 1: Basic Math ===");
+
+    let result1 = sqrt(16.0);
+    print("sqrt(16) = " + str(result1));  // 4.0
+
+    let result2 = pow(2.0, 10.0);
+    print("2^10 = " + str(result2));  // 1024.0
+
+    let result3 = ceil(3.2);
+    print("ceil(3.2) = " + str(result3));  // 4.0
+
+    let result4 = floor(3.8);
+    print("floor(3.8) = " + str(result4));  // 3.0
+
+    print("");
+}
+
+// ===== Example 2: Trigonometry =====
+
+extern "m" fn sin(x: CDouble) -> CDouble;
+extern "m" fn cos(x: CDouble) -> CDouble;
+extern "m" fn tan(x: CDouble) -> CDouble;
+
+fn example_trigonometry() -> void {
+    print("=== Example 2: Trigonometry ===");
+
+    let angle = 0.5;  // radians
+
+    let s = sin(angle);
+    let c = cos(angle);
+    let t = tan(angle);
+
+    print("sin(0.5) = " + str(s));
+    print("cos(0.5) = " + str(c));
+    print("tan(0.5) = " + str(t));
+
+    // Pythagorean identity: sin^2 + cos^2 = 1
+    let identity = s * s + c * c;
+    print("sin^2 + cos^2 = " + str(identity));  // Should be 1.0
+
+    print("");
+}
+
+// ===== Example 3: Using C Math in Atlas Functions =====
+
+extern "m" fn atan2(y: CDouble, x: CDouble) -> CDouble;
+
+fn distance(x1: number, y1: number, x2: number, y2: number) -> number {
+    let dx = x2 - x1;
+    let dy = y2 - y1;
+    return sqrt(dx * dx + dy * dy);
+}
+
+fn angle_between_points(x1: number, y1: number, x2: number, y2: number) -> number {
+    let dx = x2 - x1;
+    let dy = y2 - y1;
+    return atan2(dy, dx);
+}
+
+fn example_geometry() -> void {
+    print("=== Example 3: Geometry with C Math ===");
+
+    // Distance between (0, 0) and (3, 4)
+    let dist = distance(0.0, 0.0, 3.0, 4.0);
+    print("Distance (0,0) to (3,4) = " + str(dist));  // 5.0
+
+    // Angle from (0, 0) to (1, 1)
+    let angle = angle_between_points(0.0, 0.0, 1.0, 1.0);
+    print("Angle to (1,1) = " + str(angle) + " radians");
+
+    print("");
+}
+
+// ===== Example 4: C Standard Library =====
+
+extern "c" fn abs(x: CInt) -> CInt;
+
+fn example_stdlib() -> void {
+    print("=== Example 4: C Standard Library ===");
+
+    let negative = -42;
+    let absolute = abs(negative);
+    print("abs(-42) = " + str(absolute));  // 42
+
+    print("");
+}
+
+// ===== Example 5: Complex Calculation =====
+
+extern "m" fn log(x: CDouble) -> CDouble;
+extern "m" fn exp(x: CDouble) -> CDouble;
+
+fn compound_interest(principal: number, rate: number, years: number) -> number {
+    // A = P * e^(rt)
+    let exponent = rate * years;
+    let multiplier = exp(exponent);
+    return principal * multiplier;
+}
+
+fn example_compound_interest() -> void {
+    print("=== Example 5: Compound Interest ===");
+
+    // $1000 at 5% for 10 years
+    let principal = 1000.0;
+    let rate = 0.05;
+    let years = 10.0;
+
+    let final_amount = compound_interest(principal, rate, years);
+    print("Principal: $" + str(principal));
+    print("Rate: " + str(rate * 100.0) + "%");
+    print("Years: " + str(years));
+    print("Final Amount: $" + str(final_amount));
+
+    print("");
+}
+
+// ===== Example 6: Error Handling Pattern =====
+
+fn safe_sqrt(x: number) -> Result<number, string> {
+    if (x < 0.0) {
+        return Err("Cannot take square root of negative number");
+    }
+    return Ok(sqrt(x));
+}
+
+fn example_error_handling() -> void {
+    print("=== Example 6: Error Handling ===");
+
+    let result1 = safe_sqrt(16.0);
+    match (result1) {
+        Ok(val) => print("sqrt(16) = " + str(val)),
+        Err(msg) => print("Error: " + msg),
+    }
+
+    let result2 = safe_sqrt(-4.0);
+    match (result2) {
+        Ok(val) => print("sqrt(-4) = " + str(val)),
+        Err(msg) => print("Error: " + msg),
+    }
+
+    print("");
+}
+
+// ===== Main Function =====
+
+fn main() -> void {
+    print("FFI Examples: Calling C Library Functions");
+    print("==========================================");
+    print("");
+
+    example_basic_math();
+    example_trigonometry();
+    example_geometry();
+    example_stdlib();
+    example_compound_interest();
+    example_error_handling();
+
+    print("All examples completed successfully!");
+}
+
+// Run main
+main();
