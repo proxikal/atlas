@@ -29,10 +29,19 @@ fn test_extern_basic_declaration() {
         assert!(extern_decl.symbol.is_none());
         assert_eq!(extern_decl.params.len(), 2);
         assert_eq!(extern_decl.params[0].0, "base");
-        assert!(matches!(extern_decl.params[0].1, ExternTypeAnnotation::CDouble));
+        assert!(matches!(
+            extern_decl.params[0].1,
+            ExternTypeAnnotation::CDouble
+        ));
         assert_eq!(extern_decl.params[1].0, "exp");
-        assert!(matches!(extern_decl.params[1].1, ExternTypeAnnotation::CDouble));
-        assert!(matches!(extern_decl.return_type, ExternTypeAnnotation::CDouble));
+        assert!(matches!(
+            extern_decl.params[1].1,
+            ExternTypeAnnotation::CDouble
+        ));
+        assert!(matches!(
+            extern_decl.return_type,
+            ExternTypeAnnotation::CDouble
+        ));
     } else {
         panic!("Expected extern declaration, got: {:?}", items[0]);
     }
@@ -52,8 +61,14 @@ fn test_extern_with_symbol_renaming() {
         assert_eq!(extern_decl.symbol, Some("strlen".to_string()));
         assert_eq!(extern_decl.params.len(), 1);
         assert_eq!(extern_decl.params[0].0, "s");
-        assert!(matches!(extern_decl.params[0].1, ExternTypeAnnotation::CCharPtr));
-        assert!(matches!(extern_decl.return_type, ExternTypeAnnotation::CLong));
+        assert!(matches!(
+            extern_decl.params[0].1,
+            ExternTypeAnnotation::CCharPtr
+        ));
+        assert!(matches!(
+            extern_decl.return_type,
+            ExternTypeAnnotation::CLong
+        ));
     } else {
         panic!("Expected extern declaration");
     }
@@ -72,7 +87,10 @@ fn test_extern_no_params() {
         assert_eq!(extern_decl.library, "libc");
         assert!(extern_decl.symbol.is_none());
         assert_eq!(extern_decl.params.len(), 0);
-        assert!(matches!(extern_decl.return_type, ExternTypeAnnotation::CInt));
+        assert!(matches!(
+            extern_decl.return_type,
+            ExternTypeAnnotation::CInt
+        ));
     } else {
         panic!("Expected extern declaration");
     }
@@ -91,8 +109,14 @@ fn test_extern_void_return() {
         assert_eq!(extern_decl.library, "libc");
         assert_eq!(extern_decl.params.len(), 1);
         assert_eq!(extern_decl.params[0].0, "code");
-        assert!(matches!(extern_decl.params[0].1, ExternTypeAnnotation::CInt));
-        assert!(matches!(extern_decl.return_type, ExternTypeAnnotation::CVoid));
+        assert!(matches!(
+            extern_decl.params[0].1,
+            ExternTypeAnnotation::CInt
+        ));
+        assert!(matches!(
+            extern_decl.return_type,
+            ExternTypeAnnotation::CVoid
+        ));
     } else {
         panic!("Expected extern declaration");
     }
@@ -151,7 +175,10 @@ fn test_extern_invalid_type_error() {
     let (_items, diagnostics) = parse_program(source);
 
     // Should have a parse error for unknown type
-    assert!(!diagnostics.is_empty(), "Expected parse error for invalid type");
+    assert!(
+        !diagnostics.is_empty(),
+        "Expected parse error for invalid type"
+    );
 }
 
 #[test]

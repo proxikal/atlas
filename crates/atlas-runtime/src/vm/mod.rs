@@ -14,6 +14,7 @@ pub use frame::CallFrame;
 pub use profiler::Profiler;
 
 use crate::bytecode::{Bytecode, Opcode};
+use crate::ffi::{ExternFunction, LibraryLoader};
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
 use std::cell::RefCell;
@@ -38,6 +39,10 @@ pub struct VM {
     debugger: Option<Debugger>,
     /// Security context for current execution (set during run())
     current_security: Option<*const crate::security::SecurityContext>,
+    /// FFI library loader (phase-10b)
+    library_loader: LibraryLoader,
+    /// Loaded extern functions (phase-10b)
+    extern_functions: HashMap<String, ExternFunction>,
 }
 
 impl VM {
@@ -60,6 +65,8 @@ impl VM {
             profiler: None, // Profiling disabled by default
             debugger: None, // Debugging disabled by default
             current_security: None,
+            library_loader: LibraryLoader::new(),
+            extern_functions: HashMap::new(),
         }
     }
 
@@ -93,6 +100,92 @@ impl VM {
         &self.globals
     }
 
+    /// Load extern declarations from AST (phase-10b)
+    ///
+    /// Processes extern function declarations by loading libraries and looking up symbols.
+    /// Must be called before running bytecode that calls extern functions.
+    pub fn load_extern_declarations(
+        &mut self,
+        program: &crate::ast::Program,
+    ) -> Result<(), RuntimeError> {
+        use crate::ast::Item;
+        use crate::value::FunctionRef;
+
+        for item in &program.items {
+            if let Item::Extern(extern_decl) = item {
+                // Load the dynamic library
+                self.library_loader
+                    .load(&extern_decl.library)
+                    .map_err(|e| RuntimeError::TypeError {
+                        msg: format!("Failed to load library '{}': {}", extern_decl.library, e),
+                        span: extern_decl.span,
+                    })?;
+
+                // Determine the symbol name (use 'as' name if provided, otherwise function name)
+                let symbol_name = extern_decl.symbol.as_ref().unwrap_or(&extern_decl.name);
+
+                // Look up the function symbol
+                let fn_ptr = unsafe {
+                    self.library_loader
+                        .lookup_symbol::<*const ()>(&extern_decl.library, symbol_name)
+                        .map_err(|e| RuntimeError::TypeError {
+                            msg: format!(
+                                "Failed to find symbol '{}' in library '{}': {}",
+                                symbol_name, extern_decl.library, e
+                            ),
+                            span: extern_decl.span,
+                        })?
+                };
+
+                // Convert parameter types from AST to FFI types
+                let param_types: Vec<crate::ffi::ExternType> = extern_decl
+                    .params
+                    .iter()
+                    .map(|(_, ty)| convert_extern_type_annotation(ty))
+                    .collect();
+
+                let return_type = convert_extern_type_annotation(&extern_decl.return_type);
+
+                // Create ExternFunction
+                let extern_fn = unsafe { ExternFunction::new(*fn_ptr, param_types, return_type) };
+
+                // Store the extern function
+                self.extern_functions
+                    .insert(extern_decl.name.clone(), extern_fn);
+
+                // Register as a callable global
+                let func_value = Value::Function(FunctionRef {
+                    name: extern_decl.name.clone(),
+                    arity: extern_decl.params.len(),
+                    bytecode_offset: 0, // Not used for extern functions
+                    local_count: 0,     // Not used for extern functions
+                });
+                self.globals.insert(extern_decl.name.clone(), func_value);
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Convert ExternTypeAnnotation (AST) to ExternType (FFI runtime)
+fn convert_extern_type_annotation(
+    annotation: &crate::ast::ExternTypeAnnotation,
+) -> crate::ffi::ExternType {
+    use crate::ast::ExternTypeAnnotation;
+    use crate::ffi::ExternType;
+
+    match annotation {
+        ExternTypeAnnotation::CInt => ExternType::CInt,
+        ExternTypeAnnotation::CLong => ExternType::CLong,
+        ExternTypeAnnotation::CDouble => ExternType::CDouble,
+        ExternTypeAnnotation::CCharPtr => ExternType::CCharPtr,
+        ExternTypeAnnotation::CVoid => ExternType::CVoid,
+        ExternTypeAnnotation::CBool => ExternType::CBool,
+    }
+}
+
+impl VM {
     /// Set the instruction pointer
     ///
     /// Used by Runtime to start execution from a specific offset when
@@ -525,6 +618,28 @@ impl VM {
                                 self.pop(); // Pop function value
 
                                 let result = self.call_array_intrinsic(&func.name, &args)?;
+                                self.push(result);
+                            } else if let Some(extern_fn) =
+                                self.extern_functions.get(&func.name).cloned()
+                            {
+                                // Extern function (FFI call)
+                                let mut args = Vec::with_capacity(arg_count);
+                                for _ in 0..arg_count {
+                                    args.push(self.pop());
+                                }
+                                args.reverse(); // Args were pushed in reverse order
+                                self.pop(); // Pop function value
+
+                                // Call the extern function
+                                let result = unsafe { extern_fn.call(&args) }.map_err(|e| {
+                                    RuntimeError::TypeError {
+                                        msg: format!("FFI call error: {}", e),
+                                        span: self
+                                            .current_span()
+                                            .unwrap_or_else(crate::span::Span::dummy),
+                                    }
+                                })?;
+
                                 self.push(result);
                             } else if func.bytecode_offset == 0
                                 || crate::stdlib::is_builtin(&func.name)

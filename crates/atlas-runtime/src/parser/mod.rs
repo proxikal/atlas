@@ -273,7 +273,8 @@ impl Parser {
 
         // Optional symbol renaming: as "actual_symbol"
         let symbol = if self.match_token(TokenKind::As) {
-            let symbol_token = self.consume(TokenKind::String, "Expected symbol name string after 'as'")?;
+            let symbol_token =
+                self.consume(TokenKind::String, "Expected symbol name string after 'as'")?;
             Some(symbol_token.lexeme.clone())
         } else {
             None
@@ -309,7 +310,10 @@ impl Parser {
 
         // Consume the semicolon
         let end_span = self
-            .consume(TokenKind::Semicolon, "Expected ';' after extern declaration")?
+            .consume(
+                TokenKind::Semicolon,
+                "Expected ';' after extern declaration",
+            )?
             .span;
 
         Ok(ExternDecl {

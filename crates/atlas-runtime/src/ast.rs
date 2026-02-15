@@ -113,7 +113,7 @@ pub enum ExportItem {
 pub struct ExternDecl {
     pub name: String,
     pub library: String,
-    pub symbol: Option<String>,  // Optional symbol name (if different from name)
+    pub symbol: Option<String>, // Optional symbol name (if different from name)
     pub params: Vec<(String, ExternTypeAnnotation)>,
     pub return_type: ExternTypeAnnotation,
     pub span: Span,

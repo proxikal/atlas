@@ -1,10 +1,11 @@
-//! Integration tests for FFI interpreter execution (phase-10b)
+//! Integration tests for FFI VM execution (phase-10b)
 
-use atlas_runtime::interpreter::Interpreter;
+use atlas_runtime::compiler::Compiler;
 use atlas_runtime::lexer::Lexer;
 use atlas_runtime::parser::Parser;
 use atlas_runtime::security::SecurityContext;
 use atlas_runtime::value::Value;
+use atlas_runtime::vm::VM;
 
 fn run_program(source: &str) -> Result<Value, String> {
     // Parse
@@ -20,12 +21,23 @@ fn run_program(source: &str) -> Result<Value, String> {
         return Err(format!("Parser errors: {:?}", parse_diags));
     }
 
+    // Compile
+    let mut compiler = Compiler::new();
+    let bytecode = compiler
+        .compile(&program)
+        .map_err(|e| format!("Compiler error: {:?}", e))?;
+
     // Execute
-    let mut interpreter = Interpreter::new();
+    let mut vm = VM::new(bytecode);
     let security = SecurityContext::default();
-    interpreter
-        .eval(&program, &security)
+
+    // Load extern declarations BEFORE running bytecode
+    vm.load_extern_declarations(&program)
+        .map_err(|e| format!("Extern loading error: {}", e))?;
+
+    vm.run(&security)
         .map_err(|e| format!("Runtime error: {}", e))
+        .map(|opt| opt.unwrap_or(Value::Null))
 }
 
 #[test]

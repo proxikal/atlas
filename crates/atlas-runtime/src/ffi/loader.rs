@@ -127,9 +127,9 @@ impl LibraryLoader {
 
         // Platform-specific prefixes (try both with and without "lib" prefix)
         let prefixes = if cfg!(target_os = "windows") {
-            vec!["", "lib"]  // Windows rarely uses "lib" prefix but try it
+            vec!["", "lib"] // Windows rarely uses "lib" prefix but try it
         } else {
-            vec!["lib", ""]  // Unix prefers "lib" prefix
+            vec!["lib", ""] // Unix prefers "lib" prefix
         };
 
         // Try each combination in search paths
@@ -176,9 +176,8 @@ impl LibraryLoader {
         }
 
         // Load library
-        let library = unsafe {
-            Library::new(&path).map_err(|e| LoadError::LoadFailed(e.to_string()))?
-        };
+        let library =
+            unsafe { Library::new(&path).map_err(|e| LoadError::LoadFailed(e.to_string()))? };
 
         self.loaded.insert(path.clone(), library);
         Ok(&self.loaded[&path])
@@ -204,19 +203,16 @@ impl LibraryLoader {
 
         // Get loaded library
         let library = self.loaded.get(&path).ok_or_else(|| {
-            LoadError::LibraryNotFound(format!(
-                "{} (not loaded - call load() first)",
-                library_name
-            ))
+            LoadError::LibraryNotFound(format!("{} (not loaded - call load() first)", library_name))
         })?;
 
         // Lookup symbol
-        library.get(symbol_name.as_bytes()).map_err(|_| {
-            LoadError::SymbolNotFound {
+        library
+            .get(symbol_name.as_bytes())
+            .map_err(|_| LoadError::SymbolNotFound {
                 library: library_name.to_string(),
                 symbol: symbol_name.to_string(),
-            }
-        })
+            })
     }
 
     /// Add a custom search path (prepended to search list)
@@ -267,7 +263,9 @@ mod tests {
 
         #[cfg(target_os = "windows")]
         {
-            assert!(paths.iter().any(|p| p.to_str().unwrap().contains("System32")));
+            assert!(paths
+                .iter()
+                .any(|p| p.to_str().unwrap().contains("System32")));
         }
     }
 

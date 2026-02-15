@@ -47,6 +47,7 @@ impl From<MarshalError> for CallError {
 /// Extern function metadata and call handler
 ///
 /// Stores the function pointer and signature for type-safe FFI calls.
+#[derive(Clone)]
 pub struct ExternFunction {
     /// Raw function pointer (type-erased)
     fn_ptr: *const (),
@@ -159,8 +160,7 @@ impl ExternFunction {
             }
             "(CCharPtr)->CInt" => {
                 if let CType::CharPtr(a) = &args[0] {
-                    let f: extern "C" fn(*const c_char) -> c_int =
-                        std::mem::transmute(self.fn_ptr);
+                    let f: extern "C" fn(*const c_char) -> c_int = std::mem::transmute(self.fn_ptr);
                     Ok(CType::Int(f(*a)))
                 } else {
                     unreachable!()
@@ -179,8 +179,7 @@ impl ExternFunction {
             }
             "(CInt,CInt)->CInt" => {
                 if let (CType::Int(a), CType::Int(b)) = (&args[0], &args[1]) {
-                    let f: extern "C" fn(c_int, c_int) -> c_int =
-                        std::mem::transmute(self.fn_ptr);
+                    let f: extern "C" fn(c_int, c_int) -> c_int = std::mem::transmute(self.fn_ptr);
                     Ok(CType::Int(f(*a, *b)))
                 } else {
                     unreachable!()
@@ -263,11 +262,7 @@ mod tests {
     #[test]
     fn test_extern_function_no_args() {
         unsafe {
-            let func = ExternFunction::new(
-                test_no_args as *const (),
-                vec![],
-                ExternType::CInt,
-            );
+            let func = ExternFunction::new(test_no_args as *const (), vec![], ExternType::CInt);
 
             let result = func.call(&[]).unwrap();
             assert_eq!(result, Value::Number(42.0));

@@ -197,10 +197,7 @@ impl Interpreter {
                         })?;
 
                     // Determine the symbol name (use 'as' name if provided, otherwise function name)
-                    let symbol_name = extern_decl
-                        .symbol
-                        .as_ref()
-                        .unwrap_or(&extern_decl.name);
+                    let symbol_name = extern_decl.symbol.as_ref().unwrap_or(&extern_decl.name);
 
                     // Look up the function symbol
                     let fn_ptr = unsafe {
@@ -222,12 +219,12 @@ impl Interpreter {
                         .map(|(_, ty)| Self::convert_extern_type_annotation(ty))
                         .collect();
 
-                    let return_type = Self::convert_extern_type_annotation(&extern_decl.return_type);
+                    let return_type =
+                        Self::convert_extern_type_annotation(&extern_decl.return_type);
 
                     // Create ExternFunction
-                    let extern_fn = unsafe {
-                        ExternFunction::new(*fn_ptr, param_types, return_type)
-                    };
+                    let extern_fn =
+                        unsafe { ExternFunction::new(*fn_ptr, param_types, return_type) };
 
                     // Store the extern function
                     self.extern_functions
@@ -250,7 +247,9 @@ impl Interpreter {
     }
 
     /// Convert ExternTypeAnnotation (AST) to ExternType (FFI runtime)
-    fn convert_extern_type_annotation(annotation: &crate::ast::ExternTypeAnnotation) -> crate::ffi::ExternType {
+    fn convert_extern_type_annotation(
+        annotation: &crate::ast::ExternTypeAnnotation,
+    ) -> crate::ffi::ExternType {
         use crate::ast::ExternTypeAnnotation;
         use crate::ffi::ExternType;
 
