@@ -8,8 +8,8 @@
 ## 🎯 Current Phase
 
 **Version:** v0.2 (adding depth to v0.1 foundation)
-**Last Completed:** phases/foundation/phase-17-method-call-syntax-backend.md
-**Next Phase:** Continue v0.2 stdlib/foundation phases
+**Last Completed:** phases/stdlib/phase-05-complete-file-io-api.md
+**Next Phase:** phases/stdlib/phase-06-stdlib-integration-tests.md
 
 **✅ ALL FOUNDATION BLOCKERS COMPLETE:** Method call syntax fully implemented (Phases 16-17). JSON extraction methods now available.
 
