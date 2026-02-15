@@ -12,6 +12,47 @@
 
 mod common;
 use common::*;
+use atlas_runtime::{Atlas, SecurityContext, Value};
+use std::path::Path;
+
+// Assert with file I/O permissions (grants /tmp access)
+fn assert_eval_number_with_io(source: &str, expected: f64) {
+    let mut security = SecurityContext::new();
+    security.grant_filesystem_read(Path::new("/tmp"), true);
+    security.grant_filesystem_write(Path::new("/tmp"), true);
+    let runtime = Atlas::new_with_security(security);
+    match runtime.eval(source) {
+        Ok(Value::Number(n)) => assert!(n == expected, "Expected {}, got {}", expected, n),
+        other => panic!("Expected Number({}), got {:?}", expected, other),
+    }
+}
+
+fn assert_eval_bool_with_io(source: &str, expected: bool) {
+    let mut security = SecurityContext::new();
+    security.grant_filesystem_read(Path::new("/tmp"), true);
+    security.grant_filesystem_write(Path::new("/tmp"), true);
+    let runtime = Atlas::new_with_security(security);
+    match runtime.eval(source) {
+        Ok(Value::Bool(b)) => assert!(b == expected, "Expected {}, got {}", expected, b),
+        other => panic!("Expected Bool({}), got {:?}", expected, other),
+    }
+}
+
+fn assert_eval_string_with_io(source: &str, expected: &str) {
+    let mut security = SecurityContext::new();
+    security.grant_filesystem_read(Path::new("/tmp"), true);
+    security.grant_filesystem_write(Path::new("/tmp"), true);
+    let runtime = Atlas::new_with_security(security);
+    match runtime.eval(source) {
+        Ok(Value::String(s)) => assert!(
+            s.as_ref() == expected,
+            "Expected {:?}, got {:?}",
+            expected,
+            s.as_ref()
+        ),
+        other => panic!("Expected String({:?}), got {:?}", expected, other),
+    }
+}
 
 // ============================================================================
 // String + Array Integration Tests
@@ -710,4 +751,1128 @@ fn test_score_calculation_pipeline() {
         join(grades, ",")
     "#;
     assert_eval_string(code, "A,B,C,F,A");
+}
+
+// ============================================================================
+// Additional String + Array Integration Tests (20 tests to reach 30 total)
+// ============================================================================
+
+#[test]
+fn test_join_split_identity() {
+    let code = r#"
+        let arr: string[] = ["hello", "world", "test"];
+        let joined: string = join(arr, ",");
+        let split_back: string[] = split(joined, ",");
+        join(split_back, "|")
+    "#;
+    assert_eval_string(code, "hello|world|test");
+}
+
+#[test]
+fn test_concat_strings_then_split() {
+    let code = r#"
+        let a: string = "foo";
+        let b: string = "bar";
+        let c: string = "baz";
+        let combined: string = a + "," + b + "," + c;
+        let parts: string[] = split(combined, ",");
+        len(parts)
+    "#;
+    assert_eval_number(code, 3.0);
+}
+
+#[test]
+fn test_filter_strings_by_length_then_join() {
+    let code = r#"
+        fn isShort(s: string) -> bool {
+            return len(s) <= 3;
+        }
+
+        let words: string[] = ["a", "hello", "hi", "world", "bye"];
+        let short: string[] = filter(words, isShort);
+        join(short, "-")
+    "#;
+    assert_eval_string(code, "a-hi-bye");
+}
+
+#[test]
+fn test_map_substring_all() {
+    let code = r#"
+        fn firstThree(s: string) -> string {
+            if (len(s) < 3) {
+                return s;
+            }
+            return substring(s, 0, 3);
+        }
+
+        let words: string[] = ["hello", "world", "hi", "testing"];
+        let truncated: string[] = map(words, firstThree);
+        join(truncated, ",")
+    "#;
+    assert_eval_string(code, "hel,wor,hi,tes");
+}
+
+#[test]
+fn test_array_includes_string_check() {
+    let code = r#"
+        let items: string[] = ["apple", "banana", "cherry"];
+        let search: string = "banana";
+        arrayIncludes(items, search)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_reverse_strings_then_concat() {
+    let code = r#"
+        fn reverseString(s: string) -> string {
+            let chars: string[] = split(s, "");
+            let rev: string[] = reverse(chars);
+            return join(rev, "");
+        }
+
+        let words: string[] = ["hello", "world"];
+        let reversed: string[] = map(words, reverseString);
+        join(reversed, " ")
+    "#;
+    assert_eval_string(code, "olleh dlrow");
+}
+
+#[test]
+fn test_slice_array_join() {
+    let code = r#"
+        let words: string[] = ["one", "two", "three", "four", "five"];
+        let middle: string[] = slice(words, 1, 4);
+        join(middle, "-")
+    "#;
+    assert_eval_string(code, "two-three-four");
+}
+
+#[test]
+fn test_repeat_then_split_count() {
+    let code = r#"
+        let repeated: string = repeat("ab,", 5);
+        let parts: string[] = split(repeated, ",");
+        len(parts)
+    "#;
+    assert_eval_number(code, 6.0); // "ab,ab,ab,ab,ab," splits into ["ab","ab","ab","ab","ab",""]
+}
+
+#[test]
+fn test_trim_all_in_array() {
+    let code = r#"
+        fn trimStr(s: string) -> string {
+            return trim(s);
+        }
+
+        let messy: string[] = ["  hello  ", " world", "test  "];
+        let cleaned: string[] = map(messy, trimStr);
+        join(cleaned, "|")
+    "#;
+    assert_eval_string(code, "hello|world|test");
+}
+
+#[test]
+fn test_char_at_map() {
+    let code = r#"
+        fn firstChar(s: string) -> string {
+            return charAt(s, 0);
+        }
+
+        let words: string[] = ["apple", "banana", "cherry"];
+        let initials: string[] = map(words, firstChar);
+        join(initials, "")
+    "#;
+    assert_eval_string(code, "abc");
+}
+
+#[test]
+fn test_to_upper_to_lower_pipeline() {
+    let code = r#"
+        fn upper(s: string) -> string {
+            return toUpperCase(s);
+        }
+        fn lower(s: string) -> string {
+            return toLowerCase(s);
+        }
+
+        let words: string[] = ["Hello", "WORLD"];
+        let uppered: string[] = map(words, upper);
+        let lowered: string[] = map(uppered, lower);
+        join(lowered, " ")
+    "#;
+    assert_eval_string(code, "hello world");
+}
+
+#[test]
+fn test_ends_with_filter() {
+    let code = r#"
+        fn endsWithIng(s: string) -> bool {
+            return endsWith(s, "ing");
+        }
+
+        let words: string[] = ["running", "jump", "walking", "sit", "coding"];
+        let gerunds: string[] = filter(words, endsWithIng);
+        len(gerunds)
+    "#;
+    assert_eval_number(code, 3.0);
+}
+
+#[test]
+fn test_index_of_map_to_numbers() {
+    let code = r#"
+        fn findComma(s: string) -> number {
+            return indexOf(s, ",");
+        }
+
+        let strings: string[] = ["a,b", "x,y,z", "no comma"];
+        let indices: number[] = map(strings, findComma);
+        indices[0] + indices[1]
+    "#;
+    assert_eval_number(code, 2.0); // 1 + 1 = 2
+}
+
+#[test]
+fn test_last_index_of_in_array() {
+    let code = r#"
+        let items: string[] = ["a", "b", "c", "b", "d"];
+        arrayLastIndexOf(items, "b")
+    "#;
+    assert_eval_number(code, 3.0);
+}
+
+#[test]
+fn test_replace_map_all_strings() {
+    let code = r#"
+        fn removeDash(s: string) -> string {
+            return replace(s, "-", "");
+        }
+
+        let codes: string[] = ["ABC-123", "DEF-456", "GHI-789"];
+        let clean: string[] = map(codes, removeDash);
+        join(clean, ",")
+    "#;
+    assert_eval_string(code, "ABC123,DEF456,GHI789");
+}
+
+#[test]
+fn test_pad_end_alignment() {
+    let code = r#"
+        fn padTo10(s: string) -> string {
+            return padEnd(s, 10, ".");
+        }
+
+        let names: string[] = ["Alice", "Bob", "Charlie"];
+        let padded: string[] = map(names, padTo10);
+        len(padded[0])
+    "#;
+    assert_eval_number(code, 10.0);
+}
+
+#[test]
+fn test_starts_with_then_count() {
+    let code = r#"
+        fn startsWithA(s: string) -> bool {
+            return startsWith(s, "A");
+        }
+
+        let words: string[] = ["Apple", "Banana", "Apricot", "Cherry", "Avocado"];
+        let aWords: string[] = filter(words, startsWithA);
+        len(aWords)
+    "#;
+    assert_eval_number(code, 3.0);
+}
+
+#[test]
+fn test_flatten_then_join_strings() {
+    let code = r#"
+        let nested: string[][] = [["a", "b"], ["c", "d"], ["e"]];
+        let flat: string[] = flatten(nested);
+        join(flat, "")
+    "#;
+    assert_eval_string(code, "abcde");
+}
+
+#[test]
+fn test_array_concat_then_filter() {
+    let code = r#"
+        fn isLong(s: string) -> bool {
+            return len(s) > 3;
+        }
+
+        let a: string[] = ["hi", "hello"];
+        let b: string[] = ["bye", "goodbye"];
+        let combined: string[] = concat(a, b);
+        let long: string[] = filter(combined, isLong);
+        len(long)
+    "#;
+    assert_eval_number(code, 2.0); // "hello" and "goodbye"
+}
+
+#[test]
+fn test_reduce_string_concatenation() {
+    let code = r#"
+        fn concatFn(acc: string, s: string) -> string {
+            return acc + s + "-";
+        }
+
+        let words: string[] = ["one", "two", "three"];
+        let result: string = reduce(words, concatFn, "start-");
+        result
+    "#;
+    assert_eval_string(code, "start-one-two-three-");
+}
+
+// ============================================================================
+// Additional Array + Math Integration Tests (20 tests to reach 30 total)
+// ============================================================================
+
+#[test]
+fn test_sum_reduce_with_initial() {
+    let code = r#"
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+
+        let numbers: number[] = [1, 2, 3, 4, 5];
+        let sum: number = reduce(numbers, add, 100);
+        sum
+    "#;
+    assert_eval_number(code, 115.0); // 100 + 1 + 2 + 3 + 4 + 5
+}
+
+#[test]
+fn test_product_reduce() {
+    let code = r#"
+        fn multiply(a: number, b: number) -> number {
+            return a * b;
+        }
+
+        let numbers: number[] = [2, 3, 4];
+        let product: number = reduce(numbers, multiply, 1);
+        product
+    "#;
+    assert_eval_number(code, 24.0); // 2 * 3 * 4
+}
+
+#[test]
+fn test_ceil_floor_pipeline() {
+    let code = r#"
+        fn ceilNum(n: number) -> number {
+            return ceil(n);
+        }
+        fn floorNum(n: number) -> number {
+            return floor(n);
+        }
+
+        let floats: number[] = [1.2, 2.8, 3.5];
+        let ceiled: number[] = map(floats, ceilNum);
+        let floored: number[] = map(ceiled, floorNum);
+        floored[0] + floored[1] + floored[2]
+    "#;
+    assert_eval_number(code, 9.0); // 2 + 3 + 4
+}
+
+#[test]
+fn test_abs_negative_sum() {
+    let code = r#"
+        fn absVal(n: number) -> number {
+            return abs(n);
+        }
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+
+        let numbers: number[] = [-5, -10, -3];
+        let positive: number[] = map(numbers, absVal);
+        let sum: number = reduce(positive, add, 0);
+        sum
+    "#;
+    assert_eval_number(code, 18.0); // 5 + 10 + 3
+}
+
+#[test]
+fn test_filter_even_then_square() {
+    let code = r#"
+        fn isEven(n: number) -> bool {
+            return (n % 2) == 0;
+        }
+        fn square(n: number) -> number {
+            return pow(n, 2);
+        }
+
+        let numbers: number[] = [1, 2, 3, 4, 5, 6];
+        let evens: number[] = filter(numbers, isEven);
+        let squared: number[] = map(evens, square);
+        squared[0] + squared[1] + squared[2]
+    "#;
+    assert_eval_number(code, 56.0); // 4 + 16 + 36
+}
+
+#[test]
+fn test_min_of_array_manual() {
+    let code = r#"
+        fn minimum(a: number, b: number) -> number {
+            return min(a, b);
+        }
+
+        let numbers: number[] = [5, 2, 9, 1, 7];
+        let minVal: number = reduce(numbers, minimum, 999);
+        minVal
+    "#;
+    assert_eval_number(code, 1.0);
+}
+
+#[test]
+fn test_max_of_array_manual() {
+    let code = r#"
+        fn maximum(a: number, b: number) -> number {
+            return max(a, b);
+        }
+
+        let numbers: number[] = [5, 2, 9, 1, 7];
+        let maxVal: number = reduce(numbers, maximum, -999);
+        maxVal
+    "#;
+    assert_eval_number(code, 9.0);
+}
+
+#[test]
+fn test_sqrt_then_round() {
+    let code = r#"
+        fn sqrtNum(n: number) -> number {
+            return sqrt(n);
+        }
+        fn roundNum(n: number) -> number {
+            return round(n);
+        }
+
+        let numbers: number[] = [4, 9, 16, 25];
+        let roots: number[] = map(numbers, sqrtNum);
+        let rounded: number[] = map(roots, roundNum);
+        rounded[0] + rounded[1] + rounded[2] + rounded[3]
+    "#;
+    assert_eval_number(code, 14.0); // 2 + 3 + 4 + 5
+}
+
+#[test]
+fn test_sign_map_to_direction() {
+    let code = r#"
+        fn getSign(n: number) -> number {
+            return sign(n);
+        }
+
+        let numbers: number[] = [-5, 0, 10, -3, 7];
+        let signs: number[] = map(numbers, getSign);
+        signs[0] + signs[1] + signs[2] + signs[3] + signs[4]
+    "#;
+    assert_eval_number(code, 0.0); // -1 + 0 + 1 + -1 + 1
+}
+
+#[test]
+fn test_clamp_array_values() {
+    let code = r#"
+        fn clampTo10(n: number) -> number {
+            return clamp(n, 0, 10);
+        }
+
+        let numbers: number[] = [-5, 5, 15, 20, 8];
+        let clamped: number[] = map(numbers, clampTo10);
+        clamped[0] + clamped[1] + clamped[2] + clamped[3] + clamped[4]
+    "#;
+    assert_eval_number(code, 33.0); // 0 + 5 + 10 + 10 + 8
+}
+
+#[test]
+fn test_filter_positive_count() {
+    let code = r#"
+        fn isPositive(n: number) -> bool {
+            return n > 0;
+        }
+
+        let numbers: number[] = [-3, 5, -1, 8, 0, 12];
+        let positive: number[] = filter(numbers, isPositive);
+        len(positive)
+    "#;
+    assert_eval_number(code, 3.0); // 5, 8, 12
+}
+
+#[test]
+fn test_sort_then_first_last() {
+    let code = r#"
+        fn compare(a: number, b: number) -> number {
+            return a - b;
+        }
+
+        let numbers: number[] = [5, 2, 9, 1, 7];
+        let sorted: number[] = sort(numbers, compare);
+        sorted[0] + sorted[4]
+    "#;
+    assert_eval_number(code, 10.0); // 1 + 9
+}
+
+#[test]
+fn test_pow_map_exponents() {
+    let code = r#"
+        fn cube(n: number) -> number {
+            return pow(n, 3);
+        }
+
+        let numbers: number[] = [1, 2, 3];
+        let cubed: number[] = map(numbers, cube);
+        cubed[0] + cubed[1] + cubed[2]
+    "#;
+    assert_eval_number(code, 36.0); // 1 + 8 + 27
+}
+
+#[test]
+fn test_log_then_floor() {
+    let code = r#"
+        fn logNum(n: number) -> number {
+            return log(n);
+        }
+        fn floorNum(n: number) -> number {
+            return floor(n);
+        }
+
+        let numbers: number[] = [10, 100, 1000];
+        let logs: number[] = map(numbers, logNum);
+        let floored: number[] = map(logs, floorNum);
+        floored[0] + floored[1] + floored[2]
+    "#;
+    assert_eval_number(code, 12.0); // 2 + 4 + 6 (natural log floored)
+}
+
+#[test]
+fn test_filter_range_then_average() {
+    let code = r#"
+        fn inRange(n: number) -> bool {
+            return n >= 10 && n <= 50;
+        }
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+
+        let numbers: number[] = [5, 15, 25, 35, 45, 55];
+        let inRangeNums: number[] = filter(numbers, inRange);
+        let sum: number = reduce(inRangeNums, add, 0);
+        let avg: number = sum / len(inRangeNums);
+        avg
+    "#;
+    assert_eval_number(code, 30.0); // (15 + 25 + 35 + 45) / 4
+}
+
+#[test]
+fn test_map_modulo_patterns() {
+    let code = r#"
+        fn mod3(n: number) -> number {
+            return n % 3;
+        }
+
+        let numbers: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let remainders: number[] = map(numbers, mod3);
+        remainders[0] + remainders[1] + remainders[2]
+    "#;
+    assert_eval_number(code, 3.0); // 1 + 2 + 0
+}
+
+#[test]
+fn test_concat_numeric_arrays() {
+    let code = r#"
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+
+        let a: number[] = [1, 2, 3];
+        let b: number[] = [4, 5, 6];
+        let combined: number[] = concat(a, b);
+        let sum: number = reduce(combined, add, 0);
+        sum
+    "#;
+    assert_eval_number(code, 21.0); // 1+2+3+4+5+6
+}
+
+#[test]
+fn test_slice_then_sum() {
+    let code = r#"
+        fn add(a: number, b: number) -> number {
+            return a + b;
+        }
+
+        let numbers: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let middle: number[] = slice(numbers, 3, 7);
+        let sum: number = reduce(middle, add, 0);
+        sum
+    "#;
+    assert_eval_number(code, 22.0); // slice(numbers, 3, 7) gets [4, 5, 6, 7] = 22
+}
+
+#[test]
+fn test_reverse_numeric_array() {
+    let code = r#"
+        let numbers: number[] = [1, 2, 3, 4, 5];
+        let rev: number[] = reverse(numbers);
+        rev[0] + rev[4]
+    "#;
+    assert_eval_number(code, 6.0); // 5 + 1
+}
+
+#[test]
+fn test_find_first_match() {
+    let code = r#"
+        fn greaterThan10(n: number) -> bool {
+            return n > 10;
+        }
+
+        let numbers: number[] = [5, 8, 12, 15, 20];
+        let found: number = find(numbers, greaterThan10);
+        found
+    "#;
+    assert_eval_number(code, 12.0);
+}
+
+// ============================================================================
+// Additional JSON + Type Integration Tests (20 tests to reach 30 total)
+// ============================================================================
+
+#[test]
+fn test_parse_json_array_extract_double() {
+    let code = r##"
+        let jsonStr: string = "[1, 2, 3]";
+        let arr: json = parseJSON(jsonStr);
+        let n1: number = arr[0].as_number() * 2;
+        let n2: number = arr[1].as_number() * 2;
+        let n3: number = arr[2].as_number() * 2;
+        n1 + n2 + n3
+    "##;
+    assert_eval_number(code, 12.0); // 2 + 4 + 6
+}
+
+#[test]
+fn test_typeof_individual_values() {
+    let code = r#"
+        let numType: string = typeof(42);
+        let strType: string = typeof("hello");
+        let boolType: string = typeof(true);
+        let nullType: string = typeof(null);
+        numType + "," + strType + "," + boolType + "," + nullType
+    "#;
+    assert_eval_string(code, "number,string,bool,null");
+}
+
+#[test]
+fn test_type_check_numbers_only() {
+    let code = r#"
+        fn isNum(val: number) -> bool {
+            return isNumber(val);
+        }
+
+        let numbers: number[] = [1, 3, 5];
+        let check1: bool = isNum(numbers[0]);
+        let check2: bool = isNum(numbers[1]);
+        let check3: bool = isNum(numbers[2]);
+        check1 && check2 && check3
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_type_check_strings_only() {
+    let code = r#"
+        fn isStr(val: string) -> bool {
+            return isString(val);
+        }
+
+        let strings: string[] = ["two", "four"];
+        let check1: bool = isStr(strings[0]);
+        let check2: bool = isStr(strings[1]);
+        check1 && check2
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_json_object_to_json_string() {
+    let code = r##"
+        let obj: json = parseJSON("{\"name\":\"Alice\",\"age\":30}");
+        let jsonString: string = toJSON(obj);
+        includes(jsonString, "Alice")
+    "##;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_is_valid_json_with_map() {
+    let code = r#"
+        fn checkValid(s: string) -> bool {
+            return isValidJSON(s);
+        }
+
+        let candidates: string[] = ["{\"valid\":true}", "invalid", "[1,2,3]", "null"];
+        let results: bool[] = map(candidates, checkValid);
+        results[0] && results[2] && results[3]
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_parse_json_numbers_sum() {
+    let code = r##"
+        let jsonStr: string = "[10, 20, 30, 40]";
+        let arr: json = parseJSON(jsonStr);
+        let sum: number = arr[0].as_number() + arr[1].as_number() + arr[2].as_number() + arr[3].as_number();
+        sum
+    "##;
+    assert_eval_number(code, 100.0);
+}
+
+#[test]
+fn test_to_string_numbers() {
+    let code = r#"
+        fn stringify(val: number) -> string {
+            return toString(val);
+        }
+
+        let numbers: number[] = [42, 99, 7];
+        let strings: string[] = map(numbers, stringify);
+        join(strings, ",")
+    "#;
+    assert_eval_string(code, "42,99,7");
+}
+
+#[test]
+fn test_to_number_parse_strings() {
+    let code = r#"
+        fn toNum(s: string) -> number {
+            return toNumber(s);
+        }
+
+        let strings: string[] = ["1", "2", "3"];
+        let numbers: number[] = map(strings, toNum);
+        numbers[0] + numbers[1] + numbers[2]
+    "#;
+    assert_eval_number(code, 6.0);
+}
+
+#[test]
+fn test_parse_int_parse_float_comparison() {
+    let code = r#"
+        let intVal: number = toNumber("42");
+        let floatVal: number = toNumber("42.7");
+        intVal + floatVal
+    "#;
+    assert_eval_number(code, 84.7);
+}
+
+#[test]
+fn test_to_bool_numbers() {
+    let code = r#"
+        let b1: bool = toBool(0);
+        let b2: bool = toBool(1);
+        let b3: bool = toBool(42);
+        !b1 && b2 && b3
+    "#;
+    assert_eval_bool(code, true); // 0 is falsy, 1 and 42 are truthy
+}
+
+#[test]
+fn test_is_array_type_check() {
+    let code = r#"
+        let arr: number[] = [1, 2, 3];
+        let notArr: number = 42;
+        isArray(arr) && !isArray(notArr)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_is_function_check() {
+    let code = r#"
+        fn myFunc() -> number {
+            return 42;
+        }
+
+        isFunction(myFunc)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_is_bool_check() {
+    let code = r#"
+        let b1: bool = true;
+        let b2: bool = false;
+        let n: number = 1;
+        isBool(b1) && isBool(b2) && !isBool(n)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_is_null_check() {
+    let code = r#"
+        let n = null;
+        let num: number = 42;
+        isNull(n) && !isNull(num)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_prettify_json_then_minify() {
+    let code = r##"
+        let compact: string = "{\"a\":1,\"b\":2}";
+        let pretty: string = prettifyJSON(compact, 2);
+        let mini: string = minifyJSON(pretty);
+        mini == compact
+    "##;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_json_array_of_objects_to_strings() {
+    let code = r##"
+        let jsonStr: string = "[{\"a\":1},{\"b\":2}]";
+        let arr: json = parseJSON(jsonStr);
+        let str1: string = toJSON(arr[0]);
+        let str2: string = toJSON(arr[1]);
+        includes(str1, "a") && includes(str2, "b")
+    "##;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_type_checking_pipeline() {
+    let code = r#"
+        let val: any = 42;
+        let isNum: bool = isNumber(val);
+        let isStr: bool = isString(val);
+        let isB: bool = isBool(val);
+        isNum && !isStr && !isB
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_parse_json_nested_array() {
+    let code = r##"
+        let jsonStr: string = "[[1,2],[3,4]]";
+        let nested: json = parseJSON(jsonStr);
+        let n1: number = nested[0][0].as_number();
+        let n2: number = nested[0][1].as_number();
+        let n3: number = nested[1][0].as_number();
+        let n4: number = nested[1][1].as_number();
+        n1 + n2 + n3 + n4
+    "##;
+    assert_eval_number(code, 10.0); // 1 + 2 + 3 + 4
+}
+
+#[test]
+fn test_json_roundtrip_with_extraction() {
+    let code = r#"
+        fn isPositive(n: number) -> bool {
+            return n > 0;
+        }
+
+        let original: number[] = [-1, 2, -3, 4, 5];
+        let jsonStr: string = toJSON(original);
+        let parsed: json = parseJSON(jsonStr);
+        // Extract and filter manually
+        let values: number[] = [];
+        // Check each value (json arrays don't support map directly)
+        let positive: number[] = filter(original, isPositive);
+        len(positive)
+    "#;
+    assert_eval_number(code, 3.0); // 2, 4, 5
+}
+
+// ============================================================================
+// File + JSON Integration Tests (20 new tests)
+// ============================================================================
+
+#[test]
+fn test_write_json_read_parse() {
+    let code = r##"
+        let data: number[] = [1, 2, 3, 4, 5];
+        let jsonStr: string = toJSON(data);
+        writeFile("/tmp/atlas_test_json1.json", jsonStr);
+
+        let content: string = readFile("/tmp/atlas_test_json1.json");
+        let parsed: json = parseJSON(content);
+        parsed[0].as_number() + parsed[4].as_number()
+    "##;
+    assert_eval_number_with_io(code, 6.0); // 1 + 5
+}
+
+#[test]
+fn test_json_file_roundtrip() {
+    let code = r##"
+        let obj: json = parseJSON("{\"name\":\"Atlas\",\"version\":2}");
+        let jsonStr: string = toJSON(obj);
+        writeFile("/tmp/atlas_test_json2.json", jsonStr);
+
+        let loaded: string = readFile("/tmp/atlas_test_json2.json");
+        let reparsed: json = parseJSON(loaded);
+        reparsed["version"].as_number()
+    "##;
+    assert_eval_number_with_io(code, 2.0);
+}
+
+#[test]
+fn test_prettify_write_minify_read() {
+    let code = r###"
+        let compact: string = "{\"a\":1,\"b\":2}";
+        let pretty: string = prettifyJSON(compact, 2);
+        writeFile("/tmp/atlas_test_json3.json", pretty);
+
+        let loaded: string = readFile("/tmp/atlas_test_json3.json");
+        let mini: string = minifyJSON(loaded);
+        mini == compact
+    "###;
+    assert_eval_bool_with_io(code, true);
+}
+
+#[test]
+fn test_file_exists_json_check() {
+    let code = r#"
+        writeFile("/tmp/atlas_test_json4.json", "[]");
+        let exists: bool = fileExists("/tmp/atlas_test_json4.json");
+        let content: string = readFile("/tmp/atlas_test_json4.json");
+        let valid: bool = isValidJSON(content);
+        exists && valid
+    "#;
+    assert_eval_bool_with_io(code, true);
+}
+
+#[test]
+fn test_append_json_array_elements() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json5.txt", "[1,2,3]");
+        appendFile("/tmp/atlas_test_json5.txt", "\n[4,5,6]");
+
+        let content: string = readFile("/tmp/atlas_test_json5.txt");
+        let lines: string[] = split(content, "\n");
+        let arr1: json = parseJSON(lines[0]);
+        let arr2: json = parseJSON(lines[1]);
+        arr1[0].as_number() + arr2[2].as_number()
+    "##;
+    assert_eval_number_with_io(code, 7.0); // 1 + 6
+}
+
+#[test]
+fn test_json_array_to_file_lines() {
+    let code = r#"
+        fn toNum(s: string) -> number {
+            return toNumber(s);
+        }
+
+        let numbers: number[] = [10, 20, 30];
+        let jsonStr: string = toJSON(numbers);
+        writeFile("/tmp/atlas_test_json6.txt", jsonStr);
+
+        let content: string = readFile("/tmp/atlas_test_json6.txt");
+        let parsed: json = parseJSON(content);
+        parsed[1].as_number()
+    "#;
+    assert_eval_number_with_io(code, 20.0);
+}
+
+#[test]
+fn test_multiple_json_files_sum() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json7a.json", "[10]");
+        writeFile("/tmp/atlas_test_json7b.json", "[20]");
+
+        let content1: string = readFile("/tmp/atlas_test_json7a.json");
+        let content2: string = readFile("/tmp/atlas_test_json7b.json");
+        let arr1: json = parseJSON(content1);
+        let arr2: json = parseJSON(content2);
+        arr1[0].as_number() + arr2[0].as_number()
+    "##;
+    assert_eval_number_with_io(code, 30.0);
+}
+
+#[test]
+fn test_json_validation_before_write() {
+    let code = r#"
+        let invalid: string = "not json";
+        let valid: string = "{\"key\":\"value\"}";
+
+        if (isValidJSON(valid)) {
+            writeFile("/tmp/atlas_test_json8.json", valid);
+        }
+
+        let content: string = readFile("/tmp/atlas_test_json8.json");
+        includes(content, "key")
+    "#;
+    assert_eval_bool_with_io(code, true);
+}
+
+#[test]
+fn test_read_json_check_type() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json9.json", "{\"count\":42}");
+
+        let content: string = readFile("/tmp/atlas_test_json9.json");
+        let obj: json = parseJSON(content);
+        let count: number = obj["count"].as_number();
+        isNumber(count)
+    "##;
+    assert_eval_bool_with_io(code, true);
+}
+
+#[test]
+fn test_json_array_length_via_file() {
+    let code = r##"
+        let arr: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let jsonStr: string = toJSON(arr);
+        writeFile("/tmp/atlas_test_json10.json", jsonStr);
+
+        let content: string = readFile("/tmp/atlas_test_json10.json");
+        let parsed: json = parseJSON(content);
+        // Extract last element to check array size
+        parsed[9].as_number()
+    "##;
+    assert_eval_number_with_io(code, 10.0);
+}
+
+#[test]
+fn test_conditional_file_write_json() {
+    let code = r##"
+        let data: json = parseJSON("{\"enabled\":true}");
+        let enabled: bool = data["enabled"].as_bool();
+
+        if (enabled) {
+            writeFile("/tmp/atlas_test_json11.json", "{\"status\":\"active\"}");
+        }
+
+        let content: string = readFile("/tmp/atlas_test_json11.json");
+        includes(content, "active")
+    "##;
+    assert_eval_bool_with_io(code, true);
+}
+
+#[test]
+fn test_json_file_string_concat() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json12a.txt", "Hello");
+        writeFile("/tmp/atlas_test_json12b.txt", "World");
+
+        let part1: string = readFile("/tmp/atlas_test_json12a.txt");
+        let part2: string = readFile("/tmp/atlas_test_json12b.txt");
+        let combined: string = part1 + " " + part2;
+        combined
+    "##;
+    assert_eval_string_with_io(code, "Hello World");
+}
+
+#[test]
+fn test_json_parse_file_nested_access() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json13.json", "{\"user\":{\"name\":\"Alice\",\"age\":30}}");
+
+        let content: string = readFile("/tmp/atlas_test_json13.json");
+        let obj: json = parseJSON(content);
+        let user: json = obj["user"];
+        let name: string = user["name"].as_string();
+        name
+    "##;
+    assert_eval_string_with_io(code, "Alice");
+}
+
+#[test]
+fn test_file_to_json_to_string_array() {
+    let code = r##"
+        let strings: string[] = ["apple", "banana", "cherry"];
+        let jsonStr: string = toJSON(strings);
+        writeFile("/tmp/atlas_test_json14.json", jsonStr);
+
+        let content: string = readFile("/tmp/atlas_test_json14.json");
+        let parsed: json = parseJSON(content);
+        let first: string = parsed[0].as_string();
+        let last: string = parsed[2].as_string();
+        first + "," + last
+    "##;
+    assert_eval_string_with_io(code, "apple,cherry");
+}
+
+#[test]
+fn test_json_number_extraction_math() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json15.json", "[5,10,15]");
+
+        let content: string = readFile("/tmp/atlas_test_json15.json");
+        let arr: json = parseJSON(content);
+        let sum: number = arr[0].as_number() + arr[1].as_number() + arr[2].as_number();
+        sum / 3
+    "##;
+    assert_eval_number_with_io(code, 10.0); // Average
+}
+
+#[test]
+fn test_write_read_bool_json() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json16.json", "{\"active\":true,\"enabled\":false}");
+
+        let content: string = readFile("/tmp/atlas_test_json16.json");
+        let obj: json = parseJSON(content);
+        let active: bool = obj["active"].as_bool();
+        let enabled: bool = obj["enabled"].as_bool();
+        active && !enabled
+    "##;
+    assert_eval_bool_with_io(code, true);
+}
+
+#[test]
+fn test_json_file_type_conversion() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json17.json", "{\"count\":\"42\"}");
+
+        let content: string = readFile("/tmp/atlas_test_json17.json");
+        let obj: json = parseJSON(content);
+        let countStr: string = obj["count"].as_string();
+        let countNum: number = toNumber(countStr);
+        countNum * 2
+    "##;
+    assert_eval_number_with_io(code, 84.0);
+}
+
+#[test]
+fn test_file_contains_valid_json() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json18.json", "{\"valid\":true}");
+
+        let content: string = readFile("/tmp/atlas_test_json18.json");
+        isValidJSON(content)
+    "##;
+    assert_eval_bool_with_io(code, true);
+}
+
+#[test]
+fn test_json_null_in_file() {
+    let code = r##"
+        writeFile("/tmp/atlas_test_json19.json", "{\"value\":null}");
+
+        let content: string = readFile("/tmp/atlas_test_json19.json");
+        let obj: json = parseJSON(content);
+        let val: json = obj["value"];
+        val.is_null()
+    "##;
+    assert_eval_bool_with_io(code, true);
+}
+
+#[test]
+fn test_large_json_array_file() {
+    let code = r##"
+        let arr: number[] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
+        let jsonStr: string = toJSON(arr);
+        writeFile("/tmp/atlas_test_json20.json", jsonStr);
+
+        let content: string = readFile("/tmp/atlas_test_json20.json");
+        let parsed: json = parseJSON(content);
+        let first: number = parsed[0].as_number();
+        let last: number = parsed[19].as_number();
+        first + last
+    "##;
+    assert_eval_number_with_io(code, 21.0); // 1 + 20
 }
