@@ -1,5 +1,6 @@
 //! Type system representation
 
+use crate::ffi::ExternType;
 use serde::{Deserialize, Serialize};
 
 /// Type representation
@@ -32,6 +33,8 @@ pub enum Type {
     TypeParameter { name: String },
     /// Unknown type (for error recovery)
     Unknown,
+    /// Extern type for FFI (Foreign Function Interface)
+    Extern(ExternType),
 }
 
 impl Type {
@@ -71,6 +74,9 @@ impl Type {
             // Cannot assign json to non-json types (requires explicit extraction)
             (Type::JsonValue, Type::JsonValue) => true,
 
+            // Extern types are assignable if they match
+            (Type::Extern(a), Type::Extern(b)) => a == b,
+
             // No other types are assignable
             _ => false,
         }
@@ -97,6 +103,7 @@ impl Type {
             }
             Type::TypeParameter { name } => name.clone(),
             Type::Unknown => "?".to_string(),
+            Type::Extern(extern_type) => extern_type.display_name().to_string(),
         }
     }
 }

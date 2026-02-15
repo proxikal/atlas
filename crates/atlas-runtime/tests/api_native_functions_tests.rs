@@ -169,14 +169,12 @@ fn test_native_returning_error(#[case] mode: ExecutionMode) {
 fn test_native_with_string_args(#[case] mode: ExecutionMode) {
     let mut runtime = Runtime::new(mode);
 
-    runtime.register_function("greet", 1, |args| {
-        match &args[0] {
-            Value::String(s) => Ok(Value::string(format!("Hello, {}!", s))),
-            _ => Err(RuntimeError::TypeError {
-                msg: "Expected string".to_string(),
-                span: Span::dummy(),
-            }),
-        }
+    runtime.register_function("greet", 1, |args| match &args[0] {
+        Value::String(s) => Ok(Value::string(format!("Hello, {}!", s))),
+        _ => Err(RuntimeError::TypeError {
+            msg: "Expected string".to_string(),
+            span: Span::dummy(),
+        }),
     });
 
     let result = runtime.eval(r#"greet("World")"#).unwrap();
@@ -476,7 +474,9 @@ fn test_variadic_with_many_args(#[case] mode: ExecutionMode) {
 
     runtime.register_variadic("count", |args| Ok(Value::Number(args.len() as f64)));
 
-    let result = runtime.eval("count(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)").unwrap();
+    let result = runtime
+        .eval("count(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)")
+        .unwrap();
     assert_eq!(result, Value::Number(10.0));
 }
 

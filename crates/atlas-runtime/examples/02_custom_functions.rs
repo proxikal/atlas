@@ -12,14 +12,12 @@ fn main() {
     let mut runtime = Runtime::new(ExecutionMode::VM);
 
     // Register a simple native function
-    runtime.register_function("double", 1, |args| {
-        match &args[0] {
-            Value::Number(n) => Ok(Value::Number(n * 2.0)),
-            _ => Err(RuntimeError::TypeError {
-                msg: "Expected number".to_string(),
-                span: Span::dummy(),
-            }),
-        }
+    runtime.register_function("double", 1, |args| match &args[0] {
+        Value::Number(n) => Ok(Value::Number(n * 2.0)),
+        _ => Err(RuntimeError::TypeError {
+            msg: "Expected number".to_string(),
+            span: Span::dummy(),
+        }),
     });
 
     let result = runtime.eval("double(21)").expect("Failed");
@@ -30,17 +28,21 @@ fn main() {
     runtime.register_function("add", 2, |args| {
         let a = match &args[0] {
             Value::Number(n) => *n,
-            _ => return Err(RuntimeError::TypeError {
-                msg: "Expected number".to_string(),
-                span: Span::dummy(),
-            }),
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "Expected number".to_string(),
+                    span: Span::dummy(),
+                })
+            }
         };
         let b = match &args[1] {
             Value::Number(n) => *n,
-            _ => return Err(RuntimeError::TypeError {
-                msg: "Expected number".to_string(),
-                span: Span::dummy(),
-            }),
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "Expected number".to_string(),
+                    span: Span::dummy(),
+                })
+            }
         };
         Ok(Value::Number(a + b))
     });
@@ -55,10 +57,12 @@ fn main() {
         for arg in args {
             match arg {
                 Value::Number(n) => total += n,
-                _ => return Err(RuntimeError::TypeError {
-                    msg: "Expected number".to_string(),
-                    span: Span::dummy(),
-                }),
+                _ => {
+                    return Err(RuntimeError::TypeError {
+                        msg: "Expected number".to_string(),
+                        span: Span::dummy(),
+                    })
+                }
             }
         }
         Ok(Value::Number(total))

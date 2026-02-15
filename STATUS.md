@@ -8,15 +8,17 @@
 ## 🎯 Current Phase
 
 **Version:** v0.2 (building production infrastructure)
-**Last Completed:** phases/foundation/phase-02-embedding-api-design.md
-**Next Phase:** phases/foundation/phase-10-ffi-infrastructure.md
+**Last Completed:** phases/foundation/phase-10a-ffi-core-types.md
+**Next Phase:** phases/foundation/phase-10b-ffi-library-loading.md
 
 **🚨 CRITICAL: Foundation must be completed before continuing stdlib/frontend/CLI**
 
-**Real Progress:** 7/68 phases complete (10%)
-- Foundation: 7/17 (method call + runtime API + embedding + config + modules + error handling)
-- Stdlib: 5/15 (will hit foundation blockers at phase 10)
+**Real Progress:** 8/70 phases complete (11%)
+- Foundation: 8/19 (method call + runtime API + embedding + config + modules + error handling + FFI types)
+- Stdlib: 5/15 (will hit foundation blockers at phase 10b)
 - Everything else: Blocked by foundation
+
+**Note:** Phase-10 FFI split into 3 sub-phases (10a/10b/10c) for manageable implementation
 
 **v0.1 Prerequisites (Already Complete):**
 - ✅ First-Class Functions
@@ -108,7 +110,7 @@ v0.2 transforms Atlas into a production-ready language:
 **🚨 CATEGORY ORDER = EXECUTION ORDER 🚨**
 **Foundation MUST be complete before other categories**
 
-### 0. Foundation (6/17) - Production Infrastructure [PRIORITY 1 - DO FIRST]
+### 0. Foundation (8/19) - Production Infrastructure [PRIORITY 1 - DO FIRST]
 
 **Completed:**
 - ✅ phase-16-method-call-syntax-frontend.md **[Emergency blocker fix - not planned foundation]**
@@ -118,11 +120,13 @@ v0.2 transforms Atlas into a production-ready language:
 - ✅ phase-06-module-system-core.md **[Module system: imports/exports/deps, 82 tests, BLOCKER 04 complete]**
 - ✅ phase-09-error-handling-primitives.md **[Error propagation operator (?), 16 tests, 100% parity]**
 - ✅ phase-02-embedding-api-design.md **[Native functions + sandboxing + 6 examples, 68 tests, 100% parity]**
+- ✅ phase-10a-ffi-core-types.md **[FFI: Extern types + marshaling, 88 tests, 2026-02-15]**
 
 **Critical Path (do in this order to unblock v0.2):**
-- ⬜ phase-10-ffi-infrastructure.md **[No blockers]**
+- ⬜ phase-10b-ffi-library-loading.md **[FFI: Library loading + extern calls, ~2130 lines, 40 tests, Needs: 10a]**
+- ⬜ phase-10c-ffi-callbacks.md **[FFI: Callbacks + integration, ~3440 lines, 40 tests, Needs: 10b]**
 - ⬜ phase-07-package-manifest.md **[Needs: phase-04, phase-06]**
-- ⬜ phase-15-security-permissions.md **[Needs: phase-01, phase-02, phase-10]**
+- ⬜ phase-15-security-permissions.md **[Needs: phase-01, phase-02, phase-10a/b/c]**
 
 **Secondary (can defer until needed):**
 - ⬜ phase-03-ci-automation.md **[Useful but not blocking]**
@@ -202,10 +206,10 @@ v0.2 transforms Atlas into a production-ready language:
 - ⬜ phase-04-stability-verification.md
 - ⬜ phase-05-v02-milestone-completion.md
 
-**Total v0.2 Progress:** 10/68 phases (15%) - **MISLEADING: 5 stdlib phases will hit blockers**
-**Real Progress:** 5/68 phases (7%) - Foundation phases 01, 04, 06, 16-17 complete
-**Foundation Status:** 5/17 phases (29%) - **MUST complete before v0.2 can proceed**
-**Next Critical Path:** Complete foundation phases 01, 04, 06, 09 to unblock most of v0.2
+**Total v0.2 Progress:** 13/70 phases (19%) - **MISLEADING: 5 stdlib phases will hit blockers**
+**Real Progress:** 8/70 phases (11%) - Foundation phases 01, 02, 04, 06, 09, 10a, 16-17 complete
+**Foundation Status:** 8/19 phases (42%) - **MUST complete before v0.2 can proceed**
+**Next Critical Path:** Complete foundation FFI (10b/10c) to unblock security + stdlib network/async
 
 ---
 

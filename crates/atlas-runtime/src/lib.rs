@@ -16,6 +16,7 @@ pub mod binder;
 pub mod bytecode;
 pub mod compiler;
 pub mod diagnostic;
+pub mod ffi;
 pub mod interpreter;
 pub mod json_value;
 pub mod lexer;

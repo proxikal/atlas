@@ -29,7 +29,9 @@ fn main() {
         .eval("fn greet(name: string) -> string { return \"Hello, \" + name + \"!\"; }")
         .expect("Failed to define function");
 
-    let result = runtime.eval(r#"greet("Atlas")"#).expect("Failed to call function");
+    let result = runtime
+        .eval(r#"greet("Atlas")"#)
+        .expect("Failed to call function");
 
     println!("Result: {}", result);
     // Output: Result: Hello, Atlas!

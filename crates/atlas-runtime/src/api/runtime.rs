@@ -424,7 +424,10 @@ impl Runtime {
             ExecutionMode::VM => {
                 // For native functions and other complex types, store in interpreter globals
                 // The VM will look them up from there during execution
-                if matches!(value, Value::NativeFunction(_) | Value::Array(_) | Value::Function(_)) {
+                if matches!(
+                    value,
+                    Value::NativeFunction(_) | Value::Array(_) | Value::Function(_)
+                ) {
                     let mut interpreter = self.interpreter.borrow_mut();
                     interpreter.globals.insert(name.to_string(), value);
                     return;

@@ -166,6 +166,7 @@ fn type_to_string(ty: &Type) -> String {
         }
         Type::TypeParameter { name } => name.clone(),
         Type::Unknown => "unknown".to_string(),
+        Type::Extern(extern_type) => extern_type.display_name().to_string(),
     }
 }
 
@@ -190,6 +191,9 @@ fn collect_types(ty: &Type, types: &mut std::collections::HashSet<String>) {
             for arg in type_args {
                 collect_types(arg, types);
             }
+        }
+        Type::Extern(_) => {
+            // Extern types are primitives, no nested types to collect
         }
         _ => {}
     }

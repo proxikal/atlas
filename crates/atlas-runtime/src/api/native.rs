@@ -54,6 +54,9 @@
 use crate::value::{NativeFn, RuntimeError, Value};
 use std::sync::Arc;
 
+/// Type alias for native function implementation
+type NativeFnImpl = Box<dyn Fn(&[Value]) -> Result<Value, RuntimeError> + Send + Sync>;
+
 /// Builder for constructing native functions with arity validation
 ///
 /// Provides a fluent API for creating native functions that can be called from Atlas code.
@@ -63,7 +66,7 @@ pub struct NativeFunctionBuilder {
     name: String,
     arity: Option<usize>,
     is_variadic: bool,
-    implementation: Option<Box<dyn Fn(&[Value]) -> Result<Value, RuntimeError> + Send + Sync>>,
+    implementation: Option<NativeFnImpl>,
 }
 
 impl NativeFunctionBuilder {
@@ -298,8 +301,12 @@ mod tests {
             }
 
             // Test wrong arity (too many)
-            let err = func(&[Value::Number(10.0), Value::Number(20.0), Value::Number(30.0)])
-                .unwrap_err();
+            let err = func(&[
+                Value::Number(10.0),
+                Value::Number(20.0),
+                Value::Number(30.0),
+            ])
+            .unwrap_err();
             match err {
                 RuntimeError::TypeError { msg, .. } => {
                     assert!(msg.contains("expects 2 arguments, got 3"));

@@ -349,7 +349,7 @@ impl Bytecode {
                         2 // u16 operand
                     }
                     x if x == Opcode::Call as u8 => 1, // u8 operand
-                    _ => 0,                             // No operand
+                    _ => 0,                            // No operand
                 };
 
                 for _ in 0..operand_size {
