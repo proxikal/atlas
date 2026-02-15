@@ -41,13 +41,24 @@ Function signatures and usage
 - `stdlib.md` - Standard library API reference
 - `runtime-api.md` - Runtime embedding API
 
+### [`decision-logs/`](decision-logs/) - Architecture Decisions
+Permanent record of high-impact technical decisions (AI-optimized structure)
+- `README.md` - Template, format, search guide
+- `language/` - Type system, syntax, semantics decisions
+- `parser/` - Parsing and AST decisions
+- `typechecker/` - Type checking and inference decisions
+- `vm/` - Bytecode and VM execution decisions
+- `stdlib/` - Standard library API decisions
+- `runtime/` - Runtime model and security decisions
+- `tooling/` - CLI, REPL, LSP decisions
+
 ### [`reference/`](reference/) - Technical Reference
-Policies, decisions, and technical details
+Policies and technical details
 - `parser-recovery-policy.md` - Error recovery strategy
 - `io-security-model.md` - I/O security and sandboxing
 - `code-organization.md` - Project structure and conventions
 - `versioning.md` - Version numbering and compatibility
-- `decision-log.md` - Architecture decisions
+- `decision-log.md` - Architecture decisions (DEPRECATED - see `decision-logs/`)
 
 ### [`config/`](config/) - Configuration
 Configuration formats and options
@@ -132,7 +143,7 @@ See `philosophy/documentation-philosophy.md` for complete philosophy.
 - How to implement a feature → `implementation/`
 - Testing/quality standards → `guides/`
 - Function signatures → `api/`
-- Project decisions → `reference/decision-log.md`
+- Project decisions → `decision-logs/` (organized by component)
 - Configuration options → `config/`
 
 ---

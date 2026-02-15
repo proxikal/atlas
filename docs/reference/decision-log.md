@@ -1,5 +1,15 @@
 # Atlas Decision Log
 
+**⚠️  DEPRECATED:** This file has been migrated to `docs/decision-logs/` for better organization and AI-friendliness.
+
+**New location:** See `docs/decision-logs/README.md` for the new structure and search guide.
+
+**Migration complete:** All decisions below have been migrated to categorized decision files.
+
+---
+
+## Legacy Content (Reference Only)
+
 This log captures irreversible or high-impact design decisions. Update when a new foundational decision is made.
 
 ## Language Semantics
