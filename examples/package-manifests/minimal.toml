@@ -1,0 +1,6 @@
+# Example: Minimal Package
+# The simplest possible atlas.toml manifest
+
+[package]
+name = "minimal-package"
+version = "1.0.0"

@@ -1,0 +1,41 @@
+# Example: Workspace (Monorepo)
+# Multiple packages in a single repository with shared dependencies
+
+[package]
+name = "my-workspace"
+version = "1.0.0"
+description = "Workspace root package"
+authors = ["Team <team@example.com>"]
+license = "MIT"
+
+[workspace]
+# Include all packages in these directories
+members = [
+    "packages/*",
+    "tools/cli",
+    "tools/lsp"
+]
+
+# Exclude specific packages
+exclude = [
+    "packages/experimental",
+    "packages/archived"
+]
+
+# Shared dependencies across all workspace members
+[workspace.dependencies]
+# Common utilities
+shared-utils = "1.0"
+
+# Testing framework
+test-framework = "2.0"
+
+# Logging
+logger = "^1.5"
+
+[dependencies]
+# Root package dependencies
+shared-utils = "1.0"
+
+[dev-dependencies]
+workspace-tests = "1.0"

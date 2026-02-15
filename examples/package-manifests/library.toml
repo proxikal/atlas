@@ -1,0 +1,43 @@
+# Example: Library Package
+# A reusable library with dependencies and features
+
+[package]
+name = "atlas-utils"
+version = "1.0.0"
+description = "Utility functions for Atlas applications"
+authors = ["Atlas Team <team@atlas-lang.org>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/atlas-lang/atlas-utils"
+homepage = "https://atlas-lang.org/packages/utils"
+keywords = ["atlas", "utilities", "helpers"]
+categories = ["development-tools"]
+
+[lib]
+path = "src/lib.atl"
+
+[dependencies]
+# Simple version constraint
+core = "1.0"
+
+# Caret constraint (allows minor/patch updates)
+logging = "^2.1.0"
+
+# Optional dependency (enabled via features)
+async-runtime = { version = "0.5", optional = true }
+
+[dev-dependencies]
+test-framework = "1.0"
+benchmark = "0.3"
+
+[features]
+# Default features enabled automatically
+default = { dependencies = ["std"], default = true }
+
+# Standard library support
+std = { dependencies = [], default = false }
+
+# Async support (enables optional dependency)
+async = { dependencies = ["async-runtime"], default = false }
+
+# All features
+full = { dependencies = ["std", "async"], default = false }

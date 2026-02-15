@@ -4,6 +4,7 @@ members = [
     "crates/atlas-cli",
     "crates/atlas-lsp",
     "crates/atlas-config",
+    "crates/atlas-package",
 ]
 resolver = "2"
 

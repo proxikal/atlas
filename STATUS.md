@@ -8,13 +8,13 @@
 ## 🎯 Current Phase
 
 **Version:** v0.2 (building production infrastructure)
-**Last Completed:** phases/foundation/phase-10c-ffi-callbacks.md
-**Next Phase:** phases/foundation/phase-07-package-manifest.md
+**Last Completed:** phases/foundation/phase-07-package-manifest.md
+**Next Phase:** phases/foundation/phase-15-security-permissions.md
 
 **🚨 CRITICAL: Foundation must be completed before continuing stdlib/frontend/CLI**
 
-**Real Progress:** 10/70 phases complete (14%)
-- Foundation: 10/19 (method call + runtime API + embedding + config + modules + error handling + complete FFI system)
+**Real Progress:** 11/70 phases complete (16%)
+- Foundation: 11/19 (method call + runtime API + embedding + config + modules + error handling + complete FFI system + package manifest)
 - Stdlib: 5/15 (will hit foundation blockers at phase 10b)
 - Everything else: Blocked by foundation
 
@@ -110,7 +110,7 @@ v0.2 transforms Atlas into a production-ready language:
 **🚨 CATEGORY ORDER = EXECUTION ORDER 🚨**
 **Foundation MUST be complete before other categories**
 
-### 0. Foundation (10/19) - Production Infrastructure [PRIORITY 1 - DO FIRST]
+### 0. Foundation (11/19) - Production Infrastructure [PRIORITY 1 - DO FIRST]
 
 **Completed:**
 - ✅ phase-16-method-call-syntax-frontend.md **[Emergency blocker fix - not planned foundation]**
@@ -123,9 +123,9 @@ v0.2 transforms Atlas into a production-ready language:
 - ✅ phase-10a-ffi-core-types.md **[FFI: Extern types + marshaling, 88 tests, 2026-02-15]**
 - ✅ phase-10b-ffi-library-loading.md **[FFI: Library loading + extern calls, 16 tests (8 interpreter + 8 VM), 100% parity, 2026-02-15]**
 - ✅ phase-10c-ffi-callbacks.md **[FFI: Callbacks + integration, 35 tests + docs + examples, 2026-02-15]**
+- ✅ phase-07-package-manifest.md **[Package manifest: atlas.toml + atlas.lock + validation, 66 tests, 2026-02-15]**
 
 **Critical Path (do in this order to unblock v0.2):**
-- ⬜ phase-07-package-manifest.md **[Needs: phase-04, phase-06]**
 - ⬜ phase-15-security-permissions.md **[Needs: phase-01, phase-02, phase-10a/b/c]**
 
 **Secondary (can defer until needed):**
