@@ -119,6 +119,19 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 type_args: vec![], // Could inspect Ok/Err values
             }
         }
+
+        Value::HashMap(_) => {
+            // Generic HashMap type
+            TypeInfo {
+                name: "HashMap".to_string(),
+                kind: TypeKind::Generic,
+                fields: vec![],
+                parameters: vec![],
+                return_type: None,
+                element_type: None,
+                type_args: vec![], // Could inspect keys/values
+            }
+        }
     }
 }
 

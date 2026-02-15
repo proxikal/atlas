@@ -1,6 +1,7 @@
 //! Standard library functions
 
 pub mod array;
+pub mod collections;
 pub mod io;
 pub mod json;
 pub mod math;
@@ -54,6 +55,11 @@ pub fn is_builtin(name: &str) -> bool {
             | "reflect_same_type" | "reflect_get_length" | "reflect_is_empty"
             | "reflect_type_describe" | "reflect_clone" | "reflect_value_to_string"
             | "reflect_deep_equals" | "reflect_get_function_name" | "reflect_get_function_arity"
+            // HashMap functions
+            | "hashMapNew" | "hashMapFromEntries"
+            | "hashMapPut" | "hashMapGet" | "hashMapRemove"
+            | "hashMapHas" | "hashMapSize" | "hashMapIsEmpty"
+            | "hashMapClear" | "hashMapKeys" | "hashMapValues" | "hashMapEntries"
     )
 }
 
@@ -568,6 +574,20 @@ pub fn call_builtin(
         "reflect_deep_equals" => reflect::deep_equals_fn(args, call_span),
         "reflect_get_function_name" => reflect::get_function_name_fn(args, call_span),
         "reflect_get_function_arity" => reflect::get_function_arity_fn(args, call_span),
+
+        // HashMap functions
+        "hashMapNew" => collections::hashmap::new_map(args, call_span),
+        "hashMapFromEntries" => collections::hashmap::from_entries(args, call_span),
+        "hashMapPut" => collections::hashmap::put(args, call_span),
+        "hashMapGet" => collections::hashmap::get(args, call_span),
+        "hashMapRemove" => collections::hashmap::remove(args, call_span),
+        "hashMapHas" => collections::hashmap::has(args, call_span),
+        "hashMapSize" => collections::hashmap::size(args, call_span),
+        "hashMapIsEmpty" => collections::hashmap::is_empty(args, call_span),
+        "hashMapClear" => collections::hashmap::clear(args, call_span),
+        "hashMapKeys" => collections::hashmap::keys(args, call_span),
+        "hashMapValues" => collections::hashmap::values(args, call_span),
+        "hashMapEntries" => collections::hashmap::entries(args, call_span),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),

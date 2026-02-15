@@ -102,6 +102,7 @@ fn type_name(value: &Value) -> &'static str {
         Value::JsonValue(_) => "json",
         Value::Option(_) => "option",
         Value::Result(_) => "result",
+        Value::HashMap(_) => "hashmap",
     }
 }
 

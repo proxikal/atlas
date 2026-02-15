@@ -267,6 +267,13 @@ fn runtime_error_to_diagnostic(error: RuntimeError) -> Diagnostic {
             format!("Permission denied: environment variable {}", var),
         ),
         RuntimeError::IoError { message, .. } => ("AT0400", message.clone()),
+        RuntimeError::UnhashableType { type_name, .. } => (
+            "AT0140",
+            format!(
+                "Cannot hash type {} - only number, string, bool, null are hashable",
+                type_name
+            ),
+        ),
     };
 
     let help = match error {

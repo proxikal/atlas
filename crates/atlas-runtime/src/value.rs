@@ -44,6 +44,8 @@ pub enum Value {
     Option(Option<Box<Value>>),
     /// Result value (Ok(value) or Err(error))
     Result(Result<Box<Value>, Box<Value>>),
+    /// HashMap collection (key-value pairs)
+    HashMap(Rc<RefCell<crate::stdlib::collections::hashmap::AtlasHashMap>>),
 }
 
 /// Function reference
@@ -84,6 +86,7 @@ impl Value {
             Value::JsonValue(_) => "json",
             Value::Option(_) => "Option",
             Value::Result(_) => "Result",
+            Value::HashMap(_) => "hashmap",
         }
     }
 
@@ -121,6 +124,8 @@ impl PartialEq for Value {
             (Value::Option(a), Value::Option(b)) => a == b,
             // Result uses deep equality
             (Value::Result(a), Value::Result(b)) => a == b,
+            // HashMap uses reference identity (like arrays)
+            (Value::HashMap(a), Value::HashMap(b)) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -158,6 +163,7 @@ impl fmt::Display for Value {
                 Ok(val) => write!(f, "Ok({})", val),
                 Err(err) => write!(f, "Err({})", err),
             },
+            Value::HashMap(map) => write!(f, "<HashMap size={}>", map.borrow().len()),
         }
     }
 }
@@ -178,6 +184,7 @@ impl fmt::Debug for Value {
             Value::JsonValue(json) => write!(f, "JsonValue({:?})", json),
             Value::Option(opt) => write!(f, "Option({:?})", opt),
             Value::Result(res) => write!(f, "Result({:?})", res),
+            Value::HashMap(map) => write!(f, "HashMap(size={})", map.borrow().len()),
         }
     }
 }
@@ -255,6 +262,12 @@ pub enum RuntimeError {
         message: String,
         span: crate::span::Span,
     },
+    /// Unhashable type (collections)
+    #[error("Cannot hash type {type_name} - only number, string, bool, null are hashable")]
+    UnhashableType {
+        type_name: String,
+        span: crate::span::Span,
+    },
 }
 
 impl RuntimeError {
@@ -276,6 +289,7 @@ impl RuntimeError {
             RuntimeError::ProcessPermissionDenied { span, .. } => *span,
             RuntimeError::EnvironmentPermissionDenied { span, .. } => *span,
             RuntimeError::IoError { span, .. } => *span,
+            RuntimeError::UnhashableType { span, .. } => *span,
         }
     }
 }
