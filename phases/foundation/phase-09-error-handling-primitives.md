@@ -1,21 +1,64 @@
 # Phase 09: Error Handling Primitives - Result Types
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Type system must support generic types.
 
-**Verification:**
-```bash
-grep -n "Type::" crates/atlas-runtime/src/typechecker/types.rs
-cargo test typechecker
-grep -n "Value::" crates/atlas-runtime/src/value.rs
-```
+**REQUIRED:** Generic type system from v0.1 must be complete.
 
-**What's needed:**
-- Type system supports compound types
-- Value model can represent Result values
-- Pattern matching exists or can be added
+**Verification Steps:**
+1. Check STATUS.md: v0.1 completion should confirm generic types complete
+2. Check spec: `docs/specification/types.md` section 5 "Generic Types"
+3. Verify generic type support exists:
+   ```bash
+   grep -n "Generic\|TypeParam" crates/atlas-runtime/src/typechecker/types.rs | head -10
+   ```
+4. Verify Option<T> exists (proves generics work):
+   ```bash
+   grep -n "Option" crates/atlas-runtime/src/typechecker/types.rs
+   cargo test | grep -i option
+   ```
+5. Verify pattern matching exists:
+   ```bash
+   grep -n "match\|Match" crates/atlas-runtime/src/ast.rs
+   cargo test | grep -i pattern
+   ```
 
-**If missing:** Type system from v0.1 should support basics - may need enhancement
+**Expected from v0.1 (per STATUS.md prerequisites):**
+- Generic type system: Type<T> syntax and checking
+- Built-in generic types: Option<T> implemented
+- Pattern matching: match statements work
+- Value model: Can represent generic type instances
+- All type system tests passing
+
+**Spec Requirements (from types.md section 5.3):**
+- Result<T, E> is a generic enum type
+- Two variants: Ok(T) and Err(E)
+- Pattern matching must work on Result values
+- Type parameters T and E can be any type
+
+**Decision Tree:**
+
+a) If v0.1 generics complete (Option<T> exists and works):
+   → Proceed with phase-09
+   → Result<T,E> uses same generic infrastructure as Option<T>
+
+b) If generics exist but incomplete (no Option<T>):
+   → ERROR: v0.1 should have Option<T> per STATUS.md
+   → Verify v0.1 truly complete
+   → Do NOT proceed until Option<T> works
+
+c) If no generics at all:
+   → CRITICAL ERROR: v0.1 prerequisites not met
+   → Check STATUS.md - was v0.1 actually completed?
+   → Must complete v0.1 generic types first
+   → STOP immediately
+
+d) If pattern matching missing:
+   → ERROR: Pattern matching listed in v0.1 prerequisites
+   → Verify v0.1 completion status
+   → Cannot implement Result<T,E> without pattern matching
+   → Fix v0.1 first
+
+**No user questions needed:** Generic type system existence is verifiable via spec, code, and tests.
 
 ---
 

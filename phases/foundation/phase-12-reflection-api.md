@@ -1,21 +1,66 @@
 # Phase 12: Reflection and Introspection API
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Type system and runtime must support runtime type information.
 
-**Verification:**
-```bash
-grep -n "Type::" crates/atlas-runtime/src/typechecker/types.rs
-grep -n "Value::" crates/atlas-runtime/src/value.rs
-cargo test typechecker
-```
+**REQUIRED:** Type system and runtime from v0.1 for reflection extension.
 
-**What's needed:**
-- Type system with complete type representations
-- Value model with type information
-- Interpreter and VM runtime access
+**Verification Steps:**
+1. Check v0.1 completion: STATUS.md should confirm type system and runtime complete
 
-**If missing:** Core systems from v0.1 should be sufficient - enhancement needed
+2. Verify type system exists:
+   ```bash
+   grep -n "pub enum Type" crates/atlas-runtime/src/typechecker/types.rs | head -3
+   cargo test typechecker 2>&1 | grep "test result"
+   ```
+
+3. Verify Value enum exists with type info:
+   ```bash
+   grep -n "pub enum Value" crates/atlas-runtime/src/value.rs | head -3
+   cargo test value 2>&1 | grep "test result"
+   ```
+
+4. Verify runtime exists:
+   ```bash
+   ls crates/atlas-runtime/src/interpreter/mod.rs
+   ls crates/atlas-runtime/src/vm/mod.rs
+   cargo test interpreter vm 2>&1 | grep "test result"
+   ```
+
+**Expected from v0.1 (sufficient for reflection):**
+- Type enum with all Atlas types (Number, String, Bool, Array, Object, Function, etc.)
+- Value enum with runtime representations
+- Type checker producing type information
+- Interpreter and VM executing code
+
+**Spec Check:**
+- Check `docs/specification/types.md` for reflection requirements
+- If spec defines reflection API: Implement per spec
+- If spec doesn't define it: Reflection is NEW for v0.2
+
+**Decision Tree:**
+
+a) If v0.1 type system and runtime exist (Type and Value enums found):
+   → Proceed with phase-12
+   → Add reflection API on top of existing infrastructure
+   → Extend Value to include type metadata if needed
+
+b) If type system missing:
+   → CRITICAL ERROR: v0.1 incomplete
+   → Verify v0.1 completion in STATUS.md
+   → STOP immediately
+
+c) If spec defines reflection (check types.md):
+   → Read spec section on reflection completely
+   → Implement reflection API exactly per spec
+   → Log: "Implemented reflection per specification"
+
+d) If spec doesn't define reflection:
+   → Reflection API is NEW for this phase
+   → Design minimal type introspection API
+   → Functions: typeof(), get_type(), has_field(), etc.
+   → Document design decisions
+
+**No user questions needed:** v0.1 infrastructure is verifiable via file checks and cargo test. If spec silent on reflection, implement minimal introspection API.
 
 ---
 

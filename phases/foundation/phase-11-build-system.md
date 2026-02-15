@@ -1,23 +1,71 @@
 # Phase 11: Build System Infrastructure
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Package manifest, module system, and compiler must exist.
 
-**Verification:**
-```bash
-ls crates/atlas-package/src/manifest.rs
-ls crates/atlas-runtime/src/modules/mod.rs
-ls crates/atlas-runtime/src/compiler/mod.rs
-cargo test --package atlas-package
-```
+**REQUIRED:** Module system (phase-06), Package manifest (phase-07), and Package manager (phase-08) must be complete.
 
-**What's needed:**
-- Package manifest from foundation/phase-07
-- Module system from foundation/phase-06
-- Compiler from v0.1
-- Dependency resolver from foundation/phase-08
+**Verification Steps:**
+1. Check STATUS.md: Foundation section
+   - phase-06 (Module System) should be ✅
+   - phase-07 (Package Manifest) should be ✅
+   - phase-08 (Package Manager) should be ✅
 
-**If missing:** Complete foundation phases 06-08 first
+2. Verify phase-06 complete:
+   ```bash
+   ls crates/atlas-runtime/src/modules/mod.rs
+   ls crates/atlas-runtime/src/modules/resolver.rs
+   cargo test modules 2>&1 | grep "test result"
+   ```
+
+3. Verify phase-07 complete:
+   ```bash
+   ls crates/atlas-package/src/manifest.rs
+   cargo test -p atlas-package manifest 2>&1 | grep "test result"
+   ```
+
+4. Verify phase-08 complete:
+   ```bash
+   ls crates/atlas-package/src/resolver.rs
+   cargo test -p atlas-package resolver 2>&1 | grep "test result"
+   ```
+
+5. Verify compiler from v0.1 exists:
+   ```bash
+   ls crates/atlas-runtime/src/compiler/mod.rs
+   cargo test compiler 2>&1 | grep "test result"
+   ```
+
+**Expected from phases 06-08:**
+- Phase-06: Module resolution, dependency graph, 120+ tests
+- Phase-07: PackageManifest, lockfile, 80+ tests
+- Phase-08: Dependency resolver, registry interface, 100+ tests
+- v0.1: Compiler pipeline (lexer → parser → compiler → bytecode)
+
+**Decision Tree:**
+
+a) If all 3 phases complete (STATUS.md ✅, all tests pass):
+   → Proceed with phase-11
+   → Build system orchestrates: resolver → modules → compiler
+
+b) If any phase incomplete (STATUS.md ⬜):
+   → STOP immediately
+   → Report which phases are incomplete
+   → Complete missing phases in order: 06 → 07 → 08
+   → Then return to phase-11
+
+c) If phases marked complete but tests failing:
+   → One or more phases not actually complete
+   → Fix failing phases first
+   → Verify all tests pass
+   → Then proceed with phase-11
+
+d) If v0.1 compiler missing or broken:
+   → CRITICAL ERROR: v0.1 should be complete
+   → Verify v0.1 completion in STATUS.md
+   → Fix v0.1 compiler issues
+   → Then proceed with phase-11
+
+**No user questions needed:** Prerequisites are verifiable via STATUS.md, file existence, and cargo test.
 
 ---
 

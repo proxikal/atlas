@@ -1,21 +1,61 @@
 # Phase 08: Package Manager - Dependency Resolution
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Package manifest system must be complete.
 
-**Verification:**
-```bash
-ls crates/atlas-package/src/manifest.rs
-cargo test --package atlas-package
-grep -n "PackageManifest" crates/atlas-package/src/manifest.rs
-```
+**REQUIRED:** Foundation phase-07 (Package Manifest) must be complete.
 
-**What's needed:**
-- Package manifest from foundation/phase-07
-- Lockfile support from foundation/phase-07
-- Network access for future registry
+**Verification Steps:**
+1. Check STATUS.md: Foundation section, phase-07 should be ✅
 
-**If missing:** Complete foundation/phase-07 first
+2. Verify atlas-package crate exists:
+   ```bash
+   ls crates/atlas-package/src/lib.rs
+   ls crates/atlas-package/src/manifest.rs
+   ls crates/atlas-package/src/lockfile.rs
+   ```
+
+3. Verify PackageManifest struct exists:
+   ```bash
+   grep -n "pub struct PackageManifest" crates/atlas-package/src/manifest.rs
+   ```
+
+4. Run phase-07 tests:
+   ```bash
+   cargo test -p atlas-package 2>&1 | grep "test result"
+   ```
+
+**Expected from phase-07 (per acceptance criteria):**
+- atlas-package crate created
+- PackageManifest struct for atlas.toml parsing
+- Lockfile (atlas.lock) generation
+- Dependency specifications (semver, git, path)
+- 80+ tests passing
+
+**Decision Tree:**
+
+a) If phase-07 complete (STATUS.md ✅, files exist, 80+ tests pass):
+   → Proceed with phase-08
+   → Build dependency resolver using PackageManifest
+
+b) If phase-07 incomplete (STATUS.md ⬜ or missing files):
+   → STOP immediately
+   → Report: "Foundation phase-07 required before phase-08"
+   → Complete phase-07 first
+   → Then return to phase-08
+
+c) If phase-07 marked complete but tests failing:
+   → Phase-07 not actually complete
+   → Fix phase-07 test failures
+   → Verify 80+ tests pass
+   → Then proceed with phase-08
+
+d) If PackageManifest missing:
+   → ERROR: Phase-07 incomplete or broken
+   → Verify phase-07 acceptance criteria met
+   → Fix phase-07
+   → Then proceed with phase-08
+
+**No user questions needed:** Phase-07 completion is verifiable via STATUS.md, file existence, and cargo test.
 
 ---
 

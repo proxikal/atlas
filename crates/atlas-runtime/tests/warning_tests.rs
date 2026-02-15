@@ -94,6 +94,96 @@ fn test_unused_parameter_warning() {
     assert!(warnings[0].message.contains("Unused parameter 'b'"));
 }
 
+#[test]
+fn test_used_parameter_in_callback_no_warning() {
+    // Bug reproduction: parameter is used in function body, but function is passed as callback
+    let source = r#"
+        fn double(x: number) -> number {
+            return x * 2;
+        }
+        let result: number[] = map([1,2,3], double);
+    "#;
+    let diags = get_all_diagnostics(source);
+
+    let warnings: Vec<_> = diags.iter().filter(|d| d.code == "AT2001").collect();
+    assert_eq!(
+        warnings.len(),
+        0,
+        "Parameter 'x' is used in function body - should not warn even when function is passed as callback"
+    );
+}
+
+#[test]
+fn test_used_parameters_in_sort_callback_no_warning() {
+    // Bug reproduction: both parameters are used, function passed to sort
+    let source = r#"
+        fn compare(a: number, b: number) -> number {
+            return a - b;
+        }
+        let sorted: number[] = sort([3,1,2], compare);
+    "#;
+    let diags = get_all_diagnostics(source);
+
+    let warnings: Vec<_> = diags.iter().filter(|d| d.code == "AT2001").collect();
+    assert_eq!(
+        warnings.len(),
+        0,
+        "Parameters 'a' and 'b' are used in function body - should not warn when function is passed to sort"
+    );
+}
+
+#[test]
+fn test_minimal_callback_parameter_usage() {
+    // Minimal reproduction: parameter used in intrinsic function call
+    let source = r#"
+        fn numToStr(n: number) -> string {
+            return toString(n);
+        }
+        let x: string = numToStr(5);
+    "#;
+
+    let diags = get_all_diagnostics(source);
+
+    // Debug output
+    for diag in &diags {
+        eprintln!("{:?}: {} (code: {})", diag.level, diag.message, diag.code);
+    }
+
+    let warnings: Vec<_> = diags.iter().filter(|d| d.code == "AT2001").collect();
+    assert_eq!(
+        warnings.len(),
+        0,
+        "Parameter 'n' is used in toString call - should not warn"
+    );
+}
+
+#[test]
+fn test_parameter_used_in_user_function_call() {
+    // Control test: parameter used in regular user function call
+    let source = r#"
+        fn helper(x: number) -> number {
+            return x + 1;
+        }
+        fn wrapper(n: number) -> number {
+            return helper(n);
+        }
+        let x: number = wrapper(5);
+    "#;
+
+    let diags = get_all_diagnostics(source);
+
+    for diag in &diags {
+        eprintln!("{:?}: {} (code: {})", diag.level, diag.message, diag.code);
+    }
+
+    let warnings: Vec<_> = diags.iter().filter(|d| d.code == "AT2001").collect();
+    assert_eq!(
+        warnings.len(),
+        0,
+        "Parameter 'n' is used in helper call - should not warn"
+    );
+}
+
 // ============================================================================
 // Unreachable Code Warnings (AT2002)
 // ============================================================================

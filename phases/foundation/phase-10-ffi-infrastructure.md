@@ -1,21 +1,63 @@
 # Phase 10: FFI - Foreign Function Interface
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Type system must support extern declarations and C-compatible types.
 
-**Verification:**
-```bash
-grep -n "Type::" crates/atlas-runtime/src/typechecker/types.rs
-cargo test --all
-ls crates/atlas-runtime/src/value.rs
-```
+**REQUIRED:** Type system and runtime from v0.1 for FFI extension.
 
-**What's needed:**
-- Type system can represent C types
-- Runtime can load dynamic libraries
-- Calling convention compatibility
+**Verification Steps:**
+1. Check spec: `docs/specification/types.md` section 7 "Foreign Types" (if exists)
+2. Verify type system exists:
+   ```bash
+   grep -n "pub enum Type" crates/atlas-runtime/src/typechecker/types.rs | head -3
+   cargo test typechecker 2>&1 | grep "test result"
+   ```
+3. Verify runtime/value model exists:
+   ```bash
+   ls crates/atlas-runtime/src/value.rs
+   ls crates/atlas-runtime/src/interpreter/mod.rs
+   ```
+4. Check if extern types already exist:
+   ```bash
+   grep -n "Extern\|Foreign\|FFI" crates/atlas-runtime/src/typechecker/types.rs
+   ```
 
-**If missing:** May need type system enhancements for extern types
+**Spec Check (types.md section 7):**
+- Read `docs/specification/types.md` section 7 to see if extern types are defined
+- If spec section exists: Implement exactly per spec
+- If spec section doesn't exist: Extern types are NEW for v0.2 FFI phase
+
+**Expected from v0.1 (sufficient for FFI):**
+- Type enum with variants for all Atlas types
+- Value enum with runtime representations
+- Type checker can validate function signatures
+- Runtime can call functions dynamically
+
+**Decision Tree:**
+
+a) If v0.1 type system exists (Type enum found):
+   → Proceed with phase-10
+   → Add Extern type variant to Type enum
+   → Implement per spec if spec defines it
+
+b) If spec defines extern types (section 7 exists):
+   → Read spec section 7 completely
+   → Implement extern types exactly per spec
+   → Add Type::Extern variant matching spec
+   → Log: "Implemented extern types per types.md section 7"
+
+c) If spec doesn't define extern types:
+   → Extern types are NEW for this phase
+   → Design minimal FFI-compatible type representation
+   → C-compatible primitives: int, double, char*, void
+   → Document design decisions in implementation
+   → Consider proposing spec addition after implementation
+
+d) If type system missing entirely:
+   → CRITICAL ERROR: v0.1 incomplete
+   → STOP immediately
+   → Verify v0.1 completion in STATUS.md
+
+**No user questions needed:** Spec and v0.1 infrastructure are verifiable. If spec silent on extern types, implement minimal C-compatible design.
 
 ---
 

@@ -1,22 +1,70 @@
 # Phase 14: Documentation Generator
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Parser must extract doc comments, module system must exist.
 
-**Verification:**
-```bash
-grep -n "Comment\|doc" crates/atlas-runtime/src/ast.rs
-ls crates/atlas-runtime/src/modules/mod.rs
-cargo test parser
-```
+**REQUIRED:** Parser with doc comment support (frontend/phase-02) and Module system (foundation/phase-06).
 
-**What's needed:**
-- Parser preserves doc comments from frontend/phase-02
-- Module system from foundation/phase-06
-- AST with documentation nodes
-- Reflection API from foundation/phase-12 helpful
+**Verification Steps:**
+1. Check STATUS.md:
+   - Frontend section, phase-02 (Formatter) should be ✅
+   - Foundation section, phase-06 (Module System) should be ✅
 
-**If missing:** Complete frontend/phase-02 and foundation/phase-06 first
+2. Check spec for doc comment syntax:
+   - Read `docs/specification/syntax.md` for comment syntax
+   - Check if doc comments (`///` or `/** */`) are defined
+
+3. Verify parser preserves comments (if frontend/phase-02 complete):
+   ```bash
+   grep -n "Comment\|comment\|doc" crates/atlas-runtime/src/ast.rs | head -10
+   cargo test parser 2>&1 | grep "test result"
+   ```
+
+4. Verify module system exists:
+   ```bash
+   ls crates/atlas-runtime/src/modules/mod.rs
+   cargo test modules 2>&1 | grep "test result"
+   ```
+
+**Frontend/phase-02 dependency:**
+- Phase-02 (Formatter) should preserve and expose doc comments
+- Parser should include comment nodes in AST
+- If phase-02 incomplete, doc comments may not be accessible
+
+**Foundation/phase-06 dependency:**
+- Module system provides structure for documentation
+- Need module exports/imports for cross-references
+- Need module resolution for linking
+
+**Decision Tree:**
+
+a) If both frontend/phase-02 AND foundation/phase-06 complete:
+   → Proceed with phase-14
+   → Extract doc comments from AST
+   → Use module system for documentation structure
+
+b) If frontend/phase-02 incomplete:
+   → STOP immediately
+   → Report: "Frontend phase-02 required for doc comment support"
+   → Complete frontend/phase-02 first
+   → Then return to phase-14
+
+c) If foundation/phase-06 incomplete:
+   → STOP immediately
+   → Report: "Foundation phase-06 required for module documentation"
+   → Complete foundation/phase-06 first
+   → Then return to phase-14
+
+d) If spec doesn't define doc comments:
+   → Check frontend/phase-02 for doc comment syntax it added
+   → Use triple-slash (`///`) convention (standard for doc comments)
+   → Document doc comment syntax in this phase
+
+e) If parser doesn't preserve comments yet:
+   → Extend parser to preserve doc comments
+   → Add Comment AST node if needed
+   → This is enhancement to parser, not full rewrite
+
+**No user questions needed:** Prerequisites are verifiable via STATUS.md and file checks. Doc comment syntax follows standard conventions if spec silent.
 
 ---
 

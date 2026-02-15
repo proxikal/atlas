@@ -1,27 +1,73 @@
 # Phase 05: Foundation Integration & Testing
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** All previous foundation phases must be complete.
 
-**Verification:**
-```bash
-ls crates/atlas-runtime/src/api/runtime.rs
-ls examples/embedding/
-ls .github/workflows/ci.yml
-ls crates/atlas-config/src/config.rs
-cargo test api_tests
-cargo test config_tests
-cargo run --example 01_hello_world
-grep "name: CI" .github/workflows/ci.yml
-```
+**REQUIRED:** Foundation phases 01, 02, 03, and 04 must be complete.
 
-**What's needed:**
-- Phase 01: Runtime embedding API complete
-- Phase 02: Custom functions and examples working
-- Phase 03: CI/CD workflows configured
-- Phase 04: Configuration system functional
+**Verification Steps:**
+1. Check STATUS.md: Foundation section
+   - phase-01 (Runtime API) should be ✅
+   - phase-02 (Embedding API) should be ✅
+   - phase-03 (CI/CD) should be ✅
+   - phase-04 (Configuration) should be ✅
 
-**If missing:** Complete phases foundation/phase-01 through phase-04 first
+2. Verify phase-01 complete:
+   ```bash
+   ls crates/atlas-runtime/src/api/runtime.rs
+   cargo test api_tests 2>&1 | grep "test result"
+   ```
+
+3. Verify phase-02 complete:
+   ```bash
+   ls examples/embedding/01_hello_world.rs
+   cargo run --example 01_hello_world 2>&1 | grep -E "Hello|Error"
+   cargo test api_native_functions_tests 2>&1 | grep "test result"
+   ```
+
+4. Verify phase-03 complete:
+   ```bash
+   ls .github/workflows/ci.yml
+   grep "name: CI" .github/workflows/ci.yml
+   ```
+
+5. Verify phase-04 complete:
+   ```bash
+   ls crates/atlas-config/src/config.rs
+   cargo test -p atlas-config 2>&1 | grep "test result"
+   ```
+
+**Expected from phases 01-04:**
+- Phase-01: 80+ API tests passing
+- Phase-02: 60+ native function tests + 6 examples working
+- Phase-03: CI workflows in .github/workflows/
+- Phase-04: 60+ config tests passing
+
+**Decision Tree:**
+
+a) If all 4 phases complete (STATUS.md ✅, all tests pass):
+   → Proceed with phase-05
+   → Create integration tests combining all foundation features
+
+b) If any phase incomplete (STATUS.md ⬜):
+   → STOP immediately
+   → Report which phases are incomplete
+   → Complete missing phases in order: 01 → 02 → 03 → 04
+   → Then return to phase-05
+
+c) If phases marked complete but tests failing:
+   → One or more phases not actually complete
+   → Fix failing phases first
+   → Verify all tests pass
+   → Update STATUS.md accurately
+   → Then proceed with phase-05
+
+d) If examples don't run (phase-02):
+   → Phase-02 not complete
+   → Fix embedding examples
+   → Verify all 6 examples compile and run
+   → Then proceed with phase-05
+
+**No user questions needed:** Foundation phases 01-04 completion is verifiable via STATUS.md, tests, and examples.
 
 ---
 

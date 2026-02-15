@@ -1,22 +1,62 @@
 # Phase 13: Performance Benchmarking Framework
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Test infrastructure and profiler hooks must exist.
 
-**Verification:**
-```bash
-cargo test --all
-ls crates/atlas-runtime/src/profiler/mod.rs
-grep -n "criterion" Cargo.toml
-```
+**REQUIRED:** Test infrastructure from v0.1 and profiler from bytecode-vm/phase-03.
 
-**What's needed:**
-- Test infrastructure from v0.1
-- Profiler from bytecode-vm/phase-03
-- Criterion or similar for Rust benchmarks
-- CLI for running benchmarks
+**Verification Steps:**
+1. Check v0.1 test infrastructure:
+   ```bash
+   cargo test --all 2>&1 | grep "test result"
+   ```
 
-**If missing:** Basic infrastructure should exist - enhancement needed
+2. Check STATUS.md: Bytecode-VM section
+   - If phase-03 (Profiler) is ✅: Can use profiler integration
+   - If phase-03 is ⬜: Benchmarking works without profiler (add integration later)
+
+3. Verify profiler exists (if phase-03 complete):
+   ```bash
+   ls crates/atlas-runtime/src/profiler/mod.rs 2>/dev/null || echo "Profiler not yet implemented"
+   ```
+
+4. Check if criterion already added:
+   ```bash
+   grep -n "criterion" Cargo.toml 2>/dev/null || echo "Will add criterion"
+   ```
+
+**Expected from v0.1:**
+- Test infrastructure with 1,391+ tests
+- Test utilities (rstest, insta, proptest)
+- Benchmark harness capability
+
+**Bytecode-VM/phase-03 status:**
+- If ✅ complete: Profiler hooks available for integration
+- If ⬜ incomplete: Benchmarking still works, add profiler integration later
+
+**Decision Tree:**
+
+a) If v0.1 tests exist (1,391+ tests pass):
+   → Proceed with phase-13
+   → Add criterion for Rust-side benchmarks
+   → Create Atlas benchmark syntax and runner
+
+b) If v0.1 tests missing or failing:
+   → ERROR: v0.1 must be complete
+   → Fix v0.1 test infrastructure
+   → Verify tests pass
+   → Then proceed with phase-13
+
+c) If bytecode-vm/phase-03 complete (profiler exists):
+   → Great! Include profiler integration in benchmarks
+   → Hook benchmarks into profiler for detailed analysis
+
+d) If bytecode-vm/phase-03 incomplete (no profiler):
+   → This is OK - benchmarking doesn't strictly require profiler
+   → Implement benchmarking framework
+   → Add profiler integration later when phase-03 complete
+   → Note in phase: "Profiler integration deferred to bytecode-vm/phase-03 completion"
+
+**No user questions needed:** Test infrastructure is verifiable. Profiler is optional enhancement, not blocker.
 
 ---
 

@@ -1,21 +1,59 @@
 # Phase 02: Embedding API - Custom Functions & Examples
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Phase foundation/phase-01 must be complete.
 
-**Verification:**
-```bash
-ls crates/atlas-runtime/src/api/runtime.rs crates/atlas-runtime/src/api/conversion.rs
-cargo test api_tests
-grep -n "impl Runtime" crates/atlas-runtime/src/api/runtime.rs
-```
+**REQUIRED:** Foundation phase-01 (Runtime API Expansion) must be complete.
 
-**What's needed:**
-- Runtime API from phase 01
-- Value conversion traits FromAtlas ToAtlas
-- Basic eval and call functionality working
+**Verification Steps:**
+1. Check STATUS.md: Foundation section, phase-01 should be ✅
+2. Verify API files exist:
+   ```bash
+   ls crates/atlas-runtime/src/api/runtime.rs
+   ls crates/atlas-runtime/src/api/conversion.rs
+   ls crates/atlas-runtime/src/api/mod.rs
+   ```
+3. Verify Runtime struct exists:
+   ```bash
+   grep -n "pub struct Runtime" crates/atlas-runtime/src/api/runtime.rs
+   grep -n "impl Runtime" crates/atlas-runtime/src/api/runtime.rs
+   ```
+4. Verify conversion traits exist:
+   ```bash
+   grep -n "pub trait FromAtlas" crates/atlas-runtime/src/api/conversion.rs
+   grep -n "pub trait ToAtlas" crates/atlas-runtime/src/api/conversion.rs
+   ```
+5. Run phase-01 tests:
+   ```bash
+   cargo test api_tests
+   cargo test api_conversion_tests
+   ```
 
-**If missing:** Complete phase foundation/phase-01 first
+**Expected from phase-01 (per acceptance criteria):**
+- Runtime struct with eval() and call() methods
+- FromAtlas and ToAtlas traits for type conversion
+- Bidirectional conversion for primitives, Vec, HashMap, Option
+- 80+ tests passing (40 API, 40 conversion)
+- Both interpreter and VM execution modes supported
+
+**Decision Tree:**
+
+a) If phase-01 complete (STATUS.md ✅, all files exist, tests pass):
+   → Proceed with phase-02
+
+b) If phase-01 incomplete (STATUS.md ⬜ or missing files):
+   → STOP immediately
+   → Report: "Foundation phase-01 required before phase-02"
+   → Update STATUS.md next phase to foundation/phase-01
+   → Do NOT proceed
+
+c) If phase-01 marked complete but tests failing:
+   → Phase-01 is not actually complete
+   → Fix phase-01 issues first
+   → Verify 80+ tests pass
+   → Mark phase-01 complete in STATUS.md
+   → Then proceed with phase-02
+
+**No user questions needed:** Phase-01 completion is verifiable via STATUS.md, file existence, and cargo test.
 
 ---
 

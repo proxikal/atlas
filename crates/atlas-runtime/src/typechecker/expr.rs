@@ -267,7 +267,14 @@ impl<'a> TypeChecker<'a> {
 
                 *return_type
             }
-            Type::Unknown => Type::Unknown, // Error recovery
+            Type::Unknown => {
+                // Error recovery: still check arguments for side effects (usage tracking)
+                // This ensures parameters referenced in arguments are marked as used
+                for arg in &call.args {
+                    self.check_expr(arg);
+                }
+                Type::Unknown
+            }
             _ => {
                 self.diagnostics.push(
                     Diagnostic::error_with_code(

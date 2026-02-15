@@ -1,22 +1,77 @@
 # Phase 15: Security and Permissions Model
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Runtime API and sandboxing from embedding API must exist.
 
-**Verification:**
-```bash
-ls crates/atlas-runtime/src/api/runtime.rs
-grep -n "sandbox\|RuntimeConfig" crates/atlas-runtime/src/api/
-cargo test api
-```
+**REQUIRED:** Runtime API (phase-01), Embedding API (phase-02), and FFI (phase-10) must be complete.
 
-**What's needed:**
-- Runtime API from foundation/phase-01
-- Sandboxing from foundation/phase-02
-- File I/O and network stdlib (future)
-- FFI from foundation/phase-10
+**Verification Steps:**
+1. Check STATUS.md: Foundation section
+   - phase-01 (Runtime API) should be ✅
+   - phase-02 (Embedding API) should be ✅
+   - phase-10 (FFI) should be ✅
 
-**If missing:** Complete foundation phases 01-02 and phase-10 first
+2. Verify phase-01 (Runtime API) complete:
+   ```bash
+   ls crates/atlas-runtime/src/api/runtime.rs
+   grep -n "pub struct Runtime" crates/atlas-runtime/src/api/runtime.rs
+   cargo test api_tests 2>&1 | grep "test result"
+   ```
+
+3. Verify phase-02 (Embedding API) complete:
+   ```bash
+   ls crates/atlas-runtime/src/api/native.rs
+   grep -n "RuntimeConfig\|sandbox" crates/atlas-runtime/src/api/runtime.rs
+   cargo test api_native_functions_tests 2>&1 | grep "test result"
+   ```
+
+4. Verify phase-10 (FFI) complete:
+   ```bash
+   ls crates/atlas-runtime/src/ffi/mod.rs
+   cargo test ffi_tests 2>&1 | grep "test result"
+   ```
+
+**Expected from phase-01 (per acceptance criteria):**
+- Runtime struct with eval/call methods
+- Execution mode support (interpreter/VM)
+- 80+ tests passing
+
+**Expected from phase-02 (per acceptance criteria):**
+- RuntimeConfig with sandboxing options
+- Native function registration
+- Sandboxed runtime constructor
+- 60+ tests passing
+
+**Expected from phase-10 (per acceptance criteria):**
+- FFI infrastructure for foreign calls
+- Permission checks will gate FFI operations
+- 80+ tests passing
+
+**Decision Tree:**
+
+a) If all 3 phases complete (STATUS.md ✅, files exist, tests pass):
+   → Proceed with phase-15
+   → Build on existing RuntimeConfig from phase-02
+   → Add permission checks to FFI from phase-10
+
+b) If phase-01 or phase-02 incomplete:
+   → STOP immediately
+   → Report: "Foundation phases 01, 02, and 10 required before phase-15"
+   → Complete missing phases in order: 01 → 02 → 10
+   → Then return to phase-15
+
+c) If phase-10 incomplete:
+   → STOP immediately
+   → Report: "Foundation phase-10 (FFI) required before phase-15"
+   → Complete phase-10 first
+   → Then return to phase-15
+
+d) If any phase marked complete but tests failing:
+   → That phase is not actually complete
+   → Fix the failing phase first
+   → Verify all tests pass
+   → Then proceed with phase-15
+
+**No user questions needed:** All prerequisite phases are verifiable via STATUS.md, file existence, and cargo test.
 
 ---
 

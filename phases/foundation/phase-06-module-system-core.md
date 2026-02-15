@@ -1,21 +1,54 @@
 # Phase 06: Module System - Core Infrastructure
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** AST and type checker must support namespacing concepts.
 
-**Verification:**
-```bash
-grep -n "Scope\|Environment" crates/atlas-runtime/src/typechecker/mod.rs
-grep -n "pub struct Program" crates/atlas-runtime/src/ast.rs
-cargo test typechecker
-```
+**REQUIRED:** Type checker with scope management and AST structure from v0.1.
 
-**What's needed:**
-- Type checker with scope management from v0.1
-- AST structure supports top-level declarations
-- Diagnostic system for module errors
+**Verification Steps:**
+1. Check v0.1 completion: STATUS.md should confirm type checker complete
+2. Verify type checker has scope management:
+   ```bash
+   grep -n "Scope\|Environment\|env:" crates/atlas-runtime/src/typechecker/mod.rs | head -10
+   ```
+3. Verify AST supports top-level declarations:
+   ```bash
+   grep -n "pub struct Program\|pub enum Stmt" crates/atlas-runtime/src/ast.rs | head -10
+   ```
+4. Verify type checker works:
+   ```bash
+   cargo test typechecker 2>&1 | grep "test result"
+   ```
+5. Check diagnostic system exists:
+   ```bash
+   ls crates/atlas-runtime/src/error.rs
+   ```
 
-**If missing:** Core systems should exist from v0.1 - verify workspace structure
+**Expected from v0.1 (per v0.1 completion):**
+- Type checker with Environment/Scope for variable tracking
+- AST with Program, Stmt, Expr nodes
+- Type checking for functions, variables, scopes
+- Error/diagnostic infrastructure
+- All type checker tests passing
+
+**Decision Tree:**
+
+a) If v0.1 type checker exists with scopes (grep finds Scope/Environment):
+   → Proceed with phase-06
+   → Module system will extend existing scope infrastructure
+
+b) If type checker exists but no scope management:
+   → ERROR: v0.1 should have scope management
+   → Check v0.1 implementation completeness
+   → Verify v0.1 actually complete per STATUS.md
+   → Do NOT proceed until v0.1 verified
+
+c) If AST doesn't support top-level declarations:
+   → ERROR: v0.1 should have Program/Stmt nodes
+   → Verify AST structure per docs/specification/syntax.md
+   → Fix v0.1 AST if broken
+   → Then proceed with phase-06
+
+**No user questions needed:** v0.1 infrastructure is verifiable via grep and cargo test.
 
 ---
 

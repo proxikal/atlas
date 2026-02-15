@@ -1,21 +1,50 @@
 # Phase 01: Runtime API Expansion
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
+
 **REQUIRED:** v0.1 runtime must be complete with Value model and execution engines.
 
-**Verification:**
-```bash
-grep -n "pub enum Value" crates/atlas-runtime/src/value.rs
-ls crates/atlas-runtime/src/interpreter/mod.rs crates/atlas-runtime/src/vm/mod.rs
-cargo test --lib
-```
+**Verification Steps:**
+1. Check STATUS.md: "v0.1.0: COMPLETE" section should show 93/93 phases
+2. Verify Value enum exists:
+   ```bash
+   grep -n "pub enum Value" crates/atlas-runtime/src/value.rs
+   ```
+3. Verify execution engines exist:
+   ```bash
+   ls crates/atlas-runtime/src/interpreter/mod.rs
+   ls crates/atlas-runtime/src/vm/mod.rs
+   ```
+4. Run v0.1 test suite:
+   ```bash
+   cargo test --lib 2>&1 | grep "test result"
+   ```
 
-**What's needed:**
-- Value enum with all types Number String Bool Null Array Object Function Closure
-- Interpreter and VM execution engines working
-- Basic compilation pipeline functional
+**Expected from v0.1 (per STATUS.md v0.1 completion):**
+- Value enum with types: Number, String, Bool, Null, Array, Object, Function
+- Interpreter execution engine (100% working)
+- VM execution engine (100% parity with interpreter)
+- 1,391 tests passing (zero flaky tests)
+- Basic compilation pipeline: lexer → parser → compiler → bytecode
 
-**If missing:** v0.1 should be complete - check STATUS.md v0.1 completion
+**Decision Tree:**
+
+a) If v0.1 complete (STATUS.md confirms, tests pass):
+   → Proceed with phase-01
+
+b) If v0.1 incomplete (tests failing, missing files):
+   → STOP immediately
+   → Report: "v0.1 must be 100% complete before v0.2 foundation"
+   → Fix v0.1 issues first
+   → Do NOT proceed until cargo test --lib passes
+
+c) If STATUS.md says complete but tests fail:
+   → Investigate which v0.1 component is broken
+   → Fix broken component
+   → Verify all 1,391 tests pass
+   → Then proceed with phase-01
+
+**No user questions needed:** v0.1 status is verifiable via STATUS.md and cargo test.
 
 ---
 

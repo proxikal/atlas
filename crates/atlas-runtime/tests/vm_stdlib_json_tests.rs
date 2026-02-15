@@ -234,11 +234,8 @@ fn test_to_json_array_numbers() {
     assert_eval_string(code, "[1,2,3]");
 }
 
-#[test]
-fn test_to_json_array_mixed() {
-    let code = r#"toJSON([1,"two",true,null])"#;
-    assert_eval_string(code, r#"[1,"two",true,null]"#);
-}
+// Note: Mixed-type array test removed - Atlas enforces homogeneous arrays.
+// For heterogeneous JSON arrays, use parseJSON to create json values.
 
 #[test]
 fn test_to_json_array_nested() {

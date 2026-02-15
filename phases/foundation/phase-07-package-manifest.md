@@ -1,22 +1,67 @@
 # Phase 07: Package Manifest System
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** Configuration system and module system must exist.
 
-**Verification:**
-```bash
-ls crates/atlas-config/src/lib.rs
-ls crates/atlas-runtime/src/modules/mod.rs
-cargo test config
-cargo test modules
-```
+**REQUIRED:** Configuration system (phase-04) and Module system (phase-06) must be complete.
 
-**What's needed:**
-- Configuration system from foundation/phase-04
-- Module system from foundation/phase-06
-- TOML parsing from config system
+**Verification Steps:**
+1. Check STATUS.md: Foundation section
+   - phase-04 (Configuration) should be ✅
+   - phase-06 (Module System) should be ✅
 
-**If missing:** Complete foundation/phase-04 and phase-06 first
+2. Verify phase-04 (Configuration) complete:
+   ```bash
+   ls crates/atlas-config/src/lib.rs
+   ls crates/atlas-config/src/config.rs
+   cargo test -p atlas-config 2>&1 | grep "test result"
+   grep -n "pub struct AtlasConfig" crates/atlas-config/src/config.rs
+   ```
+
+3. Verify phase-06 (Module System) complete:
+   ```bash
+   ls crates/atlas-runtime/src/modules/mod.rs
+   ls crates/atlas-runtime/src/modules/resolver.rs
+   cargo test modules 2>&1 | grep "test result"
+   ```
+
+**Expected from phase-04 (per acceptance criteria):**
+- atlas-config crate with AtlasConfig struct
+- TOML parsing using serde + toml crates
+- Configuration loading from atlas.toml files
+- 60+ tests passing
+
+**Expected from phase-06 (per acceptance criteria):**
+- Module system with import/export
+- Module resolver finding modules by path
+- Dependency graph construction
+- 120+ tests passing (60 unit, 60 integration)
+
+**Decision Tree:**
+
+a) If both phase-04 AND phase-06 complete (STATUS.md ✅, tests pass):
+   → Proceed with phase-07
+   → Use existing TOML parsing from phase-04
+   → Use module resolution from phase-06
+
+b) If phase-04 complete but phase-06 incomplete:
+   → STOP immediately
+   → Report: "Foundation phase-06 required before phase-07"
+   → Complete phase-06 first
+   → Then return to phase-07
+
+c) If phase-06 complete but phase-04 incomplete:
+   → STOP immediately
+   → Report: "Foundation phase-04 required before phase-07"
+   → Complete phase-04 first
+   → Then return to phase-07
+
+d) If both incomplete:
+   → ERROR: Wrong phase ordering
+   → Check STATUS.md next phase
+   → Should be phase-04 or phase-06, not phase-07
+   → Fix phase ordering
+
+**No user questions needed:** Phase completion is verifiable via STATUS.md, file existence, and cargo test.
 
 ---
 

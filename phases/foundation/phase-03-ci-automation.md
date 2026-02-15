@@ -1,21 +1,59 @@
 # Phase 03: CI/CD Automation
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** GitHub repository must exist with basic tests.
 
-**Verification:**
-```bash
-ls .github/workflows/
-cargo test --all
-cargo test --all 2>&1 | grep "test result"
-```
+**REQUIRED:** GitHub repository with v0.1 test suite.
 
-**What's needed:**
-- GitHub repository with .github/workflows directory
-- Test suite with substantial coverage 100+ tests from v0.1
-- Cargo.toml with proper workspace configuration
+**Verification Steps:**
+1. Verify this is a git repository:
+   ```bash
+   git status
+   ```
 
-**If missing:** Should exist from v0.1 - check repository structure
+2. Verify GitHub workflows directory exists (may be empty):
+   ```bash
+   ls -la .github/ 2>/dev/null || echo "No .github directory yet - will create"
+   ```
+
+3. Verify test suite exists from v0.1:
+   ```bash
+   cargo test --all 2>&1 | grep "test result"
+   ```
+
+4. Verify workspace structure:
+   ```bash
+   grep -n "workspace\|members" Cargo.toml | head -5
+   ```
+
+**Expected from v0.1 (per STATUS.md):**
+- Git repository initialized
+- Workspace with multiple crates
+- 1,391+ tests from v0.1 (all passing)
+- Cargo.toml workspace configuration
+
+**Decision Tree:**
+
+a) If git repo exists with 1,391+ tests passing:
+   → Proceed with phase-03
+   → Create .github/workflows/ if it doesn't exist
+   → Set up CI/CD automation
+
+b) If git repo exists but .github missing:
+   → This is fine - phase-03 will create it
+   → Proceed with phase-03
+
+c) If not a git repository:
+   → Initialize git: `git init`
+   → Make initial commit of v0.1 code
+   → Then proceed with phase-03
+
+d) If tests not passing:
+   → ERROR: v0.1 must be complete with all tests passing
+   → Fix failing tests first
+   → Verify 1,391+ tests pass
+   → Then proceed with phase-03
+
+**No user questions needed:** Repository and test status are verifiable via git and cargo test.
 
 ---
 

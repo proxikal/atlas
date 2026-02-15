@@ -1,21 +1,54 @@
 # Phase 04: Configuration System
 
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
-**REQUIRED:** CLI must exist with basic command structure.
 
-**Verification:**
-```bash
-ls crates/atlas-cli/src/main.rs
-cargo run --bin atlas -- --help
-grep -n "enum Command" crates/atlas-cli/src/main.rs
-```
+**REQUIRED:** CLI infrastructure from v0.1 must exist.
 
-**What's needed:**
-- atlas-cli crate with command structure
-- Basic CLI functionality run compile etc
-- Workspace Cargo.toml for adding new crate
+**Verification Steps:**
+1. Check v0.1 completion in STATUS.md: Should show CLI from v0.1 complete
+2. Verify CLI crate exists:
+   ```bash
+   ls crates/atlas-cli/src/main.rs
+   ls crates/atlas-cli/Cargo.toml
+   ```
+3. Verify CLI runs:
+   ```bash
+   cargo run --bin atlas -- --help
+   ```
+4. Verify command structure:
+   ```bash
+   grep -n "enum Command\|struct.*Command" crates/atlas-cli/src/main.rs
+   ```
+5. Verify workspace can add new crate:
+   ```bash
+   grep -n "members" Cargo.toml | head -5
+   ```
 
-**If missing:** CLI should exist from v0.1 - verify workspace structure
+**Expected from v0.1 (basic CLI exists):**
+- atlas-cli crate with main.rs
+- Command enum or struct for subcommands
+- Basic commands: run, compile, repl (at minimum)
+- Workspace Cargo.toml with members array
+- CLI compiles and shows help
+
+**Decision Tree:**
+
+a) If v0.1 CLI exists (cargo run --bin atlas works):
+   → Proceed with phase-04
+   → Create new atlas-config crate in workspace
+
+b) If CLI doesn't exist:
+   → ERROR: v0.1 should be complete per STATUS.md
+   → Check STATUS.md v0.1 completion section
+   → If v0.1 truly incomplete: Must complete v0.1 first
+   → STOP, do not proceed
+
+c) If CLI exists but commands broken:
+   → Fix v0.1 CLI issues
+   → Verify atlas --help works
+   → Then proceed with phase-04
+
+**No user questions needed:** v0.1 CLI existence is verifiable via cargo run and file checks.
 
 ---
 
