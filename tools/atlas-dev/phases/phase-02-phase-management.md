@@ -4,6 +4,7 @@
 
 **Priority:** CRITICAL
 **Depends On:** Phase 1
+**CRITICAL:** Must follow `STATUS-FORMAT-SPEC.md` EXACTLY (line numbers, patterns, rounding)
 
 ---
 
@@ -250,24 +251,42 @@ atlas-dev phase complete "phases/stdlib/phase-07c-queue-stack.md" \
 
 ## Acceptance Criteria
 
-- [x] Phase path parser correctly extracts category and name
-- [x] Tracker reader parses markdown, counts ✅/⬜ correctly
-- [x] Tracker writer updates phase status (⬜ → ✅)
-- [x] STATUS.md reader parses all necessary fields
-- [x] STATUS.md writer updates all 5 fields correctly
-- [x] Percentage calculator rounds correctly (10/21 = 48%, not 47%)
-- [x] Next phase finder locates next ⬜ in tracker
-- [x] Sync validator detects mismatches
-- [x] Git commit creates atomic commit with both files
-- [x] `phase complete` works end-to-end with --dry-run
-- [x] `phase complete --commit` creates real commit
-- [x] `phase current` returns correct current phase
-- [x] `phase next` returns correct next phase
-- [x] `validate` detects sync errors
-- [x] All output is valid JSON
-- [x] Unit tests pass
-- [x] Integration test passes
-- [x] Real-world test (phase-07c) passes
+### Functional Requirements
+- [ ] Phase path parser correctly extracts category and name
+- [ ] Tracker reader parses markdown, counts ✅/⬜ correctly
+- [ ] Tracker writer updates phase status (⬜ → ✅)
+- [ ] STATUS.md reader parses all necessary fields (lines 3, 10, 11, 12, 21-28)
+- [ ] STATUS.md writer updates all 5 fields correctly
+- [ ] Percentage calculator rounds correctly (10/21 = 48%, not 47%)
+- [ ] Next phase finder locates next ⬜ in tracker
+- [ ] Sync validator detects mismatches
+- [ ] Git commit creates atomic commit with both files
+- [ ] `phase complete` works end-to-end with --dry-run
+- [ ] `phase complete --commit` creates real commit
+- [ ] `phase current` returns correct current phase
+- [ ] `phase next` returns correct next phase
+- [ ] `validate` detects sync errors
+- [ ] Unit tests pass
+- [ ] Integration test passes
+- [ ] Real-world test (phase-07c) passes
+
+### STATUS.md Format Compliance (CRITICAL)
+- [ ] Follows `STATUS-FORMAT-SPEC.md` EXACTLY
+- [ ] Updates line 3 (Last Updated)
+- [ ] Updates line 10 (Last Completed with verified date)
+- [ ] Updates line 11 (Next Phase)
+- [ ] Updates line 12 (Real Progress X/78)
+- [ ] Updates correct category row in table (lines 20-28)
+- [ ] Uses exact tracker path format: `status/trackers/{N}-{category}.md`
+- [ ] Category mapping matches spec (foundation=0, stdlib=1, etc.)
+- [ ] Rounding uses math.Round (not floor/ceil)
+
+### Token Efficiency Requirements
+- [ ] `phase complete --help` output < 60 tokens
+- [ ] JSON output uses compact notation (abbreviated fields)
+- [ ] No emoji in default JSON output
+- [ ] Arrays used for progress tuples: `[10, 21, 48]`
+- [ ] Null/empty fields omitted from JSON
 
 ---
 
