@@ -1,7 +1,7 @@
 # Atlas Module System Specification
 
-**Version:** v0.2+
-**Status:** Implementation in progress (BLOCKER 04)
+**Version:** v0.2
+**Status:** Implemented (foundation/phase-06)
 
 ---
 

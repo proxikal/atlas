@@ -8,13 +8,13 @@
 ## 🎯 Current Phase
 
 **Version:** v0.2 (building production infrastructure)
-**Last Completed:** phases/foundation/phase-04-configuration-system.md
-**Next Phase:** phases/foundation/phase-06-module-system-core.md
+**Last Completed:** phases/foundation/phase-06-module-system-core.md
+**Next Phase:** phases/foundation/phase-09-error-handling-primitives.md
 
 **🚨 CRITICAL: Foundation must be completed before continuing stdlib/frontend/CLI**
 
-**Real Progress:** 4/68 phases complete (6%)
-- Foundation: 4/17 (method call syntax + runtime API + config system)
+**Real Progress:** 5/68 phases complete (7%)
+- Foundation: 5/17 (method call + runtime API + config + modules)
 - Stdlib: 5/15 (will hit foundation blockers at phase 10)
 - Everything else: Blocked by foundation
 
@@ -108,16 +108,16 @@ v0.2 transforms Atlas into a production-ready language:
 **🚨 CATEGORY ORDER = EXECUTION ORDER 🚨**
 **Foundation MUST be complete before other categories**
 
-### 0. Foundation (4/17) - Production Infrastructure [PRIORITY 1 - DO FIRST]
+### 0. Foundation (5/17) - Production Infrastructure [PRIORITY 1 - DO FIRST]
 
 **Completed:**
 - ✅ phase-16-method-call-syntax-frontend.md **[Emergency blocker fix - not planned foundation]**
 - ✅ phase-17-method-call-syntax-backend.md **[Emergency blocker fix - not planned foundation]**
 - ✅ phase-01-runtime-api-expansion.md **[Runtime API with conversion traits, 151 tests]**
 - ✅ phase-04-configuration-system.md **[Config system: atlas.toml + global config, 76 tests]**
+- ✅ phase-06-module-system-core.md **[Module system: imports/exports/deps, 82 tests, BLOCKER 04 complete]**
 
 **Critical Path (do in this order to unblock v0.2):**
-- ⬜ phase-06-module-system-core.md **[No blockers]**
 - ⬜ phase-09-error-handling-primitives.md **[No blockers - Result types]**
 - ⬜ phase-02-embedding-api-design.md **[Needs: phase-01]**
 - ⬜ phase-10-ffi-infrastructure.md **[No blockers]**
@@ -202,9 +202,9 @@ v0.2 transforms Atlas into a production-ready language:
 - ⬜ phase-04-stability-verification.md
 - ⬜ phase-05-v02-milestone-completion.md
 
-**Total v0.2 Progress:** 9/68 phases (13%) - **MISLEADING: 5 stdlib phases will hit blockers**
-**Real Progress:** 4/68 phases (6%) - Foundation phases 01, 04, 16-17 complete
-**Foundation Status:** 4/17 phases (24%) - **MUST complete before v0.2 can proceed**
+**Total v0.2 Progress:** 10/68 phases (15%) - **MISLEADING: 5 stdlib phases will hit blockers**
+**Real Progress:** 5/68 phases (7%) - Foundation phases 01, 04, 06, 16-17 complete
+**Foundation Status:** 5/17 phases (29%) - **MUST complete before v0.2 can proceed**
 **Next Critical Path:** Complete foundation phases 01, 04, 06, 09 to unblock most of v0.2
 
 ---
