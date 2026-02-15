@@ -485,7 +485,7 @@ mod tests {
         manager.load_policy(derived).unwrap();
 
         let perms = manager.get_permissions("derived").unwrap();
-        
+
         // Should have both base and derived permissions
         assert!(perms.len() >= 2);
     }
@@ -504,7 +504,7 @@ mod tests {
     #[test]
     fn test_time_based_validation() {
         let mut policy = SecurityPolicy::new("test".to_string());
-        
+
         // Invalid day of week
         policy.time_based.push(TimeBasedGrant {
             permission: "file-read:/data/*".to_string(),

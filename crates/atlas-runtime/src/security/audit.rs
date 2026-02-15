@@ -35,10 +35,7 @@ pub enum AuditEvent {
     /// Sandbox destroyed
     SandboxDestroyed { sandbox_id: String },
     /// Security policy violation
-    PolicyViolation {
-        policy: String,
-        violation: String,
-    },
+    PolicyViolation { policy: String, violation: String },
     /// Resource quota exceeded
     QuotaViolation {
         resource: String,

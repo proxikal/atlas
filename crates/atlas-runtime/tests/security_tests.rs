@@ -1,10 +1,10 @@
 //! Comprehensive security and permission tests
 
+use atlas_runtime::security::policy::{PolicyAction, PolicyRule, ResourceType};
 use atlas_runtime::security::{
     Permission, PermissionSet, PolicyManager, ResourceQuotas, Sandbox, SecurityContext,
     SecurityError, SecurityPolicy,
 };
-use atlas_runtime::security::policy::{PolicyAction, PolicyRule, ResourceType};
 use std::path::{Path, PathBuf};
 
 // ============================================================================
@@ -523,9 +523,8 @@ fn test_security_context_isolation() {
 
 #[test]
 fn test_sandbox_complete_lifecycle() {
-
     let sandbox = Sandbox::restrictive("test-lifecycle".to_string());
-    
+
     assert_eq!(sandbox.id(), "test-lifecycle");
     assert!(sandbox.is_enabled());
 
@@ -534,7 +533,6 @@ fn test_sandbox_complete_lifecycle() {
 
 #[test]
 fn test_sandbox_resource_quotas_enforced() {
-
     let quotas = ResourceQuotas {
         memory_limit: Some(1000),
         file_descriptor_limit: Some(5),
@@ -556,7 +554,6 @@ fn test_sandbox_resource_quotas_enforced() {
 
 #[test]
 fn test_security_policy_enforcement() {
-
     let mut policy = SecurityPolicy::new("test-policy".to_string());
     policy.default_action = PolicyAction::Deny;
 
@@ -573,7 +570,6 @@ fn test_security_policy_enforcement() {
 
 #[test]
 fn test_policy_manager_inheritance() {
-
     let mut manager = PolicyManager::new();
 
     // Base policy
@@ -633,7 +629,6 @@ fn test_permission_set_operations() {
 
 #[test]
 fn test_sandbox_permission_integration() {
-
     let mut sandbox = Sandbox::restrictive("test-perms".to_string());
 
     // Grant specific permission
@@ -647,7 +642,6 @@ fn test_sandbox_permission_integration() {
 
 #[test]
 fn test_resource_quota_monitoring() {
-
     let sandbox = Sandbox::new(
         "test-monitoring".to_string(),
         PermissionSet::new(),
@@ -666,7 +660,6 @@ fn test_resource_quota_monitoring() {
 
 #[test]
 fn test_policy_deny_rules_override_allow() {
-
     let mut policy = SecurityPolicy::new("test-deny-priority".to_string());
     policy.default_action = PolicyAction::Allow;
 
@@ -692,7 +685,6 @@ fn test_policy_deny_rules_override_allow() {
 
 #[test]
 fn test_sandbox_disabled_bypasses_checks() {
-
     let quotas = ResourceQuotas {
         memory_limit: Some(100),
         ..ResourceQuotas::default()

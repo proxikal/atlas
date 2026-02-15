@@ -23,6 +23,7 @@ pub mod lexer;
 pub mod module_executor;
 pub mod module_loader;
 pub mod parser;
+pub mod reflect;
 pub mod repl;
 pub mod resolver;
 pub mod runtime;

@@ -61,24 +61,24 @@ impl ResourceQuotas {
     /// Create restrictive default quotas for untrusted code
     pub fn restrictive() -> Self {
         Self {
-            memory_limit: Some(64 * 1024 * 1024),     // 64 MB
+            memory_limit: Some(64 * 1024 * 1024),         // 64 MB
             cpu_time_limit: Some(Duration::from_secs(5)), // 5 seconds
-            stack_depth_limit: Some(1000),             // 1000 frames
-            file_descriptor_limit: Some(10),           // 10 FDs
-            network_connection_limit: Some(5),         // 5 connections
-            disk_io_limit: Some(10 * 1024 * 1024),    // 10 MB
+            stack_depth_limit: Some(1000),                // 1000 frames
+            file_descriptor_limit: Some(10),              // 10 FDs
+            network_connection_limit: Some(5),            // 5 connections
+            disk_io_limit: Some(10 * 1024 * 1024),        // 10 MB
         }
     }
 
     /// Create permissive quotas for trusted code
     pub fn permissive() -> Self {
         Self {
-            memory_limit: Some(1024 * 1024 * 1024),       // 1 GB
+            memory_limit: Some(1024 * 1024 * 1024),         // 1 GB
             cpu_time_limit: Some(Duration::from_secs(300)), // 5 minutes
-            stack_depth_limit: Some(10000),                // 10000 frames
-            file_descriptor_limit: Some(1000),             // 1000 FDs
-            network_connection_limit: Some(100),           // 100 connections
-            disk_io_limit: Some(1024 * 1024 * 1024),      // 1 GB
+            stack_depth_limit: Some(10000),                 // 10000 frames
+            file_descriptor_limit: Some(1000),              // 1000 FDs
+            network_connection_limit: Some(100),            // 100 connections
+            disk_io_limit: Some(1024 * 1024 * 1024),        // 1 GB
         }
     }
 
@@ -135,11 +135,7 @@ pub struct Sandbox {
 
 impl Sandbox {
     /// Create new sandbox with given permissions and quotas
-    pub fn new(
-        id: String,
-        permissions: PermissionSet,
-        quotas: ResourceQuotas,
-    ) -> Self {
+    pub fn new(id: String, permissions: PermissionSet, quotas: ResourceQuotas) -> Self {
         Self {
             id,
             permissions,
@@ -225,10 +221,7 @@ impl Sandbox {
                         attempted: total as u64,
                     });
                 }
-                return Err(SandboxError::MemoryQuotaExceeded {
-                    used: total,
-                    limit,
-                });
+                return Err(SandboxError::MemoryQuotaExceeded { used: total, limit });
             }
         }
 
@@ -456,7 +449,7 @@ mod tests {
     #[test]
     fn test_file_access_denied_in_sandbox() {
         let sandbox = Sandbox::restrictive("test".to_string());
-        
+
         // Sandbox has no permissions by default
         assert_eq!(sandbox.permissions().len(), 0);
     }
@@ -464,7 +457,7 @@ mod tests {
     #[test]
     fn test_network_access_denied_in_sandbox() {
         let sandbox = Sandbox::restrictive("test".to_string());
-        
+
         // Sandbox has no permissions by default
         assert_eq!(sandbox.permissions().len(), 0);
     }
@@ -572,7 +565,11 @@ mod tests {
 
     #[test]
     fn test_quota_monitoring() {
-        let sandbox = Sandbox::new("test".to_string(), PermissionSet::new(), ResourceQuotas::default());
+        let sandbox = Sandbox::new(
+            "test".to_string(),
+            PermissionSet::new(),
+            ResourceQuotas::default(),
+        );
 
         sandbox.allocate_memory(100).unwrap();
         sandbox.allocate_file_descriptor().unwrap();

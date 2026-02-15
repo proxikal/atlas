@@ -4,6 +4,7 @@ pub mod array;
 pub mod io;
 pub mod json;
 pub mod math;
+pub mod reflect;
 pub mod string;
 pub mod types;
 
@@ -48,6 +49,11 @@ pub fn is_builtin(name: &str) -> bool {
             | "readFile" | "writeFile" | "appendFile" | "fileExists"
             | "readDir" | "createDir" | "removeFile" | "removeDir"
             | "fileInfo" | "pathJoin"
+            // Reflection functions
+            | "reflect_typeof" | "reflect_is_callable" | "reflect_is_primitive"
+            | "reflect_same_type" | "reflect_get_length" | "reflect_is_empty"
+            | "reflect_type_describe" | "reflect_clone" | "reflect_value_to_string"
+            | "reflect_deep_equals" | "reflect_get_function_name" | "reflect_get_function_arity"
     )
 }
 
@@ -548,6 +554,20 @@ pub fn call_builtin(
             }
             types::result_err(&args[0], call_span)
         }
+
+        // Reflection functions
+        "reflect_typeof" => reflect::typeof_fn(args, call_span),
+        "reflect_is_callable" => reflect::is_callable_fn(args, call_span),
+        "reflect_is_primitive" => reflect::is_primitive_fn(args, call_span),
+        "reflect_same_type" => reflect::same_type_fn(args, call_span),
+        "reflect_get_length" => reflect::get_length_fn(args, call_span),
+        "reflect_is_empty" => reflect::is_empty_fn(args, call_span),
+        "reflect_type_describe" => reflect::type_describe_fn(args, call_span),
+        "reflect_clone" => reflect::clone_fn(args, call_span),
+        "reflect_value_to_string" => reflect::value_to_string_fn(args, call_span),
+        "reflect_deep_equals" => reflect::deep_equals_fn(args, call_span),
+        "reflect_get_function_name" => reflect::get_function_name_fn(args, call_span),
+        "reflect_get_function_arity" => reflect::get_function_arity_fn(args, call_span),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),
