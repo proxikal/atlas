@@ -514,15 +514,19 @@ mod dependency_resolution {
             version = "1.0.0"
 
             [dependencies]
-            foo = "1.2.3"
+            foo = "^1.0"
         "#;
 
         let manifest = PackageManifest::from_str(toml).unwrap();
-        let lockfile = Resolver::resolve(&manifest).unwrap();
+        let mut resolver = Resolver::new();
+        let resolution = resolver.resolve(&manifest).unwrap();
+        let lockfile = resolver.generate_lockfile(&resolution);
 
         assert_eq!(lockfile.packages.len(), 1);
-        assert_eq!(lockfile.packages[0].name, "foo");
-        assert_eq!(lockfile.packages[0].version.to_string(), "1.2.3");
+        let foo_pkg = lockfile.get_package("foo").unwrap();
+        assert_eq!(foo_pkg.name, "foo");
+        // Mock versions are [1.0.0, 1.1.0, 1.2.0, 2.0.0], ^1.0 picks max 1.x
+        assert_eq!(foo_pkg.version.to_string(), "1.2.0");
     }
 
     #[test]
@@ -533,14 +537,18 @@ mod dependency_resolution {
             version = "1.0.0"
 
             [dependencies]
-            foo = "^1.2.3"
+            foo = "^1.1"
         "#;
 
         let manifest = PackageManifest::from_str(toml).unwrap();
-        let lockfile = Resolver::resolve(&manifest).unwrap();
+        let mut resolver = Resolver::new();
+        let resolution = resolver.resolve(&manifest).unwrap();
+        let lockfile = resolver.generate_lockfile(&resolution);
 
         assert_eq!(lockfile.packages.len(), 1);
-        assert_eq!(lockfile.packages[0].version.to_string(), "1.2.3");
+        let foo_pkg = lockfile.get_package("foo").unwrap();
+        // Mock versions: [1.0.0, 1.1.0, 1.2.0, 2.0.0], ^1.1 picks max 1.x >= 1.1
+        assert_eq!(foo_pkg.version.to_string(), "1.2.0");
     }
 
     #[test]
@@ -551,14 +559,18 @@ mod dependency_resolution {
             version = "1.0.0"
 
             [dependencies]
-            foo = "~1.2.3"
+            foo = "~1.0"
         "#;
 
         let manifest = PackageManifest::from_str(toml).unwrap();
-        let lockfile = Resolver::resolve(&manifest).unwrap();
+        let mut resolver = Resolver::new();
+        let resolution = resolver.resolve(&manifest).unwrap();
+        let lockfile = resolver.generate_lockfile(&resolution);
 
         assert_eq!(lockfile.packages.len(), 1);
-        assert_eq!(lockfile.packages[0].version.to_string(), "1.2.3");
+        let foo_pkg = lockfile.get_package("foo").unwrap();
+        // Mock versions: [1.0.0, 1.1.0, 1.2.0, 2.0.0], ~1.0 picks max 1.0.x
+        assert_eq!(foo_pkg.version.to_string(), "1.0.0");
     }
 
     #[test]
@@ -573,10 +585,15 @@ mod dependency_resolution {
         "#;
 
         let manifest = PackageManifest::from_str(toml).unwrap();
-        let lockfile = Resolver::resolve(&manifest).unwrap();
+        let mut resolver = Resolver::new();
+        let resolution = resolver.resolve(&manifest).unwrap();
 
-        // Git dependencies without version are skipped in current implementation
-        assert!(lockfile.packages.is_empty());
+        // Git dependencies without version are treated as "*" (wildcard)
+        // and resolve to latest available version
+        assert_eq!(resolution.packages.len(), 1);
+        let foo_pkg = resolution.get_package("foo").unwrap();
+        // Mock versions: [1.0.0, 1.1.0, 1.2.0, 2.0.0], * picks max
+        assert_eq!(foo_pkg.version.to_string(), "2.0.0");
     }
 
     #[test]
@@ -588,7 +605,9 @@ mod dependency_resolution {
         "#;
 
         let manifest = PackageManifest::from_str(toml).unwrap();
-        let lockfile = Resolver::resolve(&manifest).unwrap();
+        let mut resolver = Resolver::new();
+        let resolution = resolver.resolve(&manifest).unwrap();
+        let lockfile = resolver.generate_lockfile(&resolution);
 
         assert!(lockfile.metadata.atlas_version.is_some());
         assert!(lockfile.metadata.generated_at.is_some());

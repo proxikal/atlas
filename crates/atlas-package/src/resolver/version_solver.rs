@@ -141,7 +141,7 @@ mod tests {
             ],
         );
 
-        let req = create_version_req("1.0.0");
+        let req = create_version_req("=1.0.0");
         let version = solver.max_satisfying_version("test", &[req]);
         assert_eq!(version, Some(Version::new(1, 0, 0)));
     }

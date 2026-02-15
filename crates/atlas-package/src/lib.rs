@@ -1,8 +1,10 @@
-//! Atlas Package Management (phase-07 + phase-08a + phase-08b)
+//! Atlas Package Management (phase-07 + phase-08a + phase-08b + phase-08c)
 //!
 //! Package manifest system for atlas.toml files, dependency management,
-//! lockfile generation, workspace support, and package registry.
+//! lockfile generation, workspace support, package registry, conflict resolution,
+//! and build order computation.
 
+pub mod build_order;
 pub mod cache;
 pub mod downloader;
 pub mod lockfile;
@@ -11,9 +13,10 @@ pub mod registry;
 pub mod resolver;
 pub mod validator;
 
+pub use build_order::{BuildOrderComputer, BuildOrderError, BuildOrderResult};
 pub use cache::PackageCache;
 pub use downloader::Downloader;
-pub use lockfile::{LockedPackage, LockedSource, Lockfile};
+pub use lockfile::{LockedPackage, LockedSource, Lockfile, LockfileMetadata};
 pub use manifest::{
     Dependency, DependencySource, Feature, PackageManifest, VersionConstraint, Workspace,
 };
@@ -22,8 +25,8 @@ pub use registry::{
     RemoteRegistry,
 };
 pub use resolver::{
-    DependencyGraph, Resolution, ResolvedPackage, Resolver, ResolverError, ResolverResult,
-    VersionSolver,
+    Conflict, ConflictResolver, ConflictingConstraint, DependencyGraph, Resolution,
+    ResolvedPackage, Resolver, ResolverError, ResolverResult, VersionSolver,
 };
 pub use validator::{ValidationError, Validator};
 

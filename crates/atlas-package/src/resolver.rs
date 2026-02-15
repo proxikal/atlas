@@ -3,9 +3,11 @@ use semver::{Version, VersionReq};
 use std::collections::HashMap;
 use thiserror::Error;
 
+pub mod conflict;
 mod graph;
 mod version_solver;
 
+pub use conflict::{Conflict, ConflictResolver, ConflictingConstraint};
 pub use graph::DependencyGraph;
 pub use version_solver::VersionSolver;
 
@@ -201,6 +203,110 @@ impl Resolver {
             graph::GraphError::CircularDependency(msg) => ResolverError::CircularDependency(msg),
             graph::GraphError::PackageNotFound(msg) => ResolverError::PackageNotFound(msg),
         })
+    }
+
+    /// Resolve using existing lockfile if available
+    pub fn resolve_with_lockfile(
+        &mut self,
+        manifest: &PackageManifest,
+        lockfile: Option<&crate::lockfile::Lockfile>,
+    ) -> ResolverResult<Resolution> {
+        // If lockfile exists and is valid, use it
+        if let Some(lock) = lockfile {
+            if self.lockfile_is_valid(manifest, lock)? {
+                return self.resolution_from_lockfile(lock);
+            }
+        }
+
+        // Otherwise, resolve fresh
+        self.resolve(manifest)
+    }
+
+    /// Check if lockfile matches manifest constraints
+    fn lockfile_is_valid(
+        &self,
+        manifest: &PackageManifest,
+        lockfile: &crate::lockfile::Lockfile,
+    ) -> ResolverResult<bool> {
+        // Verify lockfile integrity first
+        if lockfile.verify().is_err() {
+            return Ok(false);
+        }
+
+        // Check that all manifest dependencies are in lockfile with compatible versions
+        for (name, dep) in &manifest.dependencies {
+            let locked_pkg = match lockfile.get_package(name) {
+                Some(pkg) => pkg,
+                None => return Ok(false), // Missing dependency
+            };
+
+            // Get version constraint from dependency
+            let version_str = dep.version_constraint().unwrap_or("*");
+            let version_req = match version_str.parse::<VersionReq>() {
+                Ok(req) => req,
+                Err(_) => return Ok(false), // Invalid constraint
+            };
+
+            // Check if locked version satisfies manifest constraint
+            if !version_req.matches(&locked_pkg.version) {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
+    }
+
+    /// Create resolution from lockfile
+    fn resolution_from_lockfile(
+        &self,
+        lockfile: &crate::lockfile::Lockfile,
+    ) -> ResolverResult<Resolution> {
+        let mut resolution = Resolution::new();
+
+        for locked_pkg in &lockfile.packages {
+            let dependencies: Vec<String> = locked_pkg.dependencies.keys().cloned().collect();
+
+            resolution.add_package(ResolvedPackage {
+                name: locked_pkg.name.clone(),
+                version: locked_pkg.version.clone(),
+                dependencies,
+            });
+        }
+
+        Ok(resolution)
+    }
+
+    /// Generate lockfile from resolution
+    pub fn generate_lockfile(&self, resolution: &Resolution) -> crate::lockfile::Lockfile {
+        use crate::lockfile::{LockedPackage, LockedSource, Lockfile, LockfileMetadata};
+
+        let mut lockfile = Lockfile::new();
+
+        for (name, package) in &resolution.packages {
+            // Build dependencies map
+            let mut dependencies = HashMap::new();
+            for dep_name in &package.dependencies {
+                if let Some(dep_pkg) = resolution.packages.get(dep_name) {
+                    dependencies.insert(dep_name.clone(), dep_pkg.version.clone());
+                }
+            }
+
+            lockfile.add_package(LockedPackage {
+                name: name.clone(),
+                version: package.version.clone(),
+                source: LockedSource::Registry { registry: None },
+                checksum: None, // Would come from registry in phase-08b integration
+                dependencies,
+            });
+        }
+
+        // Add metadata
+        lockfile.metadata = LockfileMetadata {
+            generated_at: Some(chrono::Utc::now().to_rfc3339()),
+            atlas_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+        };
+
+        lockfile
     }
 }
 
