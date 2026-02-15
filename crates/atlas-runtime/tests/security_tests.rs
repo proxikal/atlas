@@ -1,6 +1,10 @@
 //! Comprehensive security and permission tests
 
-use atlas_runtime::security::{Permission, PermissionSet, SecurityContext, SecurityError};
+use atlas_runtime::security::{
+    Permission, PermissionSet, PolicyManager, ResourceQuotas, Sandbox, SecurityContext,
+    SecurityError, SecurityPolicy,
+};
+use atlas_runtime::security::policy::{PolicyAction, PolicyRule, ResourceType};
 use std::path::{Path, PathBuf};
 
 // ============================================================================
@@ -512,4 +516,196 @@ fn test_security_context_isolation() {
     assert!(ctx2
         .check_filesystem_read(Path::new("/data/file.txt"))
         .is_err());
+}
+// ============================================================================
+// Phase-15 Integration Tests: Sandbox, Policy, Capabilities
+// ============================================================================
+
+#[test]
+fn test_sandbox_complete_lifecycle() {
+
+    let sandbox = Sandbox::restrictive("test-lifecycle".to_string());
+    
+    assert_eq!(sandbox.id(), "test-lifecycle");
+    assert!(sandbox.is_enabled());
+
+    // Sandbox is dropped at end of scope, triggering audit log
+}
+
+#[test]
+fn test_sandbox_resource_quotas_enforced() {
+
+    let quotas = ResourceQuotas {
+        memory_limit: Some(1000),
+        file_descriptor_limit: Some(5),
+        ..ResourceQuotas::default()
+    };
+
+    let sandbox = Sandbox::new("test-quotas".to_string(), PermissionSet::new(), quotas);
+
+    // Memory quota
+    assert!(sandbox.allocate_memory(500).is_ok());
+    assert!(sandbox.allocate_memory(600).is_err());
+
+    // File descriptor quota
+    for _ in 0..5 {
+        assert!(sandbox.allocate_file_descriptor().is_ok());
+    }
+    assert!(sandbox.allocate_file_descriptor().is_err());
+}
+
+#[test]
+fn test_security_policy_enforcement() {
+
+    let mut policy = SecurityPolicy::new("test-policy".to_string());
+    policy.default_action = PolicyAction::Deny;
+
+    policy.allow.push(PolicyRule {
+        resource: ResourceType::FileRead,
+        pattern: "/allowed/*".to_string(),
+        scope: None,
+        description: None,
+    });
+
+    assert!(policy.allows(&ResourceType::FileRead, "/allowed/file.txt"));
+    assert!(!policy.allows(&ResourceType::FileRead, "/denied/file.txt"));
+}
+
+#[test]
+fn test_policy_manager_inheritance() {
+
+    let mut manager = PolicyManager::new();
+
+    // Base policy
+    let mut base = SecurityPolicy::new("base".to_string());
+    base.allow.push(PolicyRule {
+        resource: ResourceType::FileRead,
+        pattern: "/shared/*".to_string(),
+        scope: None,
+        description: None,
+    });
+    manager.load_policy(base).unwrap();
+
+    // Derived policy
+    let mut derived = SecurityPolicy::new("derived".to_string());
+    derived.inherits.push("base".to_string());
+    derived.allow.push(PolicyRule {
+        resource: ResourceType::FileWrite,
+        pattern: "/temp/*".to_string(),
+        scope: None,
+        description: None,
+    });
+    manager.load_policy(derived).unwrap();
+
+    // Derived should have both base and its own permissions
+    let perms = manager.get_permissions("derived").unwrap();
+    assert!(perms.len() >= 2);
+}
+
+#[test]
+fn test_permission_set_operations() {
+    let mut set1 = PermissionSet::new();
+    set1.grant(Permission::FilesystemRead {
+        path: PathBuf::from("/data"),
+        recursive: true,
+    });
+
+    let mut set2 = PermissionSet::new();
+    set2.grant(Permission::FilesystemWrite {
+        path: PathBuf::from("/output"),
+        recursive: true,
+    });
+
+    // Merge sets
+    set1.merge(&set2);
+
+    // set1 should now have both permissions
+    assert_eq!(set1.len(), 2);
+    assert!(set1.is_granted(&Permission::FilesystemRead {
+        path: PathBuf::from("/data/file.txt"),
+        recursive: false,
+    }));
+    assert!(set1.is_granted(&Permission::FilesystemWrite {
+        path: PathBuf::from("/output/file.txt"),
+        recursive: false,
+    }));
+}
+
+#[test]
+fn test_sandbox_permission_integration() {
+
+    let mut sandbox = Sandbox::restrictive("test-perms".to_string());
+
+    // Grant specific permission
+    sandbox.grant_permission(Permission::FilesystemRead {
+        path: PathBuf::from("/allowed"),
+        recursive: true,
+    });
+
+    assert_eq!(sandbox.permissions().len(), 1);
+}
+
+#[test]
+fn test_resource_quota_monitoring() {
+
+    let sandbox = Sandbox::new(
+        "test-monitoring".to_string(),
+        PermissionSet::new(),
+        ResourceQuotas::permissive(),
+    );
+
+    sandbox.allocate_memory(1000).unwrap();
+    sandbox.allocate_file_descriptor().unwrap();
+    sandbox.allocate_network_connection().unwrap();
+
+    let usage = sandbox.usage();
+    assert_eq!(usage.memory_used, 1000);
+    assert_eq!(usage.file_descriptors_used, 1);
+    assert_eq!(usage.network_connections_used, 1);
+}
+
+#[test]
+fn test_policy_deny_rules_override_allow() {
+
+    let mut policy = SecurityPolicy::new("test-deny-priority".to_string());
+    policy.default_action = PolicyAction::Allow;
+
+    // Allow all files
+    policy.allow.push(PolicyRule {
+        resource: ResourceType::FileRead,
+        pattern: "/*".to_string(),
+        scope: None,
+        description: None,
+    });
+
+    // But deny /etc specifically
+    policy.deny.push(PolicyRule {
+        resource: ResourceType::FileRead,
+        pattern: "/etc/*".to_string(),
+        scope: None,
+        description: None,
+    });
+
+    assert!(policy.allows(&ResourceType::FileRead, "/home/file.txt"));
+    assert!(!policy.allows(&ResourceType::FileRead, "/etc/passwd"));
+}
+
+#[test]
+fn test_sandbox_disabled_bypasses_checks() {
+
+    let quotas = ResourceQuotas {
+        memory_limit: Some(100),
+        ..ResourceQuotas::default()
+    };
+
+    let mut sandbox = Sandbox::new("test-disable".to_string(), PermissionSet::new(), quotas);
+
+    // Should fail with sandbox enabled
+    assert!(sandbox.allocate_memory(200).is_err());
+
+    // Disable sandbox
+    sandbox.disable();
+
+    // Should succeed now
+    assert!(sandbox.allocate_memory(200).is_ok());
 }

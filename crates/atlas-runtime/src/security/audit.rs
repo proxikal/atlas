@@ -26,6 +26,34 @@ pub enum AuditEvent {
     ProcessDenied { command: String },
     /// Environment variable access denied
     EnvironmentDenied { var: String },
+    /// Sandbox created
+    SandboxCreated {
+        sandbox_id: String,
+        memory_limit: Option<usize>,
+        cpu_limit: Option<u64>,
+    },
+    /// Sandbox destroyed
+    SandboxDestroyed { sandbox_id: String },
+    /// Security policy violation
+    PolicyViolation {
+        policy: String,
+        violation: String,
+    },
+    /// Resource quota exceeded
+    QuotaViolation {
+        resource: String,
+        limit: u64,
+        attempted: u64,
+    },
+    /// Privilege escalation attempt
+    PrivilegeEscalation { context: String },
+    /// Capability granted
+    CapabilityGranted {
+        capability_id: String,
+        permissions: String,
+    },
+    /// Capability revoked
+    CapabilityRevoked { capability_id: String },
 }
 
 impl fmt::Display for AuditEvent {
@@ -65,6 +93,50 @@ impl fmt::Display for AuditEvent {
             }
             AuditEvent::EnvironmentDenied { var } => {
                 write!(f, "Permission denied: environment variable {}", var)
+            }
+            AuditEvent::SandboxCreated {
+                sandbox_id,
+                memory_limit,
+                cpu_limit,
+            } => {
+                write!(
+                    f,
+                    "Sandbox created: {} (memory: {:?}, cpu: {:?})",
+                    sandbox_id, memory_limit, cpu_limit
+                )
+            }
+            AuditEvent::SandboxDestroyed { sandbox_id } => {
+                write!(f, "Sandbox destroyed: {}", sandbox_id)
+            }
+            AuditEvent::PolicyViolation { policy, violation } => {
+                write!(f, "Policy violation: {} - {}", policy, violation)
+            }
+            AuditEvent::QuotaViolation {
+                resource,
+                limit,
+                attempted,
+            } => {
+                write!(
+                    f,
+                    "Quota violation: {} (limit: {}, attempted: {})",
+                    resource, limit, attempted
+                )
+            }
+            AuditEvent::PrivilegeEscalation { context } => {
+                write!(f, "Privilege escalation attempt: {}", context)
+            }
+            AuditEvent::CapabilityGranted {
+                capability_id,
+                permissions,
+            } => {
+                write!(
+                    f,
+                    "Capability granted: {} (permissions: {})",
+                    capability_id, permissions
+                )
+            }
+            AuditEvent::CapabilityRevoked { capability_id } => {
+                write!(f, "Capability revoked: {}", capability_id)
             }
         }
     }

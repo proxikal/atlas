@@ -32,6 +32,10 @@
 
 pub mod audit;
 pub mod permissions;
+pub mod policy;
+pub mod sandbox;
 
 pub use audit::{AuditEntry, AuditEvent, AuditLogger, MemoryAuditLogger, NullAuditLogger};
 pub use permissions::{Permission, PermissionSet, SecurityContext, SecurityError};
+pub use policy::{PolicyError, PolicyManager, SecurityPolicy};
+pub use sandbox::{ResourceQuotas, ResourceUsage, Sandbox, SandboxError};

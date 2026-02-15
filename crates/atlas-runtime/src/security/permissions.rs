@@ -178,6 +178,23 @@ impl PermissionSet {
     pub fn permissions(&self) -> &HashSet<Permission> {
         &self.permissions
     }
+
+    /// Get number of permissions
+    pub fn len(&self) -> usize {
+        self.permissions.len()
+    }
+
+    /// Check if permission set is empty
+    pub fn is_empty(&self) -> bool {
+        self.permissions.is_empty()
+    }
+
+    /// Merge permissions from another set
+    pub fn merge(&mut self, other: &PermissionSet) {
+        for perm in &other.permissions {
+            self.permissions.insert(perm.clone());
+        }
+    }
 }
 
 /// Security context managing permissions
