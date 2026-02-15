@@ -175,7 +175,7 @@ Additional design docs (read when implementing specific features):
 - `docs/design/generics.md` - Generic type system design
 - `docs/design/pattern-matching.md` - Pattern matching design
 - `docs/design/modules.md` - Module system architecture
-- `docs/reference/decision-log.md` - Language design decisions
+- `docs/decision-logs/` - Architecture decisions (categorized by component)
 
 ---
 

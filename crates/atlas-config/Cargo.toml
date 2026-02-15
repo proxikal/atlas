@@ -15,3 +15,4 @@ tempfile = "3.14"
 insta = { workspace = true }
 rstest = { workspace = true }
 pretty_assertions = { workspace = true }
+serial_test = "3.2"

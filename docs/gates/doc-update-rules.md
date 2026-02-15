@@ -13,7 +13,7 @@
 **Update immediately if:**
 
 1. **Spec changed** → Update `Atlas-SPEC.md` now
-2. **Architectural decision made** → Add to `docs/reference/decision-log.md` now
+2. **Architectural decision made** → Add to `docs/decision-logs/[component]/` now (see template)
 3. **Breaking API change** → Update `docs/api/` now
 
 **Cost:** ~$0.15/phase (if needed)

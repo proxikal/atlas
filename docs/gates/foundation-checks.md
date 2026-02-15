@@ -33,10 +33,10 @@
 ---
 
 ### ✅ 3. Architectural Decision Check
-**Read `docs/reference/decision-log.md`:**
+**Search `docs/decision-logs/` (by component):**
 - [ ] Any documented decisions apply?
 - [ ] Planned approach aligns?
-- [ ] If making new decision: document it
+- [ ] If making new decision: document it (see template in README)
 
 **If conflict:** Follow documented decision or discuss with user.
 
@@ -97,4 +97,4 @@ Proceeding to GATE 2.
 
 ---
 
-**Reference:** `docs/gates/compiler-principles.md`, `docs/reference/decision-log.md`, Atlas-SPEC.md
+**Reference:** `docs/gates/compiler-principles.md`, `docs/decision-logs/`, Atlas-SPEC.md

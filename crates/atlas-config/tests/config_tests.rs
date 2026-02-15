@@ -1,6 +1,7 @@
 //! Comprehensive configuration loading and precedence tests
 
 use atlas_config::{ConfigLoader, ProjectConfig};
+use serial_test::serial;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -180,6 +181,7 @@ version = "1.0.0"
 // ============================================================================
 
 #[test]
+#[serial]
 fn test_env_override_edition() {
     let temp_dir = TempDir::new().unwrap();
     let content = r#"
@@ -201,6 +203,7 @@ edition = "2026"
 }
 
 #[test]
+#[serial]
 fn test_env_override_optimize_true() {
     let temp_dir = TempDir::new().unwrap();
     let content = r#"
@@ -224,6 +227,7 @@ version = "1.0.0"
 }
 
 #[test]
+#[serial]
 fn test_env_override_optimize_false() {
     let temp_dir = TempDir::new().unwrap();
     let content = r#"
@@ -250,6 +254,7 @@ optimize = true
 }
 
 #[test]
+#[serial]
 fn test_env_override_debug() {
     let temp_dir = TempDir::new().unwrap();
     let content = r#"
@@ -270,6 +275,7 @@ version = "1.0.0"
 }
 
 #[test]
+#[serial]
 fn test_default_edition_when_none_specified() {
     let temp_dir = TempDir::new().unwrap();
     let content = r#"

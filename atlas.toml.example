@@ -1,0 +1,271 @@
+# Atlas Project Configuration Example
+#
+# This file shows all available configuration options for Atlas projects.
+# Copy this file to `atlas.toml` and customize as needed.
+#
+# Configuration hierarchy (later overrides earlier):
+# 1. Global config (~/.atlas/config.toml)
+# 2. Project config (./atlas.toml)
+# 3. Environment variables (ATLAS_*)
+# 4. CLI flags
+
+# =============================================================================
+# Package Metadata (Required)
+# =============================================================================
+
+[package]
+# Package name (required, cannot be empty)
+name = "my-atlas-project"
+
+# Package version (required, semver format)
+version = "1.0.0"
+
+# Atlas edition (optional, default: "2026")
+# Must be "2026" or later
+edition = "2026"
+
+# Package description (optional)
+description = "A sample Atlas project"
+
+# Package authors (optional)
+authors = [
+    "John Doe <john@example.com>",
+    "Jane Smith <jane@example.com>"
+]
+
+# License identifier (optional)
+license = "MIT"
+
+# Repository URL (optional)
+repository = "https://github.com/username/my-atlas-project"
+
+# =============================================================================
+# Build Configuration (Optional)
+# =============================================================================
+
+[build]
+# Output directory (default: "target")
+output = "target"
+
+# Source directory (default: "src")
+source = "src"
+
+# Entry point file (default: "src/main.atl")
+entry = "src/main.atl"
+
+# =============================================================================
+# Compiler Configuration (Optional)
+# =============================================================================
+
+[compiler]
+# Enable optimizations (default: false)
+# Set to true for production builds
+optimize = false
+
+# Target execution engine (default: "bytecode")
+# Options: "interpreter", "bytecode"
+target = "bytecode"
+
+# Enable debug information (default: false)
+# Set to true for development
+debug = true
+
+# =============================================================================
+# Formatting Configuration (Optional)
+# =============================================================================
+
+[formatting]
+# Indentation size in spaces (default: 4)
+indent = 4
+
+# Maximum line length (default: 100)
+max_line_length = 100
+
+# Use tabs instead of spaces (default: false)
+use_tabs = false
+
+# =============================================================================
+# Security Configuration (Optional)
+# =============================================================================
+
+[security]
+# Security mode (default: "standard")
+# Options: "none", "standard", "strict"
+mode = "standard"
+
+# Filesystem permissions
+[security.filesystem]
+# Paths allowed for reading
+read = [
+    "./data",
+    "./config"
+]
+
+# Paths allowed for writing
+write = [
+    "./output",
+    "./logs"
+]
+
+# Paths explicitly denied (takes precedence over allow)
+deny = [
+    "/etc",
+    "/var"
+]
+
+# Network permissions
+[security.network]
+# Hosts/domains allowed
+# Use "*" for wildcard
+allow = [
+    "api.example.com",
+    "*.trusted-domain.com"
+]
+
+# Hosts/domains explicitly denied
+deny = [
+    "*.untrusted.com"
+]
+
+# Process execution permissions
+[security.process]
+# Commands allowed to execute
+allow = [
+    "git",
+    "npm"
+]
+
+# Commands explicitly denied
+deny = [
+    "rm",
+    "dd",
+    "format"
+]
+
+# Environment variable permissions
+[security.environment]
+# Environment variables allowed to read
+allow = [
+    "PATH",
+    "HOME",
+    "USER"
+]
+
+# Environment variables explicitly denied
+deny = [
+    "SECRET_*",
+    "API_KEY"
+]
+
+# =============================================================================
+# Dependencies (Optional)
+# =============================================================================
+
+[dependencies]
+# Simple version dependency (from registry)
+# utils = "1.0.0"
+
+# Git dependency
+# http = { git = "https://github.com/org/http.git" }
+
+# Local path dependency
+# local-lib = { path = "../local-lib" }
+
+# Registry dependency with specific registry
+# parser = { version = "2.0", registry = "atlas-registry" }
+
+# =============================================================================
+# Development Dependencies (Optional)
+# =============================================================================
+
+[dev-dependencies]
+# test-utils = "0.1.0"
+# mock-server = { git = "https://github.com/org/mock.git" }
+
+# =============================================================================
+# Configuration Examples
+# =============================================================================
+
+# Example 1: Minimal Configuration
+# ----------------------------------
+# [package]
+# name = "hello"
+# version = "0.1.0"
+
+# Example 2: Production Build
+# ----------------------------
+# [package]
+# name = "my-app"
+# version = "1.0.0"
+# edition = "2026"
+#
+# [compiler]
+# optimize = true
+# target = "bytecode"
+# debug = false
+#
+# [build]
+# output = "dist"
+
+# Example 3: Strict Security
+# ---------------------------
+# [package]
+# name = "secure-app"
+# version = "1.0.0"
+#
+# [security]
+# mode = "strict"
+#
+# [security.filesystem]
+# read = ["./data"]
+# write = ["./output"]
+# deny = ["/"]
+#
+# [security.network]
+# deny = ["*"]
+#
+# [security.process]
+# deny = ["*"]
+
+# Example 4: Development Setup
+# -----------------------------
+# [package]
+# name = "dev-project"
+# version = "0.1.0"
+#
+# [compiler]
+# debug = true
+# optimize = false
+#
+# [formatting]
+# indent = 2
+# max_line_length = 120
+
+# =============================================================================
+# Environment Variable Overrides
+# =============================================================================
+#
+# You can override configuration values with environment variables:
+#
+# ATLAS_EDITION=2027        # Override package.edition
+# ATLAS_OPTIMIZE=true       # Override compiler.optimize
+# ATLAS_DEBUG=false         # Override compiler.debug
+#
+# Example usage:
+#   ATLAS_OPTIMIZE=true atlas build main.atl
+#
+# Valid boolean values: true, false, 1, 0, yes, no
+
+# =============================================================================
+# Notes
+# =============================================================================
+#
+# 1. Only [package] section is required (name and version fields)
+# 2. All other sections are optional and use sensible defaults
+# 3. Unknown fields will cause a parse error
+# 4. Comments start with '#' and can be on their own line or after a value
+# 5. Strings can be quoted with single or double quotes
+# 6. Arrays use square brackets []
+# 7. Tables/sections use [section.subsection] notation
+#
+# For full documentation, see: docs/configuration.md

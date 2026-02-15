@@ -209,6 +209,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::fs;
     use tempfile::TempDir;
 
@@ -268,6 +269,7 @@ version = "1.0.0"
     }
 
     #[test]
+    #[serial]
     fn test_env_override_edition() {
         let temp_dir = TempDir::new().unwrap();
         let config_content = r#"
@@ -289,6 +291,7 @@ edition = "2026"
     }
 
     #[test]
+    #[serial]
     fn test_env_override_optimize() {
         let temp_dir = TempDir::new().unwrap();
         let config_content = r#"
