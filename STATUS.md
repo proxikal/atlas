@@ -8,13 +8,13 @@
 ## 🎯 Current Phase
 
 **Version:** v0.2 (building production infrastructure)
-**Last Completed:** phases/foundation/phase-08c-package-manager-integration.md
-**Next Phase:** phases/foundation/phase-11-build-system.md
+**Last Completed:** phases/foundation/phase-11a-build-system-core.md
+**Next Phase:** phases/foundation/phase-11b-build-system-incremental.md
 
 **🚨 CRITICAL: Foundation must be completed before continuing stdlib/frontend/CLI**
 
-**Real Progress:** 18/72 phases complete (25%)
-- Foundation: 18/21 (method call + runtime API + embedding + config + modules + error handling + complete FFI system + package manifest + security permissions + CI/CD automation + foundation integration docs + reflection API + complete package manager)
+**Real Progress:** 19/72 phases complete (26%)
+- Foundation: 19/21 (method call + runtime API + embedding + config + modules + error handling + complete FFI system + package manifest + security permissions + CI/CD automation + foundation integration docs + reflection API + complete package manager + build system core)
 - Stdlib: 5/15 (will hit foundation blockers at phase 10b)
 - Everything else: Blocked by foundation
 
@@ -131,12 +131,14 @@ v0.2 transforms Atlas into a production-ready language:
 - ✅ phase-08a-package-manager-resolver-core.md **[Package resolver: PubGrub algorithm, version solver, dependency graph, 52 tests (49% above target), 2026-02-15]**
 - ✅ phase-08b-package-manager-registry.md **[Registry + downloader + cache: HTTP/local registries, SHA256 checksums, LRU cache, 31 tests (48% above target), 2026-02-15]**
 - ✅ phase-08c-package-manager-integration.md **[Integration + conflict resolution + build order: lockfile integration, conflict detection, topological sort, parallel build groups, 32 tests (19% above target), comprehensive docs (809 lines), 2026-02-15]**
+- ✅ phase-11a-build-system-core.md **[Build core & targets: pipeline orchestration, multiple targets (library/binary/bytecode/test), build order (topological sort), parallel groups, 36 tests (6% above target), 2026-02-15]**
 
 **Critical Path (do in this order to unblock v0.2):**
 - ✅ **CRITICAL PATH COMPLETE** - All blocking foundation phases done!
 
 **Secondary (can defer until needed):**
-- ⬜ phase-11-build-system.md **[Needs: phase-06, phase-07, phase-08c]**
+- ⬜ phase-11b-build-system-incremental.md **[Needs: phase-11a]**
+- ⬜ phase-11c-build-system-integration.md **[Needs: phase-11a, phase-11b]**
 - ⬜ phase-13-performance-benchmarking.md **[Needs: Bytecode-VM/phase-03]**
 - ⬜ phase-14-documentation-generator.md **[Needs: Frontend/phase-02, phase-06]**
 
@@ -209,10 +211,10 @@ v0.2 transforms Atlas into a production-ready language:
 - ⬜ phase-04-stability-verification.md
 - ⬜ phase-05-v02-milestone-completion.md
 
-**Total v0.2 Progress:** 23/72 phases (32%) - **MISLEADING: 5 stdlib phases will hit blockers**
-**Real Progress:** 18/72 phases (25%) - Foundation phases 01, 02, 03, 04, 05, 06, 07, 08a/b/c, 09, 10a/b/c, 12, 15, 16-17 complete
-**Foundation Status:** 18/21 phases (86%) - **CRITICAL PATH COMPLETE! Secondary phases remain**
-**Next Focus:** Secondary foundation phases (build system, benchmarking, docs generator)
+**Total v0.2 Progress:** 24/72 phases (33%) - **MISLEADING: 5 stdlib phases will hit blockers**
+**Real Progress:** 19/72 phases (26%) - Foundation phases 01, 02, 03, 04, 05, 06, 07, 08a/b/c, 09, 10a/b/c, 11a, 12, 15, 16-17 complete
+**Foundation Status:** 19/21 phases (90%) - **CRITICAL PATH COMPLETE! Secondary phases 11b/c, 13, 14 remain**
+**Next Focus:** Secondary foundation phases (build system 11b/c, benchmarking, docs generator)
 
 ---
 

@@ -1,5 +1,23 @@
 # Phase 11: Build System Infrastructure
 
+**🚨 THIS PHASE HAS BEEN SPLIT INTO 3 SUB-PHASES 🚨**
+
+This phase was too large for a single session (~3700 lines, 100+ tests, 8 major feature areas). Following the successful pattern from phase-08, it has been split into three manageable sub-phases:
+
+- **phase-11a-build-system-core.md** - Build pipeline orchestration, targets, build order (~2490 lines, 35-40 tests)
+- **phase-11b-build-system-incremental.md** - Incremental compilation, cache system (~1980 lines, 35-40 tests)
+- **phase-11c-build-system-integration.md** - Profiles, scripts, CLI integration, docs (~3440 lines, 35-40 tests)
+
+**Total: ~7910 lines, 105-120 tests**
+
+**To implement phase-11:** Complete sub-phases 11a → 11b → 11c in order.
+
+**This file is preserved for reference but implementation should follow the sub-phase files.**
+
+---
+
+# Original Phase 11 Specification (Reference)
+
 ## 🚨 BLOCKERS - CHECK BEFORE STARTING
 
 **REQUIRED:** Module system (phase-06), Package manifest (phase-07), and Package manager (phase-08) must be complete.

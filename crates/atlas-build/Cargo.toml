@@ -1,0 +1,22 @@
+[package]
+name = "atlas-build"
+version = "0.2.0"
+edition = "2021"
+authors = ["Atlas Contributors"]
+description = "Build system infrastructure for Atlas programming language"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+atlas-runtime = { path = "../atlas-runtime" }
+atlas-package = { path = "../atlas-package" }
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rayon = "1.10"
+walkdir = "2.5"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3.14"
+rstest = "0.23"
+pretty_assertions = "1.4"
