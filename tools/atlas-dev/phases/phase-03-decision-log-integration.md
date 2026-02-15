@@ -2,7 +2,6 @@
 
 **Objective:** Full decision log management - create, read, list, search.
 
-**Estimate:** 3-4 hours
 **Priority:** HIGH
 **Depends On:** Phases 1-2
 

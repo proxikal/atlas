@@ -2,7 +2,6 @@
 
 **Objective:** Cross-system validation - ensure code, specs, docs, tests all match.
 
-**Estimate:** 6-8 hours
 **Priority:** CRITICAL
 **Depends On:** Phases 1-8
 

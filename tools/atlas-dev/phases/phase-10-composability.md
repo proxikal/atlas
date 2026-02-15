@@ -2,7 +2,6 @@
 
 **Objective:** Enable command composition, piping, chaining, batch operations.
 
-**Estimate:** 3-4 hours
 **Priority:** MEDIUM
 **Depends On:** Phases 1-9
 

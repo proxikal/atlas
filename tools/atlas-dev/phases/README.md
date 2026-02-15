@@ -14,20 +14,20 @@
 
 ## Phase Sequence
 
-| Phase | Focus | Time | Priority |
-|-------|-------|------|----------|
-| [01](phase-01-core-infrastructure.md) | Core Infrastructure | 2-3h | CRITICAL |
-| [02](phase-02-phase-management.md) | Phase Management | 4-6h | CRITICAL |
-| [03](phase-03-decision-log-integration.md) | Decision Logs | 3-4h | HIGH |
-| [04](phase-04-progress-analytics.md) | Analytics & Validation | 3-4h | HIGH |
-| [05](phase-05-documentation-context.md) | Docs & Context | 3-4h | MEDIUM |
-| [06](phase-06-polish-advanced.md) | Polish & Advanced | 3-4h | LOW |
-| [07](phase-07-feature-management.md) | Feature Management | 4-5h | HIGH |
-| [08](phase-08-spec-api-management.md) | Spec & API Management | 5-6h | HIGH |
-| [09](phase-09-parity-validation.md) | Parity Validation | 6-8h | CRITICAL |
-| [10](phase-10-composability.md) | Composability & Piping | 3-4h | MEDIUM |
+| Phase | Focus | Priority |
+|-------|-------|----------|
+| [01](phase-01-core-infrastructure.md) | Core Infrastructure | CRITICAL |
+| [02](phase-02-phase-management.md) | Phase Management | CRITICAL |
+| [03](phase-03-decision-log-integration.md) | Decision Logs | HIGH |
+| [04](phase-04-progress-analytics.md) | Analytics & Validation | HIGH |
+| [05](phase-05-documentation-context.md) | Docs & Context | MEDIUM |
+| [06](phase-06-polish-advanced.md) | Polish & Advanced | LOW |
+| [07](phase-07-feature-management.md) | Feature Management | HIGH |
+| [08](phase-08-spec-api-management.md) | Spec & API Management | HIGH |
+| [09](phase-09-parity-validation.md) | Parity Validation | CRITICAL |
+| [10](phase-10-composability.md) | Composability & Piping | MEDIUM |
 
-**Total:** 36-47 hours (4.5-6 days)
+**Note:** Complete all phases sequentially. No BS timeline estimates - just build it.
 
 ---
 
@@ -155,30 +155,31 @@ Update this README with completion status.
 
 ## Build Strategy
 
-### MVP (Phases 1-2): 6-9 hours
+### MVP (Phases 1-2): Core Phase Tracking
 **Delivers:**
 - Phase tracking (`phase complete`, `phase current`, `phase next`)
-- Decision logs (`decision create`, `decision list`)
+- STATUS.md/tracker automation
 - Validation (`validate`)
 - 99.8% success rate on phase completions
 
 **Use immediately for remaining Atlas phases.**
 
-### Full Feature Set (Phases 1-6): 18-25 hours
+### Full Feature Set (Phases 1-6): Original Vision
 **Adds:**
+- Decision logs (`decision create`, `decision list`, `decision search`)
 - Analytics, stats, blockers
-- Context system
+- Context system (`context current`)
 - Undo, export, cache
 - Human mode output
 
-**Complete original vision.**
+**Complete original automation vision.**
 
-### Unified Platform (Phases 1-10): 36-47 hours
+### Unified Platform (Phases 1-10): World-Class
 **Adds:**
-- Feature management
-- Spec/API management
-- Parity validation (code/spec/docs)
-- Composability (piping, chaining)
+- Feature management (docs/features/ CRUD)
+- Spec/API management (docs/specification/, docs/api/)
+- Parity validation (code ↔ spec ↔ docs ↔ tests) - **KILLER FEATURE**
+- Composability (piping, chaining, batch operations)
 
 **World-class unified development platform.**
 

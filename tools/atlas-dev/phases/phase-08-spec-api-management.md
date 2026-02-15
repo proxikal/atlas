@@ -2,7 +2,6 @@
 
 **Objective:** Manage specifications and API docs - read, validate, sync with code.
 
-**Estimate:** 5-6 hours
 **Priority:** HIGH
 **Depends On:** Phases 1-7
 

@@ -2,7 +2,6 @@
 
 **Objective:** Analytics, statistics, validation, blocker detection.
 
-**Estimate:** 3-4 hours
 **Priority:** HIGH
 **Depends On:** Phases 1-2
 

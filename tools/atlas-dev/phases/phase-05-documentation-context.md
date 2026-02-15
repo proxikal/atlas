@@ -2,7 +2,6 @@
 
 **Objective:** Doc search, context aggregation, intelligent phase preview.
 
-**Estimate:** 3-4 hours
 **Priority:** MEDIUM
 **Depends On:** Phases 1-3
 

@@ -2,7 +2,6 @@
 
 **Objective:** Set up Go project structure, CLI framework, configuration system, and testing infrastructure.
 
-**Estimate:** 2-3 hours
 **Priority:** CRITICAL (blocks all other phases)
 
 ---
@@ -629,13 +628,22 @@ make test
 
 ## Acceptance Criteria
 
-- [x] `go build` succeeds without errors
-- [x] `make build` creates `bin/atlas-dev`
-- [x] `atlas-dev version` outputs JSON
-- [x] `atlas-dev version --human` outputs human-readable text
-- [x] Config system loads defaults when config file doesn't exist
-- [x] All tests pass (`make test`)
-- [x] Code is formatted (`make fmt`)
+### Functional Requirements
+- [ ] `go build` succeeds without errors
+- [ ] `make build` creates `bin/atlas-dev`
+- [ ] `atlas-dev version` outputs JSON (default)
+- [ ] `atlas-dev version --human` outputs human-readable text
+- [ ] Config system loads defaults when config file doesn't exist
+- [ ] All tests pass (`make test`)
+- [ ] Code is formatted (`make fmt`)
+
+### Token Efficiency Requirements
+- [ ] `atlas-dev --help` output < 100 tokens
+- [ ] `atlas-dev version --help` output < 60 tokens
+- [ ] Default output is JSON (not human-readable)
+- [ ] JSON uses compact notation (no null/empty fields)
+- [ ] No emoji in default output (JSON mode)
+- [ ] Config defaults: `format=json`, `compact=true`, `ai.optimize=true`
 
 ---
 

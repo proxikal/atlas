@@ -2,7 +2,6 @@
 
 **Objective:** Advanced features, polish, human mode, caching.
 
-**Estimate:** 3-4 hours
 **Priority:** LOW (nice-to-have)
 **Depends On:** Phases 1-5
 

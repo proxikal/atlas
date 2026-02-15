@@ -2,7 +2,6 @@
 
 **Objective:** Manage feature documentation (docs/features/) - create, read, update, validate, sync.
 
-**Estimate:** 4-5 hours
 **Priority:** HIGH
 **Depends On:** Phases 1-6
 
