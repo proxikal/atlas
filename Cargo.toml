@@ -12,6 +12,13 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.70"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/proxikal/atlas"
+homepage = "https://github.com/proxikal/atlas"
+documentation = "https://github.com/proxikal/atlas/tree/main/docs"
+keywords = ["language", "compiler", "interpreter", "ai-first"]
+categories = ["compilers", "development-tools"]
+authors = ["Atlas Contributors"]
 
 [workspace.dependencies]
 # Testing infrastructure
