@@ -77,6 +77,9 @@ pub fn is_builtin(name: &str) -> bool {
             | "regexNew" | "regexNewWithFlags" | "regexEscape"
             | "regexIsMatch" | "regexFind" | "regexFindAll"
             | "regexCaptures" | "regexCapturesNamed"
+            | "regexReplace" | "regexReplaceAll"
+            | "regexSplit" | "regexSplitN"
+            | "regexMatchIndices" | "regexTest"
     )
 }
 
@@ -108,6 +111,9 @@ pub fn is_array_intrinsic(name: &str) -> bool {
             | "hashSetForEach"
             | "hashSetMap"
             | "hashSetFilter"
+            // Regex intrinsics (callback-based)
+            | "regexReplaceWith"
+            | "regexReplaceAllWith"
     )
 }
 
@@ -660,6 +666,12 @@ pub fn call_builtin(
         "regexFindAll" => regex::regex_find_all(args, call_span),
         "regexCaptures" => regex::regex_captures(args, call_span),
         "regexCapturesNamed" => regex::regex_captures_named(args, call_span),
+        "regexReplace" => regex::regex_replace(args, call_span),
+        "regexReplaceAll" => regex::regex_replace_all(args, call_span),
+        "regexSplit" => regex::regex_split(args, call_span),
+        "regexSplitN" => regex::regex_split_n(args, call_span),
+        "regexMatchIndices" => regex::regex_match_indices(args, call_span),
+        "regexTest" => regex::regex_test(args, call_span),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),

@@ -364,6 +364,225 @@ pub fn regex_captures_named(args: &[Value], span: Span) -> Result<Value, Runtime
 }
 
 // ============================================================================
+// Replacement Functions
+// ============================================================================
+
+/// Replace the first match of a pattern with a replacement string
+///
+/// # Arguments
+/// - `regex`: The compiled regex pattern
+/// - `text`: The string to search
+/// - `replacement`: The replacement string (supports capture group references)
+///
+/// # Replacement Syntax
+/// - `$1`, `$2`, etc. - Numbered capture groups
+/// - `$&` - The entire match
+/// - `$`` - Everything before the match
+/// - `$'` - Everything after the match
+///
+/// # Returns
+/// - String with the first match replaced
+///
+/// # Example
+/// ```atlas
+/// let pattern = regexNew("(\\d+)").unwrap();
+/// let result = regexReplace(pattern, "a1b2c3", "[$1]");
+/// // Returns "a[1]b2c3"
+/// ```
+pub fn regex_replace(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 3 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let regex = expect_regex(&args[0], span)?;
+    let text = expect_string(&args[1], span, "text")?;
+    let replacement = expect_string(&args[2], span, "replacement")?;
+
+    let result = regex.replace(text, replacement);
+
+    Ok(Value::string(result.into_owned()))
+}
+
+/// Replace all matches of a pattern with a replacement string
+///
+/// # Arguments
+/// - `regex`: The compiled regex pattern
+/// - `text`: The string to search
+/// - `replacement`: The replacement string (supports capture group references)
+///
+/// # Replacement Syntax
+/// - `$1`, `$2`, etc. - Numbered capture groups
+/// - `$&` - The entire match
+/// - `$`` - Everything before the match
+/// - `$'` - Everything after the match
+///
+/// # Returns
+/// - String with all matches replaced
+///
+/// # Example
+/// ```atlas
+/// let pattern = regexNew("(\\d+)").unwrap();
+/// let result = regexReplaceAll(pattern, "a1b2c3", "[$1]");
+/// // Returns "a[1]b[2]c[3]"
+/// ```
+pub fn regex_replace_all(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 3 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let regex = expect_regex(&args[0], span)?;
+    let text = expect_string(&args[1], span, "text")?;
+    let replacement = expect_string(&args[2], span, "replacement")?;
+
+    let result = regex.replace_all(text, replacement);
+
+    Ok(Value::string(result.into_owned()))
+}
+
+// NOTE: regexReplaceWith and regexReplaceAllWith are implemented as intrinsics
+// in the interpreter and VM (see interpreter/expr.rs and vm/mod.rs)
+
+// ============================================================================
+// String Splitting Functions
+// ============================================================================
+
+/// Split a string at regex matches
+///
+/// # Arguments
+/// - `regex`: The compiled regex pattern
+/// - `text`: The string to split
+///
+/// # Returns
+/// - Array of substrings (empty strings included)
+///
+/// # Example
+/// ```atlas
+/// let pattern = unwrap(regexNew(","));
+/// regexSplit(pattern, "a,b,,c") // Returns ["a", "b", "", "c"]
+/// ```
+pub fn regex_split(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let regex = expect_regex(&args[0], span)?;
+    let text = expect_string(&args[1], span, "text")?;
+
+    let parts: Vec<Value> = regex.split(text).map(Value::string).collect();
+
+    Ok(Value::array(parts))
+}
+
+/// Split a string at regex matches with a limit
+///
+/// # Arguments
+/// - `regex`: The compiled regex pattern
+/// - `text`: The string to split
+/// - `limit`: Maximum number of splits (0 = no limit)
+///
+/// # Returns
+/// - Array of substrings (empty strings included)
+/// - If limit is 0, returns empty array
+///
+/// # Example
+/// ```atlas
+/// let pattern = unwrap(regexNew(","));
+/// regexSplitN(pattern, "a,b,c,d", 2) // Returns ["a", "b", "c,d"]
+/// ```
+pub fn regex_split_n(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 3 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let regex = expect_regex(&args[0], span)?;
+    let text = expect_string(&args[1], span, "text")?;
+    let limit = match &args[2] {
+        Value::Number(n) => *n as usize,
+        _ => {
+            return Err(RuntimeError::TypeError {
+                msg: "Expected number for limit".to_string(),
+                span,
+            })
+        }
+    };
+
+    if limit == 0 {
+        return Ok(Value::array(vec![]));
+    }
+
+    let parts: Vec<Value> = regex.splitn(text, limit + 1).map(Value::string).collect();
+
+    Ok(Value::array(parts))
+}
+
+// ============================================================================
+// Advanced Features
+// ============================================================================
+
+/// Get all match positions as [start, end] pairs
+///
+/// # Arguments
+/// - `regex`: The compiled regex pattern
+/// - `text`: The string to search
+///
+/// # Returns
+/// - Array of [start, end] arrays (byte indices)
+///
+/// # Example
+/// ```atlas
+/// let pattern = unwrap(regexNew("\\d+"));
+/// regexMatchIndices(pattern, "a1b22c") // Returns [[1, 2], [3, 5]]
+/// ```
+pub fn regex_match_indices(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let regex = expect_regex(&args[0], span)?;
+    let text = expect_string(&args[1], span, "text")?;
+
+    let indices: Vec<Value> = regex
+        .find_iter(text)
+        .map(|mat| {
+            Value::array(vec![
+                Value::Number(mat.start() as f64),
+                Value::Number(mat.end() as f64),
+            ])
+        })
+        .collect();
+
+    Ok(Value::array(indices))
+}
+
+/// Convenience function: compile and test in one call
+///
+/// # Arguments
+/// - `pattern`: The regex pattern string
+/// - `text`: The string to test
+///
+/// # Returns
+/// - `true` if pattern matches, `false` if no match or compile error
+///
+/// # Example
+/// ```atlas
+/// regexTest("\\d+", "hello123") // Returns true
+/// regexTest("[invalid", "test") // Returns false (compile error)
+/// ```
+pub fn regex_test(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let pattern_str = expect_string(&args[0], span, "pattern")?;
+    let text = expect_string(&args[1], span, "text")?;
+
+    match Regex::new(pattern_str) {
+        Ok(regex) => Ok(Value::Bool(regex.is_match(text))),
+        Err(_) => Ok(Value::Bool(false)), // Return false on compile error
+    }
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 

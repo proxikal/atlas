@@ -278,6 +278,13 @@ impl Interpreter {
                     "hashSetForEach" => return self.intrinsic_hashset_for_each(&args, call.span),
                     "hashSetMap" => return self.intrinsic_hashset_map(&args, call.span),
                     "hashSetFilter" => return self.intrinsic_hashset_filter(&args, call.span),
+                    // Regex intrinsics (callback-based)
+                    "regexReplaceWith" => {
+                        return self.intrinsic_regex_replace_with(&args, call.span)
+                    }
+                    "regexReplaceAllWith" => {
+                        return self.intrinsic_regex_replace_all_with(&args, call.span)
+                    }
                     _ => {}
                 }
 
@@ -1628,6 +1635,266 @@ impl Interpreter {
         Ok(Value::HashSet(std::rc::Rc::new(std::cell::RefCell::new(
             result_set,
         ))))
+    }
+
+    /// Regex intrinsic: Replace first match using callback
+    fn intrinsic_regex_replace_with(
+        &mut self,
+        args: &[Value],
+        span: crate::span::Span,
+    ) -> Result<Value, RuntimeError> {
+        if args.len() != 3 {
+            return Err(RuntimeError::TypeError {
+                msg: "regexReplaceWith() expects 3 arguments (regex, text, callback)".to_string(),
+                span,
+            });
+        }
+
+        let regex = match &args[0] {
+            Value::Regex(r) => r.as_ref(),
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "regexReplaceWith() first argument must be Regex".to_string(),
+                    span,
+                })
+            }
+        };
+
+        let text = match &args[1] {
+            Value::String(s) => s.as_ref(),
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "regexReplaceWith() second argument must be string".to_string(),
+                    span,
+                })
+            }
+        };
+
+        let callback = match &args[2] {
+            Value::Function(_) => &args[2],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "regexReplaceWith() third argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
+
+        // Find first match
+        if let Some(mat) = regex.find(text) {
+            let match_start = mat.start();
+            let match_end = mat.end();
+            let match_text = mat.as_str();
+
+            // Build match data HashMap
+            let mut match_map = crate::stdlib::collections::hashmap::AtlasHashMap::new();
+            match_map.insert(
+                crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                    "text".to_string(),
+                )),
+                Value::string(match_text),
+            );
+            match_map.insert(
+                crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                    "start".to_string(),
+                )),
+                Value::Number(match_start as f64),
+            );
+            match_map.insert(
+                crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                    "end".to_string(),
+                )),
+                Value::Number(match_end as f64),
+            );
+
+            // Extract capture groups
+            if let Some(caps) = regex.captures(text) {
+                let mut groups = Vec::new();
+                for i in 0..caps.len() {
+                    if let Some(group) = caps.get(i) {
+                        groups.push(Value::string(group.as_str()));
+                    } else {
+                        groups.push(Value::Null);
+                    }
+                }
+                match_map.insert(
+                    crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                        "groups".to_string(),
+                    )),
+                    Value::array(groups),
+                );
+            } else {
+                match_map.insert(
+                    crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                        "groups".to_string(),
+                    )),
+                    Value::array(vec![]),
+                );
+            }
+
+            let match_value = Value::HashMap(std::rc::Rc::new(std::cell::RefCell::new(match_map)));
+
+            // Call callback with match data
+            let replacement_value = self.call_value(callback, vec![match_value], span)?;
+
+            // Expect string return value and clone to avoid lifetime issues
+            let replacement_str = match &replacement_value {
+                Value::String(s) => s.as_ref().to_string(),
+                _ => {
+                    return Err(RuntimeError::TypeError {
+                        msg: "regexReplaceWith() callback must return string".to_string(),
+                        span,
+                    })
+                }
+            };
+
+            // Build result string
+            let mut result = String::with_capacity(text.len());
+            result.push_str(&text[..match_start]);
+            result.push_str(&replacement_str);
+            result.push_str(&text[match_end..]);
+
+            Ok(Value::string(result))
+        } else {
+            // No match, return original text
+            Ok(Value::string(text))
+        }
+    }
+
+    /// Regex intrinsic: Replace all matches using callback
+    fn intrinsic_regex_replace_all_with(
+        &mut self,
+        args: &[Value],
+        span: crate::span::Span,
+    ) -> Result<Value, RuntimeError> {
+        if args.len() != 3 {
+            return Err(RuntimeError::TypeError {
+                msg: "regexReplaceAllWith() expects 3 arguments (regex, text, callback)"
+                    .to_string(),
+                span,
+            });
+        }
+
+        let regex = match &args[0] {
+            Value::Regex(r) => r.as_ref(),
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "regexReplaceAllWith() first argument must be Regex".to_string(),
+                    span,
+                })
+            }
+        };
+
+        let text = match &args[1] {
+            Value::String(s) => s.as_ref(),
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "regexReplaceAllWith() second argument must be string".to_string(),
+                    span,
+                })
+            }
+        };
+
+        let callback = match &args[2] {
+            Value::Function(_) => &args[2],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "regexReplaceAllWith() third argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
+
+        // Find all matches and collect them
+        let matches: Vec<_> = regex.find_iter(text).collect();
+
+        if matches.is_empty() {
+            return Ok(Value::string(text));
+        }
+
+        // Build result string by processing all matches
+        let mut result = String::with_capacity(text.len());
+        let mut last_end = 0;
+
+        for mat in matches {
+            let match_start = mat.start();
+            let match_end = mat.end();
+            let match_text = mat.as_str();
+
+            // Build match data HashMap
+            let mut match_map = crate::stdlib::collections::hashmap::AtlasHashMap::new();
+            match_map.insert(
+                crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                    "text".to_string(),
+                )),
+                Value::string(match_text),
+            );
+            match_map.insert(
+                crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                    "start".to_string(),
+                )),
+                Value::Number(match_start as f64),
+            );
+            match_map.insert(
+                crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                    "end".to_string(),
+                )),
+                Value::Number(match_end as f64),
+            );
+
+            // Extract capture groups
+            if let Some(caps) = regex.captures(mat.as_str()) {
+                let mut groups = Vec::new();
+                for i in 0..caps.len() {
+                    if let Some(group) = caps.get(i) {
+                        groups.push(Value::string(group.as_str()));
+                    } else {
+                        groups.push(Value::Null);
+                    }
+                }
+                match_map.insert(
+                    crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                        "groups".to_string(),
+                    )),
+                    Value::array(groups),
+                );
+            } else {
+                match_map.insert(
+                    crate::stdlib::collections::hash::HashKey::String(std::rc::Rc::new(
+                        "groups".to_string(),
+                    )),
+                    Value::array(vec![]),
+                );
+            }
+
+            let match_value = Value::HashMap(std::rc::Rc::new(std::cell::RefCell::new(match_map)));
+
+            // Call callback with match data
+            let replacement_value = self.call_value(callback, vec![match_value], span)?;
+
+            // Expect string return value and clone to avoid lifetime issues
+            let replacement_str = match &replacement_value {
+                Value::String(s) => s.as_ref().to_string(),
+                _ => {
+                    return Err(RuntimeError::TypeError {
+                        msg: "regexReplaceAllWith() callback must return string".to_string(),
+                        span,
+                    })
+                }
+            };
+
+            // Add text before this match
+            result.push_str(&text[last_end..match_start]);
+            // Add replacement
+            result.push_str(&replacement_str);
+
+            last_end = match_end;
+        }
+
+        // Add remaining text after last match
+        result.push_str(&text[last_end..]);
+
+        Ok(Value::string(result))
     }
 
     /// Helper: Call a function value with arguments

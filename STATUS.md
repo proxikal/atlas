@@ -7,9 +7,9 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/stdlib/phase-08a-regex-core.md
-**Next Phase:** phases/stdlib/phase-08b-regex-operations.md
-**Real Progress:** 34/80 phases complete (43%)
+**Last Completed:** phases/stdlib/phase-08b-regex-operations.md
+**Next Phase:** phases/stdlib/phase-09-datetime.md
+**Real Progress:** 35/80 phases complete (44%)
 
 ---
 
@@ -18,7 +18,7 @@
 | Category | Progress | Status |
 |----------|----------|--------|
 | **0. Foundation** | 21/21 (100%) | ✅ COMPLETE |
-| **1. Stdlib** | 13/23 (57%) | 🔨 ACTIVE |
+| **1. Stdlib** | 14/23 (61%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 0/8 (0%) | ⬜ Pending |
 | **3. Frontend** | 0/5 (0%) | ⬜ Pending |
 | **4. Typing** | 0/7 (0%) | ⬜ Pending |
@@ -29,7 +29,7 @@
 
 ---
 
-## 📋 Complete Phase List (32/78)
+## 📋 Complete Phase List (35/80)
 
 ### 0. Foundation (21/21) ✅ COMPLETE
 
@@ -55,7 +55,7 @@
 ✅ phase-11b-build-system-incremental.md
 ✅ phase-11c-build-system-integration.md
 
-### 1. Stdlib (12/23) 🔨 ACTIVE
+### 1. Stdlib (14/23) 🔨 ACTIVE
 
 ✅ phase-01-complete-string-api.md
 ✅ phase-02-complete-array-api.md
@@ -70,7 +70,7 @@
 ✅ phase-07c-queue-stack.md
 ✅ phase-07d-collection-integration.md
 ✅ phase-08a-regex-core.md
-⬜ phase-08b-regex-operations.md
+✅ phase-08b-regex-operations.md
 ⬜ phase-09-datetime.md
 ⬜ phase-10-network-http.md
 ⬜ phase-11-async-io-foundation.md
