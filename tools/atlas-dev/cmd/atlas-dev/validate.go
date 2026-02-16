@@ -6,17 +6,20 @@ import (
 )
 
 func validateCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "validate",
-		Short: "Validate database consistency",
-		Long: `Check database for consistency issues:
-- Category counts match actual phase counts
-- Percentages calculated correctly
-- Metadata is accurate
-- No orphaned phases
-- No invalid statuses
-- All triggers exist`,
+		Short: "Validation commands for database, parity, tests, and consistency",
+		Long: `Run various validation checks:
+
+- validate          - Check database consistency (default)
+- validate parity   - Validate spec/API/code/test parity
+- validate all      - Run all validators
+- validate tests    - Validate test coverage
+- validate consistency - Detect documentation conflicts
+
+Use 'validate [command] --help' for more information.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Default: database validation
 			report, err := database.Validate()
 			if err != nil {
 				return err
@@ -30,4 +33,12 @@ func validateCmd() *cobra.Command {
 			return output.Success(result)
 		},
 	}
+
+	// Add subcommands
+	cmd.AddCommand(validateParityCmd())
+	cmd.AddCommand(validateAllCmd())
+	cmd.AddCommand(validateTestsCmd())
+	cmd.AddCommand(validateConsistencyCmd())
+
+	return cmd
 }
