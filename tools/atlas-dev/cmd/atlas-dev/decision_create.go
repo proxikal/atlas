@@ -58,7 +58,7 @@ func decisionCreateCmd() *cobra.Command {
 			// Dry-run: preview without creating
 			if dryRun {
 				// Get next ID (read-only)
-				nextID, err := database.GetNextDecisionID()
+				nextID, err := database.GetNextDecisionID(component)
 				if err != nil {
 					return err
 				}

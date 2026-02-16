@@ -18,6 +18,7 @@ Use these commands to parse, validate against code, and generate API docs.`,
 	cmd.AddCommand(apiValidateCmd())
 	cmd.AddCommand(apiGenerateCmd())
 	cmd.AddCommand(apiCoverageCmd())
+	cmd.AddCommand(apiSyncCmd())
 
 	return cmd
 }

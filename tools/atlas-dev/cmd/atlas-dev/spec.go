@@ -18,6 +18,7 @@ Use these commands to parse, validate, and search spec documents.`,
 	cmd.AddCommand(specSearchCmd())
 	cmd.AddCommand(specValidateCmd())
 	cmd.AddCommand(specGrammarCmd())
+	cmd.AddCommand(specSyncCmd())
 
 	return cmd
 }

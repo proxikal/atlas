@@ -55,33 +55,34 @@ type UpdateDecisionRequest struct {
 	SupersededBy string
 }
 
-// GetNextDecisionID returns the next auto-generated decision ID
-func (db *DB) GetNextDecisionID() (string, error) {
+// GetNextDecisionID returns the next auto-generated decision ID for a component
+func (db *DB) GetNextDecisionID(component string) (string, error) {
 	start := time.Now()
 
-	// Query max ID number from decisions table
+	// Query max ID number for this component (format: {component}-DR-###)
 	query := `
-		SELECT MAX(CAST(SUBSTR(id, 4) AS INTEGER))
+		SELECT MAX(CAST(SUBSTR(id, LENGTH(?) + 5) AS INTEGER))
 		FROM decisions
-		WHERE id LIKE 'DR-%'
+		WHERE id LIKE ? || '-DR-%'
 	`
 
 	var maxID sql.NullInt64
-	err := db.conn.QueryRow(query).Scan(&maxID)
+	err := db.conn.QueryRow(query, component, component).Scan(&maxID)
 	if err != nil && err != sql.ErrNoRows {
 		return "", fmt.Errorf("failed to query max decision ID: %w", err)
 	}
 
-	// Generate next ID with zero padding
+	// Generate next ID with zero padding: {component}-DR-###
 	nextNum := 1
 	if maxID.Valid {
 		nextNum = int(maxID.Int64) + 1
 	}
 
-	nextID := fmt.Sprintf("DR-%03d", nextNum)
+	nextID := fmt.Sprintf("%s-DR-%03d", component, nextNum)
 
 	duration := time.Since(start)
 	slog.Debug("next decision ID generated",
+		"component", component,
 		"next_id", nextID,
 		"duration_ms", duration.Milliseconds(),
 	)
@@ -123,7 +124,7 @@ func (db *DB) CreateDecision(req CreateDecisionRequest) (*Decision, error) {
 	// Use exclusive lock + transaction for atomic creation
 	err = db.WithExclusiveLock(func() error {
 		// Get next ID inside lock to prevent race
-		nextID, err := db.GetNextDecisionID()
+		nextID, err := db.GetNextDecisionID(req.Component)
 		if err != nil {
 			return err
 		}
