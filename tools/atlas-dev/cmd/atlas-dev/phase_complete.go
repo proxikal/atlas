@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/atlas-lang/atlas-dev/internal/compose"
 	"github.com/atlas-lang/atlas-dev/internal/db"
 	"github.com/atlas-lang/atlas-dev/internal/git"
 	"github.com/atlas-lang/atlas-dev/internal/output"
@@ -16,6 +18,7 @@ func phaseCompleteCmd() *cobra.Command {
 		commit      bool
 		dryRun      bool
 		tests       int
+		useStdin    bool
 	)
 
 	cmd := &cobra.Command{
@@ -34,10 +37,30 @@ Example:
   atlas-dev phase complete phases/stdlib/phase-07b.md \
     --desc "HashSet with 25 tests, 100% parity" \
     --tests 25 \
-    --commit`,
-		Args: cobra.ExactArgs(1),
+    --commit
+
+  # With stdin
+  echo '{"path":"phases/stdlib/phase-07b.md"}' | \
+    atlas-dev phase complete --stdin --desc "Complete" --tests 25`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			phasePath := args[0]
+			var phasePath string
+
+			if useStdin {
+				input, err := compose.ReadAndParseStdin()
+				if err != nil {
+					return err
+				}
+				phasePath, err = compose.ExtractFirstPath(input)
+				if err != nil {
+					return err
+				}
+			} else {
+				if len(args) < 1 {
+					return fmt.Errorf("phase path required")
+				}
+				phasePath = args[0]
+			}
 
 			// Use current date if not specified
 			if date == "" {
@@ -109,6 +132,7 @@ Example:
 	cmd.Flags().BoolVarP(&commit, "commit", "c", false, "Create git commit")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would change without modifying database")
 	cmd.Flags().IntVar(&tests, "tests", 0, "Number of tests added")
+	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	_ = cmd.MarkFlagRequired("desc")
 

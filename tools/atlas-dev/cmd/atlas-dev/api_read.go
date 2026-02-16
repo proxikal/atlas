@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/atlas-lang/atlas-dev/internal/api"
+	"github.com/atlas-lang/atlas-dev/internal/compose"
 	"github.com/atlas-lang/atlas-dev/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -12,6 +13,7 @@ func apiReadCmd() *cobra.Command {
 	var (
 		function string
 		detailed bool
+		useStdin bool
 	)
 
 	cmd := &cobra.Command{
@@ -22,10 +24,29 @@ func apiReadCmd() *cobra.Command {
   atlas-dev api read ../../docs/api/stdlib.md
 
   # Read specific function
-  atlas-dev api read ../../docs/api/stdlib.md --function print`,
-		Args: cobra.ExactArgs(1),
+  atlas-dev api read ../../docs/api/stdlib.md --function print
+
+  # Read from stdin
+  echo '{"path":"docs/api/stdlib.md"}' | atlas-dev api read --stdin`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			apiPath := args[0]
+			var apiPath string
+
+			if useStdin {
+				input, err := compose.ReadAndParseStdin()
+				if err != nil {
+					return err
+				}
+				apiPath, err = compose.ExtractFirstPath(input)
+				if err != nil {
+					return err
+				}
+			} else {
+				if len(args) < 1 {
+					return fmt.Errorf("API file path required")
+				}
+				apiPath = args[0]
+			}
 
 			// Parse API doc
 			doc, err := api.Parse(apiPath)
@@ -69,6 +90,7 @@ func apiReadCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&function, "function", "", "Read specific function")
 	cmd.Flags().BoolVar(&detailed, "detailed", false, "Include full details")
+	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	return cmd
 }

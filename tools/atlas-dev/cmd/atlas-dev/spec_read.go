@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/atlas-lang/atlas-dev/internal/compose"
 	"github.com/atlas-lang/atlas-dev/internal/output"
 	"github.com/atlas-lang/atlas-dev/internal/spec"
 	"github.com/spf13/cobra"
@@ -13,6 +14,7 @@ func specReadCmd() *cobra.Command {
 	var (
 		section  string
 		withCode bool
+		useStdin bool
 	)
 
 	cmd := &cobra.Command{
@@ -23,10 +25,31 @@ func specReadCmd() *cobra.Command {
   atlas-dev spec read ../../docs/specification/syntax.md
 
   # Read specific section
-  atlas-dev spec read ../../docs/specification/syntax.md --section "Keywords"`,
-		Args: cobra.ExactArgs(1),
+  atlas-dev spec read ../../docs/specification/syntax.md --section "Keywords"
+
+  # Read from stdin
+  echo '{"path":"docs/specification/syntax.md"}' | atlas-dev spec read --stdin`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			specPath := args[0]
+			var specPath string
+
+			// Get path from stdin or args
+			if useStdin {
+				input, err := compose.ReadAndParseStdin()
+				if err != nil {
+					return err
+				}
+
+				specPath, err = compose.ExtractFirstPath(input)
+				if err != nil {
+					return err
+				}
+			} else {
+				if len(args) < 1 {
+					return fmt.Errorf("spec file path required")
+				}
+				specPath = args[0]
+			}
 
 			// Make path absolute if relative
 			if !filepath.IsAbs(specPath) {
@@ -87,6 +110,7 @@ func specReadCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&section, "section", "", "Read specific section")
 	cmd.Flags().BoolVar(&withCode, "with-code", false, "Include code blocks")
+	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	return cmd
 }

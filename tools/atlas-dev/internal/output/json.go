@@ -2,7 +2,9 @@ package output
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 )
 
 // Success outputs compact JSON with ok=true
@@ -67,4 +69,62 @@ func isEmpty(v interface{}) bool {
 	default:
 		return false
 	}
+}
+
+// StreamLine outputs a single JSON object per line (for streaming)
+func StreamLine(data map[string]interface{}) error {
+	cleaned := removeEmpty(data)
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(cleaned)
+}
+
+// Lines outputs array of strings as newline-separated values (for xargs)
+func Lines(values []string) error {
+	_, err := fmt.Fprintln(os.Stdout, strings.Join(values, "\n"))
+	return err
+}
+
+// LinesFromField extracts field from array of objects and outputs as lines
+func LinesFromField(items []map[string]interface{}, field string) error {
+	values := []string{}
+	for _, item := range items {
+		if val, ok := item[field].(string); ok && val != "" {
+			values = append(values, val)
+		}
+	}
+	return Lines(values)
+}
+
+// SuccessWithFormat outputs data in specified format
+func SuccessWithFormat(data map[string]interface{}, format string) error {
+	switch format {
+	case "lines":
+		// Try to extract array field for lines output
+		for _, key := range []string{"items", "results", "phases", "decisions", "features"} {
+			if arr, ok := data[key].([]map[string]interface{}); ok {
+				// Try common ID fields
+				for _, field := range []string{"id", "path", "name"} {
+					if len(arr) > 0 {
+						if _, exists := arr[0][field]; exists {
+							return LinesFromField(arr, field)
+						}
+					}
+				}
+			}
+		}
+		// Fallback to JSON if can't extract lines
+		return Success(data)
+	case "json":
+		fallthrough
+	default:
+		return Success(data)
+	}
+}
+
+// Array outputs array directly with ok=true wrapper
+func Array(items interface{}) error {
+	return Success(map[string]interface{}{
+		"items": items,
+	})
 }
