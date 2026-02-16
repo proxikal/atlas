@@ -21,6 +21,11 @@ func migrateCmd() *cobra.Command {
 
 	cmd.AddCommand(migrateSchemaCmd())
 	cmd.AddCommand(migrateBootstrapCmd())
+	cmd.AddCommand(migratePhasesCmd())
+	cmd.AddCommand(migrateHistoryCmd())
+	cmd.AddCommand(migrateReferencesCmd())
+	cmd.AddCommand(migrateComponentsCmd())
+	cmd.AddCommand(migrateCleanupCmd())
 
 	return cmd
 }
