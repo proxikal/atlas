@@ -1,0 +1,24 @@
+// JSON parsing, validation, and extraction
+
+export fn demo_json() -> string {
+    let text: string = "{\"name\":\"atlas\",\"count\":3,\"items\":[1,2,3],\"active\":true}";
+    let parsed = parseJSON(text);
+
+    // Field extraction via indexing + helpers
+    let name: string = jsonAsString(parsed["name"]);
+    let count: number = jsonAsNumber(parsed["count"]);
+    let second_item: number = jsonAsNumber(parsed["items"][1]);
+    let is_active: bool = jsonAsBool(parsed["active"]);
+
+    let pretty = prettifyJSON(text, 2);
+    let minified = minifyJSON(pretty);
+    let is_valid: bool = isValidJSON(text);
+
+    return "name=" + name
+        + ", count=" + str(count)
+        + ", items[1]=" + str(second_item)
+        + ", active=" + str(is_active)
+        + ", valid=" + str(is_valid)
+        + ", pretty=" + pretty
+        + ", minified=" + minified;
+}

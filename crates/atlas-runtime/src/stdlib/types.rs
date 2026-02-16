@@ -216,6 +216,7 @@ pub fn type_of(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::Queue(_) => "queue",
         Value::Stack(_) => "stack",
         Value::Regex(_) => "regex",
+        Value::DateTime(_) => "datetime",
     };
 
     Ok(Value::string(type_name))
@@ -329,6 +330,7 @@ pub fn to_string(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::Queue(_) => "[Queue]".to_string(),
         Value::Stack(_) => "[Stack]".to_string(),
         Value::Regex(r) => format!("[Regex /{}/ ]", r.as_str()),
+        Value::DateTime(dt) => dt.to_rfc3339(),
     };
 
     Ok(Value::string(string_value))
@@ -401,7 +403,8 @@ pub fn to_bool(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         | Value::HashSet(_)
         | Value::Queue(_)
         | Value::Stack(_)
-        | Value::Regex(_) => true,
+        | Value::Regex(_)
+        | Value::DateTime(_) => true,
     };
 
     Ok(Value::Bool(bool_value))
@@ -537,6 +540,7 @@ fn type_name(value: &Value) -> &str {
         Value::Queue(_) => "queue",
         Value::Stack(_) => "stack",
         Value::Regex(_) => "regex",
+        Value::DateTime(_) => "datetime",
     }
 }
 
@@ -564,6 +568,7 @@ fn value_to_display_string(value: &Value) -> String {
         Value::Queue(_) => "[Queue]".to_string(),
         Value::Stack(_) => "[Stack]".to_string(),
         Value::Regex(r) => format!("[Regex /{}/ ]", r.as_str()),
+        Value::DateTime(dt) => format!("[DateTime {}]", dt.to_rfc3339()),
     }
 }
 

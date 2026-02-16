@@ -1,0 +1,28 @@
+// Regular expression APIs
+
+export fn demo_regex() -> string {
+    let email_re = unwrap(regexNew("([A-Za-z0-9._%+-]+)@([A-Za-z0-9.-]+)"));
+    let text: string = "Contact atlas@example.com or ai@labs.dev for details.";
+
+    // Capture first match groups
+    let captures = regexCaptures(email_re, text);
+    let capture_str = match captures {
+        Some(groups) => toJSON(groups),
+        None => "None"
+    };
+
+    // Positions of all matches
+    let positions = regexMatchIndices(email_re, text);
+
+    // Global replace
+    let redacted: string = regexReplaceAll(email_re, text, "[email]");
+
+    // Split on whitespace using compiled regex
+    let split_re = unwrap(regexNew("\\s+"));
+    let words = regexSplit(split_re, "atlas regex split demo");
+
+    return "captures=" + capture_str
+        + "; matchIndices=" + toJSON(positions)
+        + "; redacted=\"" + redacted + "\""
+        + "; split=" + toJSON(words);
+}

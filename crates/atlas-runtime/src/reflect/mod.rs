@@ -184,6 +184,19 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 type_args: vec![],
             }
         }
+
+        Value::DateTime(_) => {
+            // DateTime type
+            TypeInfo {
+                name: "DateTime".to_string(),
+                kind: TypeKind::Generic,
+                fields: vec![],
+                parameters: vec![],
+                return_type: None,
+                element_type: None,
+                type_args: vec![],
+            }
+        }
     }
 }
 

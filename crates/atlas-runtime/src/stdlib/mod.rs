@@ -2,6 +2,7 @@
 
 pub mod array;
 pub mod collections;
+pub mod datetime;
 pub mod io;
 pub mod json;
 pub mod math;
@@ -80,6 +81,15 @@ pub fn is_builtin(name: &str) -> bool {
             | "regexReplace" | "regexReplaceAll"
             | "regexSplit" | "regexSplitN"
             | "regexMatchIndices" | "regexTest"
+            // DateTime functions
+            | "dateTimeNow" | "dateTimeFromTimestamp" | "dateTimeFromComponents"
+            | "dateTimeParseIso" | "dateTimeUtc"
+            | "dateTimeYear" | "dateTimeMonth" | "dateTimeDay"
+            | "dateTimeHour" | "dateTimeMinute" | "dateTimeSecond"
+            | "dateTimeWeekday" | "dateTimeDayOfYear"
+            | "dateTimeAddSeconds" | "dateTimeAddMinutes" | "dateTimeAddHours" | "dateTimeAddDays"
+            | "dateTimeDiff" | "dateTimeCompare"
+            | "dateTimeToTimestamp" | "dateTimeToIso"
     )
 }
 
@@ -672,6 +682,29 @@ pub fn call_builtin(
         "regexSplitN" => regex::regex_split_n(args, call_span),
         "regexMatchIndices" => regex::regex_match_indices(args, call_span),
         "regexTest" => regex::regex_test(args, call_span),
+
+        // DateTime functions
+        "dateTimeNow" => datetime::date_time_now(args, call_span),
+        "dateTimeFromTimestamp" => datetime::date_time_from_timestamp(args, call_span),
+        "dateTimeFromComponents" => datetime::date_time_from_components(args, call_span),
+        "dateTimeParseIso" => datetime::date_time_parse_iso(args, call_span),
+        "dateTimeUtc" => datetime::date_time_utc(args, call_span),
+        "dateTimeYear" => datetime::date_time_year(args, call_span),
+        "dateTimeMonth" => datetime::date_time_month(args, call_span),
+        "dateTimeDay" => datetime::date_time_day(args, call_span),
+        "dateTimeHour" => datetime::date_time_hour(args, call_span),
+        "dateTimeMinute" => datetime::date_time_minute(args, call_span),
+        "dateTimeSecond" => datetime::date_time_second(args, call_span),
+        "dateTimeWeekday" => datetime::date_time_weekday(args, call_span),
+        "dateTimeDayOfYear" => datetime::date_time_day_of_year(args, call_span),
+        "dateTimeAddSeconds" => datetime::date_time_add_seconds(args, call_span),
+        "dateTimeAddMinutes" => datetime::date_time_add_minutes(args, call_span),
+        "dateTimeAddHours" => datetime::date_time_add_hours(args, call_span),
+        "dateTimeAddDays" => datetime::date_time_add_days(args, call_span),
+        "dateTimeDiff" => datetime::date_time_diff(args, call_span),
+        "dateTimeCompare" => datetime::date_time_compare(args, call_span),
+        "dateTimeToTimestamp" => datetime::date_time_to_timestamp(args, call_span),
+        "dateTimeToIso" => datetime::date_time_to_iso(args, call_span),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),

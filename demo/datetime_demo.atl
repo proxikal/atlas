@@ -1,0 +1,28 @@
+// DateTime creation, components, arithmetic, and formatting
+
+export fn demo_datetime() -> string {
+    let now = dateTimeNow();
+    let parsed = dateTimeParseIso("2024-01-15T10:30:00Z");
+    let from_parts = dateTimeFromComponents(2025, 6, 1, 12, 0, 0);
+
+    let tomorrow = dateTimeAddDays(now, 1);
+    let in_two_hours = dateTimeAddHours(now, 2);
+
+    let diff_seconds: number = dateTimeDiff(tomorrow, now);
+    let compare_parsed: number = dateTimeCompare(from_parts, parsed);
+
+    let iso_now: string = dateTimeToIso(now);
+    let timestamp_now: number = dateTimeToTimestamp(now);
+    let weekday: number = dateTimeWeekday(now);
+    let day_of_year: number = dateTimeDayOfYear(now);
+
+    return "now=" + iso_now
+        + ", timestamp=" + str(timestamp_now)
+        + ", weekday=" + str(weekday)
+        + ", dayOfYear=" + str(day_of_year)
+        + ", +1day diff=" + str(diff_seconds) + "s"
+        + ", parsed=" + dateTimeToIso(parsed)
+        + ", components=" + dateTimeToIso(from_parts)
+        + ", compare(parsed vs components)=" + str(compare_parsed)
+        + ", +2h=" + dateTimeToIso(in_two_hours);
+}

@@ -1,0 +1,10 @@
+{
+  "project": "atlas",
+  "version": "0.2",
+  "features": ["strings", "arrays", "regex", "datetime", "io"],
+  "nested": {
+    "numbers": [1, 2, 3],
+    "flag": true,
+    "note": "sample data for JSON APIs"
+  }
+}

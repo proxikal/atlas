@@ -1,0 +1,30 @@
+// String stdlib showcase
+
+export fn demo_strings() -> string {
+    let raw: string = "  Atlas: AI-first language  ";
+    let trimmed: string = trim(raw);
+    let upper: string = toUpperCase(trimmed);
+    let lower: string = toLowerCase(trimmed);
+    let words = split(trimmed, " ");
+    let rejoined: string = join(words, "-");
+    let replaced: string = replace(trimmed, "AI-first", "research-grade");
+    let padded: string = padStart("42", 5, "0");
+    let contains: bool = includes(trimmed, "Atlas");
+    let idx: number = indexOf(trimmed, "language");
+
+    // substring uses byte boundaries; here safe ASCII
+    let slice: string = substring(trimmed, 0, 5);
+    let repeated: string = repeat("na", 4);
+
+    return "trim='" + trimmed
+        + "', upper='" + upper
+        + "', lower='" + lower
+        + "', words=" + toJSON(words)
+        + ", rejoined=" + rejoined
+        + ", replaced='" + replaced
+        + "', padded=" + padded
+        + ", contains=" + str(contains)
+        + ", indexOf(language)=" + str(idx)
+        + ", substring=" + slice
+        + ", repeat=" + repeated;
+}

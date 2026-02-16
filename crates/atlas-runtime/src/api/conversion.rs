@@ -107,6 +107,7 @@ fn type_name(value: &Value) -> &'static str {
         Value::Queue(_) => "queue",
         Value::Stack(_) => "stack",
         Value::Regex(_) => "regex",
+        Value::DateTime(_) => "datetime",
     }
 }
 

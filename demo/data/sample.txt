@@ -1,0 +1,3 @@
+Atlas demo file I/O example.
+Line two with UTF-8 characters: café, naïve, résumé.
+Numbers: 42, 3.14, -7.

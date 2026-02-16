@@ -1,0 +1,28 @@
+// Math utilities and constants
+
+export fn demo_math() -> string {
+    let a: number = -3.7;
+    let b: number = 9;
+
+    let abs_a = abs(a);
+    let floor_a = floor(a);
+    let ceil_a = ceil(a);
+    let sqrt_b = sqrt(b);
+    let power = pow(2, 8);
+    let natural_log = log(2.71828);
+    let sine = sin(3.14159 / 2);
+    let clamped = clamp(15, 0, 10);
+    let sign_a = sign(a);
+    let rnd = random();
+
+    return "abs=" + str(abs_a)
+        + ", floor=" + str(floor_a)
+        + ", ceil=" + str(ceil_a)
+        + ", sqrt=" + str(sqrt_b)
+        + ", pow2^8=" + str(power)
+        + ", ln(e)=" + str(natural_log)
+        + ", sin(pi/2)=" + str(sine)
+        + ", clamp(15,0,10)=" + str(clamped)
+        + ", sign(-3.7)=" + str(sign_a)
+        + ", random=" + str(rnd);
+}

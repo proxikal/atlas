@@ -1,0 +1,5 @@
+[package]
+name = "atlas-demo"
+version = "0.0.1"
+edition = "2026"
+description = "Demonstration of current Atlas v0.2 capabilities"

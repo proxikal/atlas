@@ -415,6 +415,10 @@ fn value_to_json(
             msg: "Cannot serialize Regex to JSON".to_string(),
             span,
         }),
+        Value::DateTime(dt) => {
+            // Serialize DateTime as ISO 8601 string
+            Ok(serde_json::to_string(&dt.to_rfc3339()).unwrap())
+        }
     }
 }
 

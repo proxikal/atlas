@@ -1,0 +1,47 @@
+// HashMap, HashSet, Queue, and Stack collections
+
+export fn demo_collections() -> string {
+    // HashMap
+    let map = hashMapNew();
+    hashMapPut(map, "language", "Atlas");
+    hashMapPut(map, "version", "0.2");
+    hashMapPut(map, "year", "2026");
+
+    let map_keys = hashMapKeys(map);
+    let map_values = hashMapValues(map);
+    let map_entries = hashMapEntries(map);
+
+    // HashSet operations
+    let set_a = hashSetFromArray([1, 2, 3]);
+    let set_b = hashSetFromArray([3, 4, 5]);
+    let union = hashSetUnion(set_a, set_b);
+    let intersection = hashSetIntersection(set_a, set_b);
+    let difference = hashSetDifference(set_a, set_b);
+
+    // Queue
+    let queue = queueNew();
+    queueEnqueue(queue, "first");
+    queueEnqueue(queue, "second");
+    let queue_front = queuePeek(queue);
+    let dequeued = queueDequeue(queue);
+    let queue_after = queueToArray(queue);
+
+    // Stack
+    let stack = stackNew();
+    stackPush(stack, "bottom");
+    stackPush(stack, "top");
+    let top = stackPeek(stack);
+    let popped = stackPop(stack);
+    let stack_after = stackToArray(stack);
+
+    return "hashMap keys=" + toJSON(map_keys)
+        + ", values=" + toJSON(map_values)
+        + ", entries=" + toJSON(map_entries)
+        + "; hashSet union=" + toJSON(hashSetToArray(union))
+        + ", intersection=" + toJSON(hashSetToArray(intersection))
+        + ", difference=" + toJSON(hashSetToArray(difference))
+        + "; queue peek=" + queue_front + ", dequeued=" + dequeued
+        + ", remainingQueue=" + toJSON(queue_after)
+        + "; stack peek(before pop)=" + top + ", popped=" + popped
+        + ", remainingStack=" + toJSON(stack_after);
+}

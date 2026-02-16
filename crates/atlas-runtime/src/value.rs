@@ -54,6 +54,8 @@ pub enum Value {
     Stack(Rc<RefCell<crate::stdlib::collections::stack::AtlasStack>>),
     /// Regular expression pattern
     Regex(Rc<regex::Regex>),
+    /// DateTime value (UTC timezone)
+    DateTime(Rc<chrono::DateTime<chrono::Utc>>),
 }
 
 /// Function reference
@@ -99,6 +101,7 @@ impl Value {
             Value::Queue(_) => "queue",
             Value::Stack(_) => "stack",
             Value::Regex(_) => "regex",
+            Value::DateTime(_) => "datetime",
         }
     }
 
@@ -146,6 +149,8 @@ impl PartialEq for Value {
             (Value::Stack(a), Value::Stack(b)) => Rc::ptr_eq(a, b),
             // Regex uses reference identity (like arrays)
             (Value::Regex(a), Value::Regex(b)) => Rc::ptr_eq(a, b),
+            // DateTime uses value equality (compare timestamps)
+            (Value::DateTime(a), Value::DateTime(b)) => a == b,
             _ => false,
         }
     }
@@ -188,6 +193,7 @@ impl fmt::Display for Value {
             Value::Queue(queue) => write!(f, "<Queue size={}>", queue.borrow().len()),
             Value::Stack(stack) => write!(f, "<Stack size={}>", stack.borrow().len()),
             Value::Regex(r) => write!(f, "<Regex /{}/>", r.as_str()),
+            Value::DateTime(dt) => write!(f, "{}", dt.to_rfc3339()),
         }
     }
 }
@@ -213,6 +219,7 @@ impl fmt::Debug for Value {
             Value::Queue(queue) => write!(f, "Queue(size={})", queue.borrow().len()),
             Value::Stack(stack) => write!(f, "Stack(size={})", stack.borrow().len()),
             Value::Regex(r) => write!(f, "Regex(/{}/)", r.as_str()),
+            Value::DateTime(dt) => write!(f, "DateTime({})", dt.to_rfc3339()),
         }
     }
 }
