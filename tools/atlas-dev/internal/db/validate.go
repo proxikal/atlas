@@ -288,3 +288,27 @@ func (report *ValidationReport) addIssue(check, severity, message, suggestion st
 	})
 	report.OK = false
 }
+
+// ToCompactJSON converts ValidationReport to compact JSON map
+func (report *ValidationReport) ToCompactJSON() map[string]interface{} {
+	result := map[string]interface{}{
+		"valid": report.OK,
+		"chk":   report.ChecksRun,
+		"err":   report.ErrorsFound,
+	}
+
+	if len(report.Issues) > 0 {
+		issues := make([]map[string]interface{}, len(report.Issues))
+		for i, issue := range report.Issues {
+			issues[i] = map[string]interface{}{
+				"chk":  issue.Check,
+				"sev":  issue.Severity,
+				"msg":  issue.Message,
+				"fix":  issue.Suggestion,
+			}
+		}
+		result["issues"] = issues
+	}
+
+	return result
+}

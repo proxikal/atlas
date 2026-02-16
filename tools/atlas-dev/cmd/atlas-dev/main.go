@@ -69,6 +69,11 @@ func main() {
 	rootCmd.AddCommand(migrateCmd())
 	rootCmd.AddCommand(phaseCmd())
 	rootCmd.AddCommand(decisionCmd())
+	rootCmd.AddCommand(summaryCmd())
+	rootCmd.AddCommand(statsCmd())
+	rootCmd.AddCommand(blockersCmd())
+	rootCmd.AddCommand(timelineCmd())
+	rootCmd.AddCommand(coverageCmd())
 	rootCmd.AddCommand(validateCmd())
 
 	if err := rootCmd.Execute(); err != nil {

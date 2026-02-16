@@ -22,30 +22,12 @@ func validateCmd() *cobra.Command {
 				return err
 			}
 
-			// Build response
-			response := map[string]interface{}{
-				"checks": report.ChecksRun,
-				"errors": report.ErrorsFound,
-			}
-
-			if len(report.Issues) > 0 {
-				issues := make([]map[string]interface{}, 0, len(report.Issues))
-				for _, issue := range report.Issues {
-					issues = append(issues, map[string]interface{}{
-						"check":  issue.Check,
-						"sev":    issue.Severity,
-						"msg":    issue.Message,
-						"fix":    issue.Suggestion,
-					})
-				}
-				response["issues"] = issues
-			}
-
+			result := report.ToCompactJSON()
 			if report.OK {
-				response["msg"] = "Database is consistent"
+				result["msg"] = "Database is consistent"
 			}
 
-			return output.Success(response)
+			return output.Success(result)
 		},
 	}
 }
