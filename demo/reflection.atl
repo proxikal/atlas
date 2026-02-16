@@ -1,0 +1,31 @@
+// Reflection and introspection helpers
+
+fn helper(x: number) -> number { return x + 1; }
+
+export fn demo_reflection() -> string {
+    let arr = [1, 2, 3];
+    let clone_arr = reflect_clone(arr);
+
+    let type_numbers = reflect_typeof(arr);
+    let is_callable = reflect_is_callable(helper);
+    let is_primitive = reflect_is_primitive(42);
+    let same_type_check = reflect_same_type(arr, clone_arr);
+    let length = reflect_get_length(arr);
+    let empty_check = reflect_is_empty([]);
+    let description = reflect_type_describe(arr);
+    let arity = reflect_get_function_arity(helper);
+    let name = reflect_get_function_name(helper);
+    let deep_eq = reflect_deep_equals(arr, clone_arr);
+    let value_str = reflect_value_to_string(arr);
+
+    return "typeof=" + type_numbers
+        + ", isCallable(helper)=" + str(is_callable)
+        + ", isPrimitive(42)=" + str(is_primitive)
+        + ", sameType(arr, clone)=" + str(same_type_check)
+        + ", length=" + str(length)
+        + ", isEmpty([])=" + str(empty_check)
+        + ", describe=" + description
+        + ", fn name=" + name + ", arity=" + str(arity)
+        + ", deepEquals=" + str(deep_eq)
+        + ", valueToString=" + value_str;
+}

@@ -1,0 +1,34 @@
+import { demo_strings } from "./strings";
+import { demo_arrays } from "./arrays";
+import { demo_math } from "./math_demo";
+import { demo_options_results } from "./options_results";
+import { demo_regex } from "./regex_demo";
+import { demo_datetime } from "./datetime_demo";
+import { demo_json } from "./json_demo";
+import { demo_collections } from "./collections";
+import { demo_io } from "./io_demo";
+import { demo_reflection } from "./reflection";
+
+fn section(title: string, body: string) -> void {
+    print("== " + title + " ==");
+    print(body);
+    print(""); // blank line for readability
+}
+
+fn main() -> void {
+    print("Atlas demo — current v0.2 capabilities");
+    print("---------------------------------------");
+
+    section("Strings", demo_strings());
+    section("Arrays", demo_arrays());
+    section("Math", demo_math());
+    section("Option/Result + match", demo_options_results());
+    section("Regex", demo_regex());
+    section("DateTime", demo_datetime());
+    section("JSON", demo_json());
+    section("Collections", demo_collections());
+    section("File I/O (requires permissions)", demo_io());
+    section("Reflection", demo_reflection());
+}
+
+main();

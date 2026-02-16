@@ -3,25 +3,25 @@
 fn parse_number(text: string) -> Result<number, string> {
     // Validate with regex first to avoid runtime parse errors
     let compiled = unwrap(regexNew("^[-+]?[0-9]+(\\.[0-9]+)?$"));
-    if regexIsMatch(compiled, text) {
+    if (regexIsMatch(compiled, text)) {
         return Ok(parseFloat(text));
     }
     return Err("not a number");
 }
 
 fn safe_divide(a: number, b: number) -> Result<number, string> {
-    if b == 0 { return Err("divide by zero"); }
+    if (b == 0) { return Err("divide by zero"); }
     return Ok(a / b);
 }
 
 export fn demo_options_results() -> string {
-    let present: Option<number> = Some(7);
-    let absent: Option<number> = None;
-
-    let opt_msg = describe_option_number(present) + " | " + describe_option_number(absent);
-
     let ok_res: Result<number, string> = safe_divide(10, 2);
     let err_res: Result<number, string> = safe_divide(5, 0);
+
+    let present: Option<number> = Some(7);
+    let absent: Option<number> = result_ok(err_res); // yields None
+
+    let opt_msg = describe_option_number(present) + " | " + describe_option_number(absent);
 
     // Pattern matching over Result
     let res_msg = describe_result(ok_res) + " | " + describe_result(err_res);
@@ -32,9 +32,17 @@ export fn demo_options_results() -> string {
     let mapped_ok = result_map(ok_res, double);          // Ok(20)
     let mapped_err = result_map_err(err_res, annotate);  // Err("annotated: divide by zero")
 
-    // Option helpers
-    let val_or_default: number = unwrap_or_option(present, 0);
-    let none_default: number = unwrap_or_option(absent, 99);
+    // Option helpers via match (unwrap_or is also available)
+    let val_or_default: number = match present {
+        Some(value) => value,
+        None => 0,
+        _ => 0
+    };
+    let none_default: number = match absent {
+        Some(value) => value,
+        None => 99,
+        _ => 99
+    };
 
     // Result to Option conversions
     let ok_as_option: Option<number> = result_ok(ok_res);
@@ -53,20 +61,23 @@ export fn demo_options_results() -> string {
 fn describe_option_number(opt: Option<number>) -> string {
     return match opt {
         Some(value) => "Some(" + str(value) + ")",
-        None => "None"
+        None => "None",
+        _ => "Unknown Option"
     };
 }
 
 fn describe_option_string(opt: Option<string>) -> string {
     return match opt {
         Some(value) => "Some(" + value + ")",
-        None => "None"
+        None => "None",
+        _ => "Unknown Option"
     };
 }
 
 fn describe_result(res: Result<number, string>) -> string {
     return match res {
         Ok(value) => "Ok(" + str(value) + ")",
-        Err(err) => "Err(" + err + ")"
+        Err(err) => "Err(" + err + ")",
+        _ => "Unknown Result"
     };
 }

@@ -1,0 +1,99 @@
+{
+  "scopeName": "source.atl",
+  "name": "Atlas",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#builtins" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.atl",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.atl",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.atl",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "name": "constant.character.escape.atl", "match": "\\\\." }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.atl",
+          "match": "\\b-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.atl",
+          "match": "\\b(let|var|fn|if|else|while|for|return|break|continue|match|import|export|from|as|extern)\\b"
+        },
+        {
+          "name": "constant.language.boolean.atl",
+          "match": "\\b(true|false|null)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.atl",
+          "match": "\\b(number|string|bool|json|void|Option|Result|Array)\\b"
+        }
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.atl",
+          "match": "\\b(print|len|str|split|join|trim|trimStart|trimEnd|indexOf|lastIndexOf|includes|toUpperCase|toLowerCase|substring|charAt|repeat|replace|padStart|padEnd|startsWith|endsWith|map|filter|reduce|forEach|find|findIndex|flatMap|some|every|sort|sortBy|pop|shift|unshift|reverse|concat|slice|arrayIndexOf|arrayLastIndexOf|arrayIncludes|abs|floor|ceil|round|min|max|sqrt|pow|log|sin|cos|tan|asin|acos|atan|clamp|sign|random|parseJSON|toJSON|isValidJSON|prettifyJSON|minifyJSON|jsonAsString|jsonAsNumber|jsonAsBool|jsonIsNull|typeof|isString|isNumber|isBool|isNull|isArray|isFunction|toString|toNumber|toBool|parseInt|parseFloat|Some|None|is_some|is_none|Ok|Err|is_ok|is_err|unwrap|unwrap_or|expect|result_ok|result_err|result_map|result_map_err|result_and_then|result_or_else|hashMapNew|hashMapFromEntries|hashMapPut|hashMapGet|hashMapRemove|hashMapHas|hashMapSize|hashMapIsEmpty|hashMapClear|hashMapKeys|hashMapValues|hashMapEntries|hashMapForEach|hashMapMap|hashMapFilter|hashSetNew|hashSetFromArray|hashSetAdd|hashSetRemove|hashSetHas|hashSetSize|hashSetIsEmpty|hashSetClear|hashSetUnion|hashSetIntersection|hashSetDifference|hashSetSymmetricDifference|hashSetIsSubset|hashSetIsSuperset|hashSetToArray|hashSetForEach|hashSetMap|hashSetFilter|queueNew|queueEnqueue|queueDequeue|queuePeek|queueSize|queueIsEmpty|queueClear|queueToArray|stackNew|stackPush|stackPop|stackPeek|stackSize|stackIsEmpty|stackClear|stackToArray|regexNew|regexNewWithFlags|regexEscape|regexIsMatch|regexFind|regexFindAll|regexCaptures|regexCapturesNamed|regexReplace|regexReplaceAll|regexReplaceWith|regexReplaceAllWith|regexSplit|regexSplitN|regexMatchIndices|regexTest|dateTimeNow|dateTimeFromTimestamp|dateTimeFromComponents|dateTimeParseIso|dateTimeUtc|dateTimeYear|dateTimeMonth|dateTimeDay|dateTimeHour|dateTimeMinute|dateTimeSecond|dateTimeWeekday|dateTimeDayOfYear|dateTimeAddSeconds|dateTimeAddMinutes|dateTimeAddHours|dateTimeAddDays|dateTimeDiff|dateTimeCompare|dateTimeToTimestamp|dateTimeToIso|readFile|writeFile|appendFile|fileExists|readDir|createDir|removeFile|removeDir|fileInfo|pathJoin|reflect_typeof|reflect_is_callable|reflect_is_primitive|reflect_same_type|reflect_get_length|reflect_is_empty|reflect_type_describe|reflect_clone|reflect_value_to_string|reflect_deep_equals|reflect_get_function_name|reflect_get_function_arity)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.atl",
+          "match": "(\\+|-|\\*|/|%|==|!=|<=|>=|<|>|&&|\\|\\||!)"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.comma.atl",
+          "match": ","
+        },
+        {
+          "name": "punctuation.terminator.statement.atl",
+          "match": ";"
+        }
+      ]
+    }
+  },
+  "fileTypes": ["atl"],
+  "uuid": "0c47f4ec-2dd1-4d45-9f8e-8c55b6b5f0cd"
+}

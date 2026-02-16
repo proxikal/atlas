@@ -13,8 +13,8 @@ fn sum(acc: number, value: number) -> number {
 }
 
 fn compare_desc(a: number, b: number) -> number {
-    if a > b { return -1; }
-    if a < b { return 1; }
+    if (a > b) { return -1; }
+    if (a < b) { return 1; }
     return 0;
 }
 

@@ -1,0 +1,84 @@
+{
+  "name": "atlas-language-support",
+  "displayName": "Atlas Language Support (Local)",
+  "description": "Local VS Code support for the Atlas programming language (syntax, LSP client).",
+  "version": "0.0.1",
+  "publisher": "atlas-local",
+  "repository": {
+    "type": "git",
+    "url": "https://example.com/atlas-local-placeholder.git"
+  },
+  "engines": {
+    "vscode": "^1.86.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:atlas"
+  ],
+  "main": "./out/extension.js",
+  "files": [
+    "out/**",
+    "syntaxes/**",
+    "language-configuration.json",
+    "README.md",
+    "package.json"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "atlas",
+        "aliases": [
+          "Atlas",
+          "atlas"
+        ],
+        "extensions": [
+          ".atl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "atlas",
+        "scopeName": "source.atl",
+        "path": "./syntaxes/atlas.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Atlas",
+      "properties": {
+        "atlas.lsp.path": {
+          "type": "string",
+          "default": "atlas-lsp",
+          "description": "Path to the atlas-lsp executable (absolute or on PATH)."
+        },
+        "atlas.lsp.trace": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "LSP trace level for debugging."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "vscode:prepublish": "npm run compile",
+    "lint": "echo \"No lint configured\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.10",
+    "@types/vscode": "^1.86.0",
+    "typescript": "^5.3.3",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver-protocol": "^3.17.5",
+    "@vscode/vsce": "^2.22.0"
+  }
+}

@@ -22,16 +22,20 @@ export fn demo_collections() -> string {
     let queue = queueNew();
     queueEnqueue(queue, "first");
     queueEnqueue(queue, "second");
-    let queue_front = queuePeek(queue);
-    let dequeued = queueDequeue(queue);
+    let queue_front_opt: Option<string> = queuePeek(queue);
+    let queue_front = option_string(queue_front_opt);
+    let dequeued_opt: Option<string> = queueDequeue(queue);
+    let dequeued = option_string(dequeued_opt);
     let queue_after = queueToArray(queue);
 
     // Stack
     let stack = stackNew();
     stackPush(stack, "bottom");
     stackPush(stack, "top");
-    let top = stackPeek(stack);
-    let popped = stackPop(stack);
+    let top_opt: Option<string> = stackPeek(stack);
+    let top = option_string(top_opt);
+    let popped_opt: Option<string> = stackPop(stack);
+    let popped = option_string(popped_opt);
     let stack_after = stackToArray(stack);
 
     return "hashMap keys=" + toJSON(map_keys)
@@ -44,4 +48,12 @@ export fn demo_collections() -> string {
         + ", remainingQueue=" + toJSON(queue_after)
         + "; stack peek(before pop)=" + top + ", popped=" + popped
         + ", remainingStack=" + toJSON(stack_after);
+}
+
+fn option_string(opt: Option<string>) -> string {
+    return match opt {
+        Some(value) => value,
+        None => "None",
+        _ => "Unknown"
+    };
 }
