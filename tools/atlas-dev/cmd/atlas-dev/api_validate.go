@@ -11,10 +11,7 @@ import (
 )
 
 func apiValidateCmd() *cobra.Command {
-	var (
-		codePath string
-		useStdin bool
-	)
+	var codePath string
 
 	cmd := &cobra.Command{
 		Use:   "validate <api-file>",
@@ -23,14 +20,14 @@ func apiValidateCmd() *cobra.Command {
 		Example: `  # Validate API docs
   atlas-dev api validate ../../docs/api/stdlib.md --code ../../crates/atlas-runtime/src/stdlib
 
-  # Validate from stdin
-  echo '{"path":"docs/api/stdlib.md"}' | atlas-dev api validate --stdin`,
+  # Validate from stdin (auto-detected)
+  echo '{"path":"docs/api/stdlib.md"}' | atlas-dev api validate`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var apiPath string
 
-			// Get path from stdin or args
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -85,7 +82,6 @@ func apiValidateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&codePath, "code", "", "Path to Rust source code")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	return cmd
 }

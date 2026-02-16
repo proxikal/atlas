@@ -147,9 +147,11 @@ CREATE TABLE IF NOT EXISTS audit_log (
     action TEXT NOT NULL,
     entity_type TEXT NOT NULL,
     entity_id TEXT NOT NULL,
+    old_data TEXT,
     changes TEXT NOT NULL,
     commit_sha TEXT,
-    agent TEXT
+    agent TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp);

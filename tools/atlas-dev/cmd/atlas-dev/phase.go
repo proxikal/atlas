@@ -6,9 +6,10 @@ import (
 
 func phaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "phase",
-		Short: "Phase management commands",
-		Long:  `Manage development phases - complete, query current/next, list, and view details.`,
+		Use:     "phase",
+		Aliases: []string{"p"},
+		Short:   "Phase management commands",
+		Long:    `Manage development phases - complete, query current/next, list, and view details.`,
 	}
 
 	cmd.AddCommand(phaseCompleteCmd())

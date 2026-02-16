@@ -13,8 +13,6 @@ import (
 )
 
 func specValidateCmd() *cobra.Command {
-	var useStdin bool
-
 	cmd := &cobra.Command{
 		Use:   "validate <spec-file>",
 		Short: "Validate a specification document",
@@ -22,14 +20,14 @@ func specValidateCmd() *cobra.Command {
 		Example: `  # Validate spec
   atlas-dev spec validate ../../docs/specification/syntax.md
 
-  # Validate from stdin
-  echo '{"path":"docs/specification/syntax.md"}' | atlas-dev spec validate --stdin`,
+  # Validate from stdin (auto-detected)
+  echo '{"path":"docs/specification/syntax.md"}' | atlas-dev spec validate`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var specPath string
 
-			// Get path from stdin or args
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -111,8 +109,6 @@ func specValidateCmd() *cobra.Command {
 			return output.Success(result)
 		},
 	}
-
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	return cmd
 }

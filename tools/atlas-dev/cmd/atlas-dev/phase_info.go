@@ -9,8 +9,6 @@ import (
 )
 
 func phaseInfoCmd() *cobra.Command {
-	var useStdin bool
-
 	cmd := &cobra.Command{
 		Use:   "info <phase-path>",
 		Short: "Show phase details",
@@ -18,14 +16,14 @@ func phaseInfoCmd() *cobra.Command {
 		Example: `  # Show phase info
   atlas-dev phase info phases/stdlib/phase-01.md
 
-  # Read from stdin
-  echo '{"path":"phases/stdlib/phase-01.md"}' | atlas-dev phase info --stdin`,
+  # Read from stdin (auto-detected)
+  echo '{"path":"phases/stdlib/phase-01.md"}' | atlas-dev phase info`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var phasePath string
 
-			// Get path from stdin or args
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -50,8 +48,6 @@ func phaseInfoCmd() *cobra.Command {
 			return output.Success(phase.ToCompactJSON())
 		},
 	}
-
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	return cmd
 }

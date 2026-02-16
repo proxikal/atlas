@@ -11,8 +11,6 @@ import (
 )
 
 func featureReadCmd() *cobra.Command {
-	var useStdin bool
-
 	cmd := &cobra.Command{
 		Use:   "read <name>",
 		Short: "Read a feature",
@@ -20,14 +18,14 @@ func featureReadCmd() *cobra.Command {
 		Example: `  # Read feature
   atlas-dev feature read pattern-matching
 
-  # Read from stdin
-  echo '{"name":"pattern-matching"}' | atlas-dev feature read --stdin`,
+  # Read from stdin (auto-detected)
+  echo '{"name":"pattern-matching"}' | atlas-dev feature read`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
 
-			// Get name from stdin or args
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -87,8 +85,6 @@ func featureReadCmd() *cobra.Command {
 			return output.Success(result)
 		},
 	}
-
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read feature name from stdin JSON")
 
 	return cmd
 }

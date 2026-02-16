@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -83,10 +84,58 @@ func main() {
 	rootCmd.AddCommand(timelineCmd())
 	rootCmd.AddCommand(coverageCmd())
 	rootCmd.AddCommand(validateCmd())
+	rootCmd.AddCommand(completionCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		output.Fatal(err)
 	}
+}
+
+func completionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "completion [bash|zsh|fish|powershell]",
+		Short: "Generate shell completion script",
+		Long: `Generate shell completion script for atlas-dev.
+
+To load completions:
+
+Bash:
+  $ source <(atlas-dev completion bash)
+  # To load for every session:
+  $ atlas-dev completion bash > /etc/bash_completion.d/atlas-dev
+
+Zsh:
+  $ atlas-dev completion zsh > "${fpath[1]}/_atlas-dev"
+  # Then restart your shell
+
+Fish:
+  $ atlas-dev completion fish | source
+  # To load for every session:
+  $ atlas-dev completion fish > ~/.config/fish/completions/atlas-dev.fish
+
+PowerShell:
+  PS> atlas-dev completion powershell | Out-String | Invoke-Expression
+`,
+		DisableFlagsInUseLine: true,
+		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+		Args:                  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			switch args[0] {
+			case "bash":
+				return cmd.Root().GenBashCompletion(os.Stdout)
+			case "zsh":
+				return cmd.Root().GenZshCompletion(os.Stdout)
+			case "fish":
+				return cmd.Root().GenFishCompletion(os.Stdout, true)
+			case "powershell":
+				return cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
+			default:
+				return fmt.Errorf("unsupported shell: %s (supported: bash, zsh, fish, powershell)", args[0])
+			}
+		},
+	}
+
+	return cmd
 }
 
 func versionCmd() *cobra.Command {

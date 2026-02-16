@@ -6,8 +6,9 @@ import (
 
 func featureCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "feature",
-		Short: "Feature management commands",
+		Use:     "feature",
+		Aliases: []string{"f", "feat"},
+		Short:   "Feature management commands",
 		Long: `Manage feature documentation - create, list, read, update, validate, sync, delete, and search features.
 
 Features are tracked in both the database and docs/features/ directory.

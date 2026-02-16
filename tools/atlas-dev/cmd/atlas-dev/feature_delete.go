@@ -13,7 +13,7 @@ import (
 func featureDeleteCmd() *cobra.Command {
 	var (
 		deleteFile bool
-		useStdin   bool
+		dryRun     bool
 	)
 
 	cmd := &cobra.Command{
@@ -26,14 +26,14 @@ func featureDeleteCmd() *cobra.Command {
   # Delete from DB and file
   atlas-dev feature delete pattern-matching --file
 
-  # Delete from stdin
-  echo '{"name":"pattern-matching"}' | atlas-dev feature delete --stdin`,
+  # Delete from stdin (auto-detected)
+  echo '{"name":"pattern-matching"}' | atlas-dev feature delete`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
 
-			// Get name from stdin or args
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -48,6 +48,27 @@ func featureDeleteCmd() *cobra.Command {
 					return fmt.Errorf("feature name required")
 				}
 				name = args[0]
+			}
+
+			// Dry-run: preview deletion
+			if dryRun {
+				markdownPath := filepath.Join("../../docs/features", name+".md")
+				result := map[string]interface{}{
+					"dry_run": true,
+					"op":      "delete_feature",
+					"feature": name,
+					"db":      true,
+					"file":    deleteFile,
+					"msg":     "Preview only - no changes made",
+				}
+
+				// Check if file exists
+				if _, err := os.Stat(markdownPath); err == nil {
+					result["file_exists"] = true
+					result["file_path"] = markdownPath
+				}
+
+				return output.Success(result)
 			}
 
 			// Delete from database
@@ -77,7 +98,7 @@ func featureDeleteCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&deleteFile, "file", false, "Also delete markdown file")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read feature name from stdin JSON")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview deletion without applying")
 
 	return cmd
 }

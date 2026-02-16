@@ -13,7 +13,6 @@ func phaseListCmd() *cobra.Command {
 		status   string
 		limit    int
 		offset   int
-		useStdin bool
 	)
 
 	cmd := &cobra.Command{
@@ -26,13 +25,13 @@ func phaseListCmd() *cobra.Command {
   # Filter by category
   atlas-dev phase list --category stdlib
 
-  # Filter from stdin (show only phases from input)
-  echo '[{"path":"phases/stdlib/phase-01.md"},{"path":"phases/stdlib/phase-02.md"}]' | atlas-dev phase list --stdin`,
+  # Filter from stdin (auto-detected - show only phases from input)
+  echo '[{"path":"phases/stdlib/phase-01.md"},{"path":"phases/stdlib/phase-02.md"}]' | atlas-dev phase list`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var filterPaths []string
 
-			// Get filter paths from stdin if provided
-			if useStdin {
+			// Auto-detect stdin for filtering
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -90,7 +89,6 @@ func phaseListCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status")
 	cmd.Flags().IntVar(&limit, "limit", 0, "Limit number of results")
 	cmd.Flags().IntVar(&offset, "offset", 0, "Offset for pagination")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Filter results by paths from stdin JSON")
 
 	return cmd
 }

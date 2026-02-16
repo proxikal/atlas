@@ -13,7 +13,6 @@ func decisionListCmd() *cobra.Command {
 		status    string
 		limit     int
 		offset    int
-		useStdin  bool
 	)
 
 	cmd := &cobra.Command{
@@ -32,13 +31,13 @@ func decisionListCmd() *cobra.Command {
   # Pagination
   atlas-dev decision list --limit 10 --offset 20
 
-  # Filter from stdin (show only decisions from input)
-  echo '[{"id":"DR-001"},{"id":"DR-002"}]' | atlas-dev decision list --stdin`,
+  # Filter from stdin (auto-detected - show only decisions from input)
+  echo '[{"id":"DR-001"},{"id":"DR-002"}]' | atlas-dev decision list`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var filterIDs []string
 
-			// Get filter IDs from stdin if provided
-			if useStdin {
+			// Auto-detect stdin for filtering
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -89,7 +88,6 @@ func decisionListCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status")
 	cmd.Flags().IntVarP(&limit, "limit", "l", 20, "Limit results")
 	cmd.Flags().IntVar(&offset, "offset", 0, "Offset for pagination")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Filter results by IDs from stdin JSON")
 
 	return cmd
 }

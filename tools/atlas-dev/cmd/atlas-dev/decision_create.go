@@ -19,6 +19,7 @@ func decisionCreateCmd() *cobra.Command {
 		status        string
 		relatedPhases string
 		tags          string
+		dryRun        bool
 	)
 
 	cmd := &cobra.Command{
@@ -30,7 +31,15 @@ func decisionCreateCmd() *cobra.Command {
     --component stdlib \
     --title "Hash function design" \
     --decision "Use FNV-1a for HashMap" \
-    --rationale "Fast, simple, good distribution"`,
+    --rationale "Fast, simple, good distribution"
+
+  # Preview without creating (dry-run)
+  atlas-dev decision create \
+    --component stdlib \
+    --title "Test" \
+    --decision "Test decision" \
+    --rationale "Testing" \
+    --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Validate required fields
 			if component == "" {
@@ -44,6 +53,30 @@ func decisionCreateCmd() *cobra.Command {
 			}
 			if rationale == "" {
 				return fmt.Errorf("--rationale is required")
+			}
+
+			// Dry-run: preview without creating
+			if dryRun {
+				// Get next ID (read-only)
+				nextID, err := database.GetNextDecisionID()
+				if err != nil {
+					return err
+				}
+
+				result := map[string]interface{}{
+					"dry_run": true,
+					"op":      "create_decision",
+					"preview": map[string]interface{}{
+						"id":       nextID,
+						"comp":     component,
+						"title":    title,
+						"decision": decisionText,
+						"rat":      rationale,
+						"stat":     status,
+					},
+					"msg": "Preview only - no changes made",
+				}
+				return output.Success(result)
 			}
 
 			// Create decision
@@ -70,8 +103,8 @@ func decisionCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&component, "component", "", "Component/category (required)")
-	cmd.Flags().StringVar(&title, "title", "", "Decision title (required)")
+	cmd.Flags().StringVarP(&component, "component", "c", "", "Component/category (required)")
+	cmd.Flags().StringVarP(&title, "title", "t", "", "Decision title (required)")
 	cmd.Flags().StringVar(&decisionText, "decision", "", "Decision text (required)")
 	cmd.Flags().StringVar(&rationale, "rationale", "", "Rationale (required)")
 	cmd.Flags().StringVar(&alternatives, "alternatives", "", "Alternatives considered")
@@ -79,6 +112,7 @@ func decisionCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&status, "status", "accepted", "Status (proposed, accepted, rejected)")
 	cmd.Flags().StringVar(&relatedPhases, "related-phases", "", "Related phase IDs")
 	cmd.Flags().StringVar(&tags, "tags", "", "Tags (comma-separated)")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview decision without creating it")
 
 	return cmd
 }

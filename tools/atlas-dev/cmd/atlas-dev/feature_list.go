@@ -10,7 +10,6 @@ func featureListCmd() *cobra.Command {
 	var (
 		category string
 		status   string
-		useStdin bool
 	)
 
 	cmd := &cobra.Command{
@@ -26,13 +25,13 @@ func featureListCmd() *cobra.Command {
   # List by category
   atlas-dev feature list --category core
 
-  # Filter from stdin (show only features from input)
-  echo '[{"name":"pattern-matching"},{"name":"modules"}]' | atlas-dev feature list --stdin`,
+  # Filter from stdin (auto-detected - show only features from input)
+  echo '[{"name":"pattern-matching"},{"name":"modules"}]' | atlas-dev feature list`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var filterNames []string
 
-			// Get filter names from stdin if provided
-			if useStdin {
+			// Auto-detect stdin for filtering
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -81,7 +80,6 @@ func featureListCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&category, "category", "c", "", "Filter by category")
 	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Filter results by names from stdin JSON")
 
 	return cmd
 }

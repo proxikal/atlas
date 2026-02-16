@@ -16,7 +16,7 @@ func featureUpdateCmd() *cobra.Command {
 		description string
 		specPath    string
 		apiPath     string
-		useStdin    bool
+		dryRun      bool
 	)
 
 	cmd := &cobra.Command{
@@ -29,14 +29,14 @@ func featureUpdateCmd() *cobra.Command {
   # Update version
   atlas-dev feature update pattern-matching --version v0.2
 
-  # Update from stdin
-  echo '{"name":"pattern-matching"}' | atlas-dev feature update --stdin --status Implemented`,
+  # Update from stdin (auto-detected)
+  echo '{"name":"pattern-matching"}' | atlas-dev feature update --status Implemented`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
 
-			// Get name from stdin or args
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -68,6 +68,36 @@ func featureUpdateCmd() *cobra.Command {
 				return fmt.Errorf("no fields to update (use --version, --status, etc.)")
 			}
 
+			// Dry-run: preview changes
+			if dryRun {
+				// Get current state (read-only)
+				current, err := database.GetFeature(name)
+				if err != nil {
+					return err
+				}
+
+				result := map[string]interface{}{
+					"dry_run": true,
+					"op":      "update_feature",
+					"name":    name,
+					"before":  current.ToCompactJSON(),
+					"changes": map[string]interface{}{},
+					"msg":     "Preview only - no changes made",
+				}
+
+				if version != "" {
+					result["changes"].(map[string]interface{})["ver"] = version
+				}
+				if status != "" {
+					result["changes"].(map[string]interface{})["stat"] = status
+				}
+				if description != "" {
+					result["changes"].(map[string]interface{})["desc"] = description
+				}
+
+				return output.Success(result)
+			}
+
 			feature, err := database.UpdateFeature(req)
 			if err != nil {
 				return err
@@ -84,7 +114,7 @@ func featureUpdateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&description, "description", "", "Update description")
 	cmd.Flags().StringVar(&specPath, "spec", "", "Update spec path")
 	cmd.Flags().StringVar(&apiPath, "api", "", "Update API path")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read feature name from stdin JSON")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without applying")
 
 	return cmd
 }

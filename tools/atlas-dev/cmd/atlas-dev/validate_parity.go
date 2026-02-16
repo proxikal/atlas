@@ -19,7 +19,6 @@ var (
 	parityAPIDir        string
 	parityPhaseDir      string
 	parityTestDir       string
-	parityUseStdin      bool
 )
 
 func validateParityCmd() *cobra.Command {
@@ -52,14 +51,13 @@ Returns health score (0-100) and detailed mismatch report.`,
 	cmd.Flags().StringVar(&parityAPIDir, "api-dir", "", "API directory (default: docs/api/)")
 	cmd.Flags().StringVar(&parityPhaseDir, "phase-dir", "", "Phase directory (default: phases/)")
 	cmd.Flags().StringVar(&parityTestDir, "test-dir", "", "Test directory (default: crates/)")
-	cmd.Flags().BoolVar(&parityUseStdin, "stdin", false, "Read directory paths from stdin JSON")
 
 	return cmd
 }
 
 func runValidateParity(cmd *cobra.Command, args []string) error {
-	// Override directories from stdin if provided
-	if parityUseStdin {
+	// Auto-detect stdin for directory overrides
+	if compose.HasStdin() {
 		input, err := compose.ReadAndParseStdin()
 		if err != nil {
 			return err

@@ -6,9 +6,10 @@ import (
 
 func decisionCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "decision",
-		Short: "Decision log management commands",
-		Long:  `Manage architectural decisions - create, list, search, read, and update decision logs.`,
+		Use:     "decision",
+		Aliases: []string{"d", "dec"},
+		Short:   "Decision log management commands",
+		Long:    `Manage architectural decisions - create, list, search, read, and update decision logs.`,
 	}
 
 	cmd.AddCommand(decisionCreateCmd())

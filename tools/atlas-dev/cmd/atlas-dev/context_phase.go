@@ -9,8 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var contextPhaseStdin bool
-
 func contextPhaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phase <path>",
@@ -21,14 +19,14 @@ category progress, related decisions, and navigation hints.`,
 		Example: `  # Show context for a phase
   atlas-dev context phase phases/stdlib/phase-01.md
 
-  # Read from stdin
-  echo '{"path":"phases/stdlib/phase-01.md"}' | atlas-dev context phase --stdin`,
+  # Read from stdin (auto-detected)
+  echo '{"path":"phases/stdlib/phase-01.md"}' | atlas-dev context phase`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var phasePath string
 
-			// Get path from stdin or args
-			if contextPhaseStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -63,8 +61,6 @@ category progress, related decisions, and navigation hints.`,
 			return output.Success(ctx.ToCompactJSON())
 		},
 	}
-
-	cmd.Flags().BoolVar(&contextPhaseStdin, "stdin", false, "Read path from stdin JSON")
 
 	return cmd
 }

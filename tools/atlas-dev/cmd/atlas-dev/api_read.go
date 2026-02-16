@@ -13,7 +13,6 @@ func apiReadCmd() *cobra.Command {
 	var (
 		function string
 		detailed bool
-		useStdin bool
 	)
 
 	cmd := &cobra.Command{
@@ -26,13 +25,14 @@ func apiReadCmd() *cobra.Command {
   # Read specific function
   atlas-dev api read ../../docs/api/stdlib.md --function print
 
-  # Read from stdin
-  echo '{"path":"docs/api/stdlib.md"}' | atlas-dev api read --stdin`,
+  # Read from stdin (auto-detected)
+  echo '{"path":"docs/api/stdlib.md"}' | atlas-dev api read`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var apiPath string
 
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -90,7 +90,6 @@ func apiReadCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&function, "function", "", "Read specific function")
 	cmd.Flags().BoolVar(&detailed, "detailed", false, "Include full details")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	return cmd
 }

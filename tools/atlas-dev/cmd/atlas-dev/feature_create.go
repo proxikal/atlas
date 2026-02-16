@@ -21,6 +21,7 @@ func featureCreateCmd() *cobra.Command {
 		description string
 		specPath    string
 		apiPath     string
+		dryRun      bool
 	)
 
 	cmd := &cobra.Command{
@@ -50,6 +51,24 @@ func featureCreateCmd() *cobra.Command {
 			}
 			if status == "" {
 				status = "Planned"
+			}
+
+			// Dry-run: preview what would be created
+			if dryRun {
+				markdownPath := fmt.Sprintf("../../docs/features/%s.md", name)
+				result := map[string]interface{}{
+					"dry_run": true,
+					"op":      "create_feature",
+					"preview": map[string]interface{}{
+						"name":    name,
+						"display": displayName,
+						"ver":     version,
+						"stat":    status,
+						"file":    markdownPath,
+					},
+					"msg": "Preview only - no changes made",
+				}
+				return output.Success(result)
 			}
 
 			// Create feature in database
@@ -90,6 +109,7 @@ func featureCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&description, "description", "", "Description")
 	cmd.Flags().StringVar(&specPath, "spec", "", "Spec file path")
 	cmd.Flags().StringVar(&apiPath, "api", "", "API file path")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview feature without creating")
 
 	return cmd
 }

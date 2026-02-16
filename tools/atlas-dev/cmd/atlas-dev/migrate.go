@@ -41,17 +41,53 @@ func migrateSchemaCmd() *cobra.Command {
 }
 
 func migrateBootstrapCmd() *cobra.Command {
-	return &cobra.Command{
+	var force bool
+
+	cmd := &cobra.Command{
 		Use:   "bootstrap",
 		Short: "Bootstrap database from existing markdown files",
 		Long: `One-time migration: parse STATUS.md and trackers/*.md to populate database.
-Backs up markdown files to .migration-backup/ directory.`,
+Backs up markdown files to .migration-backup/ directory.
+
+CRITICAL: This should only be run ONCE. After migration, markdown files will be deleted.
+Re-running this command after deletion would be catastrophic (no source data).`,
+		Example: `  # First-time migration
+  atlas-dev migrate bootstrap
+
+  # Force re-migration (WARNING: destructive)
+  atlas-dev migrate bootstrap --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if already migrated
+			migrated, err := database.IsMigrated()
+			if err != nil {
+				return fmt.Errorf("failed to check migration status: %w", err)
+			}
+
+			if migrated && !force {
+				return fmt.Errorf("database already migrated - markdown files may have been deleted\n\nIf you really want to re-run migration, use --force flag (WARNING: may cause data loss)")
+			}
+
+			if force {
+				return output.Success(map[string]interface{}{
+					"msg":     "Force re-migration not implemented yet",
+					"warning": "This would be a destructive operation",
+				})
+			}
+
 			// TODO: Implement bootstrap migration (Phase 2)
 			// This will parse existing STATUS.md and trackers/*.md
 			// and populate the database
 
+			// After successful migration:
+			// if err := database.MarkAsMigrated(); err != nil {
+			//     return err
+			// }
+
 			return fmt.Errorf("bootstrap not yet implemented - use 'migrate schema' for fresh database")
 		},
 	}
+
+	cmd.Flags().BoolVar(&force, "force", false, "Force re-migration (WARNING: may cause data loss)")
+
+	return cmd
 }

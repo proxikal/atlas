@@ -14,7 +14,6 @@ func specReadCmd() *cobra.Command {
 	var (
 		section  string
 		withCode bool
-		useStdin bool
 	)
 
 	cmd := &cobra.Command{
@@ -27,14 +26,14 @@ func specReadCmd() *cobra.Command {
   # Read specific section
   atlas-dev spec read ../../docs/specification/syntax.md --section "Keywords"
 
-  # Read from stdin
-  echo '{"path":"docs/specification/syntax.md"}' | atlas-dev spec read --stdin`,
+  # Read from stdin (auto-detected)
+  echo '{"path":"docs/specification/syntax.md"}' | atlas-dev spec read`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var specPath string
 
-			// Get path from stdin or args
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -110,7 +109,6 @@ func specReadCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&section, "section", "", "Read specific section")
 	cmd.Flags().BoolVar(&withCode, "with-code", false, "Include code blocks")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	return cmd
 }

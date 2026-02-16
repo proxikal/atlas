@@ -8,8 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var decisionReadStdin bool
-
 func decisionReadCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "read <id>",
@@ -18,14 +16,14 @@ func decisionReadCmd() *cobra.Command {
 		Example: `  # Read decision
   atlas-dev decision read DR-001
 
-  # Read from stdin
-  echo '{"id":"DR-001"}' | atlas-dev decision read --stdin`,
+  # Read from stdin (auto-detected)
+  echo '{"id":"DR-001"}' | atlas-dev decision read`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var id string
 
-			// Get ID from stdin or args
-			if decisionReadStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -50,8 +48,6 @@ func decisionReadCmd() *cobra.Command {
 			return output.Success(decision.ToCompactJSON())
 		},
 	}
-
-	cmd.Flags().BoolVar(&decisionReadStdin, "stdin", false, "Read ID from stdin JSON")
 
 	return cmd
 }

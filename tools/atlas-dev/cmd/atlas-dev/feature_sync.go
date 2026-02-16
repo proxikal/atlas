@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/atlas-lang/atlas-dev/internal/compose"
@@ -12,11 +13,7 @@ import (
 )
 
 func featureSyncCmd() *cobra.Command {
-	var (
-		projectRoot string
-		dryRun      bool
-		useStdin    bool
-	)
+	var dryRun bool
 
 	cmd := &cobra.Command{
 		Use:   "sync <name>",
@@ -28,14 +25,14 @@ func featureSyncCmd() *cobra.Command {
   # Dry-run (preview changes)
   atlas-dev feature sync pattern-matching --dry-run
 
-  # Sync from stdin
-  echo '{"name":"pattern-matching"}' | atlas-dev feature sync --stdin`,
+  # Sync from stdin (auto-detected)
+  echo '{"name":"pattern-matching"}' | atlas-dev feature sync`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
 
-			// Get name from stdin or args
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -59,9 +56,10 @@ func featureSyncCmd() *cobra.Command {
 				return fmt.Errorf("failed to parse feature file: %w", err)
 			}
 
-			// Default project root
-			if projectRoot == "" {
-				projectRoot = "../.."
+			// Use current working directory as project root
+			projectRoot, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get working directory: %w", err)
 			}
 
 			// Sync from codebase
@@ -120,9 +118,7 @@ func featureSyncCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&projectRoot, "root", "../..", "Project root directory")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without applying")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read feature name from stdin JSON")
 
 	return cmd
 }

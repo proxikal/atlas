@@ -18,7 +18,6 @@ func phaseCompleteCmd() *cobra.Command {
 		commit      bool
 		dryRun      bool
 		tests       int
-		useStdin    bool
 	)
 
 	cmd := &cobra.Command{
@@ -39,14 +38,15 @@ Example:
     --tests 25 \
     --commit
 
-  # With stdin
+  # With stdin (auto-detected)
   echo '{"path":"phases/stdlib/phase-07b.md"}' | \
-    atlas-dev phase complete --stdin --desc "Complete" --tests 25`,
+    atlas-dev phase complete --desc "Complete" --tests 25`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var phasePath string
 
-			if useStdin {
+			// Auto-detect stdin or use args
+			if compose.HasStdin() {
 				input, err := compose.ReadAndParseStdin()
 				if err != nil {
 					return err
@@ -132,7 +132,6 @@ Example:
 	cmd.Flags().BoolVarP(&commit, "commit", "c", false, "Create git commit")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would change without modifying database")
 	cmd.Flags().IntVar(&tests, "tests", 0, "Number of tests added")
-	cmd.Flags().BoolVar(&useStdin, "stdin", false, "Read path from stdin JSON")
 
 	_ = cmd.MarkFlagRequired("desc")
 
