@@ -14,6 +14,8 @@ API documentation is tracked in docs/api/ directory.
 Use these commands to parse, validate against code, and generate API docs.`,
 	}
 
+	cmd.AddCommand(apiCountCmd())
+	cmd.AddCommand(apiListCmd())
 	cmd.AddCommand(apiReadCmd())
 	cmd.AddCommand(apiValidateCmd())
 	cmd.AddCommand(apiGenerateCmd())

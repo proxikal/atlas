@@ -14,6 +14,8 @@ Specifications are tracked in docs/specification/ directory.
 Use these commands to parse, validate, and search spec documents.`,
 	}
 
+	cmd.AddCommand(specCountCmd())
+	cmd.AddCommand(specListCmd())
 	cmd.AddCommand(specReadCmd())
 	cmd.AddCommand(specSearchCmd())
 	cmd.AddCommand(specValidateCmd())
