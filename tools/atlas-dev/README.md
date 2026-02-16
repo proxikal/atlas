@@ -6,6 +6,19 @@
 
 ---
 
+## ⚠️ AI Agents: Read This First
+
+**Before implementing any feature, read [DECISION-LOG.md](DECISION-LOG.md)**
+
+Critical rules (will cause deadlocks if violated):
+1. ❌ NEVER query database inside transaction
+2. ❌ NEVER use db methods inside transaction (use tx.Exec)
+3. ✅ ALWAYS fetch results AFTER transaction commits
+
+**See DECISION-LOG.md for patterns, examples, and details.**
+
+---
+
 ## The Problem
 
 Manual tracking has **40% failure rate**:
@@ -320,12 +333,19 @@ atlas-dev phase complete "phases/{category}/{phase}.md" \
 
 ## Documentation
 
+### ⚠️ CRITICAL - Read This First
+- **[DECISION-LOG.md](DECISION-LOG.md)** - Critical patterns & anti-patterns (MUST READ before implementing)
+
+### Architecture & Design
 - [VISION.md](VISION.md) - Pure SQLite vision & benefits
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Canonical implementation patterns
 - [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) - Complete schema reference
-- [MIGRATION.md](MIGRATION.md) - One-time migration guide
 - [TOKEN-EFFICIENCY.md](TOKEN-EFFICIENCY.md) - Token optimization details
-- [WHEN-TO-USE.md](WHEN-TO-USE.md) - AI decision tree
+
+### Implementation
 - [phases/README.md](phases/README.md) - Implementation phases
+- [MIGRATION.md](MIGRATION.md) - One-time migration guide
+- [WHEN-TO-USE.md](WHEN-TO-USE.md) - AI decision tree
 
 ---
 

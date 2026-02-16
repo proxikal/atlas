@@ -7,6 +7,18 @@
 
 ---
 
+## ⚠️ Critical: Read Decision Log First
+
+**Before implementing, read [DECISION-LOG.md](DECISION-LOG.md) for critical anti-patterns.**
+
+Most common mistakes that cause deadlocks:
+- ❌ Querying database inside transaction
+- ❌ Using db methods inside transaction (use tx.Exec instead)
+
+**See DECISION-LOG.md for complete list and examples.**
+
+---
+
 ## Core Principles
 
 1. **AI-Optimized** - Token efficient, structured JSON, deterministic

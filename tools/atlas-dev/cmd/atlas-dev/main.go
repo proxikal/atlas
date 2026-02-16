@@ -68,6 +68,7 @@ func main() {
 	rootCmd.AddCommand(versionCmd())
 	rootCmd.AddCommand(migrateCmd())
 	rootCmd.AddCommand(phaseCmd())
+	rootCmd.AddCommand(decisionCmd())
 	rootCmd.AddCommand(validateCmd())
 
 	if err := rootCmd.Execute(); err != nil {
