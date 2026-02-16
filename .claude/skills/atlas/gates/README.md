@@ -120,16 +120,16 @@ cargo test integration  # Integration tests
 
 ## Doc Sync
 
-**Source of Truth:** Project `docs/` (NOT skill workflows)
+**Source of Truth:** `atlas-dev` CLI database (NOT MD files)
 
-**Key Docs:**
-- `atlas-dev CLI` - Current state, progress tracking
-- `Atlas-SPEC.md` - Spec index with routing (use to find specific spec files)
-- `docs/README.md` - Documentation navigation
-- `docs/specification/` - Grammar, semantics, runtime
-- `docs/implementation/` - Component details
-- `docs/api/` - Stdlib, runtime API
-- `docs/guides/` - Testing, code quality
+**Key Sources:**
+- `atlas-dev CLI` - ONLY source (specs, APIs, decisions, features, progress)
+  - Specs: `atlas-dev spec read/search`
+  - APIs: `atlas-dev api read`
+  - Decisions: `atlas-dev decision list/search`
+  - Features: `atlas-dev feature list/read`
+- `docs/implementation/` - Component guides (ONLY MD files that stay)
+- `docs/guides/` - Testing, code quality guides
 
 **Update Frequency:**
 - Skill: Rarely (rules only)
