@@ -66,6 +66,12 @@ pub fn is_builtin(name: &str) -> bool {
             | "hashSetSize" | "hashSetIsEmpty" | "hashSetClear"
             | "hashSetUnion" | "hashSetIntersection" | "hashSetDifference" | "hashSetSymmetricDifference"
             | "hashSetIsSubset" | "hashSetIsSuperset" | "hashSetToArray"
+            // Queue functions
+            | "queueNew" | "queueEnqueue" | "queueDequeue" | "queuePeek"
+            | "queueSize" | "queueIsEmpty" | "queueClear" | "queueToArray"
+            // Stack functions
+            | "stackNew" | "stackPush" | "stackPop" | "stackPeek"
+            | "stackSize" | "stackIsEmpty" | "stackClear" | "stackToArray"
     )
 }
 
@@ -611,6 +617,26 @@ pub fn call_builtin(
         "hashSetIsSubset" => collections::hashset::is_subset(args, call_span),
         "hashSetIsSuperset" => collections::hashset::is_superset(args, call_span),
         "hashSetToArray" => collections::hashset::to_array(args, call_span),
+
+        // Queue functions
+        "queueNew" => collections::queue::new_queue(args, call_span),
+        "queueEnqueue" => collections::queue::enqueue(args, call_span),
+        "queueDequeue" => collections::queue::dequeue(args, call_span),
+        "queuePeek" => collections::queue::peek(args, call_span),
+        "queueSize" => collections::queue::size(args, call_span),
+        "queueIsEmpty" => collections::queue::is_empty(args, call_span),
+        "queueClear" => collections::queue::clear(args, call_span),
+        "queueToArray" => collections::queue::to_array(args, call_span),
+
+        // Stack functions
+        "stackNew" => collections::stack::new_stack(args, call_span),
+        "stackPush" => collections::stack::push(args, call_span),
+        "stackPop" => collections::stack::pop(args, call_span),
+        "stackPeek" => collections::stack::peek(args, call_span),
+        "stackSize" => collections::stack::size(args, call_span),
+        "stackIsEmpty" => collections::stack::is_empty(args, call_span),
+        "stackClear" => collections::stack::clear(args, call_span),
+        "stackToArray" => collections::stack::to_array(args, call_span),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),

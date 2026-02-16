@@ -145,6 +145,32 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 type_args: vec![], // Could inspect elements
             }
         }
+
+        Value::Queue(_) => {
+            // Generic Queue type
+            TypeInfo {
+                name: "Queue".to_string(),
+                kind: TypeKind::Generic,
+                fields: vec![],
+                parameters: vec![],
+                return_type: None,
+                element_type: None,
+                type_args: vec![], // Could inspect elements
+            }
+        }
+
+        Value::Stack(_) => {
+            // Generic Stack type
+            TypeInfo {
+                name: "Stack".to_string(),
+                kind: TypeKind::Generic,
+                fields: vec![],
+                parameters: vec![],
+                return_type: None,
+                element_type: None,
+                type_args: vec![], // Could inspect elements
+            }
+        }
     }
 }
 

@@ -403,6 +403,14 @@ fn value_to_json(
             msg: "Cannot serialize HashSet to JSON".to_string(),
             span,
         }),
+        Value::Queue(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize Queue to JSON".to_string(),
+            span,
+        }),
+        Value::Stack(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize Stack to JSON".to_string(),
+            span,
+        }),
     }
 }
 

@@ -48,6 +48,10 @@ pub enum Value {
     HashMap(Rc<RefCell<crate::stdlib::collections::hashmap::AtlasHashMap>>),
     /// HashSet collection (unique values)
     HashSet(Rc<RefCell<crate::stdlib::collections::hashset::AtlasHashSet>>),
+    /// Queue collection (FIFO)
+    Queue(Rc<RefCell<crate::stdlib::collections::queue::AtlasQueue>>),
+    /// Stack collection (LIFO)
+    Stack(Rc<RefCell<crate::stdlib::collections::stack::AtlasStack>>),
 }
 
 /// Function reference
@@ -90,6 +94,8 @@ impl Value {
             Value::Result(_) => "Result",
             Value::HashMap(_) => "hashmap",
             Value::HashSet(_) => "hashset",
+            Value::Queue(_) => "queue",
+            Value::Stack(_) => "stack",
         }
     }
 
@@ -131,6 +137,10 @@ impl PartialEq for Value {
             (Value::HashMap(a), Value::HashMap(b)) => Rc::ptr_eq(a, b),
             // HashSet uses reference identity (like arrays)
             (Value::HashSet(a), Value::HashSet(b)) => Rc::ptr_eq(a, b),
+            // Queue uses reference identity (like arrays)
+            (Value::Queue(a), Value::Queue(b)) => Rc::ptr_eq(a, b),
+            // Stack uses reference identity (like arrays)
+            (Value::Stack(a), Value::Stack(b)) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -170,6 +180,8 @@ impl fmt::Display for Value {
             },
             Value::HashMap(map) => write!(f, "<HashMap size={}>", map.borrow().len()),
             Value::HashSet(set) => write!(f, "<HashSet size={}>", set.borrow().len()),
+            Value::Queue(queue) => write!(f, "<Queue size={}>", queue.borrow().len()),
+            Value::Stack(stack) => write!(f, "<Stack size={}>", stack.borrow().len()),
         }
     }
 }
@@ -192,6 +204,8 @@ impl fmt::Debug for Value {
             Value::Result(res) => write!(f, "Result({:?})", res),
             Value::HashMap(map) => write!(f, "HashMap(size={})", map.borrow().len()),
             Value::HashSet(set) => write!(f, "HashSet(size={})", set.borrow().len()),
+            Value::Queue(queue) => write!(f, "Queue(size={})", queue.borrow().len()),
+            Value::Stack(stack) => write!(f, "Stack(size={})", stack.borrow().len()),
         }
     }
 }

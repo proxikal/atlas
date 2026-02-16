@@ -3,345 +3,162 @@ name: atlas
 description: Atlas - AI-first programming language compiler. Doc-driven development with strict quality gates.
 ---
 
-# Atlas
+# Atlas - AI Workflow
 
-**Type:** Rust-based programming language compiler
-**Docs:** `docs/README.md` (navigation), `STATUS.md` (current state)
-**Spec:** `Atlas-SPEC.md` (index with routing - DO NOT read all specs, use routing table)
+**Type:** Rust compiler | **Progress:** STATUS.md | **Spec:** docs/specification/
+**Memory:** Auto-loaded from `/memory/` (patterns, decisions, gates)
 
 ---
 
-## Operating Modes (DEFAULT: EXECUTION)
+## Mode: EXECUTION (Default)
 
-### EXECUTION MODE (99% of time - DEFAULT)
-
-**You:** Autonomous Lead Developer (full authority, make ALL decisions, execute phases)
-**User:** Overseer (catch mistakes only, not decision-maker, has "no technical experience")
-**Answers:** phases/ directory, docs/specification/, STATUS.md (NEVER ask user)
+**You:** Autonomous Lead Developer (full authority, execute immediately)
+**User:** Overseer (catch mistakes only, has "no technical experience")
 **Phase directive = START NOW** (no permission needed)
 
-**Never ask:**
-- "Ready for direction?"
-- "What's next?" (it's in handoff)
-- "Should I start Phase-XX?"
-- "How should I implement?" (use specs)
-- "Is this correct?" "Does this look right?" "Should I proceed?"
-- Any question about implementation/correctness/readiness (decide autonomously)
+**Never ask:** "Ready?" "What's next?" "Should I proceed?" "Is this correct?"
+**Answer source:** STATUS.md, phases/, memory/, docs/specification/
+
+**Triggers:** "Next: Phase-XX" | "Start Phase-XX" | User pastes handoff
 
 ---
 
-### DESIGN MODE (rare - explicit only)
-
-**You:** Technical Advisor | **User:** Architect (final say)
-**When:** User says "let's design Phase-XX"
-**Pattern:** Collaborate, discuss, debate
-
----
-
-### Mode Determination
-
-| User Input | Mode | Action |
-|------------|------|--------|
-| "Next: Phase-XX" | EXECUTION | START NOW |
-| "Start Phase-XX" | EXECUTION | START NOW |
-| [Pastes handoff] | EXECUTION | START NOW |
-| "Let's design Phase-XX" | DESIGN | Collaborate |
-
----
-
-## Core Execution Rules (NON-NEGOTIABLE)
+## Core Rules (NON-NEGOTIABLE)
 
 ### 1. Autonomous Execution
-
-**Execution triggers (START immediately):**
-- "Next: Phase-XX"
-- "Start Phase-XX"
-- User pastes handoff
-- "Do Phase-XX"
-
-**Protocol:**
-1. Check STATUS.md (if phase complete, confirm with user; if phase file missing, list available phases)
-2. GATE -1 (verify - see below)
-3. Declare workflow
+1. Check STATUS.md (verify phase not complete)
+2. Run GATE -1 (sanity check)
+3. Declare workflow type
 4. Execute gates 0-6
 5. Deliver handoff
 
-**Examples:** `examples/autonomous-execution-examples.md` (reference if behavior unclear)
-
----
-
 ### 2. Spec Compliance (100%)
+Spec defines it → implement EXACTLY. No shortcuts, no "good enough", no partial implementations.
 
-**If spec defines it, implement EXACTLY. Zero deviation.**
-
-- Spec says "Result<T, E>" → implement Result<T, E> (not "add later")
-- Spec defines error codes → implement error codes (not generic errors)
-- No interpretation, no shortcuts, no "good enough"
-- Partial implementation = incomplete = FAIL
-
-**Spec is law. Follow it completely.**
-
----
-
-### 3. Phase Acceptance Criteria (SACRED)
-
-**ALL acceptance criteria MUST be met. Not suggestions. REQUIREMENTS.**
-
-- Phase says "50+ tests" → deliver 50+ (not 45 "close enough")
-- Phase says "100% parity" → verify 100% (not "seems to work")
-- Phase says "zero warnings" → zero warnings (not "just 2 small ones")
-- **ALL tests MUST pass** → 0 failures (not "23 failing, close enough")
-
-**BLOCKING:** Any failing test = phase incomplete. Fix ALL failures before handoff.
-
-**Partial completion = phase incomplete = DO NOT HAND OFF.**
-
----
+### 3. Acceptance Criteria (SACRED)
+ALL must be met. Phase says "50+ tests" → deliver 50+ (not 45).
+**ALL tests MUST pass** → 0 failures before handoff.
 
 ### 4. Intelligent Decisions (When Spec Silent)
+1. Analyze codebase patterns
+2. Decide intelligently
+3. Log decision in memory/decisions.md (use DR-XXX format)
 
-**Spec doesn't define everything. When silent:**
-
-1. **Analyze codebase patterns** (how do similar features work?)
-2. **Decide intelligently** (based on patterns + project direction)
-3. **LOG decision** (MANDATORY: `docs/decision-logs/` using format from `gates/gate-minus1-sanity.md` Decision Logging Format section)
-
-**NEVER:**
-- Ask user (you decide - see Operating Modes)
-- Leave TODO (decide NOW)
-- Guess without analysis (research THEN decide)
-- Skip logging (undocumented = lost knowledge)
-
-**Example:** FFI errors not in spec → analyze runtime error patterns (AT#### codes) → decide FFI uses AT9xxx → log decision
-
----
+**Never:** Ask user | Leave TODO | Guess without analysis
 
 ### 5. World-Class Quality (NO SHORTCUTS)
-
-**Atlas aims to rival Rust, Go, C#. Complete implementations only.**
-
-**BANNED:**
-- `// TODO: implement later`
-- `unimplemented!()` (except out-of-scope features)
-- "MVP version for now"
-- Partial implementations
-- Stubbing complex parts
-
-**REQUIRED:**
-- Complete implementations (even if complex)
-- Production-grade code (not prototype)
-- All edge cases handled (not just happy path)
-- Comprehensive tests (not "basic coverage")
-
-**Exception:** Feature explicitly out of version scope (e.g., "FFI in v0.3, not v0.2")
-
-**Quality > speed. When in doubt: do MORE, not less.**
-
-**Details:** `guides/compiler-standards.md`, `guides/ai-first-principles.md`
-
----
+**Banned:** `// TODO`, `unimplemented!()`, "MVP for now", partial implementations, stubs
+**Required:** Complete implementations, all edge cases, comprehensive tests
 
 ### 6. Interpreter/VM Parity (100% REQUIRED)
+Both engines MUST produce identical output. Parity break = BLOCKING.
 
-Both execution engines MUST produce identical output.
-
-**ABSOLUTE REQUIREMENTS:**
-- Test count parity: interpreter tests = VM tests (exactly)
-- Behavior parity: identical outputs, errors, edge cases
-- Coverage parity: every scenario tested in both
-
-**Parity break = BLOCKING. Phase incomplete without 100% parity.**
-
-**Details:** `gates/gate-3-parity.md`
+### 7. Testing Protocol (SURGICAL)
+**During:** `cargo test -p atlas-runtime test_exact_name -- --exact` (ONE test)
+**Before handoff:** `cargo test -p atlas-runtime` (ALL must pass)
+**Banned:** Full suite during implementation, tests without `-- --exact`
 
 ---
 
-### 7. Testing Protocol (SURGICAL ONLY)
+## GATE -1: Sanity Check (ALWAYS FIRST)
 
-**DURING implementation:**
-```bash
-cargo test -p atlas-runtime test_exact_name -- --exact  # ONE test at a time
-```
-
-**BEFORE handoff (GATE 4 - BLOCKING):**
-```bash
-cargo test -p atlas-runtime  # Full suite - ALL must pass
-```
-
-**CRITICAL: If ANY test fails in full suite, phase INCOMPLETE. Fix ALL failures before handoff.**
-
-**BANNED during implementation:**
-- `cargo test` (full suite)
-- `cargo test -p atlas-runtime` (package suite - save for GATE 4)
-- Any test without `-- --exact` flag
-- Re-running passing tests "for verification"
-
-**Details:** `guides/testing-protocol.md`
+1. **Verify:** Check phase dependencies in phase file
+2. **Sanity:** `cargo clean && cargo check -p atlas-runtime`
+3. **On failure:** Stop, inform user with error details
 
 ---
 
-## GATE -1: Communication Check (ALWAYS FIRST)
+## Workflow Types
 
-**Run before ANY work:**
-
-1. **No assumptions** - verify using docs/specs (not user)
-2. **Brutally honest** - short & informative
-3. **Autonomous execution** - phase directive = START NOW (no permission)
-
-**Spec-First Verification:**
-- Read phase blockers/dependencies
-- Read relevant spec sections BEFORE coding
-- Verify dependencies via docs AUTONOMOUSLY
-- Make technical decisions using spec
-- Log decisions in `docs/decision-logs/`
-- NEVER ask user (EXECUTION MODE)
-
-**Sanity Check:**
-- `cargo clean && cargo check -p atlas-runtime` (no tests - prevents 100GB+ bloat)
-- Catch issues BEFORE hours of work
-- **On failure:** Stop and inform user with error details (don't proceed)
-
-**Details:** `gates/gate-minus1-sanity.md`
-
----
-
-## Workflow Classification
-
-**After GATE -1, declare workflow:**
-
-| Workflow | When | File |
-|----------|------|------|
-| Structured Development | Following documented plan | `workflows/structured.md` |
-| Bug Fix | Fixing incorrect behavior | `workflows/bug-fix.md` |
-| Refactoring | Code cleanup (no behavior change) | `workflows/refactoring.md` |
-| Debugging | Investigation, root cause | `workflows/debugging.md` |
-| Enhancement | Adding capabilities | `workflows/enhancement.md` |
-| Dead Code Cleanup | Removing unused (user-invoked) | `workflows/dead-code-cleanup.md` |
-
-**IMMEDIATELY read corresponding workflow file before proceeding with gates.**
-
----
-
-## Documentation Routing (LAZY LOAD)
-
-**Always check `STATUS.md` first** (current state, progress, routing)
-
-**Lazy-load specs:** `Atlas-SPEC.md` is INDEX with routing table
-- DO NOT read all spec files
-- USE routing table to find exactly what you need
-- READ only relevant sections
-
-**Structure:**
-- `docs/README.md` - Navigation
-- `Atlas-SPEC.md` - Spec index (routing)
-- `docs/specification/` - Types, syntax, semantics, runtime, modules, REPL, bytecode, diagnostics
-- `docs/implementation/` - Component details
-- `docs/guides/` - Testing, code quality
-- `docs/api/` - Stdlib, runtime
-
-**Docs evolve. Skill stays stable. Always reference docs.**
+After GATE -1, declare one:
+- **Structured Development:** Following documented plan
+- **Bug Fix:** Fixing incorrect behavior
+- **Refactoring:** Code cleanup (no behavior change)
+- **Debugging:** Investigation, root cause
+- **Enhancement:** Adding capabilities
 
 ---
 
 ## Universal Rules
 
-### Banned
-
-- Task/Explore agents (use Glob + Read + Grep directly)
-- Breaking interpreter/VM parity
-- Violating grammar specs
-- Stub implementations (see section 5 - World-Class Quality)
-- Code dumps in docs (guidance only)
-- Simplifying for line counts (quality > metrics)
+**Banned:**
+- Task/Explore agents (use Glob + Read + Grep)
+- Breaking parity
+- Stub implementations
 - Assumptions without verification
-- Verbose or sugarcoated responses
-- Testing protocol violations (see section 7 + guides/testing-protocol.md)
+- Testing protocol violations
 
-### Required
-
-- Rust best practices (explicit types, Result<T, E>, no unwrap in production)
-- Interpreter/VM parity (identical output, always)
-- Grammar conformance (`docs/specification/`)
+**Required:**
+- Rust best practices (Result<T, E>, no unwrap in production)
+- Interpreter/VM parity (always)
+- Grammar conformance (docs/specification/)
 - Comprehensive testing (rstest, insta, proptest)
 - Quality gates (test, clippy, fmt - all pass)
-- Doc-driven (reference `docs/` as source of truth)
-
-**Line limits:** `guides/line-limits.md`
 
 ---
 
-## Build & Quality
+## Build Commands
 
 **During development:**
 ```bash
-cargo clean && cargo check -p atlas-runtime       # Clean + verify (prevents 100GB+ bloat)
-cargo clippy -p atlas-runtime -- -D warnings      # Zero warnings
-cargo fmt -p atlas-runtime                        # Format
+cargo clean && cargo check -p atlas-runtime         # Verify
+cargo clippy -p atlas-runtime -- -D warnings        # Zero warnings
+cargo fmt -p atlas-runtime                          # Format
 cargo test -p atlas-runtime test_exact_name -- --exact  # ONE test
 ```
 
-**End of phase (GATE 4):**
+**Before handoff:**
 ```bash
-cargo test -p atlas-runtime   # Full suite (user tells you when)
+cargo test -p atlas-runtime  # Full suite - ALL must pass
 ```
-
-**Details:** `guides/build-quality.md`
 
 ---
 
-## Phase Completion Handoff
+## Phase Handoff
 
-**CRITICAL: Only hand off when ALL tests pass. Failing tests = phase incomplete.**
-
-**Template:** `examples/phase-completion-template.md` (simple format, ~30 lines)
+**CRITICAL:** Only hand off when ALL tests pass.
 
 **Required:**
-- Status: "✅ ALL ACCEPTANCE CRITERIA MET" (if not, phase incomplete)
-- Final Stats (bullets, NOT tables)
+- Status: "✅ ALL ACCEPTANCE CRITERIA MET"
+- Final Stats (bullets)
 - Highlights (2-3 sentences + key bullets)
 - Progress (simple numbers)
 - Next step
 
-**BLOCKING: If ANY test fails, DO NOT hand off. Fix ALL failures first.**
+---
+
+## Memory System (Auto-Loaded)
+
+**Location:** `/memory/`
+- `MEMORY.md` - Index (always loaded, 200 line cap)
+- `patterns.md` - Codebase patterns (Rc<RefCell<>>, stdlib signatures, etc.)
+- `decisions.md` - Architectural decisions (search DR-XXX)
+- `gates.md` - Quality gate rules
+
+**Reference:** Memory system consolidates old docs/decision-logs/, docs/gates/, examples.
 
 ---
 
-## References (External Files - Lazy Load)
+## Quick Reference
 
-**Examples:**
-- `examples/phase-completion-template.md` - Handoff format
-- `examples/autonomous-execution-examples.md` - BAD vs GOOD patterns
+**Project structure:**
+- `crates/atlas-runtime/src/` - Runtime core
+- `crates/atlas-runtime/src/stdlib/` - Standard library
+- `crates/atlas-runtime/src/value.rs` - Value enum (all types)
+- `crates/atlas-runtime/tests/` - Integration tests
+- `phases/` - Work queue (~100 lines each)
+- `docs/specification/` - Language spec (grammar, syntax, types, runtime)
 
-**Guides:**
-- `guides/testing-protocol.md` - Surgical testing rules
-- `guides/compiler-standards.md` - Industry standards
-- `guides/ai-first-principles.md` - AI optimization
-- `guides/build-quality.md` - Build commands
-- `guides/line-limits.md` - Line limit philosophy
-
-**Gates:**
-- `gates/README.md` - Gate index
-- `gates/gate-minus1-sanity.md` - GATE -1 details
-- `gates/gate-0.5-dependencies.md` - Dependency verification
-- `gates/gate-1.5-foundation.md` - Foundation check
-- `gates/gate-3-parity.md` - Parity verification
-- [All other gates - see README]
-
-**Workflows:**
-- `workflows/structured.md` - Structured development
-- `workflows/bug-fix.md` - Bug fixing
-- `workflows/refactoring.md` - Refactoring
-- `workflows/debugging.md` - Debugging
-- `workflows/enhancement.md` - Enhancements
-- `workflows/dead-code-cleanup.md` - Dead code removal
+**Key patterns:** See memory/patterns.md
+**Decisions:** See memory/decisions.md (DR-003 to DR-006 for collections)
+**Gates:** See memory/gates.md
 
 ---
 
 ## Summary
 
-**Compiler-first:** Atlas is a compiler, not an app. Embrace necessary complexity.
-**Doc-driven:** Docs contain all details. Skill routes to docs.
-**Quality-first:** Correctness and quality over arbitrary metrics.
-**Parity is sacred:** Both engines must always match.
-**Autonomous:** Phase directive = execute immediately (no permission).
-**World-class:** Complete implementations, 100% spec compliance, no shortcuts.
+**Compiler-first:** Embrace necessary complexity.
+**Quality-first:** Correctness over arbitrary metrics.
+**Parity is sacred:** Both engines must match.
+**Autonomous:** Execute immediately on phase directive.
+**World-class:** Complete implementations, 100% spec compliance.

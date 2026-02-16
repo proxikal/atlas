@@ -178,6 +178,8 @@ fn format_value(value: &crate::value::Value) -> String {
         Value::Result(_) => "<result>".to_string(),
         Value::HashMap(_) => "<hashmap>".to_string(),
         Value::HashSet(_) => "<hashset>".to_string(),
+        Value::Queue(_) => "<queue>".to_string(),
+        Value::Stack(_) => "<stack>".to_string(),
     }
 }
 
