@@ -89,6 +89,12 @@ pub(super) fn serialize_value(value: &Value, bytes: &mut Vec<u8>) {
             // They are runtime-only values
             panic!("Cannot serialize DateTime values in bytecode constants");
         }
+        Value::HttpRequest(_) => {
+            panic!("Cannot serialize HttpRequest values in bytecode constants");
+        }
+        Value::HttpResponse(_) => {
+            panic!("Cannot serialize HttpResponse values in bytecode constants");
+        }
     }
 }
 

@@ -197,6 +197,24 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 type_args: vec![],
             }
         }
+        Value::HttpRequest(_) => TypeInfo {
+            name: "HttpRequest".to_string(),
+            kind: TypeKind::Generic,
+            fields: vec![],
+            parameters: vec![],
+            return_type: None,
+            element_type: None,
+            type_args: vec![],
+        },
+        Value::HttpResponse(_) => TypeInfo {
+            name: "HttpResponse".to_string(),
+            kind: TypeKind::Generic,
+            fields: vec![],
+            parameters: vec![],
+            return_type: None,
+            element_type: None,
+            type_args: vec![],
+        },
     }
 }
 

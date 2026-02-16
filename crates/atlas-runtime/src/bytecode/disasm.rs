@@ -182,6 +182,8 @@ fn format_value(value: &crate::value::Value) -> String {
         Value::Stack(_) => "<stack>".to_string(),
         Value::Regex(r) => format!("<regex /{}/>", r.as_str()),
         Value::DateTime(dt) => format!("<datetime {}>", dt.to_rfc3339()),
+        Value::HttpRequest(req) => format!("<HttpRequest {} {}>", req.method(), req.url()),
+        Value::HttpResponse(res) => format!("<HttpResponse {}>", res.status()),
     }
 }
 

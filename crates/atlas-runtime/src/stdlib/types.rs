@@ -217,6 +217,8 @@ pub fn type_of(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::Stack(_) => "stack",
         Value::Regex(_) => "regex",
         Value::DateTime(_) => "datetime",
+        Value::HttpRequest(_) => "HttpRequest",
+        Value::HttpResponse(_) => "HttpResponse",
     };
 
     Ok(Value::string(type_name))
@@ -331,6 +333,8 @@ pub fn to_string(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::Stack(_) => "[Stack]".to_string(),
         Value::Regex(r) => format!("[Regex /{}/ ]", r.as_str()),
         Value::DateTime(dt) => dt.to_rfc3339(),
+        Value::HttpRequest(req) => format!("<HttpRequest {} {}>", req.method(), req.url()),
+        Value::HttpResponse(res) => format!("<HttpResponse {}>", res.status()),
     };
 
     Ok(Value::string(string_value))
@@ -404,7 +408,9 @@ pub fn to_bool(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         | Value::Queue(_)
         | Value::Stack(_)
         | Value::Regex(_)
-        | Value::DateTime(_) => true,
+        | Value::DateTime(_)
+        | Value::HttpRequest(_)
+        | Value::HttpResponse(_) => true,
     };
 
     Ok(Value::Bool(bool_value))
@@ -541,6 +547,8 @@ fn type_name(value: &Value) -> &str {
         Value::Stack(_) => "stack",
         Value::Regex(_) => "regex",
         Value::DateTime(_) => "datetime",
+        Value::HttpRequest(_) => "HttpRequest",
+        Value::HttpResponse(_) => "HttpResponse",
     }
 }
 
@@ -569,6 +577,8 @@ fn value_to_display_string(value: &Value) -> String {
         Value::Stack(_) => "[Stack]".to_string(),
         Value::Regex(r) => format!("[Regex /{}/ ]", r.as_str()),
         Value::DateTime(dt) => format!("[DateTime {}]", dt.to_rfc3339()),
+        Value::HttpRequest(req) => format!("[HttpRequest {} {}]", req.method(), req.url()),
+        Value::HttpResponse(res) => format!("[HttpResponse {}]", res.status()),
     }
 }
 

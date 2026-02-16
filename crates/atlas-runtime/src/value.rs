@@ -56,6 +56,10 @@ pub enum Value {
     Regex(Rc<regex::Regex>),
     /// DateTime value (UTC timezone)
     DateTime(Rc<chrono::DateTime<chrono::Utc>>),
+    /// HTTP Request configuration
+    HttpRequest(Rc<crate::stdlib::http::HttpRequest>),
+    /// HTTP Response data
+    HttpResponse(Rc<crate::stdlib::http::HttpResponse>),
 }
 
 /// Function reference
@@ -102,6 +106,8 @@ impl Value {
             Value::Stack(_) => "stack",
             Value::Regex(_) => "regex",
             Value::DateTime(_) => "datetime",
+            Value::HttpRequest(_) => "HttpRequest",
+            Value::HttpResponse(_) => "HttpResponse",
         }
     }
 
@@ -151,6 +157,10 @@ impl PartialEq for Value {
             (Value::Regex(a), Value::Regex(b)) => Rc::ptr_eq(a, b),
             // DateTime uses value equality (compare timestamps)
             (Value::DateTime(a), Value::DateTime(b)) => a == b,
+            // HttpRequest uses reference identity
+            (Value::HttpRequest(a), Value::HttpRequest(b)) => Rc::ptr_eq(a, b),
+            // HttpResponse uses reference identity
+            (Value::HttpResponse(a), Value::HttpResponse(b)) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -194,6 +204,8 @@ impl fmt::Display for Value {
             Value::Stack(stack) => write!(f, "<Stack size={}>", stack.borrow().len()),
             Value::Regex(r) => write!(f, "<Regex /{}/>", r.as_str()),
             Value::DateTime(dt) => write!(f, "{}", dt.to_rfc3339()),
+            Value::HttpRequest(req) => write!(f, "<HttpRequest {} {}>", req.method(), req.url()),
+            Value::HttpResponse(res) => write!(f, "<HttpResponse {}>", res.status()),
         }
     }
 }
@@ -220,6 +232,8 @@ impl fmt::Debug for Value {
             Value::Stack(stack) => write!(f, "Stack(size={})", stack.borrow().len()),
             Value::Regex(r) => write!(f, "Regex(/{}/)", r.as_str()),
             Value::DateTime(dt) => write!(f, "DateTime({})", dt.to_rfc3339()),
+            Value::HttpRequest(req) => write!(f, "HttpRequest({} {})", req.method(), req.url()),
+            Value::HttpResponse(res) => write!(f, "HttpResponse({})", res.status()),
         }
     }
 }

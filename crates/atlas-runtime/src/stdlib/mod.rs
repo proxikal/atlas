@@ -3,6 +3,7 @@
 pub mod array;
 pub mod collections;
 pub mod datetime;
+pub mod http;
 pub mod io;
 pub mod json;
 pub mod math;
@@ -90,6 +91,24 @@ pub fn is_builtin(name: &str) -> bool {
             | "dateTimeAddSeconds" | "dateTimeAddMinutes" | "dateTimeAddHours" | "dateTimeAddDays"
             | "dateTimeDiff" | "dateTimeCompare"
             | "dateTimeToTimestamp" | "dateTimeToIso"
+            | "dateTimeFormat" | "dateTimeToRfc3339" | "dateTimeToRfc2822" | "dateTimeToCustom"
+            | "dateTimeParse" | "dateTimeParseRfc3339" | "dateTimeParseRfc2822" | "dateTimeTryParse"
+            | "dateTimeToUtc" | "dateTimeToLocal" | "dateTimeToTimezone"
+            | "dateTimeGetTimezone" | "dateTimeGetOffset" | "dateTimeInTimezone"
+            | "durationFromSeconds" | "durationFromMinutes" | "durationFromHours" | "durationFromDays"
+            | "durationFormat"
+            // HTTP functions
+            | "httpRequest" | "httpRequestGet" | "httpRequestPost"
+            | "httpRequestPut" | "httpRequestDelete" | "httpRequestPatch"
+            | "httpSetHeader" | "httpSetBody" | "httpSetTimeout"
+            | "httpSetQuery" | "httpSetFollowRedirects" | "httpSetMaxRedirects"
+            | "httpSetUserAgent" | "httpSetAuth"
+            | "httpStatus" | "httpBody" | "httpHeader" | "httpHeaders" | "httpUrl" | "httpIsSuccess"
+            | "httpStatusText" | "httpContentType" | "httpContentLength"
+            | "httpIsRedirect" | "httpIsClientError" | "httpIsServerError"
+            | "httpSend" | "httpGet" | "httpPost" | "httpPut" | "httpDelete" | "httpPatch"
+            | "httpPostJson" | "httpParseJson" | "httpGetJson"
+            | "httpCheckPermission"
     )
 }
 
@@ -705,6 +724,67 @@ pub fn call_builtin(
         "dateTimeCompare" => datetime::date_time_compare(args, call_span),
         "dateTimeToTimestamp" => datetime::date_time_to_timestamp(args, call_span),
         "dateTimeToIso" => datetime::date_time_to_iso(args, call_span),
+        // Advanced formatting
+        "dateTimeFormat" => datetime::date_time_format(args, call_span),
+        "dateTimeToRfc3339" => datetime::date_time_to_rfc3339(args, call_span),
+        "dateTimeToRfc2822" => datetime::date_time_to_rfc2822(args, call_span),
+        "dateTimeToCustom" => datetime::date_time_to_custom(args, call_span),
+        // Advanced parsing
+        "dateTimeParse" => datetime::date_time_parse(args, call_span),
+        "dateTimeParseRfc3339" => datetime::date_time_parse_rfc3339(args, call_span),
+        "dateTimeParseRfc2822" => datetime::date_time_parse_rfc2822(args, call_span),
+        "dateTimeTryParse" => datetime::date_time_try_parse(args, call_span),
+        // Timezone operations
+        "dateTimeToUtc" => datetime::date_time_to_utc(args, call_span),
+        "dateTimeToLocal" => datetime::date_time_to_local(args, call_span),
+        "dateTimeToTimezone" => datetime::date_time_to_timezone(args, call_span),
+        "dateTimeGetTimezone" => datetime::date_time_get_timezone(args, call_span),
+        "dateTimeGetOffset" => datetime::date_time_get_offset(args, call_span),
+        "dateTimeInTimezone" => datetime::date_time_in_timezone(args, call_span),
+        // Duration operations
+        "durationFromSeconds" => datetime::duration_from_seconds(args, call_span),
+        "durationFromMinutes" => datetime::duration_from_minutes(args, call_span),
+        "durationFromHours" => datetime::duration_from_hours(args, call_span),
+        "durationFromDays" => datetime::duration_from_days(args, call_span),
+        "durationFormat" => datetime::duration_format(args, call_span),
+        // HTTP functions
+        "httpRequest" => http::http_request(args, call_span),
+        "httpRequestGet" => http::http_request_get(args, call_span),
+        "httpRequestPost" => http::http_request_post(args, call_span),
+        "httpSetHeader" => http::http_set_header(args, call_span),
+        "httpSetBody" => http::http_set_body(args, call_span),
+        "httpSetTimeout" => http::http_set_timeout(args, call_span),
+        "httpStatus" => http::http_status(args, call_span),
+        "httpBody" => http::http_body(args, call_span),
+        "httpHeader" => http::http_header(args, call_span),
+        "httpHeaders" => http::http_headers(args, call_span),
+        "httpUrl" => http::http_url(args, call_span),
+        "httpIsSuccess" => http::http_is_success(args, call_span),
+        "httpSend" => http::http_send(args, call_span),
+        "httpGet" => http::http_get(args, call_span),
+        "httpPost" => http::http_post(args, call_span),
+        "httpPostJson" => http::http_post_json(args, call_span),
+        "httpParseJson" => http::http_parse_json(args, call_span),
+        // Phase 10b: Advanced HTTP
+        "httpRequestPut" => http::http_request_put(args, call_span),
+        "httpRequestDelete" => http::http_request_delete(args, call_span),
+        "httpRequestPatch" => http::http_request_patch(args, call_span),
+        "httpPut" => http::http_put(args, call_span),
+        "httpDelete" => http::http_delete(args, call_span),
+        "httpPatch" => http::http_patch(args, call_span),
+        "httpSetQuery" => http::http_set_query(args, call_span),
+        "httpSetFollowRedirects" => http::http_set_follow_redirects(args, call_span),
+        "httpSetMaxRedirects" => http::http_set_max_redirects(args, call_span),
+        "httpSetUserAgent" => http::http_set_user_agent(args, call_span),
+        "httpSetAuth" => http::http_set_auth(args, call_span),
+        "httpStatusText" => http::http_status_text(args, call_span),
+        "httpContentType" => http::http_content_type(args, call_span),
+        "httpContentLength" => http::http_content_length(args, call_span),
+        "httpIsRedirect" => http::http_is_redirect(args, call_span),
+        "httpIsClientError" => http::http_is_client_error(args, call_span),
+        "httpIsServerError" => http::http_is_server_error(args, call_span),
+        "httpGetJson" => http::http_get_json(args, call_span),
+        "httpCheckPermission" => http::http_check_permission(args, call_span),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),

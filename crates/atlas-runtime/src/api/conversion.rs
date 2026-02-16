@@ -108,6 +108,8 @@ fn type_name(value: &Value) -> &'static str {
         Value::Stack(_) => "stack",
         Value::Regex(_) => "regex",
         Value::DateTime(_) => "datetime",
+        Value::HttpRequest(_) => "HttpRequest",
+        Value::HttpResponse(_) => "HttpResponse",
     }
 }
 

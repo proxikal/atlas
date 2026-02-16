@@ -13,6 +13,10 @@ rand = "0.8"
 ordered-float = "4.5"
 regex = "1"
 chrono = "0.4"
+chrono-tz = "0.8"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+urlencoding = "2.1"
+base64 = "0.22"
 
 # FFI support (phase-10b/10c)
 libloading = "0.8"

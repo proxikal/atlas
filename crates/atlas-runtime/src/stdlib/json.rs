@@ -419,6 +419,10 @@ fn value_to_json(
             // Serialize DateTime as ISO 8601 string
             Ok(serde_json::to_string(&dt.to_rfc3339()).unwrap())
         }
+        Value::HttpRequest(_) | Value::HttpResponse(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize HttpRequest/HttpResponse to JSON".to_string(),
+            span,
+        }),
     }
 }
 
