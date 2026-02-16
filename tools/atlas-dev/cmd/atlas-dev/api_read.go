@@ -14,6 +14,7 @@ func apiReadCmd() *cobra.Command {
 	var (
 		function string
 		detailed bool
+		raw      bool
 	)
 
 	cmd := &cobra.Command{
@@ -64,13 +65,14 @@ func apiReadCmd() *cobra.Command {
 				title          string
 				functionsJSON  string
 				functionsCount int
+				content        string
 			)
 
 			err := database.QueryRow(`
-				SELECT title, functions, functions_count
+				SELECT title, functions, functions_count, content
 				FROM api_docs
 				WHERE module = ? OR name = ?
-			`, moduleName, moduleName).Scan(&title, &functionsJSON, &functionsCount)
+			`, moduleName, moduleName).Scan(&title, &functionsJSON, &functionsCount, &content)
 
 			if err != nil {
 				return fmt.Errorf("API doc not found: %s", moduleName)
@@ -79,6 +81,12 @@ func apiReadCmd() *cobra.Command {
 			result := map[string]interface{}{
 				"ok":    true,
 				"title": title,
+			}
+
+			// Return raw content if requested
+			if raw {
+				result["content"] = content
+				return output.Success(result)
 			}
 
 			// Parse functions JSON
@@ -127,6 +135,7 @@ func apiReadCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&function, "function", "", "Read specific function")
 	cmd.Flags().BoolVar(&detailed, "detailed", false, "Include full details")
+	cmd.Flags().BoolVar(&raw, "raw", false, "Return raw markdown content")
 
 	return cmd
 }

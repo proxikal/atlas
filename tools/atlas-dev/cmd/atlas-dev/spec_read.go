@@ -13,6 +13,7 @@ func specReadCmd() *cobra.Command {
 	var (
 		section  string
 		withCode bool
+		raw      bool
 	)
 
 	cmd := &cobra.Command{
@@ -66,13 +67,14 @@ func specReadCmd() *cobra.Command {
 				status   string
 				outline  string
 				sections string
+				content  string
 			)
 
 			err := database.QueryRow(`
-				SELECT title, version, status, outline, sections
+				SELECT title, version, status, outline, sections, content
 				FROM specs
 				WHERE name = ?
-			`, specName).Scan(&title, &version, &status, &outline, &sections)
+			`, specName).Scan(&title, &version, &status, &outline, &sections, &content)
 
 			if err != nil {
 				return fmt.Errorf("spec not found: %s", specName)
@@ -88,6 +90,12 @@ func specReadCmd() *cobra.Command {
 			}
 			if status != "" {
 				result["stat"] = status
+			}
+
+			// Return raw content if requested
+			if raw {
+				result["content"] = content
+				return output.Success(result)
 			}
 
 			// Filter to specific section if requested
@@ -115,7 +123,7 @@ func specReadCmd() *cobra.Command {
 					return fmt.Errorf("section not found: %s", section)
 				}
 			} else {
-				// Return outline
+				// Return outline and full sections
 				var outlineList []string
 				if err := json.Unmarshal([]byte(outline), &outlineList); err == nil {
 					result["outline"] = outlineList
@@ -123,7 +131,7 @@ func specReadCmd() *cobra.Command {
 
 				var sectionsList []interface{}
 				if err := json.Unmarshal([]byte(sections), &sectionsList); err == nil {
-					result["sections"] = len(sectionsList)
+					result["sections"] = sectionsList
 				}
 			}
 
@@ -133,6 +141,7 @@ func specReadCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&section, "section", "", "Read specific section")
 	cmd.Flags().BoolVar(&withCode, "with-code", false, "Include code blocks")
+	cmd.Flags().BoolVar(&raw, "raw", false, "Return raw markdown content")
 
 	return cmd
 }
