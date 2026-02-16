@@ -33,7 +33,7 @@ Check 1: Does it exist in codebase?
 - Verify with `atlas-dev phase info <path>` as complete
 
 Check 2: Does it match spec?
-- Compare implementation to `docs/specification/`
+- Compare implementation to spec: `atlas-dev spec search "feature"`
 - Verify behavior matches documented semantics
 
 Check 3: Is it complete or partial?

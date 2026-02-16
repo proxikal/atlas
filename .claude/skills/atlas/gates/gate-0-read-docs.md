@@ -47,18 +47,19 @@ cargo clean
 3. **ROUTING:** Read `Atlas-SPEC.md` (INDEX only - use routing table)
 4. **SELECTIVE:** Read ONLY the spec files your task needs:
 
-### Use Routing Table (DO NOT read all specs)
+### Use CLI Commands (Surgical Queries)
 
-**From Atlas-SPEC.md routing table:**
-- Implementing types/generics? → Read `docs/specification/types.md`
-- Parser/grammar work? → Read `docs/specification/syntax.md`
-- Type checking? → Read `docs/specification/language-semantics.md`
-- Runtime/execution? → Read `docs/specification/runtime.md`
-- Module system? → Read `docs/specification/modules.md`
-- REPL behavior? → Read `docs/specification/repl.md`
-- Bytecode/VM? → Read `docs/specification/bytecode.md`
-- Error codes? → Read `docs/specification/diagnostics.md`
-- Stdlib API? → Read `docs/api/stdlib.md`
+**Query specs/APIs from database:**
+- Implementing types/generics? → `atlas-dev spec read types.md`
+- Parser/grammar work? → `atlas-dev spec read syntax.md`
+- Type checking? → `atlas-dev spec read language-semantics.md`
+- Runtime/execution? → `atlas-dev spec read runtime.md`
+- Module system? → `atlas-dev spec read modules.md`
+- REPL behavior? → `atlas-dev spec read repl.md`
+- Bytecode/VM? → `atlas-dev spec read bytecode.md`
+- Error codes? → `atlas-dev spec read diagnostics.md`
+- Stdlib API? → `atlas-dev api read stdlib.md`
+- Search specs: → `atlas-dev spec search "keyword"`
 
 ### Implementation Docs (As Needed)
 

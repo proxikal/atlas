@@ -34,9 +34,9 @@
    Dependency: [feature name]
 
    Step 1: Check specification
-   - Look in `docs/specification/` for feature definition
-   - Search `Atlas-SPEC.md` routing table
-   - Read relevant spec section
+   - Search specs: `atlas-dev spec search "feature"`
+   - Read spec: `atlas-dev spec read <file>`
+   - Check grammar: `atlas-dev spec grammar`
 
    Step 2: Determine status
    - ✅ Spec defines it AND it's implemented → Proceed
@@ -44,8 +44,8 @@
    - 🚫 Spec DOESN'T define it → Check if out-of-scope for current version
 
    Step 3: Log decision (if implementing)
-   - Add entry to `docs/reference/decision-log.md`
-   - Format: "Implemented X per spec section Y for phase Z"
+   - Create decision: `atlas-dev decision create -c COMP -t "..." --decision "..." --rationale "..."`
+   - Decision stored in database
    ```
 
 3. **NEVER ask user these questions:**
