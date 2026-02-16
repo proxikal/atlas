@@ -1,1 +1,14 @@
 bin/
+
+# Build artifacts
+atlas-dev
+*.exe
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Backups
+.backups/
+**/.backups/
