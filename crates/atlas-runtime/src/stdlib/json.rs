@@ -399,6 +399,10 @@ fn value_to_json(
             msg: "Cannot serialize HashMap to JSON".to_string(),
             span,
         }),
+        Value::HashSet(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize HashSet to JSON".to_string(),
+            span,
+        }),
     }
 }
 

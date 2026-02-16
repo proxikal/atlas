@@ -212,6 +212,7 @@ pub fn type_of(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::Option(_) => "option",
         Value::Result(_) => "result",
         Value::HashMap(_) => "hashmap",
+        Value::HashSet(_) => "hashset",
     };
 
     Ok(Value::string(type_name))
@@ -321,6 +322,7 @@ pub fn to_string(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::Result(Ok(v)) => format!("Ok({})", value_to_display_string(v)),
         Value::Result(Err(e)) => format!("Err({})", value_to_display_string(e)),
         Value::HashMap(_) => "[HashMap]".to_string(),
+        Value::HashSet(_) => "[HashSet]".to_string(),
     };
 
     Ok(Value::string(string_value))
@@ -389,7 +391,8 @@ pub fn to_bool(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         | Value::JsonValue(_)
         | Value::Option(_)
         | Value::Result(_)
-        | Value::HashMap(_) => true,
+        | Value::HashMap(_)
+        | Value::HashSet(_) => true,
     };
 
     Ok(Value::Bool(bool_value))
@@ -521,6 +524,7 @@ fn type_name(value: &Value) -> &str {
         Value::Option(_) => "option",
         Value::Result(_) => "result",
         Value::HashMap(_) => "hashmap",
+        Value::HashSet(_) => "hashset",
     }
 }
 
@@ -544,6 +548,7 @@ fn value_to_display_string(value: &Value) -> String {
         Value::Option(_) => "[Option]".to_string(),
         Value::Result(_) => "[Result]".to_string(),
         Value::HashMap(_) => "[HashMap]".to_string(),
+        Value::HashSet(_) => "[HashSet]".to_string(),
     }
 }
 

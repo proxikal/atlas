@@ -60,6 +60,12 @@ pub fn is_builtin(name: &str) -> bool {
             | "hashMapPut" | "hashMapGet" | "hashMapRemove"
             | "hashMapHas" | "hashMapSize" | "hashMapIsEmpty"
             | "hashMapClear" | "hashMapKeys" | "hashMapValues" | "hashMapEntries"
+            // HashSet functions
+            | "hashSetNew" | "hashSetFromArray"
+            | "hashSetAdd" | "hashSetRemove" | "hashSetHas"
+            | "hashSetSize" | "hashSetIsEmpty" | "hashSetClear"
+            | "hashSetUnion" | "hashSetIntersection" | "hashSetDifference" | "hashSetSymmetricDifference"
+            | "hashSetIsSubset" | "hashSetIsSuperset" | "hashSetToArray"
     )
 }
 
@@ -588,6 +594,23 @@ pub fn call_builtin(
         "hashMapKeys" => collections::hashmap::keys(args, call_span),
         "hashMapValues" => collections::hashmap::values(args, call_span),
         "hashMapEntries" => collections::hashmap::entries(args, call_span),
+
+        // HashSet functions
+        "hashSetNew" => collections::hashset::new_set(args, call_span),
+        "hashSetFromArray" => collections::hashset::from_array(args, call_span),
+        "hashSetAdd" => collections::hashset::add(args, call_span),
+        "hashSetRemove" => collections::hashset::remove(args, call_span),
+        "hashSetHas" => collections::hashset::has(args, call_span),
+        "hashSetSize" => collections::hashset::size(args, call_span),
+        "hashSetIsEmpty" => collections::hashset::is_empty(args, call_span),
+        "hashSetClear" => collections::hashset::clear(args, call_span),
+        "hashSetUnion" => collections::hashset::union(args, call_span),
+        "hashSetIntersection" => collections::hashset::intersection(args, call_span),
+        "hashSetDifference" => collections::hashset::difference(args, call_span),
+        "hashSetSymmetricDifference" => collections::hashset::symmetric_difference(args, call_span),
+        "hashSetIsSubset" => collections::hashset::is_subset(args, call_span),
+        "hashSetIsSuperset" => collections::hashset::is_superset(args, call_span),
+        "hashSetToArray" => collections::hashset::to_array(args, call_span),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),

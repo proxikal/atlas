@@ -46,6 +46,8 @@ pub enum Value {
     Result(Result<Box<Value>, Box<Value>>),
     /// HashMap collection (key-value pairs)
     HashMap(Rc<RefCell<crate::stdlib::collections::hashmap::AtlasHashMap>>),
+    /// HashSet collection (unique values)
+    HashSet(Rc<RefCell<crate::stdlib::collections::hashset::AtlasHashSet>>),
 }
 
 /// Function reference
@@ -87,6 +89,7 @@ impl Value {
             Value::Option(_) => "Option",
             Value::Result(_) => "Result",
             Value::HashMap(_) => "hashmap",
+            Value::HashSet(_) => "hashset",
         }
     }
 
@@ -126,6 +129,8 @@ impl PartialEq for Value {
             (Value::Result(a), Value::Result(b)) => a == b,
             // HashMap uses reference identity (like arrays)
             (Value::HashMap(a), Value::HashMap(b)) => Rc::ptr_eq(a, b),
+            // HashSet uses reference identity (like arrays)
+            (Value::HashSet(a), Value::HashSet(b)) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -164,6 +169,7 @@ impl fmt::Display for Value {
                 Err(err) => write!(f, "Err({})", err),
             },
             Value::HashMap(map) => write!(f, "<HashMap size={}>", map.borrow().len()),
+            Value::HashSet(set) => write!(f, "<HashSet size={}>", set.borrow().len()),
         }
     }
 }
@@ -185,6 +191,7 @@ impl fmt::Debug for Value {
             Value::Option(opt) => write!(f, "Option({:?})", opt),
             Value::Result(res) => write!(f, "Result({:?})", res),
             Value::HashMap(map) => write!(f, "HashMap(size={})", map.borrow().len()),
+            Value::HashSet(set) => write!(f, "HashSet(size={})", set.borrow().len()),
         }
     }
 }

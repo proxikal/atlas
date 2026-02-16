@@ -574,10 +574,116 @@ _Phases will populate this section with JSON parsing and serialization functions
 
 ## Collection Functions
 
-**Implementation:** `crates/atlas-runtime/src/stdlib/collections.rs`
-**Phase:** phases/stdlib/phase-07-collections.md
+**Implementation:** `crates/atlas-runtime/src/stdlib/collections/`
+**Phases:** 07a (HashMap), 07b (HashSet)
 
-_Phases will populate this section with HashMap, HashSet, Queue, Stack APIs_
+### HashSet Functions
+
+HashSet provides unique value storage with O(1) average-case membership testing. Elements must be hashable types (number, string, bool, null). Supports classic set operations.
+
+#### hashSetNew
+**Signature:** `hashSetNew() -> HashSet`
+**Behavior:** Creates new empty HashSet
+**Example:** `let set = hashSetNew()`
+**Errors:** None
+
+#### hashSetFromArray
+**Signature:** `hashSetFromArray(elements: hashable[]) -> HashSet`
+**Behavior:** Creates HashSet from array (duplicates automatically removed)
+**Example:** `let set = hashSetFromArray([1, 2, 2, 3])` → set has {1, 2, 3}
+**Errors:** AT0140 if array contains unhashable elements
+
+#### hashSetAdd
+**Signature:** `hashSetAdd(set: HashSet, element: hashable) -> void`
+**Behavior:** Adds element to set (idempotent)
+**Example:** `hashSetAdd(set, "apple")`
+**Errors:** AT0140 if element not hashable, AT0102 if wrong type
+
+#### hashSetRemove
+**Signature:** `hashSetRemove(set: HashSet, element: hashable) -> bool`
+**Behavior:** Removes element from set, returns true if element existed
+**Example:** `hashSetRemove(set, "apple")` → true or false
+**Errors:** AT0140 if element not hashable, AT0102 if wrong type
+
+#### hashSetHas
+**Signature:** `hashSetHas(set: HashSet, element: hashable) -> bool`
+**Behavior:** Checks if element exists in set
+**Example:** `hashSetHas(set, "apple")` → true or false
+**Errors:** AT0140 if element not hashable, AT0102 if wrong type
+
+#### hashSetSize
+**Signature:** `hashSetSize(set: HashSet) -> number`
+**Behavior:** Returns number of elements in set
+**Example:** `hashSetSize(set)` → 3
+**Errors:** AT0102 if wrong type
+
+#### hashSetIsEmpty
+**Signature:** `hashSetIsEmpty(set: HashSet) -> bool`
+**Behavior:** Checks if set has no elements
+**Example:** `hashSetIsEmpty(set)` → true or false
+**Errors:** AT0102 if wrong type
+
+#### hashSetClear
+**Signature:** `hashSetClear(set: HashSet) -> void`
+**Behavior:** Removes all elements from set
+**Example:** `hashSetClear(set)`
+**Errors:** AT0102 if wrong type
+
+#### hashSetUnion
+**Signature:** `hashSetUnion(setA: HashSet, setB: HashSet) -> HashSet`
+**Behavior:** Returns new set with all elements from both sets
+**Example:** `let union = hashSetUnion(setA, setB)` → {1, 2, 3, 4}
+**Errors:** AT0102 if wrong types
+
+#### hashSetIntersection
+**Signature:** `hashSetIntersection(setA: HashSet, setB: HashSet) -> HashSet`
+**Behavior:** Returns new set with elements in both sets
+**Example:** `let intersection = hashSetIntersection(setA, setB)` → {2, 3}
+**Errors:** AT0102 if wrong types
+
+#### hashSetDifference
+**Signature:** `hashSetDifference(setA: HashSet, setB: HashSet) -> HashSet`
+**Behavior:** Returns new set with elements in setA but not in setB
+**Example:** `let difference = hashSetDifference(setA, setB)` → {1}
+**Errors:** AT0102 if wrong types
+
+#### hashSetSymmetricDifference
+**Signature:** `hashSetSymmetricDifference(setA: HashSet, setB: HashSet) -> HashSet`
+**Behavior:** Returns new set with elements in exactly one set (not both)
+**Example:** `let symDiff = hashSetSymmetricDifference(setA, setB)` → {1, 4}
+**Errors:** AT0102 if wrong types
+
+#### hashSetIsSubset
+**Signature:** `hashSetIsSubset(setA: HashSet, setB: HashSet) -> bool`
+**Behavior:** Checks if all elements of setA are in setB
+**Example:** `hashSetIsSubset(setA, setB)` → true or false
+**Errors:** AT0102 if wrong types
+
+#### hashSetIsSuperset
+**Signature:** `hashSetIsSuperset(setA: HashSet, setB: HashSet) -> bool`
+**Behavior:** Checks if setA contains all elements of setB
+**Example:** `hashSetIsSuperset(setA, setB)` → true or false
+**Errors:** AT0102 if wrong types
+
+#### hashSetToArray
+**Signature:** `hashSetToArray(set: HashSet) -> hashable[]`
+**Behavior:** Converts set to array (order undefined)
+**Example:** `let arr = hashSetToArray(set)` → [1, 2, 3]
+**Errors:** AT0102 if wrong type
+
+**Set Operations Example:**
+```atlas
+let a = hashSetFromArray([1, 2, 3]);
+let b = hashSetFromArray([2, 3, 4]);
+
+let union = hashSetUnion(a, b);              // {1, 2, 3, 4}
+let intersection = hashSetIntersection(a, b); // {2, 3}
+let difference = hashSetDifference(a, b);     // {1}
+let symDiff = hashSetSymmetricDifference(a, b); // {1, 4}
+
+hashSetIsSubset(a, b);   // false
+hashSetIsSuperset(a, b); // false
+```
 
 ---
 

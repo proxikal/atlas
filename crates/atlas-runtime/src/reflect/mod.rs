@@ -132,6 +132,19 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 type_args: vec![], // Could inspect keys/values
             }
         }
+
+        Value::HashSet(_) => {
+            // Generic HashSet type
+            TypeInfo {
+                name: "HashSet".to_string(),
+                kind: TypeKind::Generic,
+                fields: vec![],
+                parameters: vec![],
+                return_type: None,
+                element_type: None,
+                type_args: vec![], // Could inspect elements
+            }
+        }
     }
 }
 

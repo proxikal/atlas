@@ -177,6 +177,7 @@ fn format_value(value: &crate::value::Value) -> String {
         Value::Option(_) => "<option>".to_string(),
         Value::Result(_) => "<result>".to_string(),
         Value::HashMap(_) => "<hashmap>".to_string(),
+        Value::HashSet(_) => "<hashset>".to_string(),
     }
 }
 

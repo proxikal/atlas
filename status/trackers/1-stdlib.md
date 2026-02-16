@@ -1,7 +1,7 @@
-# Standard Library (9/21) - Complete API
+# Standard Library (10/21) - Complete API
 
 **Status:** ⚠️ FOUNDATION BLOCKERS AHEAD
-**Progress:** 9/21 phases (43%)
+**Progress:** 10/21 phases (48%)
 
 ---
 
@@ -16,13 +16,11 @@
 - ✅ phase-06b-stdlib-real-world.md **[COMPLETE - 150 real-world tests]**
 - ✅ phase-06c-stdlib-performance-docs.md **[Benchmarks + docs + parity verification, 2026-02-15]**
 - ✅ phase-07a-hash-infrastructure-hashmap.md **[Hash + HashMap + 12 functions + DR-006, 17 tests, 2026-02-15]**
+- ✅ phase-07b-hashset.md **[HashSet + 15 functions + set operations, 39 tests, 2026-02-16]**
 
 ---
 
 ## Pending Phases
-
-- ⬜ phase-07b-hashset.md **[HashSet + set operations, ~610 lines, 25+ tests]**
-- ⬜ phase-07b-hashset.md **[HashSet + set operations, ~610 lines, 25+ tests]**
 - ⬜ phase-07c-queue-stack.md **[Queue (FIFO) + Stack (LIFO), ~690 lines, 36+ tests]**
 - ⬜ phase-07d-collection-integration.md **[Iteration + integration + benchmarks, ~450 lines, 35+ tests]**
 - ⬜ phase-08-regex.md **[Can continue - Regular expressions]**

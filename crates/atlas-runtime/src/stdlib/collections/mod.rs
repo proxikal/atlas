@@ -2,3 +2,4 @@
 
 pub mod hash;
 pub mod hashmap;
+pub mod hashset;

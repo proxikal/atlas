@@ -103,6 +103,7 @@ fn type_name(value: &Value) -> &'static str {
         Value::Option(_) => "option",
         Value::Result(_) => "result",
         Value::HashMap(_) => "hashmap",
+        Value::HashSet(_) => "hashset",
     }
 }
 
