@@ -358,7 +358,7 @@ REPL implementation splits concerns:
 - **Core:** Lexer, parser, typechecker, interpreter (pure logic)
 - **UI:** Input handling, prompts, formatting (terminal interaction)
 
-**See:** `docs/implementation/15-repl.md` for implementation guidance
+**See:** `docs/repl.md` for REPL architecture overview
 
 ### Execution Modes
 
@@ -460,4 +460,4 @@ Both modes must produce identical output (parity requirement).
 
 **Discoverable:** Built-ins always available. No imports needed for core functionality.
 
-**See:** `docs/philosophy/ai-manifesto.md` for design rationale
+**See:** `docs/specification/language-semantics.md` for design rationale

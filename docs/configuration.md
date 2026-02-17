@@ -402,9 +402,9 @@ Run tests to ensure compatibility with new edition.
 
 ## Related Documentation
 
-- [Project Structure](implementation/01-project-structure.md)
-- [Security Model](reference/security-model.md)
-- [CLI Reference](api/cli-reference.md)
+- [Security Model](security-model.md)
+- [Package Manifest](package-manifest.md)
+- [Build System](build-system.md)
 
 ## Version History
 

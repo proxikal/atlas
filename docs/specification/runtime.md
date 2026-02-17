@@ -21,27 +21,37 @@ Atlas runtime model defines how values are represented in memory, how execution 
 - `null` - Explicit absence
 
 ### Reference-Counted Values (Heap-allocated)
-- `string` - Rc<String> (immutable, shared)
-- `array` - Rc<RefCell<Vec<Value>>> (mutable, shared)
+- `string` - Arc<String> (immutable, shared, thread-safe)
+- `array` - Arc<Mutex<Vec<Value>>> (mutable, shared, thread-safe)
 - `function` - FunctionRef (name + arity + bytecode offset)
-- `json` - Rc<JsonValue> (immutable, shared)
+- `json` - Arc<JsonValue> (immutable, shared, thread-safe)
+- `Option` - Option<Box<Value>> (Some/None)
+- `Result` - Result<Box<Value>, Box<Value>> (Ok/Err)
+- `HashMap` - Arc<Mutex<AtlasHashMap>> (key-value collection)
+- `HashSet` - Arc<Mutex<AtlasHashSet>> (unique value collection)
+- `Queue` - Arc<Mutex<AtlasQueue>> (FIFO collection)
+- `Stack` - Arc<Mutex<AtlasStack>> (LIFO collection)
+- `Regex` - Arc<regex::Regex> (compiled regex pattern)
+- `DateTime` - Arc<chrono::DateTime<Utc>> (UTC timestamp)
+- `HttpRequest` - Arc<HttpRequest> (HTTP request config)
+- `HttpResponse` - Arc<HttpResponse> (HTTP response data)
 
-**See:** `docs/implementation/09-value-model.md` for detailed implementation
+**Note:** All heap-allocated values use `Arc<Mutex<>>` (not `Rc<RefCell<>>`), migrated in phase-18 for thread safety.
 
 ---
 
 ## Memory Model
 
 ### Reference Counting
-- v0.1/v0.2 use reference counting (Rc), no GC
-- Shared ownership for strings, arrays, JSON values
-- Interior mutability for arrays (RefCell)
+- v0.2 uses atomic reference counting (Arc), no GC
+- Shared ownership for strings, arrays, JSON values, collections
+- Interior mutability for mutable types via Mutex (Arc<Mutex<T>>)
 - Deterministic cleanup on scope exit
 
 ### String Semantics
 - UTF-8 encoded
 - Immutable - string operations create new strings
-- Shared via Rc (cheap cloning)
+- Shared via Arc (cheap cloning, thread-safe)
 - `len(string)` returns Unicode scalar count
 
 ### Array Semantics
@@ -108,7 +118,7 @@ Atlas runtime model defines how values are represented in memory, how execution 
 - REPL mode: Errors reported, session continues
 - Type-checking happens before execution (fail fast)
 
-**See:** `docs/specification/diagnostics.md` for error codes and formats
+**See:** `docs/specification/diagnostic-system.md` for error codes and formats
 
 ---
 
@@ -263,7 +273,7 @@ str(value: number | bool | null) -> string
 
 **Note:** Prelude names cannot be shadowed - redeclaring `print`, `len`, or `str` is a compile error (`AT1012`)
 
-**See:** `docs/api/stdlib.md` for complete stdlib reference
+**See:** `docs/specification/stdlib.md` for complete stdlib reference
 
 ---
 
@@ -288,7 +298,7 @@ str(value: number | bool | null) -> string
 - Same memory semantics
 - All tests must pass in both modes
 
-**See:** `docs/guides/testing-guide.md` for parity testing requirements
+**Note:** Parity is verified by running the same tests against both execution engines.
 
 ---
 
@@ -302,17 +312,17 @@ str(value: number | bool | null) -> string
 ### Guaranteed
 - Evaluation order (left-to-right for arguments)
 - Short-circuit behavior (&&, ||)
-- Deterministic cleanup (Rc drop on scope exit)
+- Deterministic cleanup (Arc drop on scope exit)
 - Single evaluation of each expression
 
 ---
 
 ## Future Considerations (v0.3+)
 
-- Garbage collection (replace Rc with tracing GC)
+- Garbage collection (replace Arc with tracing GC)
 - Closures (capture local variables)
 - Async/await
 - JIT compilation
 - Optimization passes
 
-**See:** `Atlas-SPEC.md` for roadmap
+**See:** `STATUS.md` in project root for roadmap

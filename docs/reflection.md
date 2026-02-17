@@ -659,6 +659,6 @@ The following features are planned for future versions:
 Atlas's reflection API provides powerful runtime introspection while maintaining performance and type safety. Use it to build generic libraries, debugging tools, and metaprogramming utilities, but remember that static typing should be preferred when possible.
 
 For questions or examples, see:
-- Test suite: `tests/reflection_tests.rs`
-- Implementation: `src/reflect/`
-- Stdlib: `src/stdlib/reflect.rs`
+- Test suite: `crates/atlas-runtime/tests/reflection_tests.rs`
+- Implementation: `crates/atlas-runtime/src/reflect/` (type_info.rs, value_info.rs, mod.rs)
+- Stdlib: `crates/atlas-runtime/src/stdlib/reflect.rs`

@@ -578,7 +578,6 @@ pub enum PolicyError {
 
 ## See Also
 
-- [Runtime API Documentation](api/runtime-api.md)
-- [FFI Security Guide](features/ffi-guide.md)
-- [Configuration Reference](config/README.md)
-- [Atlas Security Principles](philosophy/ai-manifesto.md)
+- [Configuration System](configuration.md)
+- [Embedding Guide](embedding-guide.md)
+- [Runtime Specification](specification/runtime.md)

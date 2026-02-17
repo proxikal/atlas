@@ -7,31 +7,40 @@
 Embedding Atlas lets host applications execute Atlas code, register native Rust functions, enforce security policies, and interoperate with C via FFI. This guide walks through setup, native function registration, security, callbacks, and examples.
 
 ## Quick Start (Rust)
-```rust
-use atlas_runtime::{Atlas, Value, Permissions};
 
-fn main() -> anyhow::Result<()> {
-    let mut rt = Atlas::with_config(Default::default());
-    rt.set_permissions(Permissions::safe_defaults());
-    rt.inject_native("host_log", |args, _span| {
-        println!("LOG: {}", args[0]);
-        Ok(Value::Null)
-    })?;
-    let out = rt.eval(r#"host_log("hi"); 1 + 2"#)?;
-    println!("{out:?}");
-    Ok(())
+### Using the `Atlas` struct (interpreter-only, simple embedding)
+```rust
+use atlas_runtime::{Atlas, Value};
+use atlas_runtime::security::SecurityContext;
+
+fn main() {
+    // Default: deny-all security
+    let runtime = Atlas::new();
+    let result = runtime.eval("1 + 2").unwrap();
+    println!("{result:?}"); // Number(3.0)
+
+    // With permissive security
+    let runtime = Atlas::new_with_security(SecurityContext::allow_all());
+    let result = runtime.eval(r#"print("hello")"#).unwrap();
 }
 ```
 
-## Native Functions
-- Register with `inject_native(name, func)`.
-- Functions receive `&[Value]` and return `Result<Value, RuntimeError>`.
-- Support for closures and state via captured environment.
-- Error handling surfaces as diagnostics to the caller.
+### Using the `Runtime` struct (interpreter or VM mode)
+```rust
+use atlas_runtime::api::{Runtime, ExecutionMode};
+
+fn main() {
+    let mut runtime = Runtime::new(ExecutionMode::Interpreter);
+    runtime.eval("let x: number = 42;").unwrap();
+    let result = runtime.eval("x").unwrap();
+    println!("{result:?}"); // Number(42.0)
+}
+```
 
 ## Security & Sandbox
-- Permissions configured via `Permissions` (filesystem, network, process, FFI, env, reflection).
-- Defaults are restrictive; enable only what hosts need.
+- Permissions configured via `SecurityContext` (filesystem, network, process, environment).
+- `SecurityContext::new()` = deny-all (default, restrictive).
+- `SecurityContext::allow_all()` = permit everything (development only).
 - Build scripts and native functions run under the same policy.
 
 ## FFI (C Interop)

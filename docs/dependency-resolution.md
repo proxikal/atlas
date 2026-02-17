@@ -868,9 +868,7 @@ Planned features for future versions:
 ## See Also
 
 - [Package Manifest Documentation](package-manifest.md)
-- [Atlas Build System](build-system.md) (future)
-- [CLI Package Commands](cli-package-manager.md) (future)
-- [Creating Packages](creating-packages.md) (future)
+- [Atlas Build System](build-system.md)
 
 ---
 
