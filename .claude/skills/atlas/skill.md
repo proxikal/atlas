@@ -110,14 +110,17 @@ cargo test -p atlas-runtime test_exact_name -- --exact  # ONE test
 
 **Before handoff:**
 ```bash
-cargo test -p atlas-runtime --test <relevant_test_file>  # Validate phase test files
-cargo clippy -p atlas-runtime -- -D warnings             # Zero warnings
+cargo nextest run -p atlas-runtime --test <relevant_test_file>  # Validate phase test files
+cargo clippy -p atlas-runtime -- -D warnings                    # Zero warnings
 ```
 
-**Emergency only:**
+**Full suite (when needed):**
 ```bash
-cargo test -p atlas-runtime  # Full suite — ONLY when debugging unexplainable failures
+cargo nextest run -p atlas-runtime                        # All tests (excludes network tests)
+cargo nextest run -p atlas-runtime --run-ignored all      # Include network tests too
 ```
+
+**Network tests** are marked `#[ignore = "requires network"]` — excluded by default, run explicitly when needed.
 
 ---
 

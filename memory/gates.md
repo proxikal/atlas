@@ -180,7 +180,7 @@ cargo test -p atlas-runtime
 grep -c "^#\[test\]" crates/atlas-runtime/tests/<phase_test_file>.rs
 
 # Run phase test files (NOT full suite)
-cargo test -p atlas-runtime --test <phase_test_file>
+cargo nextest run -p atlas-runtime --test <phase_test_file>
 ```
 
 ### Outcome
@@ -204,12 +204,12 @@ cargo test -p atlas-runtime --test <phase_test_file>
 ### Validation
 
 ```bash
-# Interpreter tests (default)
-cargo test -p atlas-runtime
+# All tests (excludes network tests by default)
+cargo nextest run -p atlas-runtime
 
 # VM tests (if VM test mode exists)
 # NOTE: Currently tested via bytecode_compiler_integration tests
-cargo test -p atlas-runtime bytecode_compiler_integration
+cargo nextest run -p atlas-runtime --test bytecode_compiler_integration
 ```
 
 **Manual Verification:**
@@ -351,7 +351,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
 ```bash
 # Run phase-specific test files (NOT full suite)
-cargo test -p atlas-runtime --test <relevant_test_file>
+cargo nextest run -p atlas-runtime --test <relevant_test_file>
 
 # Clippy clean
 cargo clippy -p atlas-runtime -- -D warnings
@@ -360,7 +360,8 @@ cargo clippy -p atlas-runtime -- -D warnings
 git status
 ```
 
-**NOTE:** Full suite (`cargo test -p atlas-runtime`) is EMERGENCY ONLY.
+**Network tests** are `#[ignore = "requires network"]` — skipped by default.
+Run `cargo nextest run -p atlas-runtime --run-ignored all` to include them.
 Individual/per-file tests + cargo check + clippy catch regressions without wasting 15+ minutes.
 
 ### Outcome
@@ -378,7 +379,7 @@ Individual/per-file tests + cargo check + clippy catch regressions without wasti
 | **-1** | Sanity | `cargo clean && cargo check -p atlas-runtime` | ✅ Yes |
 | **0** | Declare | (declare workflow type) | ❌ No |
 | **1** | Implement | `cargo check -p atlas-runtime` | ✅ Yes |
-| **2** | Test | `cargo test -p atlas-runtime` | ✅ Yes |
+| **2** | Test | `cargo nextest run -p atlas-runtime --test <file>` | ✅ Yes |
 | **3** | Parity | (verify interpreter == VM) | ✅ Yes |
 | **4** | Quality | `cargo clippy -p atlas-runtime -- -D warnings` | ✅ Yes |
 | **5** | Document | (update memory/ if needed) | ✅ Yes |

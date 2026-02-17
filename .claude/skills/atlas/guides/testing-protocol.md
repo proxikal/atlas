@@ -2,7 +2,9 @@
 
 **🚫 STOP WASTING TIME AND DISK SPACE 🚫**
 
-**THE PROBLEM:** Running `cargo test -p atlas-runtime` compiles ALL 86 test files into separate binaries with debug symbols. Multiple runs = 20GB+ bloat. NEVER AGAIN.
+**THE PROBLEM:** Running `cargo test -p atlas-runtime` compiles ALL 124 test files into separate binaries with debug symbols. Multiple runs = 20GB+ bloat. NEVER AGAIN.
+
+**THE FIX:** Use `cargo nextest run` — installed, faster, smarter parallelism.
 
 ---
 
@@ -44,14 +46,23 @@ cargo test -p atlas-runtime test_exact_function_name -- --exact
 
 ## ABSOLUTE BANS (Cause 20GB Bloat)
 
-- 🚫 `cargo test` - Everything (1400+ tests)
-- 🚫 `cargo test -p atlas-runtime` - 86 test files = 20GB
+- 🚫 `cargo test` - Everything (compiles 124 binaries)
+- 🚫 `cargo test -p atlas-runtime` - 124 test files = 20GB+ bloat
 - 🚫 `cargo test -p atlas-runtime test_try` - Multiple tests (matches pattern)
-- 🚫 `cargo test --test file` - Whole test file
-- 🚫 Any test WITHOUT `-- --exact` flag
+- 🚫 Any `cargo test` WITHOUT `-- --exact` during development
 - 🚫 Re-running passing tests for "verification" (trust your fix!)
 - 🚫 Background test runs (tests finish in seconds)
 - 🚫 Running unrelated tests (only test what you changed)
+
+## Allowed Full-Suite Commands (nextest only)
+
+```bash
+cargo nextest run -p atlas-runtime                    # All tests (fast, no network)
+cargo nextest run -p atlas-runtime --test <file>      # Per-file validation
+cargo nextest run -p atlas-runtime --run-ignored all  # Include network tests
+```
+
+**Network tests** (`http_core_tests`, `http_advanced_tests`) are `#[ignore = "requires network"]` — excluded from all normal runs automatically.
 
 ---
 
