@@ -2,16 +2,15 @@
 //!
 //! Shared value representation for interpreter and VM.
 //! - Numbers, Bools, Null: Immediate values (stack-allocated)
-//! - Strings: Heap-allocated, reference-counted (Rc<String>), immutable
-//! - Arrays: Heap-allocated, reference-counted (Rc<RefCell<Vec<Value>>>), mutable
+//! - Strings: Heap-allocated, reference-counted (Arc<String>), immutable
+//! - Arrays: Heap-allocated, reference-counted (Arc<RefCell<Vec<Value>>>), mutable
 //! - Functions: Reference to bytecode or builtin
 //! - NativeFunction: Rust closures callable from Atlas
-//! - JsonValue: Isolated dynamic type for JSON interop (Rc<JsonValue>)
+//! - JsonValue: Isolated dynamic type for JSON interop (Arc<JsonValue>)
 
 use crate::json_value::JsonValue;
 use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -27,41 +26,41 @@ pub enum Value {
     /// Numeric value (IEEE 754 double-precision)
     Number(f64),
     /// String value (reference-counted, immutable)
-    String(Rc<String>),
+    String(Arc<String>),
     /// Boolean value
     Bool(bool),
     /// Null value
     Null,
     /// Array value (reference-counted, mutable through RefCell)
-    Array(Rc<RefCell<Vec<Value>>>),
+    Array(Arc<RefCell<Vec<Value>>>),
     /// Function reference (bytecode or builtin)
     Function(FunctionRef),
     /// Native function (Rust closure callable from Atlas)
     NativeFunction(NativeFn),
     /// JSON value (isolated dynamic type for JSON interop)
-    JsonValue(Rc<JsonValue>),
+    JsonValue(Arc<JsonValue>),
     /// Option value (Some(value) or None)
     Option(Option<Box<Value>>),
     /// Result value (Ok(value) or Err(error))
     Result(Result<Box<Value>, Box<Value>>),
     /// HashMap collection (key-value pairs)
-    HashMap(Rc<RefCell<crate::stdlib::collections::hashmap::AtlasHashMap>>),
+    HashMap(Arc<RefCell<crate::stdlib::collections::hashmap::AtlasHashMap>>),
     /// HashSet collection (unique values)
-    HashSet(Rc<RefCell<crate::stdlib::collections::hashset::AtlasHashSet>>),
+    HashSet(Arc<RefCell<crate::stdlib::collections::hashset::AtlasHashSet>>),
     /// Queue collection (FIFO)
-    Queue(Rc<RefCell<crate::stdlib::collections::queue::AtlasQueue>>),
+    Queue(Arc<RefCell<crate::stdlib::collections::queue::AtlasQueue>>),
     /// Stack collection (LIFO)
-    Stack(Rc<RefCell<crate::stdlib::collections::stack::AtlasStack>>),
+    Stack(Arc<RefCell<crate::stdlib::collections::stack::AtlasStack>>),
     /// Regular expression pattern
-    Regex(Rc<regex::Regex>),
+    Regex(Arc<regex::Regex>),
     /// DateTime value (UTC timezone)
-    DateTime(Rc<chrono::DateTime<chrono::Utc>>),
+    DateTime(Arc<chrono::DateTime<chrono::Utc>>),
     /// HTTP Request configuration
-    HttpRequest(Rc<crate::stdlib::http::HttpRequest>),
+    HttpRequest(Arc<crate::stdlib::http::HttpRequest>),
     /// HTTP Response data
-    HttpResponse(Rc<crate::stdlib::http::HttpResponse>),
+    HttpResponse(Arc<crate::stdlib::http::HttpResponse>),
     /// Future value (async computation)
-    Future(Rc<crate::async_runtime::AtlasFuture>),
+    Future(Arc<crate::async_runtime::AtlasFuture>),
 }
 
 /// Function reference
@@ -81,12 +80,12 @@ pub struct FunctionRef {
 impl Value {
     /// Create a new string value
     pub fn string(s: impl Into<String>) -> Self {
-        Value::String(Rc::new(s.into()))
+        Value::String(Arc::new(s.into()))
     }
 
     /// Create a new array value
     pub fn array(values: Vec<Value>) -> Self {
-        Value::Array(Rc::new(RefCell::new(values)))
+        Value::Array(Arc::new(RefCell::new(values)))
     }
 
     /// Get the type name of this value
@@ -137,7 +136,7 @@ impl PartialEq for Value {
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::Null, Value::Null) => true,
             // Arrays use reference identity, not deep equality
-            (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
+            (Value::Array(a), Value::Array(b)) => Arc::ptr_eq(a, b),
             // Functions are equal if they have the same name
             (Value::Function(a), Value::Function(b)) => a.name == b.name,
             // Native functions use pointer equality
@@ -149,21 +148,21 @@ impl PartialEq for Value {
             // Result uses deep equality
             (Value::Result(a), Value::Result(b)) => a == b,
             // HashMap uses reference identity (like arrays)
-            (Value::HashMap(a), Value::HashMap(b)) => Rc::ptr_eq(a, b),
+            (Value::HashMap(a), Value::HashMap(b)) => Arc::ptr_eq(a, b),
             // HashSet uses reference identity (like arrays)
-            (Value::HashSet(a), Value::HashSet(b)) => Rc::ptr_eq(a, b),
+            (Value::HashSet(a), Value::HashSet(b)) => Arc::ptr_eq(a, b),
             // Queue uses reference identity (like arrays)
-            (Value::Queue(a), Value::Queue(b)) => Rc::ptr_eq(a, b),
+            (Value::Queue(a), Value::Queue(b)) => Arc::ptr_eq(a, b),
             // Stack uses reference identity (like arrays)
-            (Value::Stack(a), Value::Stack(b)) => Rc::ptr_eq(a, b),
+            (Value::Stack(a), Value::Stack(b)) => Arc::ptr_eq(a, b),
             // Regex uses reference identity (like arrays)
-            (Value::Regex(a), Value::Regex(b)) => Rc::ptr_eq(a, b),
+            (Value::Regex(a), Value::Regex(b)) => Arc::ptr_eq(a, b),
             // DateTime uses value equality (compare timestamps)
             (Value::DateTime(a), Value::DateTime(b)) => a == b,
             // HttpRequest uses reference identity
-            (Value::HttpRequest(a), Value::HttpRequest(b)) => Rc::ptr_eq(a, b),
+            (Value::HttpRequest(a), Value::HttpRequest(b)) => Arc::ptr_eq(a, b),
             // HttpResponse uses reference identity
-            (Value::HttpResponse(a), Value::HttpResponse(b)) => Rc::ptr_eq(a, b),
+            (Value::HttpResponse(a), Value::HttpResponse(b)) => Arc::ptr_eq(a, b),
             _ => false,
         }
     }
