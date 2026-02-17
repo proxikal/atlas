@@ -1,3 +1,4 @@
+
 //! Type conversion between Rust and Atlas values
 //!
 //! Provides traits and implementations for bidirectional conversion:
@@ -22,7 +23,7 @@
 use crate::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 /// Error type for value conversion failures
 #[derive(Debug, Clone, PartialEq)]
@@ -150,7 +151,7 @@ impl FromAtlas for String {
 
 impl ToAtlas for String {
     fn to_atlas(self) -> Value {
-        Value::String(Rc::from(self))
+        Value::String(Arc::from(self))
     }
 }
 
@@ -220,7 +221,7 @@ impl<T: FromAtlas> FromAtlas for Vec<T> {
     fn from_atlas(value: &Value) -> Result<Self, ConversionError> {
         match value {
             Value::Array(arr) => {
-                let arr_borrow = arr.borrow();
+                let arr_borrow = arr.lock().unwrap();
                 let mut result = Vec::with_capacity(arr_borrow.len());
                 for (index, elem) in arr_borrow.iter().enumerate() {
                     match T::from_atlas(elem) {
@@ -248,7 +249,7 @@ impl<T: FromAtlas> FromAtlas for Vec<T> {
 impl<T: ToAtlas> ToAtlas for Vec<T> {
     fn to_atlas(self) -> Value {
         let values: Vec<Value> = self.into_iter().map(|v| v.to_atlas()).collect();
-        Value::Array(Rc::new(RefCell::new(values)))
+        Value::Array(Arc::new(Mutex::new(values)))
     }
 }
 
@@ -285,7 +286,7 @@ impl<T: ToAtlas> ToAtlas for HashMap<String, T> {
                 Value::String(s) => JV::String(s.to_string()),
                 Value::Array(arr) => {
                     // Convert array to JSON array
-                    let arr_borrow = arr.borrow();
+                    let arr_borrow = arr.lock().unwrap();
                     let json_arr: Vec<JV> = arr_borrow
                         .iter()
                         .map(|v| match v {
@@ -302,7 +303,7 @@ impl<T: ToAtlas> ToAtlas for HashMap<String, T> {
             };
             obj.insert(key, json_value);
         }
-        Value::JsonValue(Rc::new(JV::Object(obj)))
+        Value::JsonValue(Arc::new(JV::Object(obj)))
     }
 }
 
@@ -310,13 +311,13 @@ impl<T: ToAtlas> ToAtlas for HashMap<String, T> {
 
 impl ToAtlas for &str {
     fn to_atlas(self) -> Value {
-        Value::String(Rc::new(self.to_string()))
+        Value::String(Arc::new(self.to_string()))
     }
 }
 
 impl ToAtlas for &String {
     fn to_atlas(self) -> Value {
-        Value::String(Rc::new(self.clone()))
+        Value::String(Arc::new(self.clone()))
     }
 }
 
@@ -341,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_f64_from_atlas_wrong_type() {
-        let value = Value::String(Rc::new("hello".to_string()));
+        let value = Value::String(Arc::new("hello".to_string()));
         let result: Result<f64, _> = FromAtlas::from_atlas(&value);
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -363,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_string_from_atlas() {
-        let value = Value::String(Rc::new("hello".to_string()));
+        let value = Value::String(Arc::new("hello".to_string()));
         let result: String = FromAtlas::from_atlas(&value).unwrap();
         assert_eq!(result, "hello");
     }
@@ -456,7 +457,7 @@ mod tests {
         let value = vec.to_atlas();
         match value {
             Value::Array(arr) => {
-                let arr_borrow = arr.borrow();
+                let arr_borrow = arr.lock().unwrap();
                 assert_eq!(arr_borrow.len(), 3);
                 assert!(matches!(arr_borrow[0], Value::Number(n) if n == 1.0));
                 assert!(matches!(arr_borrow[1], Value::Number(n) if n == 2.0));
@@ -469,7 +470,7 @@ mod tests {
     #[test]
     fn test_vec_from_atlas() {
         let arr = vec![Value::Number(1.0), Value::Number(2.0), Value::Number(3.0)];
-        let value = Value::Array(Rc::new(RefCell::new(arr)));
+        let value = Value::Array(Arc::new(Mutex::new(arr)));
         let result: Vec<f64> = FromAtlas::from_atlas(&value).unwrap();
         assert_eq!(result, vec![1.0, 2.0, 3.0]);
     }
@@ -485,9 +486,9 @@ mod tests {
     fn test_vec_from_atlas_element_type_mismatch() {
         let arr = vec![
             Value::Number(1.0),
-            Value::String(Rc::new("oops".to_string())),
+            Value::String(Arc::new("oops".to_string())),
         ];
-        let value = Value::Array(Rc::new(RefCell::new(arr)));
+        let value = Value::Array(Arc::new(Mutex::new(arr)));
         let result: Result<Vec<f64>, _> = FromAtlas::from_atlas(&value);
         assert!(result.is_err());
         match result.unwrap_err() {

@@ -364,7 +364,7 @@ fn value_to_json(
                 });
             }
 
-            let arr = arr_ref.borrow();
+            let arr = arr_ref.lock().unwrap();
             let elements: Result<Vec<String>, RuntimeError> = arr
                 .iter()
                 .map(|v| value_to_json(v, visited, span))

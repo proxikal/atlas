@@ -10,7 +10,7 @@ use crate::stdlib::http::{HttpRequest, HttpResponse};
 use crate::value::{RuntimeError, Value};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
@@ -81,7 +81,7 @@ pub fn read_file_async(
     // Execute the async task
     block_on(task);
 
-    Ok(Value::Future(Rc::new(future)))
+    Ok(Value::Future(Arc::new(future)))
 }
 
 /// Write file asynchronously
@@ -175,7 +175,7 @@ pub fn write_file_async(
     };
 
     block_on(task);
-    Ok(Value::Future(Rc::new(future)))
+    Ok(Value::Future(Arc::new(future)))
 }
 
 /// Append to file asynchronously
@@ -280,7 +280,7 @@ pub fn append_file_async(
     };
 
     block_on(task);
-    Ok(Value::Future(Rc::new(future)))
+    Ok(Value::Future(Arc::new(future)))
 }
 
 // ============================================================================
@@ -406,11 +406,11 @@ pub fn http_send_async(args: &[Value], span: Span) -> Result<Value, RuntimeError
         };
 
         let http_response = HttpResponse::new(status, headers_map, body, final_url);
-        future_clone.resolve(Value::HttpResponse(Rc::new(http_response)));
+        future_clone.resolve(Value::HttpResponse(Arc::new(http_response)));
     };
 
     block_on(task);
-    Ok(Value::Future(Rc::new(future)))
+    Ok(Value::Future(Arc::new(future)))
 }
 
 /// GET request asynchronously
@@ -439,7 +439,7 @@ pub fn http_get_async(args: &[Value], span: Span) -> Result<Value, RuntimeError>
 
     // Create GET request
     let request = HttpRequest::new("GET".to_string(), url);
-    http_send_async(&[Value::HttpRequest(Rc::new(request))], span)
+    http_send_async(&[Value::HttpRequest(Arc::new(request))], span)
 }
 
 /// POST request asynchronously
@@ -478,7 +478,7 @@ pub fn http_post_async(args: &[Value], span: Span) -> Result<Value, RuntimeError
     };
 
     let request = HttpRequest::new("POST".to_string(), url).with_body(body);
-    http_send_async(&[Value::HttpRequest(Rc::new(request))], span)
+    http_send_async(&[Value::HttpRequest(Arc::new(request))], span)
 }
 
 /// PUT request asynchronously
@@ -517,7 +517,7 @@ pub fn http_put_async(args: &[Value], span: Span) -> Result<Value, RuntimeError>
     };
 
     let request = HttpRequest::new("PUT".to_string(), url).with_body(body);
-    http_send_async(&[Value::HttpRequest(Rc::new(request))], span)
+    http_send_async(&[Value::HttpRequest(Arc::new(request))], span)
 }
 
 /// DELETE request asynchronously
@@ -545,7 +545,7 @@ pub fn http_delete_async(args: &[Value], span: Span) -> Result<Value, RuntimeErr
     };
 
     let request = HttpRequest::new("DELETE".to_string(), url);
-    http_send_async(&[Value::HttpRequest(Rc::new(request))], span)
+    http_send_async(&[Value::HttpRequest(Arc::new(request))], span)
 }
 
 // ============================================================================

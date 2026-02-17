@@ -73,7 +73,7 @@ where
 {
     // Initialize LocalSet if needed
     LOCAL_SET.with(|cell| {
-        let mut local_set = cell.borrow_mut();
+        let mut local_set = cell.lock().unwrap();
         if local_set.is_none() {
             *local_set = Some(LocalSet::new());
         }

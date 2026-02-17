@@ -176,7 +176,7 @@ fn extract_number(value: &Value, span: crate::span::Span) -> Result<f64, Runtime
 /// Extract array from value
 fn extract_array(value: &Value, span: crate::span::Span) -> Result<Vec<Value>, RuntimeError> {
     match value {
-        Value::Array(arr) => Ok(arr.borrow().clone()),
+        Value::Array(arr) => Ok(arr.lock().unwrap().clone()),
         _ => Err(RuntimeError::InvalidStdlibArgument { span }),
     }
 }
@@ -846,7 +846,7 @@ pub fn print(value: &Value, span: crate::span::Span) -> Result<(), RuntimeError>
 pub fn len(value: &Value, span: crate::span::Span) -> Result<f64, RuntimeError> {
     match value {
         Value::String(s) => Ok(s.chars().count() as f64), // Unicode scalar count
-        Value::Array(arr) => Ok(arr.borrow().len() as f64),
+        Value::Array(arr) => Ok(arr.lock().unwrap().len() as f64),
         _ => Err(RuntimeError::InvalidStdlibArgument { span }),
     }
 }

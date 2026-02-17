@@ -131,6 +131,7 @@ impl Default for AtlasHashSet {
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
 use std::cell::RefCell;
+use std::sync::Mutex;
 use std::sync::Arc;
 
 /// Create a new empty HashSet
@@ -139,7 +140,7 @@ pub fn new_set(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
 
-    Ok(Value::HashSet(Arc::new(RefCell::new(AtlasHashSet::new()))))
+    Ok(Value::HashSet(Arc::new(Mutex::new(AtlasHashSet::new()))))
 }
 
 /// Create HashSet from array of hashable elements
@@ -156,7 +157,7 @@ pub fn from_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         set.insert(key);
     }
 
-    Ok(Value::HashSet(Arc::new(RefCell::new(set))))
+    Ok(Value::HashSet(Arc::new(Mutex::new(set))))
 }
 
 /// Add element to HashSet
@@ -168,7 +169,7 @@ pub fn add(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set = extract_hashset(&args[0], span)?;
     let key = HashKey::from_value(&args[1], span)?;
 
-    set.borrow_mut().insert(key);
+    set.lock().unwrap().insert(key);
     Ok(Value::Null)
 }
 
@@ -181,7 +182,7 @@ pub fn remove(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set = extract_hashset(&args[0], span)?;
     let key = HashKey::from_value(&args[1], span)?;
 
-    let existed = set.borrow_mut().remove(&key);
+    let existed = set.lock().unwrap().remove(&key);
     Ok(Value::Bool(existed))
 }
 
@@ -194,7 +195,7 @@ pub fn has(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set = extract_hashset(&args[0], span)?;
     let key = HashKey::from_value(&args[1], span)?;
 
-    let exists = set.borrow().contains(&key);
+    let exists = set.lock().unwrap().contains(&key);
     Ok(Value::Bool(exists))
 }
 
@@ -205,7 +206,7 @@ pub fn size(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let set = extract_hashset(&args[0], span)?;
-    let len = set.borrow().len();
+    let len = set.lock().unwrap().len();
     Ok(Value::Number(len as f64))
 }
 
@@ -216,7 +217,7 @@ pub fn is_empty(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let set = extract_hashset(&args[0], span)?;
-    let empty = set.borrow().is_empty();
+    let empty = set.lock().unwrap().is_empty();
     Ok(Value::Bool(empty))
 }
 
@@ -227,7 +228,7 @@ pub fn clear(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let set = extract_hashset(&args[0], span)?;
-    set.borrow_mut().clear();
+    set.lock().unwrap().clear();
     Ok(Value::Null)
 }
 
@@ -240,8 +241,8 @@ pub fn union(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_a = extract_hashset(&args[0], span)?;
     let set_b = extract_hashset(&args[1], span)?;
 
-    let result = set_a.borrow().union(&set_b.borrow());
-    Ok(Value::HashSet(Arc::new(RefCell::new(result))))
+    let result = set_a.lock().unwrap().union(&set_b.lock().unwrap());
+    Ok(Value::HashSet(Arc::new(Mutex::new(result))))
 }
 
 /// Intersection of two HashSets
@@ -253,8 +254,8 @@ pub fn intersection(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_a = extract_hashset(&args[0], span)?;
     let set_b = extract_hashset(&args[1], span)?;
 
-    let result = set_a.borrow().intersection(&set_b.borrow());
-    Ok(Value::HashSet(Arc::new(RefCell::new(result))))
+    let result = set_a.lock().unwrap().intersection(&set_b.lock().unwrap());
+    Ok(Value::HashSet(Arc::new(Mutex::new(result))))
 }
 
 /// Difference of two HashSets (elements in A but not in B)
@@ -266,8 +267,8 @@ pub fn difference(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_a = extract_hashset(&args[0], span)?;
     let set_b = extract_hashset(&args[1], span)?;
 
-    let result = set_a.borrow().difference(&set_b.borrow());
-    Ok(Value::HashSet(Arc::new(RefCell::new(result))))
+    let result = set_a.lock().unwrap().difference(&set_b.lock().unwrap());
+    Ok(Value::HashSet(Arc::new(Mutex::new(result))))
 }
 
 /// Symmetric difference of two HashSets (elements in exactly one set)
@@ -279,8 +280,8 @@ pub fn symmetric_difference(args: &[Value], span: Span) -> Result<Value, Runtime
     let set_a = extract_hashset(&args[0], span)?;
     let set_b = extract_hashset(&args[1], span)?;
 
-    let result = set_a.borrow().symmetric_difference(&set_b.borrow());
-    Ok(Value::HashSet(Arc::new(RefCell::new(result))))
+    let result = set_a.lock().unwrap().symmetric_difference(&set_b.lock().unwrap());
+    Ok(Value::HashSet(Arc::new(Mutex::new(result))))
 }
 
 /// Check if set A is subset of set B
@@ -292,7 +293,7 @@ pub fn is_subset(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_a = extract_hashset(&args[0], span)?;
     let set_b = extract_hashset(&args[1], span)?;
 
-    let is_sub = set_a.borrow().is_subset(&set_b.borrow());
+    let is_sub = set_a.lock().unwrap().is_subset(&set_b.lock().unwrap());
     Ok(Value::Bool(is_sub))
 }
 
@@ -305,7 +306,7 @@ pub fn is_superset(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_a = extract_hashset(&args[0], span)?;
     let set_b = extract_hashset(&args[1], span)?;
 
-    let is_super = set_a.borrow().is_superset(&set_b.borrow());
+    let is_super = set_a.lock().unwrap().is_superset(&set_b.lock().unwrap());
     Ok(Value::Bool(is_super))
 }
 
@@ -317,12 +318,12 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let set = extract_hashset(&args[0], span)?;
     let elements: Vec<Value> = set
-        .borrow()
+        .lock().unwrap()
         .to_vec()
         .into_iter()
         .map(|key| key.to_value())
         .collect();
-    Ok(Value::Array(Arc::new(RefCell::new(elements))))
+    Ok(Value::Array(Arc::new(Mutex::new(elements))))
 }
 
 // ============================================================================
@@ -330,7 +331,7 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 // ============================================================================
 
 /// Extract HashSet from value
-fn extract_hashset(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasHashSet>>, RuntimeError> {
+fn extract_hashset(value: &Value, span: Span) -> Result<Arc<Mutex<AtlasHashSet>>, RuntimeError> {
     match value {
         Value::HashSet(set) => Ok(Arc::clone(set)),
         _ => Err(RuntimeError::InvalidStdlibArgument { span }),
@@ -340,7 +341,7 @@ fn extract_hashset(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasHashSet
 /// Extract array from value
 fn extract_array(value: &Value, span: Span) -> Result<Vec<Value>, RuntimeError> {
     match value {
-        Value::Array(arr) => Ok(arr.borrow().clone()),
+        Value::Array(arr) => Ok(arr.lock().unwrap().clone()),
         _ => Err(RuntimeError::InvalidStdlibArgument { span }),
     }
 }

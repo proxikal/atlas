@@ -4,7 +4,7 @@
 //! introspection for nested structures.
 
 use crate::value::Value;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Value information for runtime introspection
 #[derive(Debug, Clone)]
@@ -27,7 +27,7 @@ impl ValueInfo {
     /// Get the length of arrays or strings
     pub fn get_length(&self) -> Option<usize> {
         match &self.value {
-            Value::Array(arr) => Some(arr.borrow().len()),
+            Value::Array(arr) => Some(arr.lock().unwrap().len()),
             Value::String(s) => Some(s.len()),
             _ => None,
         }
@@ -36,7 +36,7 @@ impl ValueInfo {
     /// Check if a collection is empty
     pub fn is_empty(&self) -> bool {
         match &self.value {
-            Value::Array(arr) => arr.borrow().is_empty(),
+            Value::Array(arr) => arr.lock().unwrap().is_empty(),
             Value::String(s) => s.is_empty(),
             _ => false,
         }
@@ -66,15 +66,15 @@ impl ValueInfo {
     /// Get array elements
     pub fn get_array_elements(&self) -> Option<Vec<Value>> {
         match &self.value {
-            Value::Array(arr) => Some(arr.borrow().clone()),
+            Value::Array(arr) => Some(arr.lock().unwrap().clone()),
             _ => None,
         }
     }
 
     /// Get string value
-    pub fn get_string(&self) -> Option<Rc<String>> {
+    pub fn get_string(&self) -> Option<Arc<String>> {
         match &self.value {
-            Value::String(s) => Some(Rc::clone(s)),
+            Value::String(s) => Some(Arc::clone(s)),
             _ => None,
         }
     }

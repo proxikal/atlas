@@ -152,10 +152,11 @@ impl Default for AtlasQueue {
 use crate::span::Span;
 use crate::value::RuntimeError;
 use std::cell::RefCell;
+use std::sync::Mutex;
 use std::sync::Arc;
 
 /// Extract queue from value
-fn extract_queue(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasQueue>>, RuntimeError> {
+fn extract_queue(value: &Value, span: Span) -> Result<Arc<Mutex<AtlasQueue>>, RuntimeError> {
     match value {
         Value::Queue(queue) => Ok(Arc::clone(queue)),
         _ => Err(RuntimeError::TypeError {
@@ -170,7 +171,7 @@ pub fn new_queue(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
-    Ok(Value::Queue(Arc::new(RefCell::new(AtlasQueue::new()))))
+    Ok(Value::Queue(Arc::new(Mutex::new(AtlasQueue::new()))))
 }
 
 /// Add element to back of queue
@@ -182,7 +183,7 @@ pub fn enqueue(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let queue = extract_queue(&args[0], span)?;
     let element = args[1].clone();
 
-    queue.borrow_mut().enqueue(element);
+    queue.lock().unwrap().enqueue(element);
     Ok(Value::Null)
 }
 
@@ -193,7 +194,7 @@ pub fn dequeue(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let queue = extract_queue(&args[0], span)?;
-    let value = queue.borrow_mut().dequeue();
+    let value = queue.lock().unwrap().dequeue();
 
     Ok(match value {
         Some(v) => Value::Option(Some(Box::new(v))),
@@ -208,7 +209,7 @@ pub fn peek(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let queue = extract_queue(&args[0], span)?;
-    let value = queue.borrow().peek().cloned();
+    let value = queue.lock().unwrap().peek().cloned();
 
     Ok(match value {
         Some(v) => Value::Option(Some(Box::new(v))),
@@ -223,7 +224,7 @@ pub fn size(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let queue = extract_queue(&args[0], span)?;
-    let len = queue.borrow().len();
+    let len = queue.lock().unwrap().len();
     Ok(Value::Number(len as f64))
 }
 
@@ -234,7 +235,7 @@ pub fn is_empty(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let queue = extract_queue(&args[0], span)?;
-    let empty = queue.borrow().is_empty();
+    let empty = queue.lock().unwrap().is_empty();
     Ok(Value::Bool(empty))
 }
 
@@ -245,7 +246,7 @@ pub fn clear(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let queue = extract_queue(&args[0], span)?;
-    queue.borrow_mut().clear();
+    queue.lock().unwrap().clear();
     Ok(Value::Null)
 }
 
@@ -256,8 +257,8 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let queue = extract_queue(&args[0], span)?;
-    let elements = queue.borrow().to_vec();
-    Ok(Value::Array(Arc::new(RefCell::new(elements))))
+    let elements = queue.lock().unwrap().to_vec();
+    Ok(Value::Array(Arc::new(Mutex::new(elements))))
 }
 
 #[cfg(test)]

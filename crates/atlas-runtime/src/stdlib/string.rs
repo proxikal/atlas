@@ -312,7 +312,7 @@ mod tests {
     fn test_split_basic() {
         let result = split("a,b,c", ",", Span::dummy()).unwrap();
         if let Value::Array(arr) = result {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 3);
             assert_eq!(borrowed[0], Value::string("a"));
             assert_eq!(borrowed[1], Value::string("b"));
@@ -326,7 +326,7 @@ mod tests {
     fn test_split_empty_separator() {
         let result = split("abc", "", Span::dummy()).unwrap();
         if let Value::Array(arr) = result {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 3);
             assert_eq!(borrowed[0], Value::string("a"));
             assert_eq!(borrowed[1], Value::string("b"));

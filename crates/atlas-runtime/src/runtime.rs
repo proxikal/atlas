@@ -1,3 +1,4 @@
+
 //! Atlas runtime API for embedding
 
 use crate::binder::Binder;
@@ -46,7 +47,7 @@ impl Atlas {
     /// ```
     pub fn new() -> Self {
         Self {
-            interpreter: RefCell::new(Interpreter::new()),
+            interpreter: Mutex::new(Interpreter::new()),
             security: SecurityContext::new(),
         }
     }
@@ -63,7 +64,7 @@ impl Atlas {
     /// ```
     pub fn new_with_security(security: SecurityContext) -> Self {
         Self {
-            interpreter: RefCell::new(Interpreter::new()),
+            interpreter: Mutex::new(Interpreter::new()),
             security,
         }
     }
@@ -133,7 +134,7 @@ impl Atlas {
         }
 
         // Interpret the AST
-        let mut interpreter = self.interpreter.borrow_mut();
+        let mut interpreter = self.interpreter.lock().unwrap();
 
         match interpreter.eval(&ast, &self.security) {
             Ok(value) => Ok(value),

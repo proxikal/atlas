@@ -10,9 +10,8 @@
 //! like `futureAll` and `futureRace` for working with multiple futures.
 
 use crate::value::Value;
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 /// Future state representing the status of an async computation
 #[derive(Clone)]
@@ -53,49 +52,49 @@ impl fmt::Debug for FutureState {
 /// ```
 #[derive(Clone)]
 pub struct AtlasFuture {
-    state: Rc<RefCell<FutureState>>,
+    state: Arc<Mutex<FutureState>>,
 }
 
 impl AtlasFuture {
     /// Create a new pending future
     pub fn new_pending() -> Self {
         Self {
-            state: Rc::new(RefCell::new(FutureState::Pending)),
+            state: Arc::new(Mutex::new(FutureState::Pending)),
         }
     }
 
     /// Create an immediately resolved future
     pub fn resolved(value: Value) -> Self {
         Self {
-            state: Rc::new(RefCell::new(FutureState::Resolved(value))),
+            state: Arc::new(Mutex::new(FutureState::Resolved(value))),
         }
     }
 
     /// Create an immediately rejected future
     pub fn rejected(error: Value) -> Self {
         Self {
-            state: Rc::new(RefCell::new(FutureState::Rejected(error))),
+            state: Arc::new(Mutex::new(FutureState::Rejected(error))),
         }
     }
 
     /// Check if the future is pending
     pub fn is_pending(&self) -> bool {
-        matches!(*self.state.borrow(), FutureState::Pending)
+        matches!(*self.state.lock().unwrap(), FutureState::Pending)
     }
 
     /// Check if the future is resolved
     pub fn is_resolved(&self) -> bool {
-        matches!(*self.state.borrow(), FutureState::Resolved(_))
+        matches!(*self.state.lock().unwrap(), FutureState::Resolved(_))
     }
 
     /// Check if the future is rejected
     pub fn is_rejected(&self) -> bool {
-        matches!(*self.state.borrow(), FutureState::Rejected(_))
+        matches!(*self.state.lock().unwrap(), FutureState::Rejected(_))
     }
 
     /// Get the current state (cloned)
     pub fn get_state(&self) -> FutureState {
-        self.state.borrow().clone()
+        self.state.lock().unwrap().clone()
     }
 
     /// Resolve the future with a value
@@ -103,7 +102,7 @@ impl AtlasFuture {
     /// This transitions the future from Pending to Resolved.
     /// If the future is already resolved or rejected, this is a no-op.
     pub fn resolve(&self, value: Value) {
-        let mut state = self.state.borrow_mut();
+        let mut state = self.state.lock().unwrap();
         if matches!(*state, FutureState::Pending) {
             *state = FutureState::Resolved(value);
         }
@@ -114,7 +113,7 @@ impl AtlasFuture {
     /// This transitions the future from Pending to Rejected.
     /// If the future is already resolved or rejected, this is a no-op.
     pub fn reject(&self, error: Value) {
-        let mut state = self.state.borrow_mut();
+        let mut state = self.state.lock().unwrap();
         if matches!(*state, FutureState::Pending) {
             *state = FutureState::Rejected(error);
         }
@@ -179,13 +178,13 @@ impl AtlasFuture {
 
 impl fmt::Debug for AtlasFuture {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Future({:?})", *self.state.borrow())
+        write!(f, "Future({:?})", *self.state.lock().unwrap())
     }
 }
 
 impl fmt::Display for AtlasFuture {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self.state.borrow() {
+        match *self.state.lock().unwrap() {
             FutureState::Pending => write!(f, "Future(pending)"),
             FutureState::Resolved(_) => write!(f, "Future(resolved)"),
             FutureState::Rejected(_) => write!(f, "Future(rejected)"),
@@ -383,7 +382,7 @@ mod tests {
 
         match result.get_state() {
             FutureState::Resolved(Value::Array(arr)) => {
-                let values = arr.borrow();
+                let values = arr.lock().unwrap();
                 assert_eq!(values.len(), 3);
             }
             _ => panic!("Expected array of results"),
@@ -414,7 +413,7 @@ mod tests {
 
         match result.get_state() {
             FutureState::Resolved(Value::Array(arr)) => {
-                assert_eq!(arr.borrow().len(), 0);
+                assert_eq!(arr.lock().unwrap().len(), 0);
             }
             _ => panic!("Expected empty array"),
         }

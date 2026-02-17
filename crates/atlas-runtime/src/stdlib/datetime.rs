@@ -10,6 +10,7 @@ use crate::value::Value;
 use chrono::{Datelike, Local, TimeZone, Timelike, Utc, Weekday};
 use chrono_tz::Tz;
 use std::cell::RefCell;
+use std::sync::Mutex;
 use std::sync::Arc;
 
 // ============================================================================
@@ -784,7 +785,7 @@ pub fn date_time_try_parse(args: &[Value], span: Span) -> Result<Value, RuntimeE
     let text = expect_string(&args[0], "text", span)?;
     let formats_array = expect_array(&args[1], "formats", span)?;
 
-    for format_value in formats_array.borrow().iter() {
+    for format_value in formats_array.lock().unwrap().iter() {
         if let Value::String(format_str) = format_value {
             if let Ok(naive_dt) = chrono::NaiveDateTime::parse_from_str(&text, format_str.as_ref())
             {
@@ -1108,7 +1109,7 @@ pub fn duration_format(args: &[Value], span: Span) -> Result<Value, RuntimeError
     }
 
     let duration_map = expect_hashmap(&args[0], "duration", span)?;
-    let map = duration_map.borrow();
+    let map = duration_map.lock().unwrap();
 
     let days = get_number_from_map(&map, "days", span)?;
     let hours = get_number_from_map(&map, "hours", span)?;
@@ -1196,7 +1197,7 @@ fn expect_array(
     value: &Value,
     arg_name: &str,
     span: Span,
-) -> Result<Arc<RefCell<Vec<Value>>>, RuntimeError> {
+) -> Result<Arc<Mutex<Vec<Value>>>, RuntimeError> {
     match value {
         Value::Array(arr) => Ok(arr.clone()),
         _ => Err(RuntimeError::TypeError {
@@ -1215,7 +1216,7 @@ fn expect_hashmap(
     value: &Value,
     arg_name: &str,
     span: Span,
-) -> Result<Arc<RefCell<AtlasHashMap>>, RuntimeError> {
+) -> Result<Arc<Mutex<AtlasHashMap>>, RuntimeError> {
     match value {
         Value::HashMap(map) => Ok(map.clone()),
         _ => Err(RuntimeError::TypeError {
@@ -1288,5 +1289,5 @@ fn create_duration_map(total_seconds: i64) -> Value {
         }),
     );
 
-    Value::HashMap(Arc::new(RefCell::new(map)))
+    Value::HashMap(Arc::new(Mutex::new(map)))
 }

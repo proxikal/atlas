@@ -149,10 +149,11 @@ impl Default for AtlasStack {
 use crate::span::Span;
 use crate::value::RuntimeError;
 use std::cell::RefCell;
+use std::sync::Mutex;
 use std::sync::Arc;
 
 /// Extract stack from value
-fn extract_stack(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasStack>>, RuntimeError> {
+fn extract_stack(value: &Value, span: Span) -> Result<Arc<Mutex<AtlasStack>>, RuntimeError> {
     match value {
         Value::Stack(stack) => Ok(Arc::clone(stack)),
         _ => Err(RuntimeError::TypeError {
@@ -167,7 +168,7 @@ pub fn new_stack(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
-    Ok(Value::Stack(Arc::new(RefCell::new(AtlasStack::new()))))
+    Ok(Value::Stack(Arc::new(Mutex::new(AtlasStack::new()))))
 }
 
 /// Push element onto top of stack
@@ -179,7 +180,7 @@ pub fn push(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let stack = extract_stack(&args[0], span)?;
     let element = args[1].clone();
 
-    stack.borrow_mut().push(element);
+    stack.lock().unwrap().push(element);
     Ok(Value::Null)
 }
 
@@ -190,7 +191,7 @@ pub fn pop(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let stack = extract_stack(&args[0], span)?;
-    let value = stack.borrow_mut().pop();
+    let value = stack.lock().unwrap().pop();
 
     Ok(match value {
         Some(v) => Value::Option(Some(Box::new(v))),
@@ -205,7 +206,7 @@ pub fn peek(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let stack = extract_stack(&args[0], span)?;
-    let value = stack.borrow().peek().cloned();
+    let value = stack.lock().unwrap().peek().cloned();
 
     Ok(match value {
         Some(v) => Value::Option(Some(Box::new(v))),
@@ -220,7 +221,7 @@ pub fn size(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let stack = extract_stack(&args[0], span)?;
-    let len = stack.borrow().len();
+    let len = stack.lock().unwrap().len();
     Ok(Value::Number(len as f64))
 }
 
@@ -231,7 +232,7 @@ pub fn is_empty(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let stack = extract_stack(&args[0], span)?;
-    let empty = stack.borrow().is_empty();
+    let empty = stack.lock().unwrap().is_empty();
     Ok(Value::Bool(empty))
 }
 
@@ -242,7 +243,7 @@ pub fn clear(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let stack = extract_stack(&args[0], span)?;
-    stack.borrow_mut().clear();
+    stack.lock().unwrap().clear();
     Ok(Value::Null)
 }
 
@@ -253,8 +254,8 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let stack = extract_stack(&args[0], span)?;
-    let elements = stack.borrow().to_vec();
-    Ok(Value::Array(Arc::new(RefCell::new(elements))))
+    let elements = stack.lock().unwrap().to_vec();
+    Ok(Value::Array(Arc::new(Mutex::new(elements))))
 }
 
 #[cfg(test)]

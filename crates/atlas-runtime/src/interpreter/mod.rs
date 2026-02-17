@@ -361,7 +361,7 @@ impl Interpreter {
                     return Err(RuntimeError::InvalidIndex { span });
                 }
 
-                let borrowed = arr.borrow();
+                let borrowed = arr.lock().unwrap();
                 if index_val >= 0 && (index_val as usize) < borrowed.len() {
                     Ok(borrowed[index_val as usize].clone())
                 } else {
@@ -393,7 +393,7 @@ impl Interpreter {
                     return Err(RuntimeError::InvalidIndex { span });
                 }
 
-                let mut borrowed = arr.borrow_mut();
+                let mut borrowed = arr.lock().unwrap();
                 if index_val >= 0 && (index_val as usize) < borrowed.len() {
                     borrowed[index_val as usize] = value;
                     Ok(())

@@ -3,7 +3,7 @@
 //! Shared value representation for interpreter and VM.
 //! - Numbers, Bools, Null: Immediate values (stack-allocated)
 //! - Strings: Heap-allocated, reference-counted (Arc<String>), immutable
-//! - Arrays: Heap-allocated, reference-counted (Arc<RefCell<Vec<Value>>>), mutable
+//! - Arrays: Heap-allocated, reference-counted (Arc<Mutex<Vec<Value>>>), mutable
 //! - Functions: Reference to bytecode or builtin
 //! - NativeFunction: Rust closures callable from Atlas
 //! - JsonValue: Isolated dynamic type for JSON interop (Arc<JsonValue>)
@@ -11,7 +11,7 @@
 use crate::json_value::JsonValue;
 use std::cell::RefCell;
 use std::fmt;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 /// Native function type - Rust closure callable from Atlas
@@ -31,8 +31,8 @@ pub enum Value {
     Bool(bool),
     /// Null value
     Null,
-    /// Array value (reference-counted, mutable through RefCell)
-    Array(Arc<RefCell<Vec<Value>>>),
+    /// Array value (reference-counted, mutable through Mutex)
+    Array(Arc<Mutex<Vec<Value>>>),
     /// Function reference (bytecode or builtin)
     Function(FunctionRef),
     /// Native function (Rust closure callable from Atlas)
@@ -44,13 +44,13 @@ pub enum Value {
     /// Result value (Ok(value) or Err(error))
     Result(Result<Box<Value>, Box<Value>>),
     /// HashMap collection (key-value pairs)
-    HashMap(Arc<RefCell<crate::stdlib::collections::hashmap::AtlasHashMap>>),
+    HashMap(Arc<Mutex<crate::stdlib::collections::hashmap::AtlasHashMap>>),
     /// HashSet collection (unique values)
-    HashSet(Arc<RefCell<crate::stdlib::collections::hashset::AtlasHashSet>>),
+    HashSet(Arc<Mutex<crate::stdlib::collections::hashset::AtlasHashSet>>),
     /// Queue collection (FIFO)
-    Queue(Arc<RefCell<crate::stdlib::collections::queue::AtlasQueue>>),
+    Queue(Arc<Mutex<crate::stdlib::collections::queue::AtlasQueue>>),
     /// Stack collection (LIFO)
-    Stack(Arc<RefCell<crate::stdlib::collections::stack::AtlasStack>>),
+    Stack(Arc<Mutex<crate::stdlib::collections::stack::AtlasStack>>),
     /// Regular expression pattern
     Regex(Arc<regex::Regex>),
     /// DateTime value (UTC timezone)
@@ -85,7 +85,7 @@ impl Value {
 
     /// Create a new array value
     pub fn array(values: Vec<Value>) -> Self {
-        Value::Array(Arc::new(RefCell::new(values)))
+        Value::Array(Arc::new(Mutex::new(values)))
     }
 
     /// Get the type name of this value
@@ -185,7 +185,7 @@ impl fmt::Display for Value {
             Value::Bool(b) => write!(f, "{}", b),
             Value::Null => write!(f, "null"),
             Value::Array(arr) => {
-                let borrowed = arr.borrow();
+                let borrowed = arr.lock().unwrap();
                 let elements: Vec<String> = borrowed.iter().map(|v| v.to_string()).collect();
                 write!(f, "[{}]", elements.join(", "))
             }
@@ -200,10 +200,10 @@ impl fmt::Display for Value {
                 Ok(val) => write!(f, "Ok({})", val),
                 Err(err) => write!(f, "Err({})", err),
             },
-            Value::HashMap(map) => write!(f, "<HashMap size={}>", map.borrow().len()),
-            Value::HashSet(set) => write!(f, "<HashSet size={}>", set.borrow().len()),
-            Value::Queue(queue) => write!(f, "<Queue size={}>", queue.borrow().len()),
-            Value::Stack(stack) => write!(f, "<Stack size={}>", stack.borrow().len()),
+            Value::HashMap(map) => write!(f, "<HashMap size={}>", map.lock().unwrap().len()),
+            Value::HashSet(set) => write!(f, "<HashSet size={}>", set.lock().unwrap().len()),
+            Value::Queue(queue) => write!(f, "<Queue size={}>", queue.lock().unwrap().len()),
+            Value::Stack(stack) => write!(f, "<Stack size={}>", stack.lock().unwrap().len()),
             Value::Regex(r) => write!(f, "<Regex /{}/>", r.as_str()),
             Value::DateTime(dt) => write!(f, "{}", dt.to_rfc3339()),
             Value::HttpRequest(req) => write!(f, "<HttpRequest {} {}>", req.method(), req.url()),
@@ -221,7 +221,7 @@ impl fmt::Debug for Value {
             Value::Bool(b) => write!(f, "Bool({})", b),
             Value::Null => write!(f, "Null"),
             Value::Array(arr) => {
-                let borrowed = arr.borrow();
+                let borrowed = arr.lock().unwrap();
                 write!(f, "Array({:?})", &*borrowed)
             }
             Value::Function(func) => write!(f, "Function({:?})", func),
@@ -229,10 +229,10 @@ impl fmt::Debug for Value {
             Value::JsonValue(json) => write!(f, "JsonValue({:?})", json),
             Value::Option(opt) => write!(f, "Option({:?})", opt),
             Value::Result(res) => write!(f, "Result({:?})", res),
-            Value::HashMap(map) => write!(f, "HashMap(size={})", map.borrow().len()),
-            Value::HashSet(set) => write!(f, "HashSet(size={})", set.borrow().len()),
-            Value::Queue(queue) => write!(f, "Queue(size={})", queue.borrow().len()),
-            Value::Stack(stack) => write!(f, "Stack(size={})", stack.borrow().len()),
+            Value::HashMap(map) => write!(f, "HashMap(size={})", map.lock().unwrap().len()),
+            Value::HashSet(set) => write!(f, "HashSet(size={})", set.lock().unwrap().len()),
+            Value::Queue(queue) => write!(f, "Queue(size={})", queue.lock().unwrap().len()),
+            Value::Stack(stack) => write!(f, "Stack(size={})", stack.lock().unwrap().len()),
             Value::Regex(r) => write!(f, "Regex(/{}/)", r.as_str()),
             Value::DateTime(dt) => write!(f, "DateTime({})", dt.to_rfc3339()),
             Value::HttpRequest(req) => write!(f, "HttpRequest({} {})", req.method(), req.url()),
@@ -494,12 +494,12 @@ mod tests {
 
         // Mutate through arr1
         if let Value::Array(a) = &arr1 {
-            a.borrow_mut()[0] = Value::Number(42.0);
+            a.lock().unwrap()[0] = Value::Number(42.0);
         }
 
         // Verify arr2 sees the change
         if let Value::Array(a) = &arr2 {
-            assert_eq!(a.borrow()[0], Value::Number(42.0));
+            assert_eq!(a.lock().unwrap()[0], Value::Number(42.0));
         }
     }
 

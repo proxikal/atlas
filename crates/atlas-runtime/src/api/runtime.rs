@@ -117,9 +117,9 @@ impl Runtime {
     pub fn new(mode: ExecutionMode) -> Self {
         Self {
             mode,
-            interpreter: RefCell::new(Interpreter::new()),
+            interpreter: Mutex::new(Interpreter::new()),
             security: SecurityContext::new(),
-            accumulated_bytecode: RefCell::new(crate::bytecode::Bytecode::new()),
+            accumulated_bytecode: Mutex::new(crate::bytecode::Bytecode::new()),
         }
     }
 
@@ -137,9 +137,9 @@ impl Runtime {
     pub fn new_with_security(mode: ExecutionMode, security: SecurityContext) -> Self {
         Self {
             mode,
-            interpreter: RefCell::new(Interpreter::new()),
+            interpreter: Mutex::new(Interpreter::new()),
             security,
-            accumulated_bytecode: RefCell::new(crate::bytecode::Bytecode::new()),
+            accumulated_bytecode: Mutex::new(crate::bytecode::Bytecode::new()),
         }
     }
 
@@ -168,9 +168,9 @@ impl Runtime {
 
         Self {
             mode,
-            interpreter: RefCell::new(Interpreter::new()),
+            interpreter: Mutex::new(Interpreter::new()),
             security,
-            accumulated_bytecode: RefCell::new(crate::bytecode::Bytecode::new()),
+            accumulated_bytecode: Mutex::new(crate::bytecode::Bytecode::new()),
         }
     }
 
@@ -248,7 +248,7 @@ impl Runtime {
         // Create initial symbol table with registered globals
         let mut initial_symbol_table = crate::symbol::SymbolTable::new();
         {
-            let interpreter = self.interpreter.borrow();
+            let interpreter = self.interpreter.lock().unwrap();
             for (name, value) in &interpreter.globals {
                 // Determine symbol kind based on value type
                 let kind = match value {
@@ -296,7 +296,7 @@ impl Runtime {
         // Execute based on mode
         match self.mode {
             ExecutionMode::Interpreter => {
-                let mut interpreter = self.interpreter.borrow_mut();
+                let mut interpreter = self.interpreter.lock().unwrap();
                 interpreter
                     .eval(&ast, &self.security)
                     .map_err(EvalError::RuntimeError)
@@ -310,13 +310,13 @@ impl Runtime {
                 };
 
                 // Get the start offset of new code (before appending)
-                let new_code_start = self.accumulated_bytecode.borrow().instructions.len();
+                let new_code_start = self.accumulated_bytecode.lock().unwrap().instructions.len();
 
                 // Append to accumulated bytecode
-                self.accumulated_bytecode.borrow_mut().append(new_bytecode);
+                self.accumulated_bytecode.lock().unwrap().append(new_bytecode);
 
                 // Create VM with the accumulated bytecode
-                let accumulated = self.accumulated_bytecode.borrow().clone();
+                let accumulated = self.accumulated_bytecode.lock().unwrap().clone();
                 let mut vm = VM::new(accumulated);
 
                 // Set IP to start of new code (so we don't re-execute old code)
@@ -324,7 +324,7 @@ impl Runtime {
 
                 // Copy interpreter globals to VM (for natives and other complex types)
                 {
-                    let interpreter = self.interpreter.borrow();
+                    let interpreter = self.interpreter.lock().unwrap();
                     for (name, value) in &interpreter.globals {
                         vm.set_global(name.clone(), value.clone());
                     }
@@ -338,7 +338,7 @@ impl Runtime {
 
                 // Copy VM globals back to interpreter for persistence across eval() calls
                 {
-                    let mut interpreter = self.interpreter.borrow_mut();
+                    let mut interpreter = self.interpreter.lock().unwrap();
                     for (name, value) in vm.get_globals() {
                         interpreter.globals.insert(name.clone(), value.clone());
                     }
@@ -418,7 +418,7 @@ impl Runtime {
     pub fn set_global(&mut self, name: &str, value: Value) {
         match self.mode {
             ExecutionMode::Interpreter => {
-                let mut interpreter = self.interpreter.borrow_mut();
+                let mut interpreter = self.interpreter.lock().unwrap();
                 interpreter.globals.insert(name.to_string(), value);
             }
             ExecutionMode::VM => {
@@ -428,7 +428,7 @@ impl Runtime {
                     value,
                     Value::NativeFunction(_) | Value::Array(_) | Value::Function(_)
                 ) {
-                    let mut interpreter = self.interpreter.borrow_mut();
+                    let mut interpreter = self.interpreter.lock().unwrap();
                     interpreter.globals.insert(name.to_string(), value);
                     return;
                 }
@@ -477,7 +477,7 @@ impl Runtime {
     pub fn get_global(&self, name: &str) -> Option<Value> {
         match self.mode {
             ExecutionMode::Interpreter => {
-                let interpreter = self.interpreter.borrow();
+                let interpreter = self.interpreter.lock().unwrap();
                 interpreter.globals.get(name).cloned()
             }
             ExecutionMode::VM => {

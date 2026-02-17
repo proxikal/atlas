@@ -4,6 +4,7 @@ use super::hash::HashKey;
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
 use std::cell::RefCell;
+use std::sync::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -92,7 +93,7 @@ impl Default for AtlasHashMap {
 }
 
 /// Extract array from value with better error message
-fn extract_array(value: &Value, span: Span) -> Result<Arc<RefCell<Vec<Value>>>, RuntimeError> {
+fn extract_array(value: &Value, span: Span) -> Result<Arc<Mutex<Vec<Value>>>, RuntimeError> {
     match value {
         Value::Array(arr) => Ok(Arc::clone(arr)),
         _ => Err(RuntimeError::InvalidStdlibArgument { span }),
@@ -100,7 +101,7 @@ fn extract_array(value: &Value, span: Span) -> Result<Arc<RefCell<Vec<Value>>>, 
 }
 
 /// Extract hashmap from value
-fn extract_hashmap(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasHashMap>>, RuntimeError> {
+fn extract_hashmap(value: &Value, span: Span) -> Result<Arc<Mutex<AtlasHashMap>>, RuntimeError> {
     match value {
         Value::HashMap(map) => Ok(Arc::clone(map)),
         _ => Err(RuntimeError::TypeError {
@@ -121,7 +122,7 @@ pub fn new_map(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
-    Ok(Value::HashMap(Arc::new(RefCell::new(AtlasHashMap::new()))))
+    Ok(Value::HashMap(Arc::new(Mutex::new(AtlasHashMap::new()))))
 }
 
 /// Create HashMap from array of [key, value] entries
@@ -139,9 +140,9 @@ pub fn from_entries(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let entries_array = extract_array(&args[0], span)?;
     let mut map = AtlasHashMap::new();
 
-    for entry in entries_array.borrow().iter() {
+    for entry in entries_array.lock().unwrap().iter() {
         let pair = extract_array(entry, span)?;
-        let pair_borrow = pair.borrow();
+        let pair_borrow = pair.lock().unwrap();
 
         if pair_borrow.len() != 2 {
             return Err(RuntimeError::TypeError {
@@ -155,7 +156,7 @@ pub fn from_entries(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         map.insert(key, value);
     }
 
-    Ok(Value::HashMap(Arc::new(RefCell::new(map))))
+    Ok(Value::HashMap(Arc::new(Mutex::new(map))))
 }
 
 /// Insert or update key-value pair
@@ -176,7 +177,7 @@ pub fn put(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let key = HashKey::from_value(&args[1], span)?;
     let value = args[2].clone();
 
-    map.borrow_mut().insert(key, value);
+    map.lock().unwrap().insert(key, value);
     Ok(Value::Null)
 }
 
@@ -196,7 +197,7 @@ pub fn get(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let map = extract_hashmap(&args[0], span)?;
     let key = HashKey::from_value(&args[1], span)?;
 
-    let value = map.borrow().get(&key).cloned();
+    let value = map.lock().unwrap().get(&key).cloned();
     Ok(match value {
         Some(v) => Value::Option(Some(Box::new(v))),
         None => Value::Option(None),
@@ -219,7 +220,7 @@ pub fn remove(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let map = extract_hashmap(&args[0], span)?;
     let key = HashKey::from_value(&args[1], span)?;
 
-    let removed = map.borrow_mut().remove(&key);
+    let removed = map.lock().unwrap().remove(&key);
     Ok(match removed {
         Some(v) => Value::Option(Some(Box::new(v))),
         None => Value::Option(None),
@@ -242,7 +243,7 @@ pub fn has(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let map = extract_hashmap(&args[0], span)?;
     let key = HashKey::from_value(&args[1], span)?;
 
-    let exists = map.borrow().contains_key(&key);
+    let exists = map.lock().unwrap().contains_key(&key);
     Ok(Value::Bool(exists))
 }
 
@@ -259,7 +260,7 @@ pub fn size(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let map = extract_hashmap(&args[0], span)?;
-    let len = map.borrow().len();
+    let len = map.lock().unwrap().len();
     Ok(Value::Number(len as f64))
 }
 
@@ -276,7 +277,7 @@ pub fn is_empty(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let map = extract_hashmap(&args[0], span)?;
-    let empty = map.borrow().is_empty();
+    let empty = map.lock().unwrap().is_empty();
     Ok(Value::Bool(empty))
 }
 
@@ -293,7 +294,7 @@ pub fn clear(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let map = extract_hashmap(&args[0], span)?;
-    map.borrow_mut().clear();
+    map.lock().unwrap().clear();
     Ok(Value::Null)
 }
 
@@ -311,12 +312,12 @@ pub fn keys(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let map = extract_hashmap(&args[0], span)?;
     let keys: Vec<Value> = map
-        .borrow()
+        .lock().unwrap()
         .keys()
         .into_iter()
         .map(|k| k.to_value())
         .collect();
-    Ok(Value::Array(Arc::new(RefCell::new(keys))))
+    Ok(Value::Array(Arc::new(Mutex::new(keys))))
 }
 
 /// Get all values as array
@@ -333,10 +334,10 @@ pub fn values(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let map = extract_hashmap(&args[0], span)?;
     let vals = {
-        let borrowed = map.borrow();
+        let borrowed = map.lock().unwrap();
         borrowed.values()
     };
-    Ok(Value::Array(Arc::new(RefCell::new(vals))))
+    Ok(Value::Array(Arc::new(Mutex::new(vals))))
 }
 
 /// Get all entries as array of [key, value] pairs
@@ -353,15 +354,15 @@ pub fn entries(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let map = extract_hashmap(&args[0], span)?;
     let entries: Vec<Value> = map
-        .borrow()
+        .lock().unwrap()
         .entries()
         .into_iter()
         .map(|(k, v)| {
             let pair = vec![k.to_value(), v];
-            Value::Array(Arc::new(RefCell::new(pair)))
+            Value::Array(Arc::new(Mutex::new(pair)))
         })
         .collect();
-    Ok(Value::Array(Arc::new(RefCell::new(entries))))
+    Ok(Value::Array(Arc::new(Mutex::new(entries))))
 }
 
 #[cfg(test)]
@@ -391,7 +392,7 @@ mod tests {
         let result = new_map(&[], Span::dummy()).unwrap();
         match result {
             Value::HashMap(map) => {
-                assert_eq!(map.borrow().len(), 0);
+                assert_eq!(map.lock().unwrap().len(), 0);
             }
             _ => panic!("Expected HashMap"),
         }

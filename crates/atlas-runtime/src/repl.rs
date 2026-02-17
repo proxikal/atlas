@@ -414,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_string_values() {
-        use std::rc::Rc;
+        use std::sync::Arc;
         let mut repl = ReplCore::new();
 
         let result = repl.eval_line("\"hello\";");
@@ -425,7 +425,7 @@ mod tests {
         );
         assert_eq!(
             result.value.unwrap(),
-            Value::String(Rc::new("hello".to_string()))
+            Value::String(Arc::new("hello".to_string()))
         );
 
         let result = repl.eval_line("\"hello\" + \" world\";");
@@ -436,7 +436,7 @@ mod tests {
         );
         assert_eq!(
             result.value.unwrap(),
-            Value::String(Rc::new("hello world".to_string()))
+            Value::String(Arc::new("hello world".to_string()))
         );
     }
 

@@ -1,3 +1,4 @@
+
 //! Regular expression operations
 //!
 //! This module provides regex pattern matching, searching, and capture group extraction
@@ -19,7 +20,7 @@ use crate::stdlib::collections::hashmap::AtlasHashMap;
 use crate::value::{RuntimeError, Value};
 use regex::{Regex, RegexBuilder};
 use std::cell::RefCell;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 // ============================================================================
 // Construction Functions
@@ -217,7 +218,7 @@ pub fn regex_find(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
             Value::Number(mat.end() as f64),
         );
 
-        let hashmap_value = Value::HashMap(Arc::new(RefCell::new(map)));
+        let hashmap_value = Value::HashMap(Arc::new(Mutex::new(map)));
         Ok(Value::Option(Some(Box::new(hashmap_value))))
     } else {
         Ok(Value::Option(None))
@@ -265,7 +266,7 @@ pub fn regex_find_all(args: &[Value], span: Span) -> Result<Value, RuntimeError>
             Value::Number(mat.end() as f64),
         );
 
-        matches.push(Value::HashMap(Arc::new(RefCell::new(map))));
+        matches.push(Value::HashMap(Arc::new(Mutex::new(map))));
     }
 
     Ok(Value::array(matches))
@@ -356,7 +357,7 @@ pub fn regex_captures_named(args: &[Value], span: Span) -> Result<Value, Runtime
             }
         }
 
-        let hashmap_value = Value::HashMap(Arc::new(RefCell::new(map)));
+        let hashmap_value = Value::HashMap(Arc::new(Mutex::new(map)));
         Ok(Value::Option(Some(Box::new(hashmap_value))))
     } else {
         Ok(Value::Option(None))

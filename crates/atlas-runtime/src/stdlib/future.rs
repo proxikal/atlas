@@ -13,7 +13,7 @@
 use crate::async_runtime::{future_all, future_race, AtlasFuture};
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Create a resolved future with a value
 ///
@@ -24,7 +24,7 @@ pub fn future_resolve(args: &[Value], span: Span) -> Result<Value, RuntimeError>
     }
 
     let future = AtlasFuture::resolved(args[0].clone());
-    Ok(Value::Future(Rc::new(future)))
+    Ok(Value::Future(Arc::new(future)))
 }
 
 /// Create a rejected future with an error
@@ -36,7 +36,7 @@ pub fn future_reject(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
     }
 
     let future = AtlasFuture::rejected(args[0].clone());
-    Ok(Value::Future(Rc::new(future)))
+    Ok(Value::Future(Arc::new(future)))
 }
 
 /// Create a new pending future
@@ -52,7 +52,7 @@ pub fn future_new(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let future = AtlasFuture::new_pending();
-    Ok(Value::Future(Rc::new(future)))
+    Ok(Value::Future(Arc::new(future)))
 }
 
 /// Check if a future is pending
@@ -193,7 +193,7 @@ pub fn future_all_fn(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
 
     // Extract futures from array
     let mut futures = Vec::new();
-    for value in futures_array.borrow().iter() {
+    for value in futures_array.lock().unwrap().iter() {
         match value {
             Value::Future(f) => futures.push((**f).clone()),
             _ => {
@@ -207,7 +207,7 @@ pub fn future_all_fn(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
 
     // Combine futures
     let result = future_all(futures);
-    Ok(Value::Future(Rc::new(result)))
+    Ok(Value::Future(Arc::new(result)))
 }
 
 /// Return the first future to complete
@@ -233,7 +233,7 @@ pub fn future_race_fn(args: &[Value], span: Span) -> Result<Value, RuntimeError>
 
     // Extract futures from array
     let mut futures = Vec::new();
-    for value in futures_array.borrow().iter() {
+    for value in futures_array.lock().unwrap().iter() {
         match value {
             Value::Future(f) => futures.push((**f).clone()),
             _ => {
@@ -247,7 +247,7 @@ pub fn future_race_fn(args: &[Value], span: Span) -> Result<Value, RuntimeError>
 
     // Race futures
     let result = future_race(futures);
-    Ok(Value::Future(Rc::new(result)))
+    Ok(Value::Future(Arc::new(result)))
 }
 
 #[cfg(test)]

@@ -86,7 +86,7 @@ pub fn flatten(arr: &[Value], _span: Span) -> Result<Value, RuntimeError> {
     for elem in arr {
         match elem {
             Value::Array(nested) => {
-                result.extend(nested.borrow().clone());
+                result.extend(nested.lock().unwrap().clone());
             }
             other => {
                 result.push(other.clone());
@@ -188,7 +188,7 @@ mod tests {
         // Should return [removed_element, new_array]
         match result {
             Value::Array(result_arr) => {
-                let borrowed = result_arr.borrow();
+                let borrowed = result_arr.lock().unwrap();
                 assert_eq!(borrowed.len(), 2);
                 assert_eq!(borrowed[0], Value::Number(3.0)); // Removed element
                                                              // borrowed[1] is the new array
@@ -211,7 +211,7 @@ mod tests {
         // Should return [removed_element, new_array]
         match result {
             Value::Array(result_arr) => {
-                let borrowed = result_arr.borrow();
+                let borrowed = result_arr.lock().unwrap();
                 assert_eq!(borrowed.len(), 2);
                 assert_eq!(borrowed[0], Value::Number(1.0)); // Removed element
             }
@@ -226,7 +226,7 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.borrow();
+                let borrowed = new_arr.lock().unwrap();
                 assert_eq!(borrowed.len(), 3);
                 assert_eq!(borrowed[0], Value::Number(1.0));
             }
@@ -241,7 +241,7 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.borrow();
+                let borrowed = new_arr.lock().unwrap();
                 assert_eq!(borrowed[0], Value::Number(3.0));
                 assert_eq!(borrowed[2], Value::Number(1.0));
             }
@@ -257,7 +257,7 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.borrow();
+                let borrowed = new_arr.lock().unwrap();
                 assert_eq!(borrowed.len(), 4);
             }
             _ => panic!("Expected array"),
@@ -272,7 +272,7 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.borrow();
+                let borrowed = new_arr.lock().unwrap();
                 assert_eq!(borrowed.len(), 4);
             }
             _ => panic!("Expected array"),
@@ -320,7 +320,7 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.borrow();
+                let borrowed = new_arr.lock().unwrap();
                 assert_eq!(borrowed.len(), 3);
                 assert_eq!(borrowed[0], Value::Number(1.0));
             }

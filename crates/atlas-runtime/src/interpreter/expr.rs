@@ -428,7 +428,7 @@ impl Interpreter {
                         return Err(RuntimeError::InvalidIndex { span: index.span });
                     }
 
-                    let borrowed = arr.borrow();
+                    let borrowed = arr.lock().unwrap();
                     if index_val >= 0 && (index_val as usize) < borrowed.len() {
                         Ok(borrowed[index_val as usize].clone())
                     } else {
@@ -617,7 +617,7 @@ impl Interpreter {
         value: &Value,
     ) -> Option<Vec<(String, Value)>> {
         if let Value::Array(arr) = value {
-            let arr_borrow = arr.borrow();
+            let arr_borrow = arr.lock().unwrap();
 
             // Array patterns must have exact length match
             if arr_borrow.len() != pattern_elements.len() {
@@ -670,7 +670,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "map() first argument must be array".to_string(),
@@ -713,7 +713,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "filter() first argument must be array".to_string(),
@@ -764,7 +764,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "reduce() first argument must be array".to_string(),
@@ -805,7 +805,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "forEach() first argument must be array".to_string(),
@@ -845,7 +845,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "find() first argument must be array".to_string(),
@@ -895,7 +895,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "findIndex() first argument must be array".to_string(),
@@ -945,7 +945,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "flatMap() first argument must be array".to_string(),
@@ -969,7 +969,7 @@ impl Interpreter {
             let callback_result = self.call_value(callback, vec![elem], span)?;
             match callback_result {
                 Value::Array(nested) => {
-                    result.extend(nested.borrow().clone());
+                    result.extend(nested.lock().unwrap().clone());
                 }
                 other => result.push(other),
             }
@@ -992,7 +992,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "some() first argument must be array".to_string(),
@@ -1042,7 +1042,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "every() first argument must be array".to_string(),
@@ -1094,7 +1094,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sort() first argument must be array".to_string(),
@@ -1156,7 +1156,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sortBy() first argument must be array".to_string(),
@@ -1368,7 +1368,7 @@ impl Interpreter {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.borrow().entries(),
+            Value::HashMap(m) => m.lock().unwrap().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapForEach() first argument must be HashMap".to_string(),
@@ -1409,7 +1409,7 @@ impl Interpreter {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.borrow().entries(),
+            Value::HashMap(m) => m.lock().unwrap().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapMap() first argument must be HashMap".to_string(),
@@ -1436,7 +1436,7 @@ impl Interpreter {
         }
 
         Ok(Value::HashMap(std::sync::Arc::new(
-            std::cell::RefCell::new(result_map),
+            std::sync::Mutex::new(result_map),
         )))
     }
 
@@ -1454,7 +1454,7 @@ impl Interpreter {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.borrow().entries(),
+            Value::HashMap(m) => m.lock().unwrap().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapFilter() first argument must be HashMap".to_string(),
@@ -1493,7 +1493,7 @@ impl Interpreter {
         }
 
         Ok(Value::HashMap(std::sync::Arc::new(
-            std::cell::RefCell::new(result_map),
+            std::sync::Mutex::new(result_map),
         )))
     }
 
@@ -1511,7 +1511,7 @@ impl Interpreter {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.borrow().to_vec(),
+            Value::HashSet(s) => s.lock().unwrap().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetForEach() first argument must be HashSet".to_string(),
@@ -1552,7 +1552,7 @@ impl Interpreter {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.borrow().to_vec(),
+            Value::HashSet(s) => s.lock().unwrap().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetMap() first argument must be HashSet".to_string(),
@@ -1595,7 +1595,7 @@ impl Interpreter {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.borrow().to_vec(),
+            Value::HashSet(s) => s.lock().unwrap().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetFilter() first argument must be HashSet".to_string(),
@@ -1633,7 +1633,7 @@ impl Interpreter {
         }
 
         Ok(Value::HashSet(std::sync::Arc::new(
-            std::cell::RefCell::new(result_set),
+            std::sync::Mutex::new(result_set),
         )))
     }
 
@@ -1733,7 +1733,7 @@ impl Interpreter {
             }
 
             let match_value =
-                Value::HashMap(std::sync::Arc::new(std::cell::RefCell::new(match_map)));
+                Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
 
             // Call callback with match data
             let replacement_value = self.call_value(callback, vec![match_value], span)?;
@@ -1869,7 +1869,7 @@ impl Interpreter {
             }
 
             let match_value =
-                Value::HashMap(std::sync::Arc::new(std::cell::RefCell::new(match_map)));
+                Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
 
             // Call callback with match data
             let replacement_value = self.call_value(callback, vec![match_value], span)?;

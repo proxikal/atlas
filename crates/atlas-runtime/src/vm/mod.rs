@@ -19,7 +19,7 @@ use crate::span::Span;
 use crate::value::{RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 /// Virtual machine state
 pub struct VM {
@@ -763,7 +763,7 @@ impl VM {
                         elements.push(self.pop());
                     }
                     elements.reverse(); // Stack is LIFO, so reverse to get correct order
-                    self.push(Value::Array(Arc::new(RefCell::new(elements))));
+                    self.push(Value::Array(Arc::new(Mutex::new(elements))));
                 }
                 Opcode::GetIndex => {
                     let index_val = self.pop();
@@ -780,7 +780,7 @@ impl VM {
                                     });
                                 }
                                 let idx = index as usize;
-                                let borrowed = arr.borrow();
+                                let borrowed = arr.lock().unwrap();
                                 if idx >= borrowed.len() {
                                     return Err(RuntimeError::OutOfBounds {
                                         span: self
@@ -835,7 +835,7 @@ impl VM {
                                 });
                             }
                             let idx = index as usize;
-                            let mut borrowed = arr.borrow_mut();
+                            let mut borrowed = arr.lock().unwrap();
                             if idx >= borrowed.len() {
                                 return Err(RuntimeError::OutOfBounds {
                                     span: self
@@ -927,7 +927,7 @@ impl VM {
                     let value = self.pop();
                     match value {
                         Value::Array(arr) => {
-                            let len = arr.borrow().len();
+                            let len = arr.lock().unwrap().len();
                             self.push(Value::Number(len as f64));
                         }
                         _ => {
@@ -1110,7 +1110,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "map() first argument must be array".to_string(),
@@ -1143,7 +1143,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "filter() first argument must be array".to_string(),
@@ -1185,7 +1185,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "reduce() first argument must be array".to_string(),
@@ -1217,7 +1217,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "forEach() first argument must be array".to_string(),
@@ -1247,7 +1247,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "find() first argument must be array".to_string(),
@@ -1287,7 +1287,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "findIndex() first argument must be array".to_string(),
@@ -1327,7 +1327,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "flatMap() first argument must be array".to_string(),
@@ -1343,7 +1343,7 @@ impl VM {
             let callback_result = self.vm_call_function_value(callback, vec![elem], span)?;
             match callback_result {
                 Value::Array(nested) => {
-                    result.extend(nested.borrow().clone());
+                    result.extend(nested.lock().unwrap().clone());
                 }
                 other => result.push(other),
             }
@@ -1365,7 +1365,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "some() first argument must be array".to_string(),
@@ -1405,7 +1405,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "every() first argument must be array".to_string(),
@@ -1445,7 +1445,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sort() first argument must be array".to_string(),
@@ -1498,7 +1498,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.borrow().clone(),
+            Value::Array(a) => a.lock().unwrap().clone(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sortBy() first argument must be array".to_string(),
@@ -1686,7 +1686,7 @@ impl VM {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.borrow().entries(),
+            Value::HashMap(m) => m.lock().unwrap().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapForEach() first argument must be HashMap".to_string(),
@@ -1717,7 +1717,7 @@ impl VM {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.borrow().entries(),
+            Value::HashMap(m) => m.lock().unwrap().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapMap() first argument must be HashMap".to_string(),
@@ -1736,7 +1736,7 @@ impl VM {
         }
 
         Ok(Value::HashMap(std::sync::Arc::new(
-            std::cell::RefCell::new(result_map),
+            std::sync::Mutex::new(result_map),
         )))
     }
 
@@ -1753,7 +1753,7 @@ impl VM {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.borrow().entries(),
+            Value::HashMap(m) => m.lock().unwrap().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapFilter() first argument must be HashMap".to_string(),
@@ -1786,7 +1786,7 @@ impl VM {
         }
 
         Ok(Value::HashMap(std::sync::Arc::new(
-            std::cell::RefCell::new(result_map),
+            std::sync::Mutex::new(result_map),
         )))
     }
 
@@ -1803,7 +1803,7 @@ impl VM {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.borrow().to_vec(),
+            Value::HashSet(s) => s.lock().unwrap().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetForEach() first argument must be HashSet".to_string(),
@@ -1834,7 +1834,7 @@ impl VM {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.borrow().to_vec(),
+            Value::HashSet(s) => s.lock().unwrap().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetMap() first argument must be HashSet".to_string(),
@@ -1868,7 +1868,7 @@ impl VM {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.borrow().to_vec(),
+            Value::HashSet(s) => s.lock().unwrap().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetFilter() first argument must be HashSet".to_string(),
@@ -1898,7 +1898,7 @@ impl VM {
         }
 
         Ok(Value::HashSet(std::sync::Arc::new(
-            std::cell::RefCell::new(result_set),
+            std::sync::Mutex::new(result_set),
         )))
     }
 
@@ -1990,7 +1990,7 @@ impl VM {
             }
 
             let match_value =
-                Value::HashMap(std::sync::Arc::new(std::cell::RefCell::new(match_map)));
+                Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
 
             // Call callback with match data
             let replacement_value =
@@ -2119,7 +2119,7 @@ impl VM {
             }
 
             let match_value =
-                Value::HashMap(std::sync::Arc::new(std::cell::RefCell::new(match_map)));
+                Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
 
             // Call callback with match data
             let replacement_value =
@@ -2318,7 +2318,7 @@ mod tests {
     fn test_vm_array_literal() {
         let result = execute_source("[1, 2, 3];").unwrap();
         if let Some(Value::Array(arr)) = result {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 3);
             assert_eq!(borrowed[0], Value::Number(1.0));
             assert_eq!(borrowed[1], Value::Number(2.0));
