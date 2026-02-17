@@ -163,6 +163,10 @@ pub fn is_builtin(name: &str) -> bool {
             // Compression - tar
             | "tarCreate" | "tarCreateGz" | "tarExtract" | "tarExtractGz"
             | "tarList" | "tarContains"
+            // Compression - zip
+            | "zipCreate" | "zipCreateWithComment" | "zipExtract" | "zipExtractFiles"
+            | "zipList" | "zipContains" | "zipCompressionRatio"
+            | "zipAddFile" | "zipValidate" | "zipComment"
     )
 }
 
@@ -1342,6 +1346,80 @@ pub fn call_builtin(
                 return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
             }
             compression::tar::tar_contains_file(&args[0], &args[1], call_span)
+        }
+
+        // Compression - zip
+        "zipCreate" => {
+            if args.is_empty() || args.len() > 3 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let level_opt = args.get(2);
+            compression::zip::zip_create(&args[0], &args[1], level_opt, call_span)
+        }
+        "zipCreateWithComment" => {
+            if args.len() < 3 || args.len() > 4 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let level_opt = args.get(3);
+            compression::zip::zip_create_with_comment(
+                &args[0], &args[1], &args[2], level_opt, call_span,
+            )
+        }
+        "zipExtract" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::zip::zip_extract(&args[0], &args[1], call_span)
+        }
+        "zipExtractFiles" => {
+            if args.len() != 3 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::zip::zip_extract_files(&args[0], &args[1], &args[2], call_span)
+        }
+        "zipList" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::zip::zip_list(&args[0], call_span)
+        }
+        "zipContains" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::zip::zip_contains_file(&args[0], &args[1], call_span)
+        }
+        "zipCompressionRatio" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::zip::zip_compression_ratio(&args[0], call_span)
+        }
+        "zipAddFile" => {
+            if args.len() < 2 || args.len() > 4 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let entry_name_opt = args.get(2);
+            let level_opt = args.get(3);
+            compression::zip::zip_add_file_fn(
+                &args[0],
+                &args[1],
+                entry_name_opt,
+                level_opt,
+                call_span,
+            )
+        }
+        "zipValidate" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::zip::zip_validate_fn(&args[0], call_span)
+        }
+        "zipComment" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::zip::zip_comment_fn(&args[0], call_span)
         }
 
         _ => Err(RuntimeError::UnknownFunction {
