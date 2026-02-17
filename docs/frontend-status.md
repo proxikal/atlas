@@ -34,6 +34,15 @@
   - Error code registry verification
   - Warning system integration
 
+- [x] **Phase 04: Source Maps**
+  - Source Map v3 specification compliant (JSON + VLQ encoding)
+  - `sourcemap/` module: `vlq.rs`, `encoder.rs`, `mod.rs`
+  - SourceMapBuilder for incremental construction
+  - Bytecode → original source position lookup
+  - Inline source map support (base64 data URL)
+  - Debugger integration (works alongside existing debugger::source_map)
+  - 57 tests (VLQ, builder, JSON roundtrip, compiler integration, edge cases)
+
 ---
 
 ## Error Code System
@@ -212,11 +221,10 @@ error[AT0001]: Type mismatch
 
 ## Future Enhancements (v0.2+)
 
-- Source maps (Phase 04) — track original positions through transformations
 - Incremental compilation (Phase 05) — cache and reuse compilation artifacts
 - LSP integration — format-on-save, format-on-type
 - Formatter plugins — custom formatting rules
 
 ---
 
-**Conclusion:** The Atlas frontend infrastructure is production-ready. All three phases are complete with comprehensive testing, consistent error codes, configurable warnings, and a full-featured code formatter. The 180 integration tests validate cross-feature interactions and full pipeline correctness.
+**Conclusion:** The Atlas frontend infrastructure is production-ready. Four of five phases are complete with comprehensive testing, consistent error codes, configurable warnings, a full-featured code formatter, and standard source map generation. 237 integration tests validate cross-feature interactions and full pipeline correctness.

@@ -235,7 +235,7 @@ STATUS.md changes:
 - `Atlas-SPEC.md` - Spec index with routing table
 
 **History:**
-- `status/history/v0.1-summary.md` - v0.1 completion details
+- v0.1: 93 phases complete, 1391 tests, 100% parity (archived in `phases/*/archive/v0.1/`)
 
 ### For Humans
 
