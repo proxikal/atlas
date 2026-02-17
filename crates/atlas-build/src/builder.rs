@@ -4,13 +4,17 @@ use crate::cache::BuildCache;
 use crate::error::{BuildError, BuildResult};
 use crate::fingerprint::FingerprintConfig;
 use crate::incremental::{IncrementalEngine, IncrementalStats};
+use crate::module_resolver::ModuleResolver;
 use crate::output::OutputMode;
 use crate::profile::{Profile, ProfileManager};
 use crate::script::{BuildScript, ScriptContext, ScriptExecutor, ScriptPhase};
 use crate::targets::{ArtifactMetadata, BuildArtifact, BuildTarget, TargetKind};
 
 use atlas_package::manifest::PackageManifest;
-use atlas_runtime::{Binder, Bytecode, Compiler, Diagnostic, Lexer, Parser, TypeChecker};
+use atlas_runtime::module_loader::ModuleRegistry;
+use atlas_runtime::{
+    Binder, Bytecode, Compiler, Diagnostic, Lexer, Parser, SymbolTable, TypeChecker,
+};
 
 // Note: Parallel compilation disabled for now due to Bytecode containing non-Send types (Rc<>)
 // use rayon::prelude::*;
@@ -322,16 +326,21 @@ impl Builder {
         let cache_dir = self.config.target_dir.join("cache");
         let mut cache = BuildCache::load(&cache_dir)?;
 
-        // Compile modules
+        // Compile modules in topological order with cross-module resolution
         let compile_start = Instant::now();
         let mut compiled_modules = Vec::new();
+        let mut resolver = ModuleResolver::new();
         let recompile_set: std::collections::HashSet<String> =
             plan.recompile.iter().cloned().collect();
 
-        for (module_name, node) in graph.modules() {
+        let topo_order = graph.compute_build_order()?;
+        for module_name in &topo_order {
+            let node = graph.get_module(module_name).unwrap();
+            let registry = resolver.build_registry_for(&node.dependencies);
+
             if recompile_set.contains(module_name) {
                 // Recompile this module
-                let compiled = self.compile_single_module(module_name, &node.path)?;
+                let compiled = self.compile_single_module(module_name, &node.path, &registry)?;
 
                 // Read source for fingerprint + cache
                 let source =
@@ -354,13 +363,16 @@ impl Builder {
                 compiled_modules.push(compiled);
             } else {
                 // Cached module - still need to compile for linking
-                // (bytecode deserialization not yet implemented)
                 if self.config.verbose {
                     println!("  Cache hit: {}", module_name);
                 }
-                let compiled = self.compile_single_module(module_name, &node.path)?;
+                let compiled = self.compile_single_module(module_name, &node.path, &registry)?;
                 compiled_modules.push(compiled);
             }
+
+            // Register this module's exports for downstream dependents
+            let symbol_table = self.extract_symbol_table(module_name, &node.path, &registry)?;
+            resolver.register_module(module_name.clone(), node.path.clone(), symbol_table);
         }
 
         let compilation_time = compile_start.elapsed();
@@ -427,80 +439,17 @@ impl Builder {
             .collect()
     }
 
-    /// Compile a single module
+    /// Compile a single module (standalone, no cross-module resolution).
+    ///
+    /// Used by incremental builds where modules are compiled individually.
+    /// For cross-module support, use `compile_module_with_imports`.
     fn compile_single_module(
         &self,
         module_name: &str,
         source_path: &Path,
+        registry: &ModuleRegistry,
     ) -> BuildResult<CompiledModule> {
-        let compile_start = Instant::now();
-
-        // Read source
-        let source = fs::read_to_string(source_path).map_err(|e| BuildError::io(source_path, e))?;
-
-        // Lex
-        let mut lexer = Lexer::new(&source);
-        let (tokens, lex_diagnostics) = lexer.tokenize();
-
-        if !lex_diagnostics.is_empty() {
-            return Err(BuildError::compilation(
-                module_name,
-                format_diagnostics(&lex_diagnostics),
-            ));
-        }
-
-        // Parse
-        let mut parser = Parser::new(tokens);
-        let (program, parse_diagnostics) = parser.parse();
-
-        if !parse_diagnostics.is_empty() {
-            return Err(BuildError::compilation(
-                module_name,
-                format_diagnostics(&parse_diagnostics),
-            ));
-        }
-
-        // Bind
-        let mut binder = Binder::new();
-        let (mut symbol_table, bind_diagnostics) = binder.bind(&program);
-
-        if !bind_diagnostics.is_empty() {
-            return Err(BuildError::compilation(
-                module_name,
-                format_diagnostics(&bind_diagnostics),
-            ));
-        }
-
-        // Type check
-        let mut type_checker = TypeChecker::new(&mut symbol_table);
-        let type_diagnostics = type_checker.check(&program);
-
-        if !type_diagnostics.is_empty() {
-            return Err(BuildError::compilation(
-                module_name,
-                format_diagnostics(&type_diagnostics),
-            ));
-        }
-
-        // Compile to bytecode
-        let mut compiler = if self.config.optimization_level.should_optimize() {
-            Compiler::with_optimization()
-        } else {
-            Compiler::new()
-        };
-
-        let bytecode = compiler.compile(&program).map_err(|diagnostics| {
-            BuildError::compilation(module_name, format_diagnostics(&diagnostics))
-        })?;
-
-        let compile_time = compile_start.elapsed();
-
-        Ok(CompiledModule {
-            name: module_name.to_string(),
-            path: source_path.to_path_buf(),
-            bytecode,
-            compile_time,
-        })
+        self.compile_module_with_imports(module_name, source_path, registry)
     }
 
     /// Discover all source files in the project
@@ -586,13 +535,17 @@ impl Builder {
         Ok(graph)
     }
 
-    /// Compile modules in parallel groups
+    /// Compile modules in topological order with cross-module symbol resolution.
+    ///
+    /// After each module compiles, its exports are registered so that
+    /// dependent modules can resolve their imports during binding.
     fn compile_modules(
         &self,
         graph: &BuildGraph,
         build_order: &[Vec<String>],
     ) -> BuildResult<Vec<CompiledModule>> {
         let mut compiled = Vec::new();
+        let mut resolver = ModuleResolver::new();
 
         for (group_idx, group) in build_order.iter().enumerate() {
             if self.config.verbose {
@@ -603,35 +556,45 @@ impl Builder {
                 );
             }
 
-            // TODO: Parallel compilation requires Bytecode to be Send
-            // For now, compile sequentially
-            // Issue: Bytecode contains Rc<> types which are not thread-safe
-            let group_compiled: Vec<CompiledModule> = group
-                .iter()
-                .map(|module_name| self.compile_module(graph, module_name))
-                .collect::<BuildResult<Vec<_>>>()?;
+            // Compile each module in the group, injecting dependency exports
+            for module_name in group {
+                let module = graph
+                    .get_module(module_name)
+                    .ok_or_else(|| BuildError::module_not_found(module_name))?;
 
-            compiled.extend(group_compiled);
+                // Build a registry containing only this module's dependencies
+                let registry = resolver.build_registry_for(&module.dependencies);
+
+                let compiled_module =
+                    self.compile_module_with_imports(module_name, &module.path, &registry)?;
+
+                // Register this module's symbol table for downstream dependents
+                let symbol_table =
+                    self.extract_symbol_table(module_name, &module.path, &registry)?;
+                resolver.register_module(module_name.clone(), module.path.clone(), symbol_table);
+
+                compiled.push(compiled_module);
+            }
         }
 
         Ok(compiled)
     }
 
-    /// Compile a single module
-    fn compile_module(&self, graph: &BuildGraph, module_name: &str) -> BuildResult<CompiledModule> {
+    /// Compile a single module with cross-module import resolution.
+    fn compile_module_with_imports(
+        &self,
+        module_name: &str,
+        source_path: &Path,
+        registry: &ModuleRegistry,
+    ) -> BuildResult<CompiledModule> {
         let compile_start = Instant::now();
-
-        let module = graph
-            .get_module(module_name)
-            .ok_or_else(|| BuildError::module_not_found(module_name))?;
 
         if self.config.verbose {
             println!("  Compiling {}", module_name);
         }
 
         // Read source
-        let source =
-            fs::read_to_string(&module.path).map_err(|e| BuildError::io(&module.path, e))?;
+        let source = fs::read_to_string(source_path).map_err(|e| BuildError::io(source_path, e))?;
 
         // Lex
         let mut lexer = Lexer::new(&source);
@@ -655,9 +618,10 @@ impl Builder {
             ));
         }
 
-        // Bind
+        // Bind with cross-module support
         let mut binder = Binder::new();
-        let (mut symbol_table, bind_diagnostics) = binder.bind(&program);
+        let (mut symbol_table, bind_diagnostics) =
+            binder.bind_with_modules(&program, source_path, registry);
 
         if !bind_diagnostics.is_empty() {
             return Err(BuildError::compilation(
@@ -692,10 +656,42 @@ impl Builder {
 
         Ok(CompiledModule {
             name: module_name.to_string(),
-            path: module.path.clone(),
+            path: source_path.to_path_buf(),
             bytecode,
             compile_time,
         })
+    }
+
+    /// Extract a module's symbol table (for registering exports).
+    ///
+    /// Re-runs lex/parse/bind to get the symbol table with exports marked.
+    /// This is separate from compilation because the compiler consumes the program.
+    fn extract_symbol_table(
+        &self,
+        module_name: &str,
+        source_path: &Path,
+        registry: &ModuleRegistry,
+    ) -> BuildResult<SymbolTable> {
+        let source = fs::read_to_string(source_path).map_err(|e| BuildError::io(source_path, e))?;
+
+        let mut lexer = Lexer::new(&source);
+        let (tokens, _) = lexer.tokenize();
+
+        let mut parser = Parser::new(tokens);
+        let (program, _) = parser.parse();
+
+        let mut binder = Binder::new();
+        let (symbol_table, bind_diagnostics) =
+            binder.bind_with_modules(&program, source_path, registry);
+
+        if !bind_diagnostics.is_empty() {
+            return Err(BuildError::compilation(
+                module_name,
+                format_diagnostics(&bind_diagnostics),
+            ));
+        }
+
+        Ok(symbol_table)
     }
 
     /// Create build targets from source files

@@ -16,6 +16,7 @@ pub mod cache;
 pub mod error;
 pub mod fingerprint;
 pub mod incremental;
+pub mod module_resolver;
 pub mod output;
 pub mod profile;
 pub mod script;
