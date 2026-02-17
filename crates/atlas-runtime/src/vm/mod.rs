@@ -6,6 +6,7 @@
 //! - Control flow uses jumps and loops
 
 mod debugger;
+pub mod dispatch;
 mod frame;
 mod profiler;
 
@@ -61,6 +62,8 @@ pub struct VM {
     library_loader: LibraryLoader,
     /// Loaded extern functions (phase-10b)
     extern_functions: HashMap<String, ExternFunction>,
+    /// Reusable string buffer for temporary string operations (reduces allocations)
+    string_buffer: String,
 }
 
 impl VM {
@@ -75,17 +78,18 @@ impl VM {
         };
 
         Self {
-            stack: Vec::with_capacity(256),
+            stack: Vec::with_capacity(1024),
             frames: vec![main_frame],
             globals: HashMap::new(),
             bytecode,
             ip: 0,
-            profiler: None, // Profiling disabled by default
-            debugger: None, // Debugging disabled by default
+            profiler: None,
+            debugger: None,
             debug_pause_pending: false,
             current_security: None,
             library_loader: LibraryLoader::new(),
             extern_functions: HashMap::new(),
+            string_buffer: String::with_capacity(256),
         }
     }
 
@@ -638,7 +642,11 @@ impl VM {
                             self.push(Value::Number(result));
                         }
                         (Value::String(x), Value::String(y)) => {
-                            self.push(Value::String(Arc::new(format!("{}{}", x, y))));
+                            // Reuse string buffer to reduce allocations
+                            self.string_buffer.clear();
+                            self.string_buffer.push_str(x);
+                            self.string_buffer.push_str(y);
+                            self.push(Value::String(Arc::new(self.string_buffer.clone())));
                         }
                         _ => {
                             return Err(RuntimeError::TypeError {
@@ -905,12 +913,8 @@ impl VM {
 
                     if let Some(f) = frame {
                         // Clean up the stack (remove locals, arguments, and function value)
-                        // stack_base points to first argument, so we need to also remove the function value below it
-                        while self.stack.len() > f.stack_base {
-                            self.stack.pop();
-                        }
+                        self.stack.truncate(f.stack_base);
                         // Also remove the function value (one slot below stack_base)
-                        // Only if stack_base > 0 (not at the very start of the stack)
                         if f.stack_base > 0 && !self.stack.is_empty() {
                             self.stack.pop();
                         }
@@ -1127,18 +1131,23 @@ impl VM {
 
     // ===== Helper Methods =====
 
+    #[inline(always)]
     fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
 
+    #[inline(always)]
     fn pop(&mut self) -> Value {
-        self.stack.pop().expect("Stack underflow")
+        // SAFETY: VM invariants guarantee stack is non-empty when pop is called
+        unsafe { self.stack.pop().unwrap_unchecked() }
     }
 
+    #[inline(always)]
     fn peek(&self, distance: usize) -> &Value {
-        &self.stack[self.stack.len() - 1 - distance]
+        unsafe { self.stack.get_unchecked(self.stack.len() - 1 - distance) }
     }
 
+    #[inline(always)]
     fn pop_number(&mut self) -> Result<f64, RuntimeError> {
         match self.pop() {
             Value::Number(n) => Ok(n),
@@ -1149,6 +1158,7 @@ impl VM {
         }
     }
 
+    #[inline(always)]
     fn binary_numeric_op<F>(&mut self, op: F) -> Result<(), RuntimeError>
     where
         F: FnOnce(f64, f64) -> f64,
@@ -1165,39 +1175,44 @@ impl VM {
         Ok(())
     }
 
+    #[inline(always)]
     fn read_opcode(&mut self) -> Result<Opcode, RuntimeError> {
         if self.ip >= self.bytecode.instructions.len() {
             return Err(RuntimeError::UnknownOpcode {
                 span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
             });
         }
-        let byte = self.bytecode.instructions[self.ip];
+        let byte = unsafe { *self.bytecode.instructions.get_unchecked(self.ip) };
         self.ip += 1;
-        Opcode::try_from(byte).map_err(|_| RuntimeError::UnknownOpcode {
+        // Use static dispatch table for O(1) opcode lookup
+        dispatch::decode_opcode(byte).ok_or_else(|| RuntimeError::UnknownOpcode {
             span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
         })
     }
 
+    #[inline(always)]
     fn read_u8(&mut self) -> u8 {
-        let byte = self.bytecode.instructions[self.ip];
+        let byte = unsafe { *self.bytecode.instructions.get_unchecked(self.ip) };
         self.ip += 1;
         byte
     }
 
+    #[inline(always)]
     fn read_u16(&mut self) -> u16 {
-        let hi = self.bytecode.instructions[self.ip] as u16;
-        let lo = self.bytecode.instructions[self.ip + 1] as u16;
+        let hi = unsafe { *self.bytecode.instructions.get_unchecked(self.ip) } as u16;
+        let lo = unsafe { *self.bytecode.instructions.get_unchecked(self.ip + 1) } as u16;
         self.ip += 2;
         (hi << 8) | lo
     }
 
+    #[inline(always)]
     fn read_i16(&mut self) -> i16 {
         self.read_u16() as i16
     }
 
-    /// Get the current call frame
+    #[inline(always)]
     fn current_frame(&self) -> &CallFrame {
-        self.frames.last().expect("No call frame available")
+        unsafe { self.frames.last().unwrap_unchecked() }
     }
 
     /// Generate a stack trace from the current call frames
@@ -2375,21 +2390,9 @@ impl VM {
                 let result = self.execute_loop(Some(saved_frame_depth))?;
 
                 // Get the return value from stack
-                let return_value = if let Some(val) = result {
-                    // Pop the return value
-                    let ret = val;
-                    // Clean up stack to original base
-                    while self.stack.len() > stack_base {
-                        self.stack.pop();
-                    }
-                    ret
-                } else {
-                    // No return value means null
-                    while self.stack.len() > stack_base {
-                        self.stack.pop();
-                    }
-                    Value::Null
-                };
+                let return_value = result.unwrap_or(Value::Null);
+                // Clean up stack to original base
+                self.stack.truncate(stack_base);
 
                 // Restore IP
                 self.ip = saved_ip;
