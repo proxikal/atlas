@@ -4,6 +4,59 @@
 
 ---
 
+## Atlas Grammar Quick Reference (from parser)
+
+**ALWAYS check this before writing Atlas code or tests.**
+
+```
+// Control flow — ALL require parentheses around condition
+if (cond) { ... }
+if (cond) { ... } else { ... }
+while (cond) { ... }
+for (init; cond; step) { ... }     // C-style: for (let i = 0; i < n; i++)
+for item in iterable { ... }       // For-in: NO parens
+
+// Functions
+fn name(param: type, ...) -> ReturnType { ... }
+fn name(param: type) { ... }       // No return type → parser stores "null" (not "void")
+
+// Type syntax
+number, string, bool, null         // Named types
+Type<T1, T2>                       // Generics: Result<number, string>
+type[]                              // Array type: number[]
+(T1, T2) -> T3                     // Function type (parens, NOT fn keyword)
+
+// Default return type
+// When no `->` specified, parser sets: TypeRef::Named("null", Span::dummy())
+// Formatter should OMIT return type when it equals "null"
+
+// Variable declarations
+let x = 5;                          // Immutable
+var x = 5;                          // Mutable
+let x: number = 5;                  // With type annotation
+
+// Operators
+x++;  x--;  x += 1;  x -= 1;      // Compound assignment
+x = expr;                           // Assignment
+arr[0] = expr;                      // Index assignment
+
+// Match
+match expr { pattern => body, ... }
+
+// Modules
+import { a, b } from "./path";
+import * as ns from "./path";
+export fn name() { ... }
+export let x = 5;
+
+// Comments (lexer skips by default, tokenize_with_comments() preserves them)
+// line comment
+/* block comment */
+/// doc comment (3 slashes exactly, //// is NOT doc)
+```
+
+---
+
 ## Collection Types (Shared Mutable State)
 
 **Pattern:** `Arc<Mutex<X>>` for all collection types (migrated from `Rc<RefCell<>>` in phase-18)

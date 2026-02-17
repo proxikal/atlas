@@ -9,6 +9,7 @@
 ## File Index
 
 **patterns.md** - Codebase implementation patterns
+- **Grammar quick reference** (syntax for if/while/for/fn/types — CHECK BEFORE WRITING ATLAS CODE)
 - Collection types (`Arc<Mutex<T>>`, `.lock().unwrap()`)
 - Intrinsic pattern (callback-based, interpreter + VM)
 - Stdlib function pattern (non-intrinsic)
@@ -100,6 +101,7 @@ atlas/
 
 ## Pattern Quick Lookup
 
+**Writing Atlas code/tests?** → patterns.md "Grammar Quick Reference" (ALWAYS CHECK FIRST)
 **Implementing intrinsic?** → patterns.md "Intrinsic Pattern"
 **Implementing stdlib function?** → patterns.md "Stdlib Function Pattern"
 **Error handling?** → patterns.md "Error Pattern"
