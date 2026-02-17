@@ -164,6 +164,14 @@ pub enum TokenKind {
     /// `?` (error propagation operator)
     Question,
 
+    // Comments (emitted in comment-preserving mode)
+    /// Single-line comment (// ...)
+    LineComment,
+    /// Block comment (/* ... */)
+    BlockComment,
+    /// Doc comment (/// ...)
+    DocComment,
+
     // Special
     /// End of file
     Eof,
@@ -261,6 +269,9 @@ impl TokenKind {
             TokenKind::FatArrow => "=>",
             TokenKind::Underscore => "_",
             TokenKind::Question => "?",
+            TokenKind::LineComment => "// comment",
+            TokenKind::BlockComment => "/* comment */",
+            TokenKind::DocComment => "/// comment",
             TokenKind::Eof => "EOF",
             TokenKind::Error => "error",
         }

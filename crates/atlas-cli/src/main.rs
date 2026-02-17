@@ -71,6 +71,24 @@ enum Commands {
         /// Path to the Atlas source file
         file: String,
     },
+    /// Format Atlas source files
+    Fmt {
+        /// Files or directories to format
+        #[arg(required = true)]
+        files: Vec<String>,
+        /// Check formatting without modifying files
+        #[arg(long)]
+        check: bool,
+        /// Indentation size in spaces
+        #[arg(long)]
+        indent_size: Option<usize>,
+        /// Maximum line width
+        #[arg(long)]
+        max_width: Option<usize>,
+        /// Enable or disable trailing commas
+        #[arg(long)]
+        trailing_commas: Option<bool>,
+    },
     /// Profile an Atlas source file (VM execution analysis)
     Profile {
         /// Path to the Atlas source file
@@ -139,6 +157,22 @@ fn main() -> Result<()> {
         }
         Commands::Typecheck { file } => {
             commands::typecheck::run(&file)?;
+        }
+        Commands::Fmt {
+            files,
+            check,
+            indent_size,
+            max_width,
+            trailing_commas,
+        } => {
+            let args = commands::fmt::FmtArgs {
+                files,
+                check,
+                indent_size,
+                max_width,
+                trailing_commas,
+            };
+            commands::fmt::run(args)?;
         }
         Commands::Profile {
             file,

@@ -28,6 +28,10 @@ pub struct Lexer {
     pub(super) start_column: u32,
     /// Collected diagnostics
     pub(super) diagnostics: Vec<Diagnostic>,
+    /// Whether to emit comment tokens
+    emit_comments: bool,
+    /// Pending comment tokens to emit
+    pending_comments: Vec<Token>,
 }
 
 impl Lexer {
@@ -45,6 +49,8 @@ impl Lexer {
             start_line: 1,
             start_column: 1,
             diagnostics: Vec::new(),
+            emit_comments: false,
+            pending_comments: Vec::new(),
         }
     }
 
@@ -61,6 +67,28 @@ impl Lexer {
             }
         }
 
+        (tokens, std::mem::take(&mut self.diagnostics))
+    }
+
+    /// Tokenize preserving comment tokens in the stream
+    pub fn tokenize_with_comments(&mut self) -> (Vec<Token>, Vec<Diagnostic>) {
+        self.emit_comments = true;
+        let mut tokens = Vec::new();
+
+        loop {
+            let token = self.next_token();
+            let is_eof = token.kind == TokenKind::Eof;
+
+            // Drain any pending comment tokens collected before this token
+            tokens.append(&mut self.pending_comments);
+            tokens.push(token);
+
+            if is_eof {
+                break;
+            }
+        }
+
+        self.emit_comments = false;
         (tokens, std::mem::take(&mut self.diagnostics))
     }
 
@@ -221,12 +249,32 @@ impl Lexer {
                 }
                 '/' => {
                     if self.peek_next() == Some('/') {
+                        let comment_start = self.current;
+                        // Check for doc comment (///)
+                        let is_doc = self.current + 2 < self.chars.len()
+                            && self.chars[self.current + 2] == '/'
+                            && (self.current + 3 >= self.chars.len()
+                                || self.chars[self.current + 3] != '/');
+
                         // Single-line comment
                         while !self.is_at_end() && self.peek() != '\n' {
                             self.advance();
                         }
+
+                        if self.emit_comments {
+                            let text: String =
+                                self.chars[comment_start..self.current].iter().collect();
+                            let span = Span::new(comment_start, self.current);
+                            let kind = if is_doc {
+                                TokenKind::DocComment
+                            } else {
+                                TokenKind::LineComment
+                            };
+                            self.pending_comments.push(Token::new(kind, text, span));
+                        }
                     } else if self.peek_next() == Some('*') {
                         // Multi-line comment
+                        let comment_start = self.current;
                         let comment_start_line = self.line;
                         self.advance(); // /
                         self.advance(); // *
@@ -244,6 +292,17 @@ impl Lexer {
                                 self.column = 1;
                             }
                             self.advance();
+                        }
+
+                        if self.emit_comments && terminated {
+                            let text: String =
+                                self.chars[comment_start..self.current].iter().collect();
+                            let span = Span::new(comment_start, self.current);
+                            self.pending_comments.push(Token::new(
+                                TokenKind::BlockComment,
+                                text,
+                                span,
+                            ));
                         }
 
                         // Report error if comment was not terminated

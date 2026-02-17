@@ -11,6 +11,7 @@ path = "src/main.rs"
 atlas-runtime = { path = "../atlas-runtime" }
 atlas-config = { path = "../atlas-config" }
 atlas-build = { path = "../atlas-build" }
+atlas-formatter = { path = "../atlas-formatter" }
 clap = { version = "4.5", features = ["derive"] }
 rustyline = "14.0"  # Line editor for REPL
 ratatui = "0.28"  # TUI framework for rich REPL mode
