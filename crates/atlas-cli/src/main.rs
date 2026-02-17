@@ -94,7 +94,14 @@ fn main() -> Result<()> {
             let use_json = json || cli_config.default_json;
             commands::check::run(&file, use_json)?;
         }
-        Commands::Build { profile, release, clean, verbose, quiet, json } => {
+        Commands::Build {
+            profile,
+            release,
+            clean,
+            verbose,
+            quiet,
+            json,
+        } => {
             // Command-line flag overrides environment variable
             let use_json = json || cli_config.default_json;
             let args = commands::build::BuildArgs {

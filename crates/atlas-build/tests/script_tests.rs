@@ -1,8 +1,6 @@
 //! Build script execution tests
 
-use atlas_build::{
-    BuildScript, Profile, ScriptContext, ScriptExecutor, ScriptPhase,
-};
+use atlas_build::{BuildScript, Profile, ScriptContext, ScriptExecutor, ScriptPhase};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -44,10 +42,16 @@ fn test_script_access_to_build_context() {
     let env = ctx.environment();
 
     assert_eq!(env.get("ATLAS_PROFILE"), Some(&"dev".to_string()));
-    assert_eq!(env.get("ATLAS_TARGET_DIR"), Some(&"/tmp/target".to_string()));
+    assert_eq!(
+        env.get("ATLAS_TARGET_DIR"),
+        Some(&"/tmp/target".to_string())
+    );
     assert_eq!(env.get("ATLAS_SOURCE_DIR"), Some(&"/tmp/src".to_string()));
     assert_eq!(env.get("ATLAS_VERSION"), Some(&"0.2.0".to_string()));
-    assert_eq!(env.get("ATLAS_PACKAGE_NAME"), Some(&"test-package".to_string()));
+    assert_eq!(
+        env.get("ATLAS_PACKAGE_NAME"),
+        Some(&"test-package".to_string())
+    );
     assert_eq!(env.get("ATLAS_PACKAGE_VERSION"), Some(&"1.0.0".to_string()));
 }
 
@@ -107,14 +111,17 @@ fn test_script_phase_ordering() {
     ];
 
     // Execute only pre-build phase
-    let results = executor.execute_phase(&scripts, ScriptPhase::PreBuild).unwrap();
+    let results = executor
+        .execute_phase(&scripts, ScriptPhase::PreBuild)
+        .unwrap();
     assert_eq!(results.len(), 2);
 }
 
 #[test]
 fn test_script_env_vars_in_context() {
     let mut ctx = test_context();
-    ctx.env_vars.insert("CUSTOM_VAR".to_string(), "custom_value".to_string());
+    ctx.env_vars
+        .insert("CUSTOM_VAR".to_string(), "custom_value".to_string());
 
     let env = ctx.environment();
     assert_eq!(env.get("CUSTOM_VAR"), Some(&"custom_value".to_string()));

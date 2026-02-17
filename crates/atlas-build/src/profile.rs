@@ -261,18 +261,9 @@ impl ProfileManager {
         let mut profiles = HashMap::new();
 
         // Register built-in profiles
-        profiles.insert(
-            "dev".to_string(),
-            Profile::Dev.default_config(),
-        );
-        profiles.insert(
-            "release".to_string(),
-            Profile::Release.default_config(),
-        );
-        profiles.insert(
-            "test".to_string(),
-            Profile::Test.default_config(),
-        );
+        profiles.insert("dev".to_string(), Profile::Dev.default_config());
+        profiles.insert("release".to_string(), Profile::Release.default_config());
+        profiles.insert("test".to_string(), Profile::Test.default_config());
 
         Self { profiles }
     }
@@ -296,11 +287,7 @@ impl ProfileManager {
                     None
                 };
 
-                ProfileConfig::from_custom(
-                    name.clone(),
-                    manifest_config,
-                    base_profile.as_ref(),
-                )
+                ProfileConfig::from_custom(name.clone(), manifest_config, base_profile.as_ref())
             };
 
             self.profiles.insert(name.clone(), profile);
@@ -466,11 +453,8 @@ mod tests {
             },
         };
 
-        let config = ProfileConfig::from_custom(
-            "bench".to_string(),
-            &manifest,
-            Some(&Profile::Release),
-        );
+        let config =
+            ProfileConfig::from_custom("bench".to_string(), &manifest, Some(&Profile::Release));
 
         assert_eq!(config.name, "bench");
         assert_eq!(config.optimization_level, OptLevel::O3);

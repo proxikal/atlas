@@ -826,8 +826,7 @@ impl Builder {
             self.manifest.package.version.to_string(),
         );
 
-        let script_executor = ScriptExecutor::new(script_context)
-            .with_verbose(self.config.verbose);
+        let script_executor = ScriptExecutor::new(script_context).with_verbose(self.config.verbose);
 
         // Execute pre-build scripts
         script_executor.execute_phase(scripts, ScriptPhase::PreBuild)?;
@@ -864,8 +863,7 @@ impl Builder {
     pub fn clean(&mut self) -> BuildResult<()> {
         let target_dir = &self.config.target_dir;
         if target_dir.exists() {
-            std::fs::remove_dir_all(target_dir)
-                .map_err(|e| BuildError::io(target_dir, e))?;
+            std::fs::remove_dir_all(target_dir).map_err(|e| BuildError::io(target_dir, e))?;
         }
         Ok(())
     }

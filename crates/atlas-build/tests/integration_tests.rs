@@ -2,9 +2,7 @@
 //!
 //! End-to-end tests for complete build system functionality
 
-use atlas_build::{
-    BuildScript, Builder, OutputMode, Profile, ScriptPhase,
-};
+use atlas_build::{BuildScript, Builder, OutputMode, Profile, ScriptPhase};
 use std::fs;
 use tempfile::TempDir;
 
@@ -114,7 +112,8 @@ fn test_builder_with_custom_target_dir() {
     let project = create_test_project();
     let custom_target = project.path().join("build");
 
-    let mut builder = Builder::new(project.path()).unwrap()
+    let mut builder = Builder::new(project.path())
+        .unwrap()
         .with_target_dir(custom_target.clone());
 
     // Verify builder accepts custom target directory

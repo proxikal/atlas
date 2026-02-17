@@ -42,11 +42,8 @@ fn test_custom_profile_from_manifest() {
         },
     };
 
-    let config = ProfileConfig::from_custom(
-        "bench".to_string(),
-        &manifest,
-        Some(&Profile::Release),
-    );
+    let config =
+        ProfileConfig::from_custom("bench".to_string(), &manifest, Some(&Profile::Release));
 
     assert_eq!(config.name, "bench");
     assert_eq!(config.optimization_level, OptLevel::O3);
@@ -110,13 +107,19 @@ fn test_cache_key_suffix_different_profiles() {
     let dev_config = Profile::Dev.default_config();
     let release_config = Profile::Release.default_config();
 
-    assert_ne!(dev_config.cache_key_suffix(), release_config.cache_key_suffix());
+    assert_ne!(
+        dev_config.cache_key_suffix(),
+        release_config.cache_key_suffix()
+    );
 }
 
 #[test]
 fn test_profile_env_vars() {
     let test_config = Profile::Test.default_config();
-    assert_eq!(test_config.env_vars.get("ATLAS_TEST"), Some(&"1".to_string()));
+    assert_eq!(
+        test_config.env_vars.get("ATLAS_TEST"),
+        Some(&"1".to_string())
+    );
 
     let dev_config = Profile::Dev.default_config();
     assert!(dev_config.env_vars.is_empty());
@@ -134,11 +137,8 @@ fn test_custom_profile_inheritance() {
         env_vars: HashMap::new(),
     };
 
-    let config = ProfileConfig::from_custom(
-        "bench".to_string(),
-        &manifest,
-        Some(&Profile::Release),
-    );
+    let config =
+        ProfileConfig::from_custom("bench".to_string(), &manifest, Some(&Profile::Release));
 
     // O3 from manifest
     assert_eq!(config.optimization_level, OptLevel::O3);

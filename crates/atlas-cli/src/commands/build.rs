@@ -1,9 +1,7 @@
 //! Build command - compile Atlas projects with profiles, scripts, and caching
 
 use anyhow::{Context, Result};
-use atlas_build::{
-    BuildScript, Builder, OutputMode, Profile, ScriptPhase,
-};
+use atlas_build::{BuildScript, Builder, OutputMode, Profile, ScriptPhase};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -53,11 +51,13 @@ impl Default for BuildArgs {
 /// Run the build command
 pub fn run(args: BuildArgs) -> Result<()> {
     // Determine project directory
-    let project_dir = args.project_dir.clone().unwrap_or_else(|| PathBuf::from("."));
+    let project_dir = args
+        .project_dir
+        .clone()
+        .unwrap_or_else(|| PathBuf::from("."));
 
     // Create builder
-    let mut builder = Builder::new(&project_dir)
-        .context("Failed to create builder")?;
+    let mut builder = Builder::new(&project_dir).context("Failed to create builder")?;
 
     // Determine build profile
     let profile = determine_profile(&args)?;
@@ -70,8 +70,7 @@ pub fn run(args: BuildArgs) -> Result<()> {
         if !args.quiet {
             println!("Cleaning build artifacts...");
         }
-        builder.clean()
-            .context("Failed to clean build artifacts")?;
+        builder.clean().context("Failed to clean build artifacts")?;
     }
 
     // Set target directory if specified
@@ -113,7 +112,10 @@ pub fn run(args: BuildArgs) -> Result<()> {
     } else if !args.quiet {
         // Human-readable output
         println!("\n{}", "=".repeat(60));
-        println!("Build succeeded in {:.2}s", context.stats.total_time.as_secs_f64());
+        println!(
+            "Build succeeded in {:.2}s",
+            context.stats.total_time.as_secs_f64()
+        );
         println!("{}", "=".repeat(60));
         println!("  Profile: {}", profile.name());
         println!("  Modules: {} compiled", context.stats.compiled_modules);
@@ -130,8 +132,7 @@ fn determine_profile(args: &BuildArgs) -> Result<Profile> {
     if args.release {
         Ok(Profile::Release)
     } else if let Some(ref profile_name) = args.profile {
-        Profile::from_str(profile_name)
-            .map_err(|e| anyhow::anyhow!("Invalid profile: {}", e))
+        Profile::from_str(profile_name).map_err(|e| anyhow::anyhow!("Invalid profile: {}", e))
     } else {
         // Check environment variable
         if let Ok(profile_env) = std::env::var("ATLAS_PROFILE") {
@@ -164,11 +165,11 @@ fn load_build_scripts(_builder: &Builder, project_dir: &PathBuf) -> Result<Vec<B
         return Ok(Vec::new());
     }
 
-    let manifest_content = std::fs::read_to_string(&manifest_path)
-        .context("Failed to read atlas.toml")?;
+    let manifest_content =
+        std::fs::read_to_string(&manifest_path).context("Failed to read atlas.toml")?;
 
-    let manifest: atlas_build::PackageManifest = toml::from_str(&manifest_content)
-        .context("Failed to parse atlas.toml")?;
+    let manifest: atlas_build::PackageManifest =
+        toml::from_str(&manifest_content).context("Failed to parse atlas.toml")?;
 
     // Extract build scripts if present
     let mut scripts = Vec::new();
@@ -182,7 +183,10 @@ fn load_build_scripts(_builder: &Builder, project_dir: &PathBuf) -> Result<Vec<B
             } else if let Some(shell) = script_config.shell {
                 BuildScript::shell(&script_config.name, shell, phase)
             } else {
-                anyhow::bail!("Build script '{}' must specify either 'path' or 'shell'", script_config.name);
+                anyhow::bail!(
+                    "Build script '{}' must specify either 'path' or 'shell'",
+                    script_config.name
+                );
             };
 
             let script = if let Some(timeout_secs) = script_config.timeout {
@@ -210,7 +214,10 @@ fn parse_script_phase(phase_str: &str) -> Result<ScriptPhase> {
         "pre-build" | "prebuild" => Ok(ScriptPhase::PreBuild),
         "post-build" | "postbuild" => Ok(ScriptPhase::PostBuild),
         "post-link" | "postlink" => Ok(ScriptPhase::PostLink),
-        _ => anyhow::bail!("Invalid script phase: {}. Valid phases are: pre-build, post-build, post-link", phase_str),
+        _ => anyhow::bail!(
+            "Invalid script phase: {}. Valid phases are: pre-build, post-build, post-link",
+            phase_str
+        ),
     }
 }
 
@@ -295,20 +302,38 @@ mod tests {
 
     #[test]
     fn test_parse_script_phase_prebuild() {
-        assert_eq!(parse_script_phase("pre-build").unwrap(), ScriptPhase::PreBuild);
-        assert_eq!(parse_script_phase("prebuild").unwrap(), ScriptPhase::PreBuild);
+        assert_eq!(
+            parse_script_phase("pre-build").unwrap(),
+            ScriptPhase::PreBuild
+        );
+        assert_eq!(
+            parse_script_phase("prebuild").unwrap(),
+            ScriptPhase::PreBuild
+        );
     }
 
     #[test]
     fn test_parse_script_phase_postbuild() {
-        assert_eq!(parse_script_phase("post-build").unwrap(), ScriptPhase::PostBuild);
-        assert_eq!(parse_script_phase("postbuild").unwrap(), ScriptPhase::PostBuild);
+        assert_eq!(
+            parse_script_phase("post-build").unwrap(),
+            ScriptPhase::PostBuild
+        );
+        assert_eq!(
+            parse_script_phase("postbuild").unwrap(),
+            ScriptPhase::PostBuild
+        );
     }
 
     #[test]
     fn test_parse_script_phase_postlink() {
-        assert_eq!(parse_script_phase("post-link").unwrap(), ScriptPhase::PostLink);
-        assert_eq!(parse_script_phase("postlink").unwrap(), ScriptPhase::PostLink);
+        assert_eq!(
+            parse_script_phase("post-link").unwrap(),
+            ScriptPhase::PostLink
+        );
+        assert_eq!(
+            parse_script_phase("postlink").unwrap(),
+            ScriptPhase::PostLink
+        );
     }
 
     #[test]

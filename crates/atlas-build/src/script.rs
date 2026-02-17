@@ -34,11 +34,7 @@ fn default_timeout() -> Duration {
 
 impl BuildScript {
     /// Create new Atlas script
-    pub fn atlas(
-        name: impl Into<String>,
-        path: impl Into<PathBuf>,
-        phase: ScriptPhase,
-    ) -> Self {
+    pub fn atlas(name: impl Into<String>, path: impl Into<PathBuf>, phase: ScriptPhase) -> Self {
         Self {
             name: name.into(),
             script: ScriptKind::Atlas(path.into()),
@@ -280,11 +276,7 @@ impl ScriptExecutor {
         }
 
         if self.verbose {
-            println!(
-                "Executing {} {} scripts",
-                phase_scripts.len(),
-                phase.name()
-            );
+            println!("Executing {} {} scripts", phase_scripts.len(), phase.name());
         }
 
         let mut results = Vec::new();
@@ -470,10 +462,7 @@ mod tests {
             env.get("ATLAS_PACKAGE_NAME"),
             Some(&"test-package".to_string())
         );
-        assert_eq!(
-            env.get("ATLAS_PACKAGE_VERSION"),
-            Some(&"1.0.0".to_string())
-        );
+        assert_eq!(env.get("ATLAS_PACKAGE_VERSION"), Some(&"1.0.0".to_string()));
     }
 
     #[test]
@@ -560,7 +549,11 @@ mod tests {
     fn test_script_executor_execute_phase_empty() {
         let ctx = test_context();
         let executor = ScriptExecutor::new(ctx);
-        let scripts = vec![BuildScript::shell("post1", "echo post1", ScriptPhase::PostBuild)];
+        let scripts = vec![BuildScript::shell(
+            "post1",
+            "echo post1",
+            ScriptPhase::PostBuild,
+        )];
 
         let results = executor
             .execute_phase(&scripts, ScriptPhase::PreBuild)
