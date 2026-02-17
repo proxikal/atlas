@@ -36,12 +36,12 @@ cargo clean
 - REPL behavior? → Read `docs/specification/repl.md`
 - Bytecode/VM? → Read `docs/specification/bytecode.md`
 - Error codes? → Read `docs/specification/diagnostics.md`
-- Stdlib API? → Read `docs/api/stdlib.md`
+- Stdlib API? → Read `docs/specification/stdlib.md`
 
-### Implementation Docs (As Needed)
+### Implementation Patterns (As Needed)
 
-- Implementation guide for component: `docs/implementation/<component>.md`
-- Testing patterns: `docs/guides/testing-guide.md`
+- Codebase patterns: `memory/patterns.md`
+- Architectural decisions: `memory/decisions.md`
 
 ---
 

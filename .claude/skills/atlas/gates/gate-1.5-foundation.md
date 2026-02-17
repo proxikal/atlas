@@ -24,7 +24,7 @@
 **If building on or modifying existing code:**
 - Read existing code FIRST
 - Check against relevant specs (use `Atlas-SPEC.md` routing to find which)
-- Check against `docs/gates/compiler-principles.md` (no stubs, parity, quality)
+- Check against skill quality rules (no stubs, parity, quality)
 - Look for violations: implicit types, stubs, TODOs, parity breaks
 - **Fix violations BEFORE adding new code**
 
@@ -37,7 +37,7 @@
 - Infrastructure ready?
 - Both engines support prerequisites?
 - Phase BLOCKERS satisfied?
-- **Dependencies not stubbed?** → Check `docs/reference/intentional-stubs.md`
+- **Dependencies not stubbed?** → Verify in codebase (grep for `unimplemented!`, `todo!`)
 
 **If dependency is stubbed:**
 - Cannot use stubbed component
@@ -47,7 +47,7 @@
 
 ### 3. Architectural Decision Check
 
-**Read `docs/reference/decision-log.md`:**
+**Read `memory/decisions.md`:**
 - Any documented decisions apply?
 - Does planned approach align?
 - If making new decision: document it
@@ -111,6 +111,6 @@ Proceeding to GATE 2: Implementation
 
 **BLOCKING:** If issues found, MUST fix BEFORE GATE 2. Don't waste tokens writing code on bad foundations.
 
-**Reference:** `docs/gates/foundation-checks.md` (detailed checklist)
+**Reference:** `memory/gates.md` (quality gate rules)
 
 **Next:** GATE 2 (only if GATE 1.5 passes)

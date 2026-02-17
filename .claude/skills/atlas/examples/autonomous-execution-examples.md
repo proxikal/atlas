@@ -70,7 +70,7 @@ AI: "⏺ GATE 1.5: Foundation Check
 
      Decision: FFI errors will use AT9xxx codes with boundary context.
 
-     Logging to docs/decision-logs/..."
+     Logging to memory/decisions.md..."
 ```
 
 **Result:** AI decides intelligently based on codebase patterns, documents decision, doesn't ask user.

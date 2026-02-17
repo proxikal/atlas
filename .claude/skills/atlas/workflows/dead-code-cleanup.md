@@ -54,7 +54,7 @@ Bad time:
 
 **Read protection lists BEFORE searching:**
 
-1. **`docs/reference/intentional-stubs.md`:**
+1. **Check for intentional stubs:**
    - Optimizer hooks, profiler hooks, debugger hooks
    - Future expansion points
    - FFI stubs, runtime hooks
@@ -151,7 +151,7 @@ grep -r "use.*module_name" src/
 
 **For EACH verified dead item:**
 ```bash
-grep "function_name\|file_name" docs/reference/intentional-stubs.md
+grep -r "unimplemented!\|todo!" crates/atlas-runtime/src/
 ```
 
 **If FOUND:**

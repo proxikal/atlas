@@ -10,7 +10,7 @@
 
 **Read and verify:**
 - `STATUS.md` - Current version (v0.1? v0.2?), what's complete, what's in progress
-- `docs/reference/decision-log.md` - Architectural decisions already made
+- `memory/decisions.md` - Architectural decisions already made
 - Current phase file - ALL dependencies and blockers
 
 **Extract:**
@@ -51,7 +51,7 @@ Status:
 - Search for similar existing code (`grep`, `rg`)
 - Read how it was done before (consistency matters)
 - Follow established patterns (don't introduce new style)
-- Check decision log for architectural constraints
+- Check `memory/decisions.md` for architectural constraints
 
 **Examples:**
 - Adding new AST node? See how existing nodes are structured
@@ -90,7 +90,7 @@ Status:
 Before proceeding to GATE 1:
 
 - [ ] Read STATUS.md - know current version and progress
-- [ ] Read decision-log.md - know architectural decisions
+- [ ] Read memory/decisions.md - know architectural decisions
 - [ ] Read phase dependencies - ALL of them
 - [ ] Verified EACH dependency exists in codebase
 - [ ] Found existing patterns to follow
@@ -105,7 +105,7 @@ Before proceeding to GATE 1:
 ❌ **Assume dependency exists** - Always verify in codebase
 ❌ **Reinvent patterns** - Search for existing patterns first
 ❌ **Ignore version context** - v0.1 vs v0.2 matters
-❌ **Skip decision log** - May violate architectural decisions
+❌ **Skip decisions.md** - May violate architectural decisions
 ❌ **Write code before reading** - Always read existing code first
 ❌ **Duplicate existing code** - Search first, reuse patterns
 

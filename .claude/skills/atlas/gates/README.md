@@ -18,6 +18,7 @@ All gates MANDATORY and BLOCKING. Cannot skip.
 | **GATE 4** | `gate-4-quality.md` | Quality gates (test, clippy, fmt) |
 | **GATE 5** | `gate-5-docs.md` | Doc updates (3-tier strategy) |
 | **GATE 6** | `gate-6-status.md` | Update STATUS.md (structured dev only) |
+| **GATE 7** | `gate-7-memory.md` | Memory check (every phase) |
 
 ---
 
@@ -120,21 +121,12 @@ cargo test integration  # Integration tests
 
 ## Doc Sync
 
-**Source of Truth:** Project `docs/` (NOT skill workflows)
-
-**Key Docs:**
-- `STATUS.md` - Current state, progress tracking
-- `Atlas-SPEC.md` - Spec index with routing (use to find specific spec files)
-- `docs/README.md` - Documentation navigation
-- `docs/specification/` - Grammar, semantics, runtime
-- `docs/implementation/` - Component details
-- `docs/api/` - Stdlib, runtime API
-- `docs/guides/` - Testing, code quality
+**Sources of Truth:**
+- `STATUS.md` — Current state, progress tracking
+- `docs/specification/` — Language spec (grammar, types, runtime, bytecode)
+- `memory/` — AI knowledge base (patterns, decisions, gates)
 
 **Update Frequency:**
-- Skill: Rarely (rules only)
-- Gates: Rarely (workflow only)
-- Workflows: Rarely (patterns only)
-- Project docs: Frequently (implementation details)
-
-**Always reference project docs as source of truth.**
+- Skill/gates/workflows: Rarely (rules only)
+- Memory files: After phases that reveal new patterns
+- Spec docs: When language behavior changes

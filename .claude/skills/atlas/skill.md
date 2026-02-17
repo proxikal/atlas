@@ -29,7 +29,7 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 1. Check STATUS.md (verify phase not complete)
 2. Run GATE -1 (sanity check)
 3. Declare workflow type
-4. Execute gates 0-6 (A to Z, uninterrupted)
+4. Execute gates 0-7 (A to Z, uninterrupted)
 5. Deliver handoff (completion checkpoint - user may engage here)
 
 ### 2. Spec Compliance (100%)
@@ -144,7 +144,7 @@ cargo test -p atlas-runtime  # Full suite — ONLY when debugging unexplainable 
 - `decisions.md` - Architectural decisions (search DR-XXX)
 - `gates.md` - Quality gate rules
 
-**Reference:** Memory system consolidates old docs/decision-logs/, docs/gates/, examples.
+**Usage:** Read patterns.md for codebase patterns, decisions.md for architectural context.
 
 ---
 

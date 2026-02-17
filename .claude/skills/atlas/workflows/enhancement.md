@@ -59,7 +59,7 @@ Enhancements use **GATE 0, 0.5, 1, 1.5, 2-5** from central gate workflow.
 - Compiler, VM, interpreter?
 - Stdlib, LSP?
 
-**Reference:** `docs/implementation/` for component patterns
+**Reference:** `memory/patterns.md` for codebase patterns
 
 ---
 

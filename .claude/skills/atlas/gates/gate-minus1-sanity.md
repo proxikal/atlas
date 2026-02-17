@@ -44,7 +44,7 @@
    - 🚫 Spec DOESN'T define it → Check if out-of-scope for current version
 
    Step 3: Log decision (if implementing)
-   - Add entry to `docs/reference/decision-log.md`
+   - Add entry to `memory/decisions.md`
    - Format: "Implemented X per spec section Y for phase Z"
    ```
 
@@ -136,7 +136,7 @@
       → If blocker: Propose spec-compliant alternative
       → If critical: Ask ARCHITECTURAL question
 
-4. Log decision in docs/reference/decision-log.md
+4. Log decision in memory/decisions.md
 ```
 
 ---
