@@ -7,7 +7,7 @@
 //! Option<T> and Result<T,E> are implemented.
 
 use atlas_runtime::typechecker::generics::Monomorphizer;
-use atlas_runtime::types::Type;
+use atlas_runtime::types::{Type, TypeParamDef};
 
 // VM uses the same monomorphization infrastructure as interpreter
 // These tests verify the infrastructure works identically
@@ -16,7 +16,10 @@ use atlas_runtime::types::Type;
 fn test_vm_monomorphizer_basic() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
     let type_args = vec![Type::Number];
 
     let subst = mono
@@ -31,7 +34,10 @@ fn test_vm_monomorphizer_basic() {
 fn test_vm_monomorphizer_multiple_types() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
 
     // Test number
     mono.get_substitutions("f", &type_params, &[Type::Number])
@@ -109,7 +115,10 @@ fn test_vm_name_mangling_arrays() {
 fn test_vm_monomorphizer_cache_efficiency() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
     let type_args = vec![Type::Number];
 
     // Multiple calls with same types should reuse cache
@@ -126,7 +135,10 @@ fn test_vm_monomorphizer_cache_efficiency() {
 fn test_vm_monomorphizer_different_functions() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
     let type_args = vec![Type::Number];
 
     // Different functions with same type args should create separate instances
@@ -144,7 +156,16 @@ fn test_vm_monomorphizer_different_functions() {
 fn test_vm_generic_type_substitution() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string(), "E".to_string()];
+    let type_params = vec![
+        TypeParamDef {
+            name: "T".to_string(),
+            bound: None,
+        },
+        TypeParamDef {
+            name: "E".to_string(),
+            bound: None,
+        },
+    ];
 
     // Result<number, string>
     let type_args = vec![Type::Number, Type::String];

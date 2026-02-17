@@ -5,7 +5,7 @@
 //! - Monomorphization (generating specialized versions for each type instantiation)
 //! - Unification, occurs check, and type parameter substitution
 
-use crate::types::Type;
+use crate::types::{Type, TypeParamDef};
 use std::collections::HashMap;
 
 /// Type inference error
@@ -36,10 +36,11 @@ impl TypeInferer {
     /// Unify two types, building substitution map
     ///
     /// Returns Ok(()) if unification succeeds, Err otherwise.
+    #[allow(clippy::result_large_err)]
     pub fn unify(&mut self, expected: &Type, actual: &Type) -> Result<(), InferenceError> {
         // Apply existing substitutions to both types before unifying
-        let expected = self.apply_substitutions(expected);
-        let actual = self.apply_substitutions(actual);
+        let expected = self.apply_substitutions(expected).normalized();
+        let actual = self.apply_substitutions(actual).normalized();
 
         match (&expected, &actual) {
             // Type parameter unifies with anything (binds to it)
@@ -144,6 +145,7 @@ impl TypeInferer {
     }
 
     /// Add a substitution for a type parameter
+    #[allow(clippy::result_large_err)]
     fn add_substitution(&mut self, param: &str, ty: Type) -> Result<(), InferenceError> {
         // If we already have a substitution, unify with existing
         if let Some(existing) = self.substitutions.get(param).cloned() {
@@ -189,6 +191,12 @@ impl TypeInferer {
             Type::Generic { type_args, .. } => {
                 type_args.iter().any(|arg| self.occurs_in(param, arg))
             }
+            Type::Alias {
+                type_args, target, ..
+            } => {
+                type_args.iter().any(|arg| self.occurs_in(param, arg))
+                    || self.occurs_in(param, target)
+            }
             _ => false,
         }
     }
@@ -212,7 +220,16 @@ impl TypeInferer {
                 params,
                 return_type,
             } => Type::Function {
-                type_params: type_params.clone(),
+                type_params: type_params
+                    .iter()
+                    .map(|param| TypeParamDef {
+                        name: param.name.clone(),
+                        bound: param
+                            .bound
+                            .as_ref()
+                            .map(|b| Box::new(self.apply_substitutions(b))),
+                    })
+                    .collect(),
                 params: params.iter().map(|p| self.apply_substitutions(p)).collect(),
                 return_type: Box::new(self.apply_substitutions(return_type)),
             },
@@ -221,6 +238,27 @@ impl TypeInferer {
                 type_args: type_args
                     .iter()
                     .map(|arg| self.apply_substitutions(arg))
+                    .collect(),
+            },
+            Type::Alias {
+                name,
+                type_args,
+                target,
+            } => Type::Alias {
+                name: name.clone(),
+                type_args: type_args
+                    .iter()
+                    .map(|arg| self.apply_substitutions(arg))
+                    .collect(),
+                target: Box::new(self.apply_substitutions(target)),
+            },
+            Type::Structural { members } => Type::Structural {
+                members: members
+                    .iter()
+                    .map(|member| crate::types::StructuralMemberType {
+                        name: member.name.clone(),
+                        ty: self.apply_substitutions(&member.ty),
+                    })
                     .collect(),
             },
             // Other types don't contain type parameters
@@ -234,10 +272,10 @@ impl TypeInferer {
     }
 
     /// Check if all type parameters have been inferred
-    pub fn all_inferred(&self, type_params: &[String]) -> bool {
+    pub fn all_inferred(&self, type_params: &[TypeParamDef]) -> bool {
         type_params
             .iter()
-            .all(|param| self.substitutions.contains_key(param))
+            .all(|param| self.substitutions.contains_key(&param.name))
     }
 }
 
@@ -296,7 +334,7 @@ impl Monomorphizer {
     pub fn get_substitutions(
         &mut self,
         function_name: &str,
-        type_params: &[String],
+        type_params: &[TypeParamDef],
         type_args: &[Type],
     ) -> Result<HashMap<String, Type>, MonomorphizeError> {
         // Verify arity
@@ -320,8 +358,8 @@ impl Monomorphizer {
 
         // Build substitution map
         let mut subst = HashMap::new();
-        for (param_name, concrete_type) in type_params.iter().zip(type_args.iter()) {
-            subst.insert(param_name.clone(), concrete_type.clone());
+        for (param, concrete_type) in type_params.iter().zip(type_args.iter()) {
+            subst.insert(param.name.clone(), concrete_type.clone());
         }
 
         // Cache and return
@@ -469,7 +507,10 @@ mod tests {
     fn test_monomorphizer_get_substitutions() {
         let mut mono = Monomorphizer::new();
 
-        let type_params = vec!["T".to_string()];
+        let type_params = vec![TypeParamDef {
+            name: "T".to_string(),
+            bound: None,
+        }];
         let type_args = vec![Type::Number];
 
         let subst = mono
@@ -484,7 +525,16 @@ mod tests {
     fn test_monomorphizer_multiple_params() {
         let mut mono = Monomorphizer::new();
 
-        let type_params = vec!["T".to_string(), "E".to_string()];
+        let type_params = vec![
+            TypeParamDef {
+                name: "T".to_string(),
+                bound: None,
+            },
+            TypeParamDef {
+                name: "E".to_string(),
+                bound: None,
+            },
+        ];
         let type_args = vec![Type::String, Type::Number];
 
         let subst = mono
@@ -500,7 +550,10 @@ mod tests {
     fn test_monomorphizer_arity_mismatch() {
         let mut mono = Monomorphizer::new();
 
-        let type_params = vec!["T".to_string()];
+        let type_params = vec![TypeParamDef {
+            name: "T".to_string(),
+            bound: None,
+        }];
         let type_args = vec![Type::Number, Type::String]; // Too many
 
         let result = mono.get_substitutions("foo", &type_params, &type_args);
@@ -515,7 +568,10 @@ mod tests {
     fn test_monomorphizer_caching() {
         let mut mono = Monomorphizer::new();
 
-        let type_params = vec!["T".to_string()];
+        let type_params = vec![TypeParamDef {
+            name: "T".to_string(),
+            bound: None,
+        }];
         let type_args = vec![Type::Number];
 
         // First call

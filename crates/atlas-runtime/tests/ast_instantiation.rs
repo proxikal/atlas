@@ -37,6 +37,7 @@ fn test_complete_program_construction() {
                     },
                 ],
                 return_type: TypeRef::Named("number".to_string(), Span::new(34, 40)),
+                predicate: None,
                 body: Block {
                     statements: vec![Stmt::Return(ReturnStmt {
                         value: Some(Expr::Binary(BinaryExpr {

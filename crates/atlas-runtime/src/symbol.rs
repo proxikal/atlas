@@ -1,8 +1,9 @@
 //! Symbol table and name binding
 
+use crate::ast::TypeAliasDecl;
 use crate::span::Span;
 use crate::types::Type;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Symbol information
 #[derive(Debug, Clone)]
@@ -41,6 +42,10 @@ pub struct SymbolTable {
     scopes: Vec<HashMap<String, Symbol>>,
     /// Top-level hoisted functions
     functions: HashMap<String, Symbol>,
+    /// Type alias declarations (name -> alias)
+    type_aliases: HashMap<String, TypeAliasDecl>,
+    /// Exported type alias names
+    type_alias_exports: HashSet<String>,
 }
 
 impl SymbolTable {
@@ -49,6 +54,8 @@ impl SymbolTable {
         let mut table = Self {
             scopes: vec![HashMap::new()],
             functions: HashMap::new(),
+            type_aliases: HashMap::new(),
+            type_alias_exports: HashSet::new(),
         };
 
         // Add prelude builtins
@@ -696,6 +703,54 @@ impl SymbolTable {
             .ok();
 
         table
+    }
+
+    /// Define a type alias in the current module
+    pub fn define_type_alias(
+        &mut self,
+        alias: TypeAliasDecl,
+    ) -> Result<(), Box<(String, Option<TypeAliasDecl>)>> {
+        if let Some(existing) = self.type_aliases.get(&alias.name.name) {
+            return Err(Box::new((
+                format!("Type alias '{}' already defined", alias.name.name),
+                Some(existing.clone()),
+            )));
+        }
+        self.type_aliases.insert(alias.name.name.clone(), alias);
+        Ok(())
+    }
+
+    /// Look up a type alias by name
+    pub fn get_type_alias(&self, name: &str) -> Option<&TypeAliasDecl> {
+        self.type_aliases.get(name)
+    }
+
+    /// Get all type aliases
+    pub fn type_aliases(&self) -> &HashMap<String, TypeAliasDecl> {
+        &self.type_aliases
+    }
+
+    /// Mark a type alias as exported
+    pub fn mark_type_alias_exported(&mut self, name: &str) -> bool {
+        if self.type_aliases.contains_key(name) {
+            self.type_alias_exports.insert(name.to_string());
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Get exported type aliases
+    pub fn get_type_alias_exports(&self) -> HashMap<String, TypeAliasDecl> {
+        self.type_alias_exports
+            .iter()
+            .filter_map(|name| {
+                self.type_aliases
+                    .get(name)
+                    .cloned()
+                    .map(|alias| (name.clone(), alias))
+            })
+            .collect()
     }
 
     /// Enter a new scope

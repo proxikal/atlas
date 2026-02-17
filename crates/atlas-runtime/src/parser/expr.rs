@@ -324,34 +324,185 @@ impl Parser {
 
     /// Parse type reference
     pub(super) fn parse_type_ref(&mut self) -> Result<TypeRef, ()> {
-        // Check if this is a function type: (T1, T2) -> T3
-        if self.check(TokenKind::LeftParen) {
-            return self.parse_function_type();
+        self.parse_union_type()
+    }
+
+    /// Parse union type: A | B
+    fn parse_union_type(&mut self) -> Result<TypeRef, ()> {
+        let mut members = vec![self.parse_intersection_type()?];
+
+        while self.match_token(TokenKind::Pipe) {
+            members.push(self.parse_intersection_type()?);
         }
 
-        let token = self.consume_identifier("a type name")?;
-        let span = token.span;
-        let name = token.lexeme.clone();
-
-        // Check for generic type: Type<T1, T2>
-        let mut type_ref = if self.check(TokenKind::Less) {
-            self.parse_generic_type(name, span)?
+        if members.len() == 1 {
+            Ok(members.remove(0))
         } else {
-            TypeRef::Named(name, span)
+            let start = members.first().unwrap().span();
+            let end = members.last().unwrap().span();
+            Ok(TypeRef::Union {
+                members,
+                span: start.merge(end),
+            })
+        }
+    }
+
+    /// Parse intersection type: A & B
+    fn parse_intersection_type(&mut self) -> Result<TypeRef, ()> {
+        let mut members = vec![self.parse_type_primary()?];
+
+        while self.match_token(TokenKind::Ampersand) {
+            members.push(self.parse_type_primary()?);
+        }
+
+        if members.len() == 1 {
+            Ok(members.remove(0))
+        } else {
+            let start = members.first().unwrap().span();
+            let end = members.last().unwrap().span();
+            Ok(TypeRef::Intersection {
+                members,
+                span: start.merge(end),
+            })
+        }
+    }
+
+    /// Parse primary type (named, generic, grouped, or function), plus array suffixes.
+    fn parse_type_primary(&mut self) -> Result<TypeRef, ()> {
+        let mut type_ref = if self.check(TokenKind::LeftParen) {
+            self.parse_paren_type()?
+        } else if self.check(TokenKind::LeftBrace) {
+            self.parse_structural_type()?
+        } else {
+            let token = if self.check(TokenKind::Null) {
+                self.advance()
+            } else {
+                self.consume_identifier("a type name")?
+            };
+            let span = token.span;
+            let name = token.lexeme.clone();
+
+            // Check for generic type: Type<T1, T2>
+            if self.check(TokenKind::Less) {
+                self.parse_generic_type(name, span)?
+            } else {
+                TypeRef::Named(name, span)
+            }
         };
 
         // Handle array type syntax: type[]
-        while self.match_token(TokenKind::LeftBracket) {
+        loop {
+            if !self.match_token(TokenKind::LeftBracket) {
+                break;
+            }
             let rbracket_token = self.consume(
                 TokenKind::RightBracket,
                 "Expected ']' after '[' in array type",
             )?;
             let end_span = rbracket_token.span;
-            let full_span = Span::new(span.start, end_span.end);
+            let full_span = type_ref.span().merge(end_span);
             type_ref = TypeRef::Array(Box::new(type_ref), full_span);
         }
 
         Ok(type_ref)
+    }
+
+    /// Parse structural type: { field: type, method: (params) -> return }
+    fn parse_structural_type(&mut self) -> Result<TypeRef, ()> {
+        use crate::ast::StructuralMember;
+
+        let start_span = self
+            .consume(
+                TokenKind::LeftBrace,
+                "Expected '{' at start of structural type",
+            )?
+            .span;
+
+        let mut members = Vec::new();
+        if !self.check(TokenKind::RightBrace) {
+            loop {
+                let member_start = self.peek().span;
+                let name_tok = self.consume_identifier("a structural member name")?;
+                let member_name = name_tok.lexeme.clone();
+                let member_name_span = name_tok.span;
+                self.consume(TokenKind::Colon, "Expected ':' after member name")?;
+                let type_ref = self.parse_type_ref()?;
+                let member_span = member_start.merge(type_ref.span());
+                members.push(StructuralMember {
+                    name: member_name,
+                    type_ref,
+                    span: member_span.merge(member_name_span),
+                });
+
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+                if self.check(TokenKind::RightBrace) {
+                    break;
+                }
+            }
+        }
+
+        let end_span = self
+            .consume(TokenKind::RightBrace, "Expected '}' after structural type")?
+            .span;
+
+        if members.is_empty() {
+            self.error("Structural type must include at least one member");
+            return Err(());
+        }
+
+        Ok(TypeRef::Structural {
+            members,
+            span: start_span.merge(end_span),
+        })
+    }
+
+    /// Parse parenthesized type or function type.
+    fn parse_paren_type(&mut self) -> Result<TypeRef, ()> {
+        let start_token = self.consume(TokenKind::LeftParen, "Expected '(' at start of type")?;
+        let start_span = start_token.span;
+
+        if self.check(TokenKind::RightParen) {
+            self.consume(TokenKind::RightParen, "Expected ')'")?;
+            if self.match_token(TokenKind::Arrow) {
+                let return_type = self.parse_type_ref()?;
+                let full_span = Span::new(start_span.start, return_type.span().end);
+                return Ok(TypeRef::Function {
+                    params: Vec::new(),
+                    return_type: Box::new(return_type),
+                    span: full_span,
+                });
+            }
+            self.error("Unexpected empty type group");
+            return Err(());
+        }
+
+        let mut params = Vec::new();
+        params.push(self.parse_type_ref()?);
+
+        while self.match_token(TokenKind::Comma) {
+            params.push(self.parse_type_ref()?);
+        }
+
+        self.consume(TokenKind::RightParen, "Expected ')' after type list")?;
+
+        if self.match_token(TokenKind::Arrow) {
+            let return_type = self.parse_type_ref()?;
+            let full_span = Span::new(start_span.start, return_type.span().end);
+            return Ok(TypeRef::Function {
+                params,
+                return_type: Box::new(return_type),
+                span: full_span,
+            });
+        }
+
+        if params.len() == 1 {
+            return Ok(params.remove(0));
+        }
+
+        self.error("Expected '->' after function type parameters");
+        Err(())
     }
 
     /// Parse generic type: Type<T1, T2, ...>
@@ -386,48 +537,7 @@ impl Parser {
         })
     }
 
-    /// Parse function type: (T1, T2) -> ReturnType
-    fn parse_function_type(&mut self) -> Result<TypeRef, ()> {
-        let start_token = self.consume(
-            TokenKind::LeftParen,
-            "Expected '(' at start of function type",
-        )?;
-        let start_span = start_token.span;
-
-        let mut params = Vec::new();
-
-        // Parse parameter types
-        if !self.check(TokenKind::RightParen) {
-            loop {
-                let param_type = self.parse_type_ref()?;
-                params.push(param_type);
-
-                if !self.match_token(TokenKind::Comma) {
-                    break;
-                }
-            }
-        }
-
-        self.consume(
-            TokenKind::RightParen,
-            "Expected ')' after function parameter types",
-        )?;
-
-        // Expect arrow ->
-        self.consume(TokenKind::Arrow, "Expected '->' in function type")?;
-
-        // Parse return type
-        let return_type = self.parse_type_ref()?;
-        let end_span = return_type.span();
-
-        let full_span = Span::new(start_span.start, end_span.end);
-
-        Ok(TypeRef::Function {
-            params,
-            return_type: Box::new(return_type),
-            span: full_span,
-        })
-    }
+    // parse_function_type removed in favor of parse_paren_type
 
     /// Parse match expression
     fn parse_match_expr(&mut self) -> Result<Expr, ()> {

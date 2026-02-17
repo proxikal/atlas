@@ -1,7 +1,9 @@
 //! Built-in generic types: Option<T> and Result<T,E>
 //! Type checking and conversion utilities
 
+use crate::json_value::JsonValue;
 use crate::span::Span;
+use crate::stdlib::collections::hash::HashKey;
 use crate::value::{RuntimeError, Value};
 
 // ============================================================================
@@ -281,6 +283,142 @@ pub fn is_function(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     Ok(Value::Bool(matches!(args[0], Value::Function(_))))
+}
+
+/// Check if value is a JSON object
+pub fn is_object(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    Ok(Value::Bool(
+        matches!(&args[0], Value::JsonValue(json) if json.is_object()),
+    ))
+}
+
+/// Check if value matches a specific runtime type name
+pub fn is_type(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let expected_type = match &args[1] {
+        Value::String(s) => s.as_ref(),
+        _ => {
+            return Err(RuntimeError::TypeError {
+                msg: "isType() requires type name string as second argument".to_string(),
+                span,
+            })
+        }
+    };
+
+    if expected_type == "object" {
+        return Ok(Value::Bool(matches!(
+            &args[0],
+            Value::JsonValue(json) if json.is_object()
+        )));
+    }
+
+    let actual = type_name(&args[0]);
+    Ok(Value::Bool(actual == expected_type))
+}
+
+/// Check if value has a field/key with the given name
+pub fn has_field(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let field = match &args[1] {
+        Value::String(s) => s.as_ref(),
+        _ => {
+            return Err(RuntimeError::TypeError {
+                msg: "hasField() requires field name string as second argument".to_string(),
+                span,
+            })
+        }
+    };
+
+    match &args[0] {
+        Value::JsonValue(json) => Ok(Value::Bool(
+            json.as_object()
+                .map(|obj| obj.contains_key(field))
+                .unwrap_or(false),
+        )),
+        Value::HashMap(map) => {
+            let key = HashKey::from_value(&Value::string(field), span)?;
+            let exists = map.lock().unwrap().contains_key(&key);
+            Ok(Value::Bool(exists))
+        }
+        _ => Ok(Value::Bool(false)),
+    }
+}
+
+/// Check if value has a method with the given name
+pub fn has_method(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let field = match &args[1] {
+        Value::String(s) => s.as_ref(),
+        _ => {
+            return Err(RuntimeError::TypeError {
+                msg: "hasMethod() requires method name string as second argument".to_string(),
+                span,
+            })
+        }
+    };
+
+    match &args[0] {
+        Value::JsonValue(json) => Ok(Value::Bool(
+            json.as_object()
+                .map(|obj| obj.contains_key(field))
+                .unwrap_or(false),
+        )),
+        Value::HashMap(map) => {
+            let key = HashKey::from_value(&Value::string(field), span)?;
+            let exists = map.lock().unwrap().contains_key(&key);
+            Ok(Value::Bool(exists))
+        }
+        _ => Ok(Value::Bool(false)),
+    }
+}
+
+/// Check if value has a tag field matching the given tag value
+pub fn has_tag(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::InvalidStdlibArgument { span });
+    }
+
+    let tag_value = match &args[1] {
+        Value::String(s) => s.as_ref(),
+        _ => {
+            return Err(RuntimeError::TypeError {
+                msg: "hasTag() requires tag value string as second argument".to_string(),
+                span,
+            })
+        }
+    };
+
+    match &args[0] {
+        Value::JsonValue(json) => {
+            if let Some(obj) = json.as_object() {
+                if let Some(JsonValue::String(value)) = obj.get("tag") {
+                    return Ok(Value::Bool(value == tag_value));
+                }
+            }
+            Ok(Value::Bool(false))
+        }
+        Value::HashMap(map) => {
+            let key = HashKey::from_value(&Value::string("tag"), span)?;
+            if let Some(Value::String(value)) = map.lock().unwrap().get(&key) {
+                return Ok(Value::Bool(value.as_ref() == tag_value));
+            }
+            Ok(Value::Bool(false))
+        }
+        _ => Ok(Value::Bool(false)),
+    }
 }
 
 // ============================================================================

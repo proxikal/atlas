@@ -5,7 +5,7 @@ use crate::diagnostic::Diagnostic;
 use crate::span::Span;
 use crate::typechecker::suggestions;
 use crate::typechecker::TypeChecker;
-use crate::types::Type;
+use crate::types::{Type, TypeParamDef};
 
 impl<'a> TypeChecker<'a> {
     /// Check an expression and return its type
@@ -40,22 +40,104 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
+    fn check_call_against_signature(
+        &mut self,
+        call: &CallExpr,
+        callee_type: &Type,
+        type_params: &[TypeParamDef],
+        params: &[Type],
+        return_type: &Type,
+    ) -> Type {
+        // Check argument count
+        if call.args.len() != params.len() {
+            self.diagnostics.push(
+                Diagnostic::error_with_code(
+                    "AT3005",
+                    format!(
+                        "Function expects {} argument{}, found {}",
+                        params.len(),
+                        if params.len() == 1 { "" } else { "s" },
+                        call.args.len()
+                    ),
+                    call.span,
+                )
+                .with_label("argument count mismatch")
+                .with_help(suggestions::suggest_arity_fix(
+                    params.len(),
+                    call.args.len(),
+                    callee_type,
+                )),
+            );
+        }
+
+        // If function has type parameters, use type inference
+        if !type_params.is_empty() {
+            return self.check_call_with_inference(type_params, params, return_type, call);
+        }
+
+        // Non-generic function - check argument types normally
+        for (i, arg) in call.args.iter().enumerate() {
+            let arg_type = self.check_expr(arg);
+            if let Some(expected_type) = params.get(i) {
+                if !arg_type.is_assignable_to(expected_type)
+                    && arg_type.normalized() != Type::Unknown
+                {
+                    let help = suggestions::suggest_type_mismatch(expected_type, &arg_type)
+                        .unwrap_or_else(|| {
+                            format!(
+                                "argument {} must be of type {}",
+                                i + 1,
+                                expected_type.display_name()
+                            )
+                        });
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3001",
+                            format!(
+                                "Argument {} type mismatch: expected {}, found {}",
+                                i + 1,
+                                expected_type.display_name(),
+                                arg_type.display_name()
+                            ),
+                            arg.span(),
+                        )
+                        .with_label(format!(
+                            "expected {}, found {}",
+                            expected_type.display_name(),
+                            arg_type.display_name()
+                        ))
+                        .with_help(help),
+                    );
+                }
+            }
+        }
+
+        return_type.clone()
+    }
+
     /// Check a binary expression
     fn check_binary(&mut self, binary: &BinaryExpr) -> Type {
         let left_type = self.check_expr(&binary.left);
         let right_type = self.check_expr(&binary.right);
+        let left_norm = left_type.normalized();
+        let right_norm = right_type.normalized();
 
         // Skip type checking if either side is Unknown (error recovery)
-        if left_type == Type::Unknown || right_type == Type::Unknown {
+        if left_norm == Type::Unknown || right_norm == Type::Unknown {
             return Type::Unknown;
         }
 
         match binary.op {
             BinaryOp::Add => {
-                if (left_type == Type::Number && right_type == Type::Number)
-                    || (left_type == Type::String && right_type == Type::String)
-                {
-                    left_type
+                if self.all_union_pairs_valid(&left_norm, &right_norm, |a, b| {
+                    (*a == Type::Number && *b == Type::Number)
+                        || (*a == Type::String && *b == Type::String)
+                }) {
+                    if left_norm == Type::String || right_norm == Type::String {
+                        Type::String
+                    } else {
+                        Type::Number
+                    }
                 } else {
                     let help = suggestions::suggest_binary_operator_fix("+", &left_type, &right_type)
                         .unwrap_or_else(|| "ensure both operands are numbers (for addition) or both are strings (for concatenation)".to_string());
@@ -80,7 +162,9 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => {
-                if left_type == Type::Number && right_type == Type::Number {
+                if self.all_union_pairs_valid(&left_norm, &right_norm, |a, b| {
+                    *a == Type::Number && *b == Type::Number
+                }) {
                     Type::Number
                 } else {
                     self.diagnostics.push(
@@ -101,7 +185,7 @@ impl<'a> TypeChecker<'a> {
             }
             BinaryOp::Eq | BinaryOp::Ne => {
                 // Equality requires same types
-                if left_type != right_type {
+                if !self.types_overlap(&left_norm, &right_norm) {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3002",
@@ -119,7 +203,9 @@ impl<'a> TypeChecker<'a> {
                 Type::Bool
             }
             BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge => {
-                if left_type == Type::Number && right_type == Type::Number {
+                if self.all_union_pairs_valid(&left_norm, &right_norm, |a, b| {
+                    *a == Type::Number && *b == Type::Number
+                }) {
                     Type::Bool
                 } else {
                     self.diagnostics.push(
@@ -139,7 +225,9 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             BinaryOp::And | BinaryOp::Or => {
-                if left_type != Type::Bool || right_type != Type::Bool {
+                if !self.all_union_pairs_valid(&left_norm, &right_norm, |a, b| {
+                    *a == Type::Bool && *b == Type::Bool
+                }) {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3002",
@@ -162,10 +250,11 @@ impl<'a> TypeChecker<'a> {
     /// Check a unary expression
     fn check_unary(&mut self, unary: &UnaryExpr) -> Type {
         let expr_type = self.check_expr(&unary.expr);
+        let expr_norm = expr_type.normalized();
 
         match unary.op {
             UnaryOp::Negate => {
-                if expr_type != Type::Number && expr_type != Type::Unknown {
+                if expr_norm != Type::Number && expr_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3002",
@@ -184,7 +273,7 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             UnaryOp::Not => {
-                if expr_type != Type::Bool && expr_type != Type::Unknown {
+                if expr_norm != Type::Bool && expr_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3002",
@@ -208,76 +297,80 @@ impl<'a> TypeChecker<'a> {
     /// Check a function call
     fn check_call(&mut self, call: &CallExpr) -> Type {
         let callee_type = self.check_expr(&call.callee);
+        let callee_norm = callee_type.normalized();
 
-        match &callee_type {
+        match &callee_norm {
             Type::Function {
                 type_params,
                 params,
                 return_type,
-            } => {
-                // Check argument count
-                if call.args.len() != params.len() {
-                    self.diagnostics.push(
-                        Diagnostic::error_with_code(
-                            "AT3005",
-                            format!(
-                                "Function expects {} argument{}, found {}",
-                                params.len(),
-                                if params.len() == 1 { "" } else { "s" },
-                                call.args.len()
-                            ),
-                            call.span,
-                        )
-                        .with_label("argument count mismatch")
-                        .with_help(suggestions::suggest_arity_fix(
-                            params.len(),
-                            call.args.len(),
-                            &callee_type,
-                        )),
-                    );
+            } => self.check_call_against_signature(
+                call,
+                &callee_type,
+                type_params,
+                params,
+                return_type,
+            ),
+            Type::Union(members) => {
+                if members.is_empty() {
+                    return Type::Unknown;
                 }
 
-                // If function has type parameters, use type inference
-                if !type_params.is_empty() {
-                    return self.check_call_with_inference(type_params, params, return_type, call);
-                }
-
-                // Non-generic function - check argument types normally
-                for (i, arg) in call.args.iter().enumerate() {
-                    let arg_type = self.check_expr(arg);
-                    if let Some(expected_type) = params.get(i) {
-                        if !arg_type.is_assignable_to(expected_type) && arg_type != Type::Unknown {
-                            let help = suggestions::suggest_type_mismatch(expected_type, &arg_type)
-                                .unwrap_or_else(|| {
-                                    format!(
-                                        "argument {} must be of type {}",
-                                        i + 1,
-                                        expected_type.display_name()
+                let mut signature: Option<Type> = None;
+                for member in members {
+                    match member {
+                        Type::Function { .. } => {
+                            if signature.is_none() {
+                                signature = Some(member.clone());
+                            } else if signature.as_ref() != Some(member) {
+                                self.diagnostics.push(
+                                    Diagnostic::error_with_code(
+                                        "AT3005",
+                                        "Cannot call union of incompatible function signatures",
+                                        call.span,
                                     )
-                                });
+                                    .with_label("ambiguous call")
+                                    .with_help(
+                                        "ensure all union members share the same function signature",
+                                    ),
+                                );
+                                return Type::Unknown;
+                            }
+                        }
+                        _ => {
                             self.diagnostics.push(
                                 Diagnostic::error_with_code(
-                                    "AT3001",
+                                    "AT3006",
                                     format!(
-                                        "Argument {} type mismatch: expected {}, found {}",
-                                        i + 1,
-                                        expected_type.display_name(),
-                                        arg_type.display_name()
+                                        "Cannot call non-function type {}",
+                                        member.display_name()
                                     ),
-                                    arg.span(),
+                                    call.span,
                                 )
-                                .with_label(format!(
-                                    "expected {}, found {}",
-                                    expected_type.display_name(),
-                                    arg_type.display_name()
-                                ))
-                                .with_help(help),
+                                .with_label("not callable")
+                                .with_help(suggestions::suggest_not_callable(&callee_type)),
                             );
+                            return Type::Unknown;
                         }
                     }
                 }
 
-                (**return_type).clone()
+                if let Some(Type::Function {
+                    type_params,
+                    params,
+                    return_type,
+                }) = signature
+                {
+                    return self.check_call_against_signature(
+                        call,
+                        &callee_type,
+                        &type_params,
+                        &params,
+                        &return_type,
+                    );
+                }
+
+                Type::Unknown
             }
             Type::Unknown => {
                 // Error recovery: still check arguments for side effects (usage tracking)
@@ -308,7 +401,7 @@ impl<'a> TypeChecker<'a> {
     /// Check a generic function call with type inference
     fn check_call_with_inference(
         &mut self,
-        type_params: &[String],
+        type_params: &[TypeParamDef],
         params: &[Type],
         return_type: &Type,
         call: &CallExpr,
@@ -349,8 +442,8 @@ impl<'a> TypeChecker<'a> {
             // Some type parameters couldn't be inferred
             let uninferred: Vec<String> = type_params
                 .iter()
-                .filter(|param| inferer.get_substitution(param).is_none())
-                .cloned()
+                .filter(|param| inferer.get_substitution(&param.name).is_none())
+                .map(|param| param.name.clone())
                 .collect();
 
             self.diagnostics.push(
@@ -365,7 +458,58 @@ impl<'a> TypeChecker<'a> {
         }
 
         // Apply substitutions to return type
-        inferer.apply_substitutions(return_type)
+        let inferred_return = inferer.apply_substitutions(return_type);
+
+        // Validate constraints
+        if !self.check_constraints(type_params, &inferer, call.span) {
+            return Type::Unknown;
+        }
+
+        inferred_return
+    }
+
+    fn all_union_pairs_valid<F>(&self, left: &Type, right: &Type, mut predicate: F) -> bool
+    where
+        F: FnMut(&Type, &Type) -> bool,
+    {
+        let left_members = self.union_members(left);
+        let right_members = self.union_members(right);
+
+        for l in &left_members {
+            for r in &right_members {
+                if l.normalized() == Type::Unknown || r.normalized() == Type::Unknown {
+                    continue;
+                }
+                if !predicate(l, r) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    fn types_overlap(&self, left: &Type, right: &Type) -> bool {
+        let left_members = self.union_members(left);
+        let right_members = self.union_members(right);
+
+        for l in &left_members {
+            for r in &right_members {
+                if l.normalized() == Type::Unknown || r.normalized() == Type::Unknown {
+                    return true;
+                }
+                if l.is_assignable_to(r) || r.is_assignable_to(l) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn union_members(&self, ty: &Type) -> Vec<Type> {
+        match ty.normalized() {
+            Type::Union(members) => members,
+            other => vec![other],
+        }
     }
 
     /// Check a member expression (method call)
@@ -374,12 +518,108 @@ impl<'a> TypeChecker<'a> {
         let target_type = self.check_expr(&member.target);
 
         // Skip error recovery cases
-        if target_type == Type::Unknown {
+        if target_type.normalized() == Type::Unknown {
             return Type::Unknown;
         }
 
         // Look up the method in the method table and clone the signature to avoid borrow issues
         let method_name = &member.member.name;
+        let target_norm = target_type.normalized();
+
+        if let Type::Union(members) = target_norm {
+            let mut return_types = Vec::new();
+            let mut signatures = Vec::new();
+
+            for member_ty in &members {
+                if let Some(sig) = self.method_table.lookup(member_ty, method_name).cloned() {
+                    signatures.push(sig.clone());
+                    return_types.push(sig.return_type);
+                } else {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3010",
+                            format!(
+                                "Type '{}' has no method named '{}'",
+                                member_ty.display_name(),
+                                method_name
+                            ),
+                            member.member.span,
+                        )
+                        .with_label("method not found")
+                        .with_help(format!(
+                            "method '{}' must exist on all union members",
+                            method_name
+                        )),
+                    );
+                    return Type::Unknown;
+                }
+            }
+
+            if let Some(first_sig) = signatures.first() {
+                let expected_args = first_sig.arg_types.len();
+                let provided_args = member.args.as_ref().map(|args| args.len()).unwrap_or(0);
+
+                if provided_args != expected_args {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3005",
+                            format!(
+                                "Method '{}' expects {} arguments, found {}",
+                                method_name, expected_args, provided_args
+                            ),
+                            member.span,
+                        )
+                        .with_label("argument count mismatch")
+                        .with_help(format!(
+                            "method '{}' requires exactly {} argument{}",
+                            method_name,
+                            expected_args,
+                            if expected_args == 1 { "" } else { "s" }
+                        )),
+                    );
+                }
+
+                if let Some(args) = &member.args {
+                    for (i, arg) in args.iter().enumerate() {
+                        let arg_type = self.check_expr(arg);
+                        for sig in &signatures {
+                            if let Some(expected_type) = sig.arg_types.get(i) {
+                                if !arg_type.is_assignable_to(expected_type)
+                                    && arg_type.normalized() != Type::Unknown
+                                {
+                                    self.diagnostics.push(
+                                        Diagnostic::error_with_code(
+                                            "AT3001",
+                                            format!(
+                                                "Argument {} has wrong type: expected {}, found {}",
+                                                i + 1,
+                                                expected_type.display_name(),
+                                                arg_type.display_name()
+                                            ),
+                                            arg.span(),
+                                        )
+                                        .with_label("type mismatch")
+                                        .with_help(
+                                            format!(
+                                                "argument {} must be of type {}",
+                                                i + 1,
+                                                expected_type.display_name()
+                                            ),
+                                        ),
+                                    );
+                                    return Type::Unknown;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return Type::union(return_types);
+            }
+
+            return Type::Unknown;
+        }
+
         let method_sig = self.method_table.lookup(&target_type, method_name).cloned();
 
         if let Some(method_sig) = method_sig {
@@ -412,7 +652,9 @@ impl<'a> TypeChecker<'a> {
                 for (i, arg) in args.iter().enumerate() {
                     let arg_type = self.check_expr(arg);
                     if let Some(expected_type) = method_sig.arg_types.get(i) {
-                        if !arg_type.is_assignable_to(expected_type) && arg_type != Type::Unknown {
+                        if !arg_type.is_assignable_to(expected_type)
+                            && arg_type.normalized() != Type::Unknown
+                        {
                             self.diagnostics.push(
                                 Diagnostic::error_with_code(
                                     "AT3001",
@@ -465,11 +707,13 @@ impl<'a> TypeChecker<'a> {
     fn check_index(&mut self, index: &IndexExpr) -> Type {
         let target_type = self.check_expr(&index.target);
         let index_type = self.check_expr(&index.index);
+        let target_norm = target_type.normalized();
+        let index_norm = index_type.normalized();
 
-        match target_type {
+        match target_norm {
             // Array indexing: requires number index, returns element type
             Type::Array(elem_type) => {
-                if index_type != Type::Number && index_type != Type::Unknown {
+                if index_norm != Type::Number && index_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -487,9 +731,9 @@ impl<'a> TypeChecker<'a> {
             }
             // JSON indexing: accepts string or number, always returns json
             Type::JsonValue => {
-                if index_type != Type::String
-                    && index_type != Type::Number
-                    && index_type != Type::Unknown
+                if index_norm != Type::String
+                    && index_norm != Type::Number
+                    && index_norm != Type::Unknown
                 {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
@@ -505,6 +749,65 @@ impl<'a> TypeChecker<'a> {
                     );
                 }
                 Type::JsonValue
+            }
+            Type::Union(members) => {
+                let mut result_types = Vec::new();
+                for member in members {
+                    match member {
+                        Type::Array(elem_type) => {
+                            if index_norm != Type::Number && index_norm != Type::Unknown {
+                                self.diagnostics.push(
+                                    Diagnostic::error_with_code(
+                                        "AT3001",
+                                        format!(
+                                            "Array index must be number, found {}",
+                                            index_type.display_name()
+                                        ),
+                                        index.index.span(),
+                                    )
+                                    .with_label("type mismatch")
+                                    .with_help("array indices must be numbers"),
+                                );
+                            }
+                            result_types.push(*elem_type);
+                        }
+                        Type::JsonValue => {
+                            if index_norm != Type::String
+                                && index_norm != Type::Number
+                                && index_norm != Type::Unknown
+                            {
+                                self.diagnostics.push(
+                                    Diagnostic::error_with_code(
+                                        "AT3001",
+                                        format!(
+                                            "JSON index must be string or number, found {}",
+                                            index_type.display_name()
+                                        ),
+                                        index.index.span(),
+                                    )
+                                    .with_label("type mismatch")
+                                    .with_help(
+                                        "use a string key or numeric index to access JSON values",
+                                    ),
+                                );
+                            }
+                            result_types.push(Type::JsonValue);
+                        }
+                        _ => {
+                            self.diagnostics.push(
+                                Diagnostic::error_with_code(
+                                    "AT3001",
+                                    format!("Cannot index into type {}", member.display_name()),
+                                    index.target.span(),
+                                )
+                                .with_label("not indexable")
+                                .with_help("only arrays and json values can be indexed"),
+                            );
+                            return Type::Unknown;
+                        }
+                    }
+                }
+                Type::union(result_types)
             }
             Type::Unknown => Type::Unknown,
             _ => {
@@ -535,7 +838,7 @@ impl<'a> TypeChecker<'a> {
         // Check that all elements have the same type
         for (i, elem) in arr.elements.iter().enumerate().skip(1) {
             let elem_type = self.check_expr(elem);
-            if !elem_type.is_assignable_to(&first_type) && elem_type != Type::Unknown {
+            if !elem_type.is_assignable_to(&first_type) && elem_type.normalized() != Type::Unknown {
                 self.diagnostics.push(
                     Diagnostic::error_with_code(
                         "AT3001",
@@ -564,7 +867,7 @@ impl<'a> TypeChecker<'a> {
         // 1. Check scrutinee type
         let scrutinee_type = self.check_expr(&match_expr.scrutinee);
 
-        if scrutinee_type == Type::Unknown {
+        if scrutinee_type.normalized() == Type::Unknown {
             // Error in scrutinee, skip match checking
             return Type::Unknown;
         }
@@ -616,27 +919,27 @@ impl<'a> TypeChecker<'a> {
             return Type::Unknown;
         }
 
-        // Get the first arm's type as the expected type
-        let (first_type, _, _) = &arm_types[0];
-
-        // Check that all other arms have compatible types
+        let mut unified = arm_types[0].0.clone();
         for (arm_type, arm_span, arm_idx) in &arm_types[1..] {
-            if !arm_type.is_assignable_to(first_type) && *arm_type != Type::Unknown {
+            if let Some(lub) = crate::typechecker::inference::least_upper_bound(&unified, arm_type)
+            {
+                unified = lub;
+            } else if arm_type.normalized() != Type::Unknown {
                 self.diagnostics.push(
                     Diagnostic::error_with_code(
                         "AT3021",
                         format!(
                             "Match arm {} returns incompatible type: expected {}, found {}",
                             arm_idx + 1,
-                            first_type.display_name(),
+                            unified.display_name(),
                             arm_type.display_name()
                         ),
                         *arm_span,
                     )
                     .with_label("type mismatch")
                     .with_help(format!(
-                        "all match arms must return the same type ({})",
-                        first_type.display_name()
+                        "all match arms must return compatible types (current: {})",
+                        unified.display_name()
                     )),
                 );
             }
@@ -645,8 +948,8 @@ impl<'a> TypeChecker<'a> {
         // 4. Check exhaustiveness
         self.check_exhaustiveness(&match_expr.arms, &scrutinee_type, match_expr.span);
 
-        // 5. Return the unified type (first arm's type)
-        first_type.clone()
+        // 5. Return the unified type
+        unified
     }
 
     /// Check exhaustiveness of match arms
@@ -669,7 +972,15 @@ impl<'a> TypeChecker<'a> {
         }
 
         // Check exhaustiveness based on scrutinee type
-        match scrutinee_type {
+        let scrutinee_norm = scrutinee_type.normalized();
+        if let Type::Union(members) = scrutinee_norm {
+            for member in members {
+                self.check_exhaustiveness(arms, &member, match_span);
+            }
+            return;
+        }
+
+        match scrutinee_norm {
             Type::Generic { name, .. } if name == "Option" => {
                 // Option<T> requires Some and None to be covered
                 let has_some = arms.iter().any(|arm| {
@@ -820,6 +1131,97 @@ impl<'a> TypeChecker<'a> {
         expected_type: &Type,
     ) -> Vec<(String, Type, Span)> {
         let mut bindings = Vec::new();
+        let expected_norm = expected_type.normalized();
+
+        if let Type::Union(members) = expected_norm {
+            match pattern {
+                Pattern::Wildcard(_) => return bindings,
+                Pattern::Variable(id) => {
+                    bindings.push((id.name.clone(), Type::Union(members), id.span));
+                    return bindings;
+                }
+                Pattern::Literal(lit, span) => {
+                    let lit_type = match lit {
+                        Literal::Number(_) => Type::Number,
+                        Literal::String(_) => Type::String,
+                        Literal::Bool(_) => Type::Bool,
+                        Literal::Null => Type::Null,
+                    };
+                    if !members
+                        .iter()
+                        .any(|member| lit_type.is_assignable_to(member))
+                    {
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3022",
+                                format!(
+                                    "Pattern type mismatch: expected {}, found {}",
+                                    Type::Union(members).display_name(),
+                                    lit_type.display_name()
+                                ),
+                                *span,
+                            )
+                            .with_label("type mismatch")
+                            .with_help("use a matching literal or wildcard pattern"),
+                        );
+                    }
+                    return bindings;
+                }
+                Pattern::Constructor { name, args, span } => {
+                    let ctor_name = name.name.as_str();
+                    let target_member = members.iter().find(|member| match member.normalized() {
+                        Type::Generic { name, .. }
+                            if ctor_name == "Some" || ctor_name == "None" =>
+                        {
+                            name == "Option"
+                        }
+                        Type::Generic { name, .. } if ctor_name == "Ok" || ctor_name == "Err" => {
+                            name == "Result"
+                        }
+                        _ => false,
+                    });
+
+                    if let Some(member) = target_member {
+                        return self.check_constructor_pattern(name, args, member, *span);
+                    }
+
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3022",
+                            format!(
+                                "Pattern type mismatch: expected {}, found constructor {}",
+                                Type::Union(members).display_name(),
+                                name.name
+                            ),
+                            *span,
+                        )
+                        .with_label("type mismatch")
+                        .with_help("use a matching constructor or wildcard pattern"),
+                    );
+                    return bindings;
+                }
+                Pattern::Array { elements, span } => {
+                    for member in &members {
+                        if matches!(member.normalized(), Type::Array(_)) {
+                            return self.check_array_pattern(elements, member, *span);
+                        }
+                    }
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3022",
+                            format!(
+                                "Pattern type mismatch: expected {}, found array pattern",
+                                Type::Union(members).display_name()
+                            ),
+                            *span,
+                        )
+                        .with_label("type mismatch")
+                        .with_help("use a matching array pattern or wildcard"),
+                    );
+                    return bindings;
+                }
+            }
+        }
 
         match pattern {
             Pattern::Literal(lit, span) => {
@@ -831,13 +1233,13 @@ impl<'a> TypeChecker<'a> {
                     Literal::Null => Type::Null,
                 };
 
-                if !lit_type.is_assignable_to(expected_type) {
+                if !lit_type.is_assignable_to(&expected_norm) {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3022",
                             format!(
                                 "Pattern type mismatch: expected {}, found {}",
-                                expected_type.display_name(),
+                                expected_norm.display_name(),
                                 lit_type.display_name()
                             ),
                             *span,
@@ -845,7 +1247,7 @@ impl<'a> TypeChecker<'a> {
                         .with_label("type mismatch")
                         .with_help(format!(
                             "use a {} literal or wildcard pattern",
-                            expected_type.display_name()
+                            expected_norm.display_name()
                         )),
                     );
                 }
@@ -857,17 +1259,17 @@ impl<'a> TypeChecker<'a> {
 
             Pattern::Variable(id) => {
                 // Variable binding - binds the entire scrutinee value
-                bindings.push((id.name.clone(), expected_type.clone(), id.span));
+                bindings.push((id.name.clone(), expected_norm.clone(), id.span));
             }
 
             Pattern::Constructor { name, args, span } => {
                 // Check constructor pattern (Ok, Err, Some, None)
-                bindings.extend(self.check_constructor_pattern(name, args, expected_type, *span));
+                bindings.extend(self.check_constructor_pattern(name, args, &expected_norm, *span));
             }
 
             Pattern::Array { elements, span } => {
                 // Check array pattern
-                bindings.extend(self.check_array_pattern(elements, expected_type, *span));
+                bindings.extend(self.check_array_pattern(elements, &expected_norm, *span));
             }
         }
 
@@ -883,8 +1285,9 @@ impl<'a> TypeChecker<'a> {
         span: Span,
     ) -> Vec<(String, Type, Span)> {
         let mut bindings = Vec::new();
+        let expected_norm = expected_type.normalized();
 
-        match expected_type {
+        match expected_norm {
             Type::Generic {
                 name: type_name,
                 type_args,
@@ -1037,12 +1440,13 @@ impl<'a> TypeChecker<'a> {
         span: Span,
     ) -> Vec<(String, Type, Span)> {
         let mut bindings = Vec::new();
+        let expected_norm = expected_type.normalized();
 
-        match expected_type {
+        match expected_norm {
             Type::Array(elem_type) => {
                 // Check each pattern element against the array element type
                 for pattern in elements {
-                    bindings.extend(self.check_pattern(pattern, elem_type));
+                    bindings.extend(self.check_pattern(pattern, &elem_type));
                 }
             }
             _ => {
@@ -1068,14 +1472,15 @@ impl<'a> TypeChecker<'a> {
     fn check_try(&mut self, try_expr: &TryExpr) -> Type {
         // Type check the expression being tried
         let expr_type = self.check_expr(&try_expr.expr);
+        let expr_norm = expr_type.normalized();
 
         // Skip if expression type is unknown (error already reported)
-        if expr_type == Type::Unknown {
+        if expr_norm == Type::Unknown {
             return Type::Unknown;
         }
 
         // Expression must be a Result<T, E>
-        let (ok_type, err_type) = match &expr_type {
+        let (ok_type, err_type) = match &expr_norm {
             Type::Generic { name, type_args } if name == "Result" && type_args.len() == 2 => {
                 (type_args[0].clone(), type_args[1].clone())
             }
@@ -1114,12 +1519,13 @@ impl<'a> TypeChecker<'a> {
         };
 
         // Function must return Result<T', E'>
-        match &function_return_type {
+        let function_return_norm = function_return_type.normalized();
+        match &function_return_norm {
             Type::Generic { name, type_args } if name == "Result" && type_args.len() == 2 => {
                 let function_err_type = &type_args[1];
 
                 // Error types must be compatible (for now, they must be the same)
-                if &err_type != function_err_type {
+                if err_type.normalized() != function_err_type.normalized() {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3029",

@@ -18,6 +18,8 @@ pub struct Config {
     pub history_file: Option<PathBuf>,
     /// Disable history by default (ATLAS_NO_HISTORY=1)
     pub no_history: bool,
+    /// Enable automatic type display in REPL (ATLAS_REPL_SHOW_TYPES, defaults to true)
+    pub show_types: bool,
 }
 
 impl Config {
@@ -30,6 +32,12 @@ impl Config {
             no_color: env::var("ATLAS_NO_COLOR").is_ok() || env::var("NO_COLOR").is_ok(),
             history_file: env::var("ATLAS_HISTORY_FILE").ok().map(PathBuf::from),
             no_history: env::var("ATLAS_NO_HISTORY").is_ok(),
+            show_types: env::var("ATLAS_REPL_SHOW_TYPES")
+                .map(|v| {
+                    let lower = v.to_lowercase();
+                    !(lower == "0" || lower == "false" || lower == "off")
+                })
+                .unwrap_or(true),
         }
     }
 
@@ -66,12 +74,14 @@ mod tests {
         env::remove_var("NO_COLOR");
         env::remove_var("ATLAS_HISTORY_FILE");
         env::remove_var("ATLAS_NO_HISTORY");
+        env::remove_var("ATLAS_REPL_SHOW_TYPES");
 
         let config = Config::from_env();
         assert!(!config.default_json);
         assert!(!config.no_color);
         assert!(config.history_file.is_none());
         assert!(!config.no_history);
+        assert!(config.show_types);
     }
 
     #[test]
@@ -113,6 +123,18 @@ mod tests {
         let config = Config::from_env();
         assert!(config.no_history);
         env::remove_var("ATLAS_NO_HISTORY");
+    }
+
+    #[test]
+    fn test_repl_show_types_flag() {
+        env::set_var("ATLAS_REPL_SHOW_TYPES", "0");
+        let config = Config::from_env();
+        assert!(!config.show_types);
+
+        env::set_var("ATLAS_REPL_SHOW_TYPES", "false");
+        let config = Config::from_env();
+        assert!(!config.show_types);
+        env::remove_var("ATLAS_REPL_SHOW_TYPES");
     }
 
     #[test]

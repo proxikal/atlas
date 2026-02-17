@@ -206,6 +206,9 @@ impl ModuleExecutor {
                             exports.insert(var.name.name.clone(), value.clone());
                         }
                     }
+                    crate::ast::ExportItem::TypeAlias(_) => {
+                        // Type aliases are compile-time only
+                    }
                 }
             }
         }

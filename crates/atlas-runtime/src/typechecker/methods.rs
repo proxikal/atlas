@@ -46,6 +46,7 @@ impl MethodTable {
 
     /// Look up a method for a type
     pub fn lookup(&self, receiver_type: &Type, method_name: &str) -> Option<&MethodSignature> {
+        let receiver_type = receiver_type.normalized();
         // Convert Type to string for lookup
         let type_name = match receiver_type {
             Type::JsonValue => "json",

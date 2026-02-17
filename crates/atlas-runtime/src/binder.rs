@@ -7,9 +7,10 @@
 use crate::ast::*;
 use crate::diagnostic::Diagnostic;
 use crate::module_loader::ModuleRegistry;
+use crate::span::Span;
 use crate::symbol::{Symbol, SymbolKind, SymbolTable};
-use crate::types::Type;
-use std::collections::HashMap;
+use crate::types::{StructuralMemberType, Type, TypeParamDef};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 /// Binder for name resolution and scope management
@@ -20,6 +21,8 @@ pub struct Binder {
     diagnostics: Vec<Diagnostic>,
     /// Type parameter scopes (stack of scopes, each scope maps param name -> TypeParam)
     type_param_scopes: Vec<HashMap<String, TypeParam>>,
+    /// Stack of aliases being resolved (for circular detection)
+    type_alias_stack: Vec<String>,
 }
 
 impl Binder {
@@ -29,6 +32,7 @@ impl Binder {
             symbol_table: SymbolTable::new(),
             diagnostics: Vec::new(),
             type_param_scopes: Vec::new(),
+            type_alias_stack: Vec::new(),
         }
     }
 
@@ -38,11 +42,15 @@ impl Binder {
             symbol_table,
             diagnostics: Vec::new(),
             type_param_scopes: Vec::new(),
+            type_alias_stack: Vec::new(),
         }
     }
 
     /// Bind a program (two-pass: hoist functions, then bind everything)
     pub fn bind(&mut self, program: &Program) -> (SymbolTable, Vec<Diagnostic>) {
+        // Phase 0: Collect type aliases (so they can be used in signatures)
+        self.collect_type_aliases(program);
+
         // Phase 1: Collect all top-level function declarations (hoisting)
         for item in &program.items {
             if let Item::Function(func) = item {
@@ -66,9 +74,15 @@ impl Binder {
                 let name = match &export_decl.item {
                     ExportItem::Function(func) => &func.name.name,
                     ExportItem::Variable(var) => &var.name.name,
+                    ExportItem::TypeAlias(alias) => &alias.name.name,
                 };
 
-                if !self.symbol_table.mark_exported(name) {
+                let mut exported = self.symbol_table.mark_exported(name);
+                if !exported {
+                    exported = self.symbol_table.mark_type_alias_exported(name);
+                }
+
+                if !exported {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT5004",
@@ -103,6 +117,16 @@ impl Binder {
         module_path: &Path,
         registry: &ModuleRegistry,
     ) -> (SymbolTable, Vec<Diagnostic>) {
+        // Phase 0: Collect type aliases (so they can be used in signatures)
+        self.collect_type_aliases(program);
+
+        // Bind imports early to support aliases in signatures
+        for item in &program.items {
+            if let Item::Import(import_decl) = item {
+                self.bind_import(import_decl, module_path, registry);
+            }
+        }
+
         // Phase 1: Collect all top-level function declarations (hoisting)
         for item in &program.items {
             if let Item::Function(func) = item {
@@ -126,9 +150,15 @@ impl Binder {
                 let name = match &export_decl.item {
                     ExportItem::Function(func) => &func.name.name,
                     ExportItem::Variable(var) => &var.name.name,
+                    ExportItem::TypeAlias(alias) => &alias.name.name,
                 };
 
-                if !self.symbol_table.mark_exported(name) {
+                let mut exported = self.symbol_table.mark_exported(name);
+                if !exported {
+                    exported = self.symbol_table.mark_type_alias_exported(name);
+                }
+
+                if !exported {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT5004",
@@ -184,10 +214,22 @@ impl Binder {
         // Exit type parameter scope
         self.exit_type_param_scope();
 
+        let type_params = func
+            .type_params
+            .iter()
+            .map(|param| TypeParamDef {
+                name: param.name.clone(),
+                bound: param
+                    .bound
+                    .as_ref()
+                    .map(|bound| Box::new(self.resolve_type_ref(bound))),
+            })
+            .collect();
+
         let symbol = Symbol {
             name: func.name.name.clone(),
             ty: Type::Function {
-                type_params: func.type_params.iter().map(|tp| tp.name.clone()).collect(),
+                type_params,
                 params: param_types,
                 return_type: Box::new(return_type),
             },
@@ -251,10 +293,22 @@ impl Binder {
         // Exit type parameter scope
         self.exit_type_param_scope();
 
+        let type_params = func
+            .type_params
+            .iter()
+            .map(|param| TypeParamDef {
+                name: param.name.clone(),
+                bound: param
+                    .bound
+                    .as_ref()
+                    .map(|bound| Box::new(self.resolve_type_ref(bound))),
+            })
+            .collect();
+
         let symbol = Symbol {
             name: func.name.name.clone(),
             ty: Type::Function {
-                type_params: func.type_params.iter().map(|tp| tp.name.clone()).collect(),
+                type_params,
                 params: param_types,
                 return_type: Box::new(return_type),
             },
@@ -309,11 +363,17 @@ impl Binder {
                         // Bind variable by treating it as a statement
                         self.bind_statement(&crate::ast::Stmt::VarDecl(var.clone()));
                     }
+                    crate::ast::ExportItem::TypeAlias(_) => {
+                        // Type aliases are handled during collection
+                    }
                 }
             }
             Item::Extern(_) => {
                 // Extern binding handled in phase-10b (FFI infrastructure)
                 // For now, just skip - full implementation pending
+            }
+            Item::TypeAlias(_) => {
+                // Type aliases are handled during collection
             }
         }
     }
@@ -323,13 +383,13 @@ impl Binder {
         &mut self,
         item: &Item,
         _module_path: &Path,
-        registry: &ModuleRegistry,
+        _registry: &ModuleRegistry,
     ) {
         match item {
             Item::Function(func) => self.bind_function(func),
             Item::Statement(stmt) => self.bind_statement(stmt),
-            Item::Import(import_decl) => {
-                self.bind_import(import_decl, registry);
+            Item::Import(_) => {
+                // Imports already bound in the pre-pass for module-aware binding
             }
             Item::Export(export_decl) => {
                 // Export wraps an item - bind the inner item
@@ -339,11 +399,17 @@ impl Binder {
                         // Bind variable by treating it as a statement
                         self.bind_statement(&crate::ast::Stmt::VarDecl(var.clone()));
                     }
+                    crate::ast::ExportItem::TypeAlias(_) => {
+                        // Type aliases are handled during collection
+                    }
                 }
             }
             Item::Extern(_) => {
                 // Extern binding handled in phase-10b (FFI infrastructure)
                 // For now, just skip - full implementation pending
+            }
+            Item::TypeAlias(_) => {
+                // Type aliases are handled during collection
             }
         }
     }
@@ -352,7 +418,12 @@ impl Binder {
     ///
     /// Creates local bindings for imported symbols by looking them up in the source module's
     /// symbol table (from the registry).
-    fn bind_import(&mut self, import_decl: &ImportDecl, registry: &ModuleRegistry) {
+    fn bind_import(
+        &mut self,
+        import_decl: &ImportDecl,
+        module_path: &Path,
+        registry: &ModuleRegistry,
+    ) {
         // Resolve source module path (this will be done by ModuleResolver in practice)
         // For now, we'll need to resolve the source path relative to the importing module
         // This is a simplified version - full path resolution happens in ModuleResolver
@@ -360,7 +431,7 @@ impl Binder {
         // Convert import source to absolute path
         // Note: In practice, this should use ModuleResolver.resolve(), but for binding
         // we assume the source path is already resolved by the loader
-        let source_path = PathBuf::from(&import_decl.source);
+        let source_path = Self::resolve_import_path(&import_decl.source, module_path);
 
         // Look up source module's symbol table
         let source_symbols = match registry.get(&source_path) {
@@ -384,6 +455,7 @@ impl Binder {
 
         // Get exported symbols from source module
         let exports = source_symbols.get_exports();
+        let type_alias_exports = source_symbols.get_type_alias_exports();
 
         // Process each import specifier
         for specifier in &import_decl.specifiers {
@@ -413,21 +485,37 @@ impl Binder {
                             }
                         }
                         None => {
-                            // Exported symbol not found
-                            self.diagnostics.push(
-                                Diagnostic::error_with_code(
-                                    "AT5006",
-                                    format!(
-                                        "Module '{}' does not export '{}'",
-                                        import_decl.source, name.name
+                            // Check for exported type alias
+                            if let Some(type_alias) = type_alias_exports.get(&name.name) {
+                                if let Err(err) =
+                                    self.symbol_table.define_type_alias(type_alias.clone())
+                                {
+                                    let (msg, _) = *err;
+                                    self.diagnostics.push(
+                                        Diagnostic::error_with_code("AT2003", &msg, *span)
+                                            .with_label("imported type alias")
+                                            .with_help(
+                                                "rename the import or remove the conflicting alias declaration",
+                                            ),
+                                    );
+                                }
+                            } else {
+                                // Exported symbol not found
+                                self.diagnostics.push(
+                                    Diagnostic::error_with_code(
+                                        "AT5006",
+                                        format!(
+                                            "Module '{}' does not export '{}'",
+                                            import_decl.source, name.name
+                                        ),
+                                        *span,
+                                    )
+                                    .with_label("imported name")
+                                    .with_help(
+                                        "check the module's exports or import a different symbol",
                                     ),
-                                    *span,
-                                )
-                                .with_label("imported name")
-                                .with_help(
-                                    "check the module's exports or import a different symbol",
-                                ),
-                            );
+                                );
+                            }
                         }
                     }
                 }
@@ -448,6 +536,87 @@ impl Binder {
                     );
                 }
             }
+        }
+    }
+
+    fn resolve_import_path(source: &str, module_path: &Path) -> PathBuf {
+        if source.starts_with("./") || source.starts_with("../") {
+            let base = module_path.parent().unwrap_or(Path::new("."));
+            let mut resolved = base.join(source);
+            if resolved.extension().is_none() {
+                resolved.set_extension("atl");
+            }
+            resolved
+        } else if source.starts_with('/') {
+            let mut stripped = PathBuf::from(source.trim_start_matches('/'));
+            if stripped.extension().is_none() {
+                stripped.set_extension("atl");
+            }
+            let root = module_path.ancestors().last().unwrap_or(Path::new("/"));
+            root.join(stripped)
+        } else {
+            PathBuf::from(source)
+        }
+    }
+
+    fn collect_type_aliases(&mut self, program: &Program) {
+        for item in &program.items {
+            match item {
+                Item::TypeAlias(alias) => {
+                    self.define_type_alias(alias);
+                }
+                Item::Export(export_decl) => {
+                    if let ExportItem::TypeAlias(alias) = &export_decl.item {
+                        self.define_type_alias(alias);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn define_type_alias(&mut self, alias: &TypeAliasDecl) {
+        // Validate type parameter uniqueness
+        let mut seen = HashSet::new();
+        for param in &alias.type_params {
+            if !seen.insert(param.name.clone()) {
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        "AT2003",
+                        format!("Duplicate type parameter '{}'", param.name),
+                        param.span,
+                    )
+                    .with_label("duplicate type parameter")
+                    .with_help("remove or rename the duplicate type parameter"),
+                );
+                return;
+            }
+        }
+
+        if let Err(err) = self.symbol_table.define_type_alias(alias.clone()) {
+            let (msg, existing) = *err;
+            let mut diag = Diagnostic::error_with_code("AT2003", &msg, alias.name.span)
+                .with_label("duplicate type alias")
+                .with_help(format!(
+                    "rename or remove one of the '{}' aliases",
+                    alias.name.name
+                ));
+
+            if let Some(existing_alias) = existing {
+                diag = diag.with_related_location(crate::diagnostic::RelatedLocation {
+                    file: "<input>".to_string(),
+                    line: 1,
+                    column: existing_alias.name.span.start + 1,
+                    length: existing_alias
+                        .name
+                        .span
+                        .end
+                        .saturating_sub(existing_alias.name.span.start),
+                    message: format!("'{}' first defined here", existing_alias.name.name),
+                });
+            }
+
+            self.diagnostics.push(diag);
         }
     }
 
@@ -874,18 +1043,40 @@ impl Binder {
     /// Resolve a type reference to a Type
     fn resolve_type_ref(&mut self, type_ref: &TypeRef) -> Type {
         match type_ref {
-            TypeRef::Named(name, _) => match name.as_str() {
+            TypeRef::Named(name, span) => match name.as_str() {
                 "number" => Type::Number,
                 "string" => Type::String,
                 "bool" => Type::Bool,
                 "void" => Type::Void,
                 "null" => Type::Null,
                 "json" => Type::JsonValue,
+                "Comparable" | "Numeric" => Type::Number,
+                "Iterable" => Type::Array(Box::new(Type::Unknown)),
+                "Equatable" => {
+                    Type::union(vec![Type::Number, Type::String, Type::Bool, Type::Null])
+                }
+                "Serializable" => Type::union(vec![
+                    Type::Number,
+                    Type::String,
+                    Type::Bool,
+                    Type::Null,
+                    Type::JsonValue,
+                ]),
                 _ => {
                     // Check if it's a type parameter
                     if let Some(_type_param) = self.lookup_type_parameter(name) {
                         return Type::TypeParameter { name: name.clone() };
                     }
+
+                    // Check if it's a type alias
+                    if let Some(alias) = self.symbol_table.get_type_alias(name).cloned() {
+                        if alias.type_params.is_empty() {
+                            return self.resolve_type_alias(&alias, Vec::new(), *span);
+                        }
+                        // Defer generic alias arity checks to the type checker (allows inference)
+                        return Type::Unknown;
+                    }
+
                     // Unknown type - will be caught by typechecker
                     Type::Unknown
                 }
@@ -904,11 +1095,49 @@ impl Binder {
                     return_type: ret_type,
                 }
             }
+            TypeRef::Structural { members, .. } => Type::Structural {
+                members: members
+                    .iter()
+                    .map(|member| StructuralMemberType {
+                        name: member.name.clone(),
+                        ty: self.resolve_type_ref(&member.type_ref),
+                    })
+                    .collect(),
+            },
             TypeRef::Generic {
                 name,
                 type_args,
                 span,
             } => {
+                if let Some(alias) = self.symbol_table.get_type_alias(name).cloned() {
+                    if type_args.len() != alias.type_params.len() {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                format!(
+                                    "Type alias '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    alias.type_params.len(),
+                                    type_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments")
+                            .with_help(format!(
+                                "provide exactly {} type argument(s) for '{}'",
+                                alias.type_params.len(),
+                                name
+                            )),
+                        );
+                        return Type::Unknown;
+                    }
+
+                    let resolved_args = type_args
+                        .iter()
+                        .map(|arg| self.resolve_type_ref(arg))
+                        .collect::<Vec<_>>();
+                    return self.resolve_type_alias(&alias, resolved_args, *span);
+                }
+
                 // BLOCKER 02-B: Validate generic type arity
                 let expected_arity = self.get_generic_type_arity(name);
 
@@ -952,6 +1181,149 @@ impl Binder {
                     name: name.clone(),
                     type_args: resolved_args,
                 }
+            }
+            TypeRef::Union { members, .. } => {
+                let resolved = members.iter().map(|m| self.resolve_type_ref(m)).collect();
+                Type::union(resolved)
+            }
+            TypeRef::Intersection { members, .. } => {
+                let resolved = members.iter().map(|m| self.resolve_type_ref(m)).collect();
+                Type::intersection(resolved)
+            }
+        }
+    }
+
+    fn resolve_type_alias(
+        &mut self,
+        alias: &TypeAliasDecl,
+        type_args: Vec<Type>,
+        span: Span,
+    ) -> Type {
+        let alias_name = alias.name.name.clone();
+        if self.type_alias_stack.contains(&alias_name) {
+            self.diagnostics.push(
+                Diagnostic::error_with_code(
+                    "AT3001",
+                    format!("Circular type alias detected for '{}'", alias_name),
+                    span,
+                )
+                .with_label("circular type alias")
+                .with_help("remove the circular reference in type aliases"),
+            );
+            return Type::Unknown;
+        }
+
+        let substitutions = alias
+            .type_params
+            .iter()
+            .map(|param| param.name.clone())
+            .zip(type_args.iter().cloned())
+            .collect::<HashMap<_, _>>();
+
+        self.type_alias_stack.push(alias_name.clone());
+        let resolved_target =
+            self.resolve_type_ref_with_alias_params(&alias.type_ref, &substitutions);
+        self.type_alias_stack.pop();
+
+        Type::Alias {
+            name: alias_name,
+            type_args,
+            target: Box::new(resolved_target),
+        }
+    }
+
+    fn resolve_type_ref_with_alias_params(
+        &mut self,
+        type_ref: &TypeRef,
+        substitutions: &HashMap<String, Type>,
+    ) -> Type {
+        match type_ref {
+            TypeRef::Named(name, _) => {
+                if let Some(sub) = substitutions.get(name) {
+                    return sub.clone();
+                }
+                self.resolve_type_ref(type_ref)
+            }
+            TypeRef::Array(elem, _) => Type::Array(Box::new(
+                self.resolve_type_ref_with_alias_params(elem, substitutions),
+            )),
+            TypeRef::Function {
+                params,
+                return_type,
+                ..
+            } => {
+                let param_types = params
+                    .iter()
+                    .map(|p| self.resolve_type_ref_with_alias_params(p, substitutions))
+                    .collect();
+                let ret_type =
+                    Box::new(self.resolve_type_ref_with_alias_params(return_type, substitutions));
+                Type::Function {
+                    type_params: vec![],
+                    params: param_types,
+                    return_type: ret_type,
+                }
+            }
+            TypeRef::Structural { members, .. } => Type::Structural {
+                members: members
+                    .iter()
+                    .map(|member| StructuralMemberType {
+                        name: member.name.clone(),
+                        ty: self
+                            .resolve_type_ref_with_alias_params(&member.type_ref, substitutions),
+                    })
+                    .collect(),
+            },
+            TypeRef::Union { members, .. } => {
+                let resolved = members
+                    .iter()
+                    .map(|m| self.resolve_type_ref_with_alias_params(m, substitutions))
+                    .collect();
+                Type::union(resolved)
+            }
+            TypeRef::Intersection { members, .. } => {
+                let resolved = members
+                    .iter()
+                    .map(|m| self.resolve_type_ref_with_alias_params(m, substitutions))
+                    .collect();
+                Type::intersection(resolved)
+            }
+            TypeRef::Generic {
+                name,
+                type_args,
+                span,
+            } => {
+                if let Some(alias) = self.symbol_table.get_type_alias(name).cloned() {
+                    if type_args.len() != alias.type_params.len() {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                format!(
+                                    "Type alias '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    alias.type_params.len(),
+                                    type_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments")
+                            .with_help(format!(
+                                "provide exactly {} type argument(s) for '{}'",
+                                alias.type_params.len(),
+                                name
+                            )),
+                        );
+                        return Type::Unknown;
+                    }
+
+                    let resolved_args = type_args
+                        .iter()
+                        .map(|arg| self.resolve_type_ref_with_alias_params(arg, substitutions))
+                        .collect::<Vec<_>>();
+                    return self.resolve_type_alias(&alias, resolved_args, *span);
+                }
+
+                // Fall back to normal resolution (includes built-in generic validation)
+                self.resolve_type_ref(type_ref)
             }
         }
     }
@@ -1212,7 +1584,7 @@ mod tests {
         // Check function type has type parameters
         if let Type::Function { type_params, .. } = &identity_symbol.unwrap().ty {
             assert_eq!(type_params.len(), 1);
-            assert_eq!(type_params[0], "T");
+            assert_eq!(type_params[0].name, "T");
         } else {
             panic!("Expected Function type");
         }
@@ -1236,8 +1608,8 @@ mod tests {
 
         if let Type::Function { type_params, .. } = &pair_symbol.unwrap().ty {
             assert_eq!(type_params.len(), 2);
-            assert_eq!(type_params[0], "A");
-            assert_eq!(type_params[1], "B");
+            assert_eq!(type_params[0].name, "A");
+            assert_eq!(type_params[1].name, "B");
         } else {
             panic!("Expected Function type");
         }

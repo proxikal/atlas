@@ -48,6 +48,7 @@ pub const VARIABLE_SHADOWING: &str = "AT2005";
 pub const CONSTANT_CONDITION: &str = "AT2006";
 pub const UNNECESSARY_ANNOTATION: &str = "AT2007";
 pub const UNUSED_IMPORT: &str = "AT2008";
+pub const DEPRECATED_TYPE_ALIAS: &str = "AT2009";
 
 // AT3xxx - Semantic and Type Checking Errors
 pub const TYPE_ERROR: &str = "AT3001";
@@ -274,6 +275,11 @@ pub static ERROR_CODES: &[ErrorCodeInfo] = &[
         code: "AT2008",
         description: "Unused import",
         help: Some("Remove the unused import statement."),
+    },
+    ErrorCodeInfo {
+        code: "AT2009",
+        description: "Deprecated type alias",
+        help: Some("Use the recommended replacement instead of the deprecated alias."),
     },
     // === AT3xxx: Semantic/Type Checking Errors ===
     ErrorCodeInfo {

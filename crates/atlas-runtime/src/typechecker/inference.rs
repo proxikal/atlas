@@ -26,10 +26,11 @@ pub fn infer_return_type(body: &Block) -> InferredReturn {
 
     // Check if all return types are the same
     let first = &return_types[0];
-    let all_same = return_types.iter().all(|t| t == first);
+    let first_norm = first.normalized();
+    let all_same = return_types.iter().all(|t| t.normalized() == first_norm);
 
     if all_same {
-        if has_implicit_void && *first != Type::Void {
+        if has_implicit_void && first_norm != Type::Void {
             // Some paths return a value, some fall through (void)
             InferredReturn::Inconsistent {
                 types: return_types,
@@ -155,10 +156,10 @@ fn infer_binary_type(op: &BinaryOp) -> Type {
 /// and refine inference results.
 pub fn check_bidirectional(expected: &Type, inferred: &Type) -> BidirectionalResult {
     // Unknown can flow to any expected type
-    if *inferred == Type::Unknown {
+    if inferred.normalized() == Type::Unknown {
         return BidirectionalResult::Compatible;
     }
-    if *expected == Type::Unknown {
+    if expected.normalized() == Type::Unknown {
         return BidirectionalResult::Compatible;
     }
 
@@ -185,25 +186,44 @@ pub enum BidirectionalResult {
 ///
 /// Returns `None` if the types are incompatible.
 pub fn least_upper_bound(a: &Type, b: &Type) -> Option<Type> {
-    if a == b {
-        return Some(a.clone());
+    let a_norm = a.normalized();
+    let b_norm = b.normalized();
+
+    if a_norm == b_norm {
+        return Some(a_norm);
     }
 
     // Unknown is subsumed by any concrete type
-    if *a == Type::Unknown {
-        return Some(b.clone());
+    if a_norm == Type::Unknown {
+        return Some(b_norm);
     }
-    if *b == Type::Unknown {
-        return Some(a.clone());
+    if b_norm == Type::Unknown {
+        return Some(a_norm);
     }
 
     // Arrays: LUB of element types
-    if let (Type::Array(ea), Type::Array(eb)) = (a, b) {
+    if let (Type::Array(ea), Type::Array(eb)) = (&a_norm, &b_norm) {
         return least_upper_bound(ea, eb).map(|lub| Type::Array(Box::new(lub)));
     }
 
-    // No common type
-    None
+    if let Type::Union(mut members) = a_norm.clone() {
+        members.push(b_norm.clone());
+        return Some(Type::union(members));
+    }
+    if let Type::Union(mut members) = b_norm.clone() {
+        members.push(a_norm.clone());
+        return Some(Type::union(members));
+    }
+
+    if a.is_assignable_to(b) {
+        return Some(b.clone());
+    }
+    if b.is_assignable_to(a) {
+        return Some(a.clone());
+    }
+
+    // No common type - fall back to union
+    Some(Type::union(vec![a.clone(), b.clone()]))
 }
 
 #[cfg(test)]
@@ -267,7 +287,10 @@ mod tests {
 
     #[test]
     fn test_least_upper_bound_incompatible() {
-        assert_eq!(least_upper_bound(&Type::Number, &Type::String), None);
+        assert_eq!(
+            least_upper_bound(&Type::Number, &Type::String),
+            Some(Type::union(vec![Type::Number, Type::String]))
+        );
     }
 
     #[test]

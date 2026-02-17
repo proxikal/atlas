@@ -155,7 +155,7 @@ let x: number = 42;
 
 ### Versioning
 
-**Current Version:** `ast_version: 1`
+**Current Version:** `ast_version: 2`
 
 **Breaking Changes:**
 - Node kind renamed or removed → Version increment
@@ -410,7 +410,7 @@ Ensure JSON dumps are deterministic, reproducible, and stable across environment
 ### Version Fields
 
 **All dumps include version:**
-- `ast_version: 1` in AST dumps
+- `ast_version: 2` in AST dumps
 - `typecheck_version: 1` in typecheck dumps
 - `diag_version: 1` in diagnostics (see DIAGNOSTIC_SYSTEM.md)
 

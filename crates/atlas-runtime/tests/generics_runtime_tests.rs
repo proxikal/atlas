@@ -7,13 +7,16 @@
 //! with the full compilation pipeline in later phases).
 
 use atlas_runtime::typechecker::generics::Monomorphizer;
-use atlas_runtime::types::Type;
+use atlas_runtime::types::{Type, TypeParamDef};
 
 #[test]
 fn test_monomorphizer_substitutions() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
     let type_args = vec![Type::Number];
 
     let subst = mono
@@ -28,7 +31,10 @@ fn test_monomorphizer_substitutions() {
 fn test_monomorphizer_multiple_instantiations() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
 
     // identity<number>
     let subst1 = mono
@@ -56,7 +62,10 @@ fn test_monomorphizer_multiple_instantiations() {
 fn test_monomorphizer_complex_types() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
 
     // Array types
     let array_number = Type::Array(Box::new(Type::Number));
@@ -71,7 +80,16 @@ fn test_monomorphizer_complex_types() {
 fn test_monomorphizer_multiple_type_params() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["K".to_string(), "V".to_string()];
+    let type_params = vec![
+        TypeParamDef {
+            name: "K".to_string(),
+            bound: None,
+        },
+        TypeParamDef {
+            name: "V".to_string(),
+            bound: None,
+        },
+    ];
     let type_args = vec![Type::String, Type::Number];
 
     let subst = mono
@@ -112,7 +130,10 @@ fn test_name_mangling() {
 fn test_monomorphizer_caching() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
     let type_args = vec![Type::Number];
 
     // First call - should create new instance
@@ -139,7 +160,10 @@ fn test_monomorphizer_caching() {
 fn test_monomorphizer_generic_types() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
 
     // Option<number>
     let option_number = Type::Generic {
@@ -158,7 +182,10 @@ fn test_monomorphizer_generic_types() {
 fn test_monomorphizer_nested_generics() {
     let mut mono = Monomorphizer::new();
 
-    let type_params = vec!["T".to_string()];
+    let type_params = vec![TypeParamDef {
+        name: "T".to_string(),
+        bound: None,
+    }];
 
     // Option<Result<number, string>>
     let result_type = Type::Generic {

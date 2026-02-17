@@ -113,6 +113,34 @@ impl Interpreter {
         self.globals.insert(name.to_string(), func_value);
     }
 
+    /// Get a cloned variable by name (search locals then globals).
+    pub fn get_binding(&self, name: &str) -> Option<Value> {
+        for scope in self.locals.iter().rev() {
+            if let Some(value) = scope.get(name) {
+                return Some(value.clone());
+            }
+        }
+        self.globals.get(name).cloned()
+    }
+
+    /// Snapshot of current bindings (locals + globals) sorted by name.
+    pub fn bindings_snapshot(&self) -> Vec<(String, Value)> {
+        let mut entries: Vec<(String, Value)> = Vec::new();
+
+        if let Some(scope) = self.locals.first() {
+            for (k, v) in scope {
+                entries.push((k.clone(), v.clone()));
+            }
+        }
+
+        for (k, v) in &self.globals {
+            entries.push((k.clone(), v.clone()));
+        }
+
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        entries
+    }
+
     /// Evaluate a program
     pub fn eval(
         &mut self,
@@ -188,6 +216,9 @@ impl Interpreter {
                             self.globals.insert(var.name.name.clone(), value);
                             last_value = Value::Null;
                         }
+                        crate::ast::ExportItem::TypeAlias(_) => {
+                            // Type aliases are compile-time only
+                        }
                     }
                 }
                 Item::Extern(extern_decl) => {
@@ -242,6 +273,9 @@ impl Interpreter {
                     });
                     self.globals.insert(extern_decl.name.clone(), func_value);
                     last_value = Value::Null;
+                }
+                Item::TypeAlias(_) => {
+                    // Type aliases are compile-time only
                 }
             }
         }

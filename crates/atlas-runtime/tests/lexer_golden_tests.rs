@@ -29,8 +29,6 @@ fn lex_file(filename: &str) -> Vec<Diagnostic> {
 #[case("invalid_escape.atl", "AT1003")]
 #[case("unexpected_char.atl", "AT1001")]
 #[case("unterminated_comment.atl", "AT1004")]
-#[case("single_ampersand.atl", "AT1001")]
-#[case("single_pipe.atl", "AT1001")]
 fn test_lexer_error_files(#[case] filename: &str, #[case] expected_code: &str) {
     let diagnostics = lex_file(filename);
 

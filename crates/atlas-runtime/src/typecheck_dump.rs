@@ -137,6 +137,7 @@ fn symbol_kind_to_string(kind: &SymbolKind) -> String {
 /// Convert type to string representation
 fn type_to_string(ty: &Type) -> String {
     match ty {
+        Type::Never => "never".to_string(),
         Type::Number => "number".to_string(),
         Type::String => "string".to_string(),
         Type::Bool => "bool".to_string(),
@@ -164,9 +165,41 @@ fn type_to_string(ty: &Type) -> String {
                 .join(", ");
             format!("{}<{}>", name, args)
         }
+        Type::Alias {
+            name, type_args, ..
+        } => {
+            if type_args.is_empty() {
+                name.clone()
+            } else {
+                let args = type_args
+                    .iter()
+                    .map(type_to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{}<{}>", name, args)
+            }
+        }
         Type::TypeParameter { name } => name.clone(),
         Type::Unknown => "unknown".to_string(),
         Type::Extern(extern_type) => extern_type.display_name().to_string(),
+        Type::Union(members) => members
+            .iter()
+            .map(type_to_string)
+            .collect::<Vec<_>>()
+            .join(" | "),
+        Type::Intersection(members) => members
+            .iter()
+            .map(type_to_string)
+            .collect::<Vec<_>>()
+            .join(" & "),
+        Type::Structural { members } => {
+            let parts = members
+                .iter()
+                .map(|member| format!("{}: {}", member.name, type_to_string(&member.ty)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{{ {} }}", parts)
+        }
     }
 }
 
@@ -192,8 +225,21 @@ fn collect_types(ty: &Type, types: &mut std::collections::HashSet<String>) {
                 collect_types(arg, types);
             }
         }
+        Type::Alias {
+            type_args, target, ..
+        } => {
+            for arg in type_args {
+                collect_types(arg, types);
+            }
+            collect_types(target, types);
+        }
         Type::Extern(_) => {
             // Extern types are primitives, no nested types to collect
+        }
+        Type::Structural { members } => {
+            for member in members {
+                collect_types(&member.ty, types);
+            }
         }
         _ => {}
     }

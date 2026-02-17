@@ -1,7 +1,8 @@
 //! REPL command implementation
 
 use anyhow::Result;
-use atlas_runtime::ReplCore;
+use atlas_runtime::{ReplCore, Type};
+use atlas_runtime::repl::ReplBinding;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
@@ -31,7 +32,7 @@ pub fn run(use_tui: bool, no_history: bool, config: &crate::config::Config) -> R
     // Display welcome message
     println!("Atlas v{} REPL", atlas_runtime::VERSION);
     println!("Type expressions or statements, or :quit to exit");
-    println!("Commands: :quit (or :q), :reset, :help");
+    println!("Commands: :quit (or :q), :reset, :help, :type <expr>, :vars [page]");
     println!();
 
     loop {
@@ -40,20 +41,52 @@ pub fn run(use_tui: bool, no_history: bool, config: &crate::config::Config) -> R
 
         match readline {
             Ok(line) => {
+                let trimmed = line.trim();
+
                 // Handle REPL commands
-                if line.trim() == ":quit" || line.trim() == ":q" {
+                if trimmed == ":quit" || trimmed == ":q" {
                     println!("Goodbye!");
                     break;
                 }
 
-                if line.trim() == ":reset" {
+                if trimmed == ":reset" {
                     repl.reset();
                     println!("REPL state reset");
                     continue;
                 }
 
-                if line.trim() == ":help" || line.trim() == ":h" {
+                if trimmed == ":help" || trimmed == ":h" {
                     print_help();
+                    continue;
+                }
+
+                if let Some(expr) = trimmed.strip_prefix(":type").map(str::trim) {
+                    if expr.is_empty() {
+                        println!("Usage: :type <expression>");
+                        continue;
+                    }
+
+                    let type_result = repl.type_of_expression(expr);
+                    if !type_result.diagnostics.is_empty() {
+                        for diag in &type_result.diagnostics {
+                            println!("{}", format_diagnostic(diag, expr));
+                        }
+                    } else if let Some(ty) = type_result.ty {
+                        println!("type: {}", format_type(&ty, config.no_color));
+                    } else {
+                        println!("type: unknown");
+                    }
+                    continue;
+                }
+
+                if trimmed.starts_with(":vars") || trimmed.starts_with(":v") {
+                    let page = trimmed
+                        .split_whitespace()
+                        .nth(1)
+                        .and_then(|p| p.parse::<usize>().ok())
+                        .filter(|p| *p > 0)
+                        .unwrap_or(1);
+                    print_vars(&repl.variables(), page, config.no_color);
                     continue;
                 }
 
@@ -81,6 +114,25 @@ pub fn run(use_tui: bool, no_history: bool, config: &crate::config::Config) -> R
                         // Don't print null values
                         if !matches!(value, atlas_runtime::Value::Null) {
                             println!("{}", value);
+                        }
+                    }
+
+                    // Automatic type display for bindings and expressions
+                    if config.show_types {
+                        for binding in &result.bindings {
+                            println!(
+                                "{}: {} = {}{}",
+                                binding.name,
+                                format_type(&binding.ty, config.no_color),
+                                if binding.mutable { "(mut) " } else { "" },
+                                binding.value
+                            );
+                        }
+
+                        if result.bindings.is_empty() {
+                            if let Some(ty) = &result.expr_type {
+                                println!("type: {}", format_type(ty, config.no_color));
+                            }
                         }
                     }
                 }
@@ -125,9 +177,11 @@ pub fn run(use_tui: bool, no_history: bool, config: &crate::config::Config) -> R
 /// Print help information
 fn print_help() {
     println!("Atlas REPL Commands:");
-    println!("  :quit, :q     Exit the REPL");
-    println!("  :reset        Clear all variables and functions");
-    println!("  :help, :h     Show this help message");
+    println!("  :quit, :q         Exit the REPL");
+    println!("  :reset            Clear all variables and functions");
+    println!("  :help, :h         Show this help message");
+    println!("  :type <expr>      Show inferred type of an expression");
+    println!("  :vars [page]      List variables with types and values");
     println!();
     println!("Type any Atlas expression or statement to evaluate it.");
     println!("Examples:");
@@ -152,6 +206,50 @@ fn format_diagnostic(diag: &atlas_runtime::Diagnostic, _source: &str) -> String 
     // - Underline the problematic code
     // - Show related locations
     format!("{}: {}", level_str, diag.message)
+}
+
+fn format_type(ty: &Type, no_color: bool) -> String {
+    let text = ty.display_name();
+    if no_color {
+        text
+    } else {
+        format!("\x1b[36m{}\x1b[0m", text)
+    }
+}
+
+fn print_vars(bindings: &[ReplBinding], page: usize, no_color: bool) {
+    if bindings.is_empty() {
+        println!("No variables defined.");
+        return;
+    }
+
+    let page_size = 20usize;
+    let total_pages = ((bindings.len() + page_size - 1) / page_size).max(1);
+    let current_page = page.min(total_pages);
+    let start = (current_page - 1) * page_size;
+    let end = (start + page_size).min(bindings.len());
+
+    println!(
+        "Variables (page {}/{}; showing {}-{} of {}):",
+        current_page,
+        total_pages,
+        start + 1,
+        end,
+        bindings.len()
+    );
+    println!("{:<16} {:<18} {:<8} {}", "name", "type", "scope", "value");
+    println!("{}", "-".repeat(60));
+
+    for binding in &bindings[start..end] {
+        println!(
+            "{:<16} {:<18} {:<8} {}{}",
+            binding.name,
+            format_type(&binding.ty, no_color),
+            "global",
+            if binding.mutable { "(mut) " } else { "" },
+            binding.value
+        );
+    }
 }
 
 #[cfg(test)]

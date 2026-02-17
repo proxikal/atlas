@@ -513,17 +513,6 @@ mod tests {
 
     // ---- helpers ------------------------------------------------------------
 
-    fn make_bytecode(ops: &[(Opcode, Option<u16>)]) -> Bytecode {
-        let mut bc = Bytecode::new();
-        for (op, operand) in ops {
-            bc.emit(*op, span());
-            if let Some(v) = operand {
-                bc.emit_u16(*v);
-            }
-        }
-        bc
-    }
-
     fn add_string_constant(bc: &mut Bytecode, s: &str) -> u16 {
         bc.add_constant(Value::string(s))
     }

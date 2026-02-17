@@ -49,16 +49,8 @@ fn ok_val(v: Value) -> Value {
     Value::Result(Ok(Box::new(v)))
 }
 
-fn err_val(v: Value) -> Value {
-    Value::Result(Err(Box::new(v)))
-}
-
 fn some_val(v: Value) -> Value {
     Value::Option(Some(Box::new(v)))
-}
-
-fn none_val() -> Value {
-    Value::Option(None)
 }
 
 fn throwing_fn() -> Value {

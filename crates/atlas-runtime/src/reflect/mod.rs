@@ -75,6 +75,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 return_type: None,
                 element_type: None, // Could inspect first element if needed
                 type_args: vec![],
+                alias_target: None,
             }
         }
 
@@ -89,6 +90,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 return_type: None,  // Runtime doesn't track return type
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             }
         }
 
@@ -103,7 +105,8 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 parameters: vec![],
                 return_type: None,
                 element_type: None,
-                type_args: vec![], // Could inspect inner value
+                type_args: vec![],
+                alias_target: None, // Could inspect inner value
             }
         }
 
@@ -116,7 +119,8 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 parameters: vec![],
                 return_type: None,
                 element_type: None,
-                type_args: vec![], // Could inspect Ok/Err values
+                type_args: vec![],
+                alias_target: None, // Could inspect Ok/Err values
             }
         }
 
@@ -129,7 +133,8 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 parameters: vec![],
                 return_type: None,
                 element_type: None,
-                type_args: vec![], // Could inspect keys/values
+                type_args: vec![],
+                alias_target: None, // Could inspect keys/values
             }
         }
 
@@ -142,7 +147,8 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 parameters: vec![],
                 return_type: None,
                 element_type: None,
-                type_args: vec![], // Could inspect elements
+                type_args: vec![],
+                alias_target: None, // Could inspect elements
             }
         }
 
@@ -155,7 +161,8 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 parameters: vec![],
                 return_type: None,
                 element_type: None,
-                type_args: vec![], // Could inspect elements
+                type_args: vec![],
+                alias_target: None, // Could inspect elements
             }
         }
 
@@ -168,7 +175,8 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 parameters: vec![],
                 return_type: None,
                 element_type: None,
-                type_args: vec![], // Could inspect elements
+                type_args: vec![],
+                alias_target: None, // Could inspect elements
             }
         }
 
@@ -182,6 +190,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             }
         }
 
@@ -195,6 +204,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             }
         }
         Value::HttpRequest(_) => TypeInfo {
@@ -205,6 +215,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             return_type: None,
             element_type: None,
             type_args: vec![],
+            alias_target: None,
         },
         Value::HttpResponse(_) => TypeInfo {
             name: "HttpResponse".to_string(),
@@ -214,6 +225,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             return_type: None,
             element_type: None,
             type_args: vec![],
+            alias_target: None,
         },
         Value::Future(_) => TypeInfo {
             name: "Future".to_string(),
@@ -223,6 +235,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             return_type: None,
             element_type: None,
             type_args: vec![],
+            alias_target: None,
         },
         Value::TaskHandle(_) => TypeInfo {
             name: "TaskHandle".to_string(),
@@ -232,6 +245,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             return_type: None,
             element_type: None,
             type_args: vec![],
+            alias_target: None,
         },
         Value::ChannelSender(_) => TypeInfo {
             name: "ChannelSender".to_string(),
@@ -241,6 +255,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             return_type: None,
             element_type: None,
             type_args: vec![],
+            alias_target: None,
         },
         Value::ChannelReceiver(_) => TypeInfo {
             name: "ChannelReceiver".to_string(),
@@ -250,6 +265,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             return_type: None,
             element_type: None,
             type_args: vec![],
+            alias_target: None,
         },
         Value::AsyncMutex(_) => TypeInfo {
             name: "AsyncMutex".to_string(),
@@ -259,6 +275,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             return_type: None,
             element_type: None,
             type_args: vec![],
+            alias_target: None,
         },
     }
 }

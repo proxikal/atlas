@@ -137,6 +137,7 @@ impl Compiler {
                     crate::ast::ExportItem::Variable(var) => {
                         self.compile_stmt(&crate::ast::Stmt::VarDecl(var.clone()))
                     }
+                    crate::ast::ExportItem::TypeAlias(_) => Ok(()),
                 }
             }
             Item::Extern(_) => {
@@ -144,6 +145,7 @@ impl Compiler {
                 // Full implementation in phase-10b (FFI infrastructure)
                 Ok(())
             }
+            Item::TypeAlias(_) => Ok(()),
         }
     }
 

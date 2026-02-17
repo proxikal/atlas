@@ -128,6 +128,7 @@ impl FormatVisitor {
     fn should_add_blank_line_before(&self, item: &Item, prev: Option<&Item>) -> bool {
         match item {
             Item::Function(_) => true,
+            Item::TypeAlias(_) => true,
             Item::Import(_) => !matches!(prev, Some(Item::Import(_))),
             _ => matches!(prev, Some(Item::Function(_))),
         }
@@ -154,6 +155,10 @@ impl FormatVisitor {
             Item::Extern(e) => {
                 self.emit_leading_comments(e.span.start);
                 self.visit_extern(e);
+            }
+            Item::TypeAlias(alias) => {
+                self.emit_leading_comments(alias.span.start);
+                self.visit_type_alias(alias);
             }
         }
     }
@@ -207,6 +212,29 @@ impl FormatVisitor {
         self.visit_expr(&v.init);
         self.write(";");
         self.emit_trailing_comment(v.span.end);
+        self.writeln();
+    }
+
+    fn visit_type_alias(&mut self, alias: &TypeAliasDecl) {
+        self.write_indent();
+        self.write("type ");
+        self.write(&alias.name.name);
+
+        if !alias.type_params.is_empty() {
+            self.write("<");
+            for (idx, param) in alias.type_params.iter().enumerate() {
+                if idx > 0 {
+                    self.write(", ");
+                }
+                self.write(&param.name);
+            }
+            self.write(">");
+        }
+
+        self.write(" = ");
+        self.visit_type_ref(&alias.type_ref);
+        self.write(";");
+        self.emit_trailing_comment(alias.span.end);
         self.writeln();
     }
 
@@ -743,6 +771,30 @@ impl FormatVisitor {
                     .collect();
                 format!("{}<{}>", name, args_str.join(", "))
             }
+            TypeRef::Union { members, .. } => members
+                .iter()
+                .map(|m| self.type_ref_to_string(m))
+                .collect::<Vec<_>>()
+                .join(" | "),
+            TypeRef::Intersection { members, .. } => members
+                .iter()
+                .map(|m| self.type_ref_to_string(m))
+                .collect::<Vec<_>>()
+                .join(" & "),
+            TypeRef::Structural { members, .. } => {
+                let parts = members
+                    .iter()
+                    .map(|member| {
+                        format!(
+                            "{}: {}",
+                            member.name,
+                            self.type_ref_to_string(&member.type_ref)
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{{ {} }}", parts)
+            }
         }
     }
 
@@ -830,6 +882,9 @@ impl FormatVisitor {
                 self.visit_expr(&v.init);
                 self.write(";");
                 self.writeln();
+            }
+            ExportItem::TypeAlias(alias) => {
+                self.visit_type_alias(alias);
             }
         }
     }

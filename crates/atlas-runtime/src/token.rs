@@ -51,6 +51,8 @@ pub enum TokenKind {
     Var,
     /// `fn` keyword (function declaration)
     Fn,
+    /// `type` keyword (type alias declaration)
+    Type,
     /// `if` keyword
     If,
     /// `else` keyword
@@ -83,6 +85,10 @@ pub enum TokenKind {
     Match,
     /// `as` keyword (used in imports and patterns)
     As,
+    /// `extends` keyword (generic constraints)
+    Extends,
+    /// `is` keyword (type predicates)
+    Is,
 
     // Operators
     /// `+` (addition)
@@ -113,6 +119,10 @@ pub enum TokenKind {
     AmpAmp,
     /// `||` (logical or)
     PipePipe,
+    /// `&` (type intersection)
+    Ampersand,
+    /// `|` (type union)
+    Pipe,
 
     // Compound assignment operators
     /// `+=` (add and assign)
@@ -186,6 +196,7 @@ impl TokenKind {
             "let" => Some(TokenKind::Let),
             "var" => Some(TokenKind::Var),
             "fn" => Some(TokenKind::Fn),
+            "type" => Some(TokenKind::Type),
             "if" => Some(TokenKind::If),
             "else" => Some(TokenKind::Else),
             "while" => Some(TokenKind::While),
@@ -203,6 +214,8 @@ impl TokenKind {
             "extern" => Some(TokenKind::Extern),
             "match" => Some(TokenKind::Match),
             "as" => Some(TokenKind::As),
+            "extends" => Some(TokenKind::Extends),
+            "is" => Some(TokenKind::Is),
             _ => None,
         }
     }
@@ -219,6 +232,7 @@ impl TokenKind {
             TokenKind::Let => "let",
             TokenKind::Var => "var",
             TokenKind::Fn => "fn",
+            TokenKind::Type => "type",
             TokenKind::If => "if",
             TokenKind::Else => "else",
             TokenKind::While => "while",
@@ -233,6 +247,8 @@ impl TokenKind {
             TokenKind::Extern => "extern",
             TokenKind::Match => "match",
             TokenKind::As => "as",
+            TokenKind::Extends => "extends",
+            TokenKind::Is => "is",
             TokenKind::Plus => "+",
             TokenKind::Minus => "-",
             TokenKind::Star => "*",
@@ -247,6 +263,8 @@ impl TokenKind {
             TokenKind::GreaterEqual => ">=",
             TokenKind::AmpAmp => "&&",
             TokenKind::PipePipe => "||",
+            TokenKind::Ampersand => "&",
+            TokenKind::Pipe => "|",
             TokenKind::PlusEqual => "+=",
             TokenKind::MinusEqual => "-=",
             TokenKind::StarEqual => "*=",
@@ -295,6 +313,7 @@ mod tests {
         assert_eq!(TokenKind::is_keyword("let"), Some(TokenKind::Let));
         assert_eq!(TokenKind::is_keyword("var"), Some(TokenKind::Var));
         assert_eq!(TokenKind::is_keyword("fn"), Some(TokenKind::Fn));
+        assert_eq!(TokenKind::is_keyword("type"), Some(TokenKind::Type));
         assert_eq!(TokenKind::is_keyword("if"), Some(TokenKind::If));
         assert_eq!(TokenKind::is_keyword("else"), Some(TokenKind::Else));
         assert_eq!(TokenKind::is_keyword("while"), Some(TokenKind::While));
@@ -305,6 +324,8 @@ mod tests {
         assert_eq!(TokenKind::is_keyword("true"), Some(TokenKind::True));
         assert_eq!(TokenKind::is_keyword("false"), Some(TokenKind::False));
         assert_eq!(TokenKind::is_keyword("null"), Some(TokenKind::Null));
+        assert_eq!(TokenKind::is_keyword("extends"), Some(TokenKind::Extends));
+        assert_eq!(TokenKind::is_keyword("is"), Some(TokenKind::Is));
     }
 
     #[test]

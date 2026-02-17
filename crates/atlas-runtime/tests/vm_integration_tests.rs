@@ -10,10 +10,9 @@ use atlas_runtime::debugger::{DebugRequest, DebugResponse, DebuggerSession, Sour
 use atlas_runtime::lexer::Lexer;
 use atlas_runtime::optimizer::Optimizer;
 use atlas_runtime::parser::Parser;
-use atlas_runtime::profiler::Profiler;
 use atlas_runtime::security::SecurityContext;
 use atlas_runtime::value::Value;
-use atlas_runtime::vm::VM;
+use atlas_runtime::vm::{Profiler, VM};
 use rstest::rstest;
 
 // ============================================================================
@@ -77,16 +76,6 @@ fn vm_bool(source: &str) -> bool {
         Some(Value::Bool(b)) => b,
         other => panic!("Expected Bool, got {:?}", other),
     }
-}
-
-fn run_with_profiler(source: &str) -> (Option<Value>, Profiler) {
-    let bc = compile(source);
-    let mut vm = VM::new(bc);
-    let mut profiler = Profiler::enabled();
-    profiler.start_timing();
-    let result = vm.run(&SecurityContext::allow_all()).expect("VM failed");
-    profiler.stop_timing();
-    (result, profiler)
 }
 
 // ============================================================================
@@ -717,7 +706,7 @@ fn test_optimizer_stats() {
     let val = vm_run(result);
     assert_eq!(val, Some(Value::Number(5.0)));
     // Stats should report something
-    assert!(stats.total_optimizations() >= 0);
+    assert!(stats.passes_run > 0);
 }
 
 #[test]

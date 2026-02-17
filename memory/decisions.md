@@ -401,3 +401,71 @@ pub enum Value {
 - DR-005: See `memory/patterns.md` (Intrinsic Pattern)
 - DR-007, DR-008: See `memory/gates.md` (Gate -1: Validation)
 - DR-009: See `crates/atlas-runtime/src/value.rs` (current collection types)
+
+---
+
+## DR-010: Type Alias Resolution and Metadata
+
+**Date:** 2026-02 (v0.2, Phase typing-03)
+**Status:** ✅ Active
+
+**Decision:**
+- Type aliases resolve structurally to their target type for assignability.
+- Alias names are preserved for display and diagnostics via `Type::Alias`.
+- Generic alias type arguments can be inferred from initializer context when omitted.
+- Circular alias definitions are rejected with explicit cycle diagnostics.
+- Doc comment tags `@deprecated` and `@since` are parsed for warnings/metadata.
+
+**Rationale:**
+- Preserves readability in errors while keeping structural type equivalence.
+- Enables ergonomic alias usage without sacrificing correctness.
+- Avoids infinite expansions by detecting cycles early.
+
+**Impact:**
+- `Type::Alias` added to type system.
+- Type checker resolves and caches aliases; warnings emitted on deprecated aliases.
+- Parser captures doc comments for alias declarations.
+
+---
+
+## DR-011: Built-in Constraint Patterns
+
+**Date:** 2026-02 (v0.2, Phase typing-05)
+**Status:** ✅ Active
+
+**Decision:**
+- Treat `Comparable`, `Numeric`, `Equatable`, `Serializable`, and `Iterable` as built-in constraint
+  names that resolve to concrete type bounds during type resolution.
+- `Comparable` and `Numeric` resolve to `number`.
+- `Equatable` resolves to `number | string | bool | null`.
+- `Serializable` resolves to `number | string | bool | null | json`.
+- `Iterable` resolves to `Array<unknown>`.
+
+**Rationale:**
+- Provides practical constraint patterns without introducing a full trait system.
+- Keeps constraint checking consistent with existing type-checker capabilities.
+- Aligns with current operator and for-in requirements.
+
+**Impact:**
+- Type resolution maps these names to concrete bounds in binder and type checker.
+- Constraint checking uses existing assignability rules for these patterns.
+
+---
+
+## DR-012: Structural Width Subtyping
+
+**Date:** 2026-02-17 (v0.2, Phase typing-06)
+**Status:** ✅ Active
+
+**Decision:**
+- Structural types are width-subtyped for assignability: a value type with extra fields/methods
+  can be assigned to a structural type that requires a subset of those members.
+- Missing required members still fails assignability.
+
+**Rationale:**
+- Enables common structural typing patterns and aligns with typical expectations for shape-based types.
+- Improves ergonomics for type guards and structural bounds without introducing explicit nominal traits.
+
+**Impact:**
+- `Type::Struct` assignability now checks required members as a subset of the source type.
+- Type guard narrowing for structural types can rely on width-subtyping behavior.

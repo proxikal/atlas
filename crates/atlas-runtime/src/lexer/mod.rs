@@ -198,14 +198,14 @@ impl Lexer {
                 if self.match_char('&') {
                     self.make_token(TokenKind::AmpAmp, "&&")
                 } else {
-                    self.error_token("Unexpected character '&', did you mean '&&'?")
+                    self.make_token(TokenKind::Ampersand, "&")
                 }
             }
             '|' => {
                 if self.match_char('|') {
                     self.make_token(TokenKind::PipePipe, "||")
                 } else {
-                    self.error_token("Unexpected character '|', did you mean '||'?")
+                    self.make_token(TokenKind::Pipe, "|")
                 }
             }
 
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn test_keywords() {
-        let mut lexer = Lexer::new("let var fn if else while for return break continue");
+        let mut lexer = Lexer::new("let var fn if else while for return break continue is");
         let (tokens, _) = lexer.tokenize();
 
         let expected = vec![
@@ -532,6 +532,7 @@ mod tests {
             TokenKind::Return,
             TokenKind::Break,
             TokenKind::Continue,
+            TokenKind::Is,
         ];
 
         for (i, expected_kind) in expected.iter().enumerate() {
@@ -691,23 +692,23 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_single_ampersand() {
+    fn test_single_ampersand_is_valid() {
+        // & is valid: used for intersection types (A & B)
         let mut lexer = Lexer::new("&");
         let (tokens, diagnostics) = lexer.tokenize();
 
-        assert_eq!(tokens[0].kind, TokenKind::Error);
-        assert_eq!(diagnostics.len(), 1);
-        assert!(diagnostics[0].message.contains("&"));
+        assert_eq!(tokens[0].kind, TokenKind::Ampersand);
+        assert!(diagnostics.is_empty());
     }
 
     #[test]
-    fn test_invalid_single_pipe() {
+    fn test_single_pipe_is_valid() {
+        // | is valid: used for union types (A | B)
         let mut lexer = Lexer::new("|");
         let (tokens, diagnostics) = lexer.tokenize();
 
-        assert_eq!(tokens[0].kind, TokenKind::Error);
-        assert_eq!(diagnostics.len(), 1);
-        assert!(diagnostics[0].message.contains("|"));
+        assert_eq!(tokens[0].kind, TokenKind::Pipe);
+        assert!(diagnostics.is_empty());
     }
 
     // === Edge Case Tests (Phase 07) ===
@@ -861,25 +862,23 @@ mod tests {
     }
 
     #[test]
-    fn test_single_ampersand_error_code() {
+    fn test_ampersand_token_kind() {
+        // & produces Ampersand token for intersection types (A & B)
         let mut lexer = Lexer::new("&");
         let (tokens, diagnostics) = lexer.tokenize();
 
-        assert_eq!(tokens[0].kind, TokenKind::Error);
-        assert_eq!(diagnostics.len(), 1);
-        assert_eq!(diagnostics[0].code, "AT1001");
-        assert!(diagnostics[0].message.contains("&"));
+        assert_eq!(tokens[0].kind, TokenKind::Ampersand);
+        assert!(diagnostics.is_empty());
     }
 
     #[test]
-    fn test_single_pipe_error_code() {
+    fn test_pipe_token_kind() {
+        // | produces Pipe token for union types (A | B)
         let mut lexer = Lexer::new("|");
         let (tokens, diagnostics) = lexer.tokenize();
 
-        assert_eq!(tokens[0].kind, TokenKind::Error);
-        assert_eq!(diagnostics.len(), 1);
-        assert_eq!(diagnostics[0].code, "AT1001");
-        assert!(diagnostics[0].message.contains("|"));
+        assert_eq!(tokens[0].kind, TokenKind::Pipe);
+        assert!(diagnostics.is_empty());
     }
 
     #[test]

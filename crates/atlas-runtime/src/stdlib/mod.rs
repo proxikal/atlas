@@ -47,6 +47,7 @@ pub fn is_builtin(name: &str) -> bool {
             | "jsonAsString" | "jsonAsNumber" | "jsonAsBool" | "jsonIsNull"
             // Type checking functions
             | "typeof" | "isString" | "isNumber" | "isBool" | "isNull" | "isArray" | "isFunction"
+            | "isObject" | "isType" | "hasField" | "hasMethod" | "hasTag"
             // Type conversion functions
             | "toString" | "toNumber" | "toBool" | "parseInt" | "parseFloat"
             // Option functions
@@ -553,6 +554,11 @@ pub fn call_builtin(
         "isNull" => types::is_null(args, call_span),
         "isArray" => types::is_array(args, call_span),
         "isFunction" => types::is_function(args, call_span),
+        "isObject" => types::is_object(args, call_span),
+        "isType" => types::is_type(args, call_span),
+        "hasField" => types::has_field(args, call_span),
+        "hasMethod" => types::has_method(args, call_span),
+        "hasTag" => types::has_tag(args, call_span),
 
         // Type conversion functions
         "toString" => types::to_string(args, call_span),

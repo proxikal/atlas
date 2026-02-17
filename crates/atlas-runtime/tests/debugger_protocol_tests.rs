@@ -14,14 +14,13 @@ use atlas_runtime::bytecode::Bytecode;
 use atlas_runtime::bytecode::DebugSpan;
 use atlas_runtime::compiler::Compiler;
 use atlas_runtime::debugger::protocol::{
-    BreakpointId, DebugEvent, DebugRequest, DebugResponse, DebugStackFrame, PauseReason,
-    SourceLocation, Variable,
+    DebugEvent, DebugRequest, DebugResponse, DebugStackFrame, PauseReason, SourceLocation, Variable,
 };
 use atlas_runtime::debugger::source_map::{
     byte_offset_to_line_column, compute_line_offsets, SourceMap,
 };
-use atlas_runtime::debugger::state::{DebuggerState, ExecutionMode, StepMode};
-use atlas_runtime::debugger::{DebugEvent as DE, DebuggerSession};
+use atlas_runtime::debugger::state::{DebuggerState, StepMode};
+use atlas_runtime::debugger::DebuggerSession;
 use atlas_runtime::lexer::Lexer;
 use atlas_runtime::parser::Parser;
 use atlas_runtime::security::SecurityContext;
@@ -82,7 +81,7 @@ fn proto_serialize_continue() {
 
 #[test]
 fn proto_serialize_step_over() {
-    use atlas_runtime::debugger::protocol::{deserialize_request, serialize_request};
+    use atlas_runtime::debugger::protocol::serialize_request;
     let req = DebugRequest::StepOver;
     let json = serialize_request(&req).unwrap();
     assert!(json.contains("StepOver"));
@@ -90,7 +89,7 @@ fn proto_serialize_step_over() {
 
 #[test]
 fn proto_serialize_step_into() {
-    use atlas_runtime::debugger::protocol::{deserialize_request, serialize_request};
+    use atlas_runtime::debugger::protocol::serialize_request;
     let req = DebugRequest::StepInto;
     let json = serialize_request(&req).unwrap();
     assert!(json.contains("StepInto"));
@@ -98,7 +97,7 @@ fn proto_serialize_step_into() {
 
 #[test]
 fn proto_serialize_step_out() {
-    use atlas_runtime::debugger::protocol::{deserialize_request, serialize_request};
+    use atlas_runtime::debugger::protocol::serialize_request;
     let req = DebugRequest::StepOut;
     let json = serialize_request(&req).unwrap();
     assert!(json.contains("StepOut"));
