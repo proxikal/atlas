@@ -1,4 +1,3 @@
-
 //! HTTP client standard library functions
 //!
 //! Provides HTTP request building, execution, and response handling.
@@ -8,7 +7,6 @@ use crate::span::Span;
 use crate::stdlib::collections::hash::HashKey;
 use crate::stdlib::collections::hashmap::AtlasHashMap;
 use crate::value::{RuntimeError, Value};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

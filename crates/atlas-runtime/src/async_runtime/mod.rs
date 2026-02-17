@@ -29,7 +29,7 @@ use tokio::task::LocalSet;
 /// Global tokio runtime for async operations
 static TOKIO_RUNTIME: OnceLock<Runtime> = OnceLock::new();
 
-/// Thread-local LocalSet for spawning !Send futures
+// Thread-local LocalSet for spawning !Send futures
 thread_local! {
     static LOCAL_SET: std::cell::RefCell<Option<LocalSet>> = const { std::cell::RefCell::new(None) };
 }
@@ -73,7 +73,7 @@ where
 {
     // Initialize LocalSet if needed
     LOCAL_SET.with(|cell| {
-        let mut local_set = cell.lock().unwrap();
+        let mut local_set = cell.borrow_mut();
         if local_set.is_none() {
             *local_set = Some(LocalSet::new());
         }

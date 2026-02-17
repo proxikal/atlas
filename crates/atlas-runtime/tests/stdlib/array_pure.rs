@@ -19,7 +19,7 @@ fn test_pop_normal() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 2);
             assert_eq!(borrowed[0], Value::Number(3.0)); // Removed element
         }
@@ -36,7 +36,7 @@ fn test_pop_single_element() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed[0], Value::Number(42.0));
         }
         _ => panic!("Expected array"),
@@ -64,7 +64,7 @@ fn test_shift_normal() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed[0], Value::Number(1.0));
         }
         _ => panic!("Expected array"),
@@ -80,7 +80,7 @@ fn test_shift_single_element() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed[0], Value::Number(99.0));
         }
         _ => panic!("Expected array"),
@@ -108,7 +108,7 @@ fn test_unshift_normal() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 3);
             assert_eq!(borrowed[0], Value::Number(1.0));
         }
@@ -126,7 +126,7 @@ fn test_unshift_multiple() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 4);
             assert_eq!(borrowed[0], Value::Number(1.0));
         }
@@ -147,7 +147,7 @@ fn test_reverse_normal() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed[0], Value::Number(5.0));
             assert_eq!(borrowed[4], Value::Number(1.0));
         }
@@ -164,7 +164,7 @@ fn test_reverse_empty() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -179,7 +179,7 @@ fn test_reverse_single() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 1);
             assert_eq!(borrowed[0], Value::Number(42.0));
         }
@@ -211,7 +211,7 @@ fn test_concat_normal() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 4);
             assert_eq!(borrowed[2], Value::Number(3.0));
         }
@@ -229,7 +229,7 @@ fn test_concat_empty_arrays() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -245,7 +245,7 @@ fn test_concat_with_empty() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 3);
+            assert_eq!(arr.lock().unwrap().len(), 3);
         }
         _ => panic!("Expected array"),
     }
@@ -263,7 +263,7 @@ fn test_concat_multiple_chains() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 6);
             assert_eq!(borrowed[5], Value::Number(6.0));
         }
@@ -294,7 +294,7 @@ fn test_flatten_empty() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -309,7 +309,7 @@ fn test_flatten_with_empty_inner() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 3);
             assert_eq!(borrowed[0], Value::Number(1.0));
         }
@@ -326,7 +326,7 @@ fn test_flatten_single_nested() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 3);
+            assert_eq!(arr.lock().unwrap().len(), 3);
         }
         _ => panic!("Expected array"),
     }
@@ -435,7 +435,7 @@ fn test_slice_normal() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 3);
             assert_eq!(borrowed[0], Value::Number(1.0));
             assert_eq!(borrowed[2], Value::Number(3.0));
@@ -453,7 +453,7 @@ fn test_slice_entire_array() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 4);
+            assert_eq!(arr.lock().unwrap().len(), 4);
         }
         _ => panic!("Expected array"),
     }
@@ -468,7 +468,7 @@ fn test_slice_single_element() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 1);
             assert_eq!(borrowed[0], Value::Number(3.0));
         }
@@ -485,7 +485,7 @@ fn test_slice_empty_range() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }

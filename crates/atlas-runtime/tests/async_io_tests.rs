@@ -644,7 +644,7 @@ fn test_multiple_concurrent_requests() {
 fn test_request_timeout() {
     // Timeout test - use a slow endpoint
     use atlas_runtime::stdlib::http::HttpRequest;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     let request = HttpRequest::new(
         "GET".to_string(),
@@ -652,7 +652,7 @@ fn test_request_timeout() {
     )
     .with_timeout(1); // 1 second timeout
 
-    let args = [Value::HttpRequest(Rc::new(request))];
+    let args = [Value::HttpRequest(Arc::new(request))];
     let result = async_io::http_send_async(&args, Span::dummy()).unwrap();
 
     let future = match result {
@@ -740,12 +740,12 @@ fn test_concurrent_requests_different_hosts() {
 #[ignore] // Requires network
 fn test_request_with_custom_headers_async() {
     use atlas_runtime::stdlib::http::HttpRequest;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     let request = HttpRequest::new("GET".to_string(), "https://httpbin.org/headers".to_string())
         .with_header("X-Custom-Header".to_string(), "test-value".to_string());
 
-    let args = [Value::HttpRequest(Rc::new(request))];
+    let args = [Value::HttpRequest(Arc::new(request))];
     let result = async_io::http_send_async(&args, Span::dummy()).unwrap();
 
     let future = match result {
@@ -811,7 +811,7 @@ fn test_parallel_file_reads_with_future_all() {
 
     match combined.get_state() {
         FutureState::Resolved(Value::Array(arr)) => {
-            assert_eq!(arr.borrow().len(), 3);
+            assert_eq!(arr.lock().unwrap().len(), 3);
         }
         _ => panic!("Expected array of results"),
     }
@@ -844,7 +844,7 @@ fn test_parallel_http_requests_with_future_all() {
 
     match combined.get_state() {
         FutureState::Resolved(Value::Array(arr)) => {
-            assert_eq!(arr.borrow().len(), 2);
+            assert_eq!(arr.lock().unwrap().len(), 2);
         }
         _ => panic!(),
     }
@@ -1013,7 +1013,7 @@ fn test_ordered_results_from_future_all() {
 
     match combined.get_state() {
         FutureState::Resolved(Value::Array(arr)) => {
-            let values = arr.borrow();
+            let values = arr.lock().unwrap();
             assert_eq!(values.len(), 5);
             // Results should be in order
             for (i, val) in values.iter().enumerate() {

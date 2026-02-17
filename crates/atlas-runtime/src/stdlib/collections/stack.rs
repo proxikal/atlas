@@ -148,9 +148,8 @@ impl Default for AtlasStack {
 
 use crate::span::Span;
 use crate::value::RuntimeError;
-use std::cell::RefCell;
-use std::sync::Mutex;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 /// Extract stack from value
 fn extract_stack(value: &Value, span: Span) -> Result<Arc<Mutex<AtlasStack>>, RuntimeError> {

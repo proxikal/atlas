@@ -212,7 +212,7 @@ fn test_native_with_array_args(#[case] mode: ExecutionMode) {
     let mut runtime = Runtime::new(mode);
 
     runtime.register_function("arrayLength", 1, |args| match &args[0] {
-        Value::Array(arr) => Ok(Value::Number(arr.borrow().len() as f64)),
+        Value::Array(arr) => Ok(Value::Number(arr.lock().unwrap().len() as f64)),
         _ => Err(RuntimeError::TypeError {
             msg: "Expected array".to_string(),
             span: Span::dummy(),
@@ -258,7 +258,7 @@ fn test_native_returning_array(#[case] mode: ExecutionMode) {
     let result = runtime.eval("makeRange(5)").unwrap();
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 5);
             assert_eq!(borrowed[0], Value::Number(0.0));
             assert_eq!(borrowed[4], Value::Number(4.0));

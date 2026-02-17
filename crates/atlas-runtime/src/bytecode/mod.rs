@@ -497,10 +497,10 @@ mod tests {
 
     #[test]
     fn test_constant_pool() {
-        use std::rc::Rc;
+        use std::sync::Arc;
         let mut bytecode = Bytecode::new();
         let idx1 = bytecode.add_constant(Value::Number(42.0));
-        let idx2 = bytecode.add_constant(Value::String(Rc::new("hello".to_string())));
+        let idx2 = bytecode.add_constant(Value::String(Arc::new("hello".to_string())));
         assert_eq!(idx1, 0);
         assert_eq!(idx2, 1);
         assert_eq!(bytecode.constants.len(), 2);
@@ -583,12 +583,12 @@ mod tests {
 
     #[test]
     fn test_constant_pool_indexing() {
-        use std::rc::Rc;
+        use std::sync::Arc;
         let mut bytecode = Bytecode::new();
 
         // Add multiple constants of different types
         let idx0 = bytecode.add_constant(Value::Number(42.0));
-        let idx1 = bytecode.add_constant(Value::String(Rc::new("hello".to_string())));
+        let idx1 = bytecode.add_constant(Value::String(Arc::new("hello".to_string())));
         let idx2 = bytecode.add_constant(Value::Bool(true));
         let idx3 = bytecode.add_constant(Value::Null);
 
@@ -602,7 +602,7 @@ mod tests {
         assert_eq!(bytecode.constants[0], Value::Number(42.0));
         assert_eq!(
             bytecode.constants[1],
-            Value::String(Rc::new("hello".to_string()))
+            Value::String(Arc::new("hello".to_string()))
         );
         assert_eq!(bytecode.constants[2], Value::Bool(true));
         assert_eq!(bytecode.constants[3], Value::Null);
@@ -640,15 +640,15 @@ mod tests {
 
     #[test]
     fn test_constant_pool_mixed_types() {
-        use std::rc::Rc;
+        use std::sync::Arc;
         let mut bytecode = Bytecode::new();
 
         // Add a variety of constant types
         bytecode.add_constant(Value::Number(1.0));
-        bytecode.add_constant(Value::String(Rc::new("a".to_string())));
+        bytecode.add_constant(Value::String(Arc::new("a".to_string())));
         bytecode.add_constant(Value::Number(2.0));
         bytecode.add_constant(Value::Bool(false));
-        bytecode.add_constant(Value::String(Rc::new("b".to_string())));
+        bytecode.add_constant(Value::String(Arc::new("b".to_string())));
         bytecode.add_constant(Value::Null);
         bytecode.add_constant(Value::Number(3.0));
         bytecode.add_constant(Value::Bool(true));
@@ -697,7 +697,7 @@ mod tests {
 
     #[test]
     fn test_constant_pool_edge_values() {
-        use std::rc::Rc;
+        use std::sync::Arc;
         let mut bytecode = Bytecode::new();
 
         // Test edge case values
@@ -705,8 +705,8 @@ mod tests {
         bytecode.add_constant(Value::Number(-0.0));
         bytecode.add_constant(Value::Number(f64::MIN));
         bytecode.add_constant(Value::Number(f64::MAX));
-        bytecode.add_constant(Value::String(Rc::new("".to_string()))); // Empty string
-        bytecode.add_constant(Value::String(Rc::new("a".repeat(1000)))); // Long string
+        bytecode.add_constant(Value::String(Arc::new("".to_string()))); // Empty string
+        bytecode.add_constant(Value::String(Arc::new("a".repeat(1000)))); // Long string
 
         assert_eq!(bytecode.constants.len(), 6);
         assert_eq!(bytecode.constants[0], Value::Number(0.0));
@@ -818,10 +818,10 @@ mod tests {
 
     #[test]
     fn test_bytecode_serialize_with_constants() {
-        use std::rc::Rc;
+        use std::sync::Arc;
         let mut bytecode = Bytecode::new();
         bytecode.add_constant(Value::Number(42.0));
-        bytecode.add_constant(Value::String(Rc::new("hello".to_string())));
+        bytecode.add_constant(Value::String(Arc::new("hello".to_string())));
         bytecode.add_constant(Value::Bool(true));
         bytecode.add_constant(Value::Null);
 
@@ -854,12 +854,12 @@ mod tests {
     #[test]
     fn test_bytecode_roundtrip() {
         // Test full roundtrip: bytecode -> bytes -> bytecode
-        use std::rc::Rc;
+        use std::sync::Arc;
         let mut bytecode = Bytecode::new();
 
         // Add constants
         bytecode.add_constant(Value::Number(2.5));
-        bytecode.add_constant(Value::String(Rc::new("test".to_string())));
+        bytecode.add_constant(Value::String(Arc::new("test".to_string())));
 
         // Add instructions
         bytecode.emit(Opcode::Constant, Span { start: 0, end: 5 });
@@ -1337,7 +1337,7 @@ mod tests {
 
     #[test]
     fn test_bytecode_format_all_value_types() {
-        use std::rc::Rc;
+        use std::sync::Arc;
         // Test that all serializable value types work
         let mut bytecode = Bytecode::new();
 
@@ -1347,8 +1347,8 @@ mod tests {
         bytecode.add_constant(Value::Number(4.2));
         bytecode.add_constant(Value::Number(-273.15));
         bytecode.add_constant(Value::Number(0.0));
-        bytecode.add_constant(Value::String(Rc::new("".to_string())));
-        bytecode.add_constant(Value::String(Rc::new("test".to_string())));
+        bytecode.add_constant(Value::String(Arc::new("".to_string())));
+        bytecode.add_constant(Value::String(Arc::new("test".to_string())));
         bytecode.add_constant(Value::Function(crate::value::FunctionRef {
             name: "myFunc".to_string(),
             arity: 3,

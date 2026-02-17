@@ -151,9 +151,8 @@ impl Default for AtlasQueue {
 
 use crate::span::Span;
 use crate::value::RuntimeError;
-use std::cell::RefCell;
-use std::sync::Mutex;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 /// Extract queue from value
 fn extract_queue(value: &Value, span: Span) -> Result<Arc<Mutex<AtlasQueue>>, RuntimeError> {

@@ -5,9 +5,9 @@
 
 use atlas_runtime::api::{ConversionError, FromAtlas, ToAtlas};
 use atlas_runtime::Value;
-use std::cell::RefCell;
+use std::sync::Mutex;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 // f64 Conversion Tests
 
@@ -26,7 +26,7 @@ fn test_f64_from_atlas_success() {
 
 #[test]
 fn test_f64_from_atlas_type_mismatch() {
-    let value = Value::String(Rc::new("hello".to_string()));
+    let value = Value::String(Arc::new("hello".to_string()));
     let result: Result<f64, _> = FromAtlas::from_atlas(&value);
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -69,7 +69,7 @@ fn test_string_to_atlas() {
 
 #[test]
 fn test_string_from_atlas_success() {
-    let value = Value::String(Rc::new("hello".to_string()));
+    let value = Value::String(Arc::new("hello".to_string()));
     let result: String = FromAtlas::from_atlas(&value).unwrap();
     assert_eq!(result, "hello");
 }
@@ -196,7 +196,7 @@ fn test_option_none_from_atlas() {
 
 #[test]
 fn test_option_string_some_from_atlas() {
-    let value = Value::String(Rc::new("test".to_string()));
+    let value = Value::String(Arc::new("test".to_string()));
     let result: Option<String> = FromAtlas::from_atlas(&value).unwrap();
     assert_eq!(result, Some("test".to_string()));
 }
@@ -216,7 +216,7 @@ fn test_vec_f64_to_atlas() {
     let value = vec.to_atlas();
     match value {
         Value::Array(arr) => {
-            let arr_borrow = arr.borrow();
+            let arr_borrow = arr.lock().unwrap();
             assert_eq!(arr_borrow.len(), 3);
             assert!(matches!(arr_borrow[0], Value::Number(n) if n == 1.0));
             assert!(matches!(arr_borrow[1], Value::Number(n) if n == 2.0));
@@ -229,7 +229,7 @@ fn test_vec_f64_to_atlas() {
 #[test]
 fn test_vec_f64_from_atlas() {
     let arr = vec![Value::Number(1.0), Value::Number(2.0), Value::Number(3.0)];
-    let value = Value::Array(Rc::new(RefCell::new(arr)));
+    let value = Value::Array(Arc::new(Mutex::new(arr)));
     let result: Vec<f64> = FromAtlas::from_atlas(&value).unwrap();
     assert_eq!(result, vec![1.0, 2.0, 3.0]);
 }
@@ -240,7 +240,7 @@ fn test_vec_string_to_atlas() {
     let value = vec.to_atlas();
     match value {
         Value::Array(arr) => {
-            let arr_borrow = arr.borrow();
+            let arr_borrow = arr.lock().unwrap();
             assert_eq!(arr_borrow.len(), 3);
             assert!(matches!(&arr_borrow[0], Value::String(s) if s.as_ref() == "a"));
             assert!(matches!(&arr_borrow[1], Value::String(s) if s.as_ref() == "b"));
@@ -253,10 +253,10 @@ fn test_vec_string_to_atlas() {
 #[test]
 fn test_vec_string_from_atlas() {
     let arr = vec![
-        Value::String(Rc::new("x".to_string())),
-        Value::String(Rc::new("y".to_string())),
+        Value::String(Arc::new("x".to_string())),
+        Value::String(Arc::new("y".to_string())),
     ];
-    let value = Value::Array(Rc::new(RefCell::new(arr)));
+    let value = Value::Array(Arc::new(Mutex::new(arr)));
     let result: Vec<String> = FromAtlas::from_atlas(&value).unwrap();
     assert_eq!(result, vec!["x".to_string(), "y".to_string()]);
 }
@@ -267,7 +267,7 @@ fn test_vec_empty_to_atlas() {
     let value = vec.to_atlas();
     match value {
         Value::Array(arr) => {
-            let arr_borrow = arr.borrow();
+            let arr_borrow = arr.lock().unwrap();
             assert_eq!(arr_borrow.len(), 0);
         }
         _ => panic!("Expected Array"),
@@ -276,7 +276,7 @@ fn test_vec_empty_to_atlas() {
 
 #[test]
 fn test_vec_empty_from_atlas() {
-    let value = Value::Array(Rc::new(RefCell::new(vec![])));
+    let value = Value::Array(Arc::new(Mutex::new(vec![])));
     let result: Vec<f64> = FromAtlas::from_atlas(&value).unwrap();
     assert_eq!(result.len(), 0);
 }
@@ -292,9 +292,9 @@ fn test_vec_from_atlas_wrong_type() {
 fn test_vec_from_atlas_element_type_mismatch() {
     let arr = vec![
         Value::Number(1.0),
-        Value::String(Rc::new("oops".to_string())),
+        Value::String(Arc::new("oops".to_string())),
     ];
-    let value = Value::Array(Rc::new(RefCell::new(arr)));
+    let value = Value::Array(Arc::new(Mutex::new(arr)));
     let result: Result<Vec<f64>, _> = FromAtlas::from_atlas(&value);
     assert!(result.is_err());
     match result.unwrap_err() {

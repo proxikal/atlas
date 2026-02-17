@@ -1435,9 +1435,9 @@ impl Interpreter {
             result_map.insert(key, new_value);
         }
 
-        Ok(Value::HashMap(std::sync::Arc::new(
-            std::sync::Mutex::new(result_map),
-        )))
+        Ok(Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(
+            result_map,
+        ))))
     }
 
     /// hashMapFilter(map, predicate) - Filter entries, return new map
@@ -1492,9 +1492,9 @@ impl Interpreter {
             }
         }
 
-        Ok(Value::HashMap(std::sync::Arc::new(
-            std::sync::Mutex::new(result_map),
-        )))
+        Ok(Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(
+            result_map,
+        ))))
     }
 
     /// hashSetForEach(set, callback) - Iterate over set elements with side effects
@@ -1632,9 +1632,9 @@ impl Interpreter {
             }
         }
 
-        Ok(Value::HashSet(std::sync::Arc::new(
-            std::sync::Mutex::new(result_set),
-        )))
+        Ok(Value::HashSet(std::sync::Arc::new(std::sync::Mutex::new(
+            result_set,
+        ))))
     }
 
     /// Regex intrinsic: Replace first match using callback
@@ -1732,8 +1732,7 @@ impl Interpreter {
                 );
             }
 
-            let match_value =
-                Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
+            let match_value = Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
 
             // Call callback with match data
             let replacement_value = self.call_value(callback, vec![match_value], span)?;
@@ -1868,8 +1867,7 @@ impl Interpreter {
                 );
             }
 
-            let match_value =
-                Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
+            let match_value = Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
 
             // Call callback with match data
             let replacement_value = self.call_value(callback, vec![match_value], span)?;

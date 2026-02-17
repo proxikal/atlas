@@ -1,4 +1,3 @@
-
 //! Type conversion between Rust and Atlas values
 //!
 //! Provides traits and implementations for bidirectional conversion:
@@ -21,7 +20,6 @@
 //! ```
 
 use crate::value::Value;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

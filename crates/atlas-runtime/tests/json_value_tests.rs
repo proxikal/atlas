@@ -4,7 +4,7 @@
 
 use atlas_runtime::{JsonValue, Value};
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Helper to create a test JSON object
 fn make_test_json() -> Value {
@@ -16,7 +16,7 @@ fn make_test_json() -> Value {
     data.insert("user".to_string(), JsonValue::object(user));
     data.insert("active".to_string(), JsonValue::Bool(true));
 
-    Value::JsonValue(Rc::new(JsonValue::object(data)))
+    Value::JsonValue(Arc::new(JsonValue::object(data)))
 }
 
 #[test]
@@ -26,9 +26,9 @@ fn test_json_value_type_display() {
 
 #[test]
 fn test_json_value_equality() {
-    let json1 = Value::JsonValue(Rc::new(JsonValue::Number(42.0)));
-    let json2 = Value::JsonValue(Rc::new(JsonValue::Number(42.0)));
-    let json3 = Value::JsonValue(Rc::new(JsonValue::Number(43.0)));
+    let json1 = Value::JsonValue(Arc::new(JsonValue::Number(42.0)));
+    let json2 = Value::JsonValue(Arc::new(JsonValue::Number(42.0)));
+    let json3 = Value::JsonValue(Arc::new(JsonValue::Number(43.0)));
 
     assert_eq!(json1, json2); // Same value
     assert_ne!(json1, json3); // Different value
@@ -86,7 +86,7 @@ fn test_json_missing_key_returns_null() {
 
 #[test]
 fn test_json_array_number_indexing() {
-    let arr = Value::JsonValue(Rc::new(JsonValue::array(vec![
+    let arr = Value::JsonValue(Arc::new(JsonValue::array(vec![
         JsonValue::Number(10.0),
         JsonValue::Number(20.0),
         JsonValue::Number(30.0),

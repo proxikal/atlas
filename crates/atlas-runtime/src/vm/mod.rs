@@ -17,7 +17,6 @@ use crate::bytecode::{Bytecode, Opcode};
 use crate::ffi::{ExternFunction, LibraryLoader};
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -1735,9 +1734,9 @@ impl VM {
             result_map.insert(key, new_value);
         }
 
-        Ok(Value::HashMap(std::sync::Arc::new(
-            std::sync::Mutex::new(result_map),
-        )))
+        Ok(Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(
+            result_map,
+        ))))
     }
 
     fn vm_intrinsic_hashmap_filter(
@@ -1785,9 +1784,9 @@ impl VM {
             }
         }
 
-        Ok(Value::HashMap(std::sync::Arc::new(
-            std::sync::Mutex::new(result_map),
-        )))
+        Ok(Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(
+            result_map,
+        ))))
     }
 
     fn vm_intrinsic_hashset_for_each(
@@ -1897,9 +1896,9 @@ impl VM {
             }
         }
 
-        Ok(Value::HashSet(std::sync::Arc::new(
-            std::sync::Mutex::new(result_set),
-        )))
+        Ok(Value::HashSet(std::sync::Arc::new(std::sync::Mutex::new(
+            result_set,
+        ))))
     }
 
     /// Regex intrinsic: Replace first match using callback (VM version)
@@ -1989,8 +1988,7 @@ impl VM {
                 );
             }
 
-            let match_value =
-                Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
+            let match_value = Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
 
             // Call callback with match data
             let replacement_value =
@@ -2118,8 +2116,7 @@ impl VM {
                 );
             }
 
-            let match_value =
-                Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
+            let match_value = Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
 
             // Call callback with match data
             let replacement_value =

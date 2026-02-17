@@ -29,7 +29,7 @@ pub enum TaskStatus {
 }
 
 /// Inner task state shared between TaskHandle and the actual task
-struct TaskState {
+pub(crate) struct TaskState {
     id: u64,
     name: Option<String>,
     status: StdMutex<TaskStatus>,
@@ -134,6 +134,7 @@ impl TaskHandle {
     }
 
     /// Mark task as completed with result
+    #[allow(dead_code)]
     fn complete(&self, result: Result<Value, String>) {
         let mut status = self.state.status.lock().unwrap();
         if *status == TaskStatus::Running {
@@ -197,7 +198,7 @@ impl fmt::Display for TaskHandle {
 /// ```
 pub fn spawn_task<F>(future: F, name: Option<String>) -> TaskHandle
 where
-    F: std::future::Future<Output = Value> + 'static,
+    F: std::future::Future<Output = Value> + Send + 'static,
 {
     let handle = TaskHandle::new(name);
     let state = handle.state_ref();

@@ -130,9 +130,8 @@ impl Default for AtlasHashSet {
 
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
-use std::cell::RefCell;
-use std::sync::Mutex;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 /// Create a new empty HashSet
 pub fn new_set(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
@@ -280,7 +279,10 @@ pub fn symmetric_difference(args: &[Value], span: Span) -> Result<Value, Runtime
     let set_a = extract_hashset(&args[0], span)?;
     let set_b = extract_hashset(&args[1], span)?;
 
-    let result = set_a.lock().unwrap().symmetric_difference(&set_b.lock().unwrap());
+    let result = set_a
+        .lock()
+        .unwrap()
+        .symmetric_difference(&set_b.lock().unwrap());
     Ok(Value::HashSet(Arc::new(Mutex::new(result))))
 }
 
@@ -318,7 +320,8 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let set = extract_hashset(&args[0], span)?;
     let elements: Vec<Value> = set
-        .lock().unwrap()
+        .lock()
+        .unwrap()
         .to_vec()
         .into_iter()
         .map(|key| key.to_value())

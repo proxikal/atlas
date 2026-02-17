@@ -176,16 +176,8 @@ pub fn channel_select(receivers: Vec<ChannelReceiver>) -> AtlasFuture {
             // Small delay before retry
             tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
 
-            // Check if all channels are closed
-            let mut all_closed = true;
-            for receiver in &receivers_locked {
-                let _rx = receiver.lock().await;
-                // If we can lock it, it might still be open
-                all_closed = false;
-                break;
-            }
-
-            if all_closed {
+            // Check if all channels are closed (simplified check)
+            if receivers_locked.is_empty() {
                 future_clone.reject(Value::string("All channels closed"));
                 return;
             }

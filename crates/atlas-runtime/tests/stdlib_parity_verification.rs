@@ -17,7 +17,7 @@
 
 use atlas_runtime::{Atlas, SecurityContext, Value};
 use rstest::rstest;
-use std::rc::Rc;
+use std::sync::Arc;
 use tempfile::TempDir;
 
 // ============================================================================
@@ -359,7 +359,7 @@ fn test_file_read_write_parity() {
     assert_eq!(format!("{:?}", interp_result), format!("{:?}", vm_result));
     assert_eq!(
         interp_result,
-        Value::String(Rc::new("test content".to_string()))
+        Value::String(Arc::new("test content".to_string()))
     );
 }
 
@@ -469,7 +469,7 @@ fn test_file_append_parity() {
     assert_eq!(format!("{:?}", interp_result), format!("{:?}", vm_result));
     assert_eq!(
         interp_result,
-        Value::String(Rc::new("firstsecond".to_string()))
+        Value::String(Arc::new("firstsecond".to_string()))
     );
 }
 

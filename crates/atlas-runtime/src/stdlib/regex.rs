@@ -1,4 +1,3 @@
-
 //! Regular expression operations
 //!
 //! This module provides regex pattern matching, searching, and capture group extraction
@@ -19,7 +18,6 @@ use crate::stdlib::collections::hash::HashKey;
 use crate::stdlib::collections::hashmap::AtlasHashMap;
 use crate::value::{RuntimeError, Value};
 use regex::{Regex, RegexBuilder};
-use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
 
 // ============================================================================

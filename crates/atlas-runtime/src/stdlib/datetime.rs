@@ -9,9 +9,8 @@ use crate::value::RuntimeError;
 use crate::value::Value;
 use chrono::{Datelike, Local, TimeZone, Timelike, Utc, Weekday};
 use chrono_tz::Tz;
-use std::cell::RefCell;
-use std::sync::Mutex;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 // ============================================================================
 // DateTime Construction

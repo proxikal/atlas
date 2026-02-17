@@ -6,7 +6,7 @@
 //! All callbacks must be named functions passed by reference.
 
 use atlas_runtime::{Atlas, Value};
-use std::rc::Rc;
+use std::sync::Arc;
 
 fn eval(code: &str) -> Value {
     let runtime = Atlas::new();
@@ -340,7 +340,7 @@ fn test_hashset_map_to_array() {
         typeof(arr)
     "#,
     );
-    assert_eq!(result, Value::String(Rc::new("array".to_string())));
+    assert_eq!(result, Value::String(Arc::new("array".to_string())));
 }
 
 #[test]

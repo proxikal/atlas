@@ -95,8 +95,8 @@ fn test_future_in_array() {
     let result = eval_ok("[futureResolve(1), futureResolve(2), futureResolve(3)]");
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 3);
-            for val in arr.borrow().iter() {
+            assert_eq!(arr.lock().unwrap().len(), 3);
+            for val in arr.lock().unwrap().iter() {
                 assert_eq!(val.type_name(), "future");
             }
         }
@@ -153,7 +153,7 @@ fn test_future_state_check_resolved() {
     let result = eval_ok(code);
     match result {
         Value::Array(arr) => {
-            let values = arr.borrow();
+            let values = arr.lock().unwrap();
             assert_eq!(values[0], Value::Bool(true)); // isResolved
             assert_eq!(values[1], Value::Bool(false)); // isRejected
             assert_eq!(values[2], Value::Bool(false)); // isPending
@@ -171,7 +171,7 @@ fn test_future_state_check_rejected() {
     let result = eval_ok(code);
     match result {
         Value::Array(arr) => {
-            let values = arr.borrow();
+            let values = arr.lock().unwrap();
             assert_eq!(values[0], Value::Bool(false)); // isResolved
             assert_eq!(values[1], Value::Bool(true)); // isRejected
             assert_eq!(values[2], Value::Bool(false)); // isPending

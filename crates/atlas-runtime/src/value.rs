@@ -9,7 +9,6 @@
 //! - JsonValue: Isolated dynamic type for JSON interop (Arc<JsonValue>)
 
 use crate::json_value::JsonValue;
-use std::cell::RefCell;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;

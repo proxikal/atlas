@@ -387,7 +387,7 @@ fn test_to_array_returns_bottom_to_top_order() {
     let array = call_builtin("stackToArray", &[stack], dummy_span(), &security()).unwrap();
 
     if let Value::Array(arr) = array {
-        let borrowed = arr.borrow();
+        let borrowed = arr.lock().unwrap();
         assert_eq!(borrowed.len(), 3);
         assert_eq!(borrowed[0], Value::Number(1.0));
         assert_eq!(borrowed[1], Value::Number(2.0));
@@ -424,7 +424,7 @@ fn test_to_array_on_empty_stack() {
     let array = call_builtin("stackToArray", &[stack], dummy_span(), &security()).unwrap();
 
     if let Value::Array(arr) = array {
-        assert_eq!(arr.borrow().len(), 0);
+        assert_eq!(arr.lock().unwrap().len(), 0);
     } else {
         panic!("Expected array");
     }

@@ -5,7 +5,7 @@
 
 use atlas_runtime::api::{EvalError, ExecutionMode, Runtime};
 use atlas_runtime::Value;
-use std::rc::Rc;
+use std::sync::Arc;
 
 // Runtime Creation Tests
 
@@ -308,7 +308,7 @@ fn test_set_global_number_interpreter() {
 #[test]
 fn test_set_global_string_interpreter() {
     let mut runtime = Runtime::new(ExecutionMode::Interpreter);
-    runtime.set_global("message", Value::String(Rc::new("hello".to_string())));
+    runtime.set_global("message", Value::String(Arc::new("hello".to_string())));
     let value = runtime.get_global("message").unwrap();
     assert!(matches!(value, Value::String(s) if s.as_ref() == "hello"));
 }

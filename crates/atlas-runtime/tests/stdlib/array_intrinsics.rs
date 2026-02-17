@@ -22,7 +22,7 @@ fn test_map_double() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 3);
             assert_eq!(borrowed[0], Value::Number(2.0));
             assert_eq!(borrowed[2], Value::Number(6.0));
@@ -43,7 +43,7 @@ fn test_map_empty_array() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -61,7 +61,7 @@ fn test_map_single_element() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 1);
             assert_eq!(borrowed[0], Value::Number(15.0));
         }
@@ -98,7 +98,7 @@ fn test_filter_evens() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 3);
             assert_eq!(borrowed[0], Value::Number(2.0));
         }
@@ -118,7 +118,7 @@ fn test_filter_empty_array() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -136,7 +136,7 @@ fn test_filter_all_match() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 5);
+            assert_eq!(arr.lock().unwrap().len(), 5);
         }
         _ => panic!("Expected array"),
     }
@@ -154,7 +154,7 @@ fn test_filter_none_match() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -176,7 +176,7 @@ fn test_filter_chain() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 2);
             assert_eq!(borrowed[0], Value::Number(2.0));
         }
@@ -405,7 +405,7 @@ fn test_flat_map() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 6);
             assert_eq!(borrowed[0], Value::Number(1.0));
             assert_eq!(borrowed[1], Value::Number(1.0));
@@ -426,7 +426,7 @@ fn test_flat_map_empty() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -451,7 +451,7 @@ fn test_flat_map_empty_results() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -609,7 +609,7 @@ fn test_sort_ascending() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed[0], Value::Number(1.0));
             assert_eq!(borrowed[4], Value::Number(5.0));
         }
@@ -629,7 +629,7 @@ fn test_sort_descending() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed[0], Value::Number(5.0));
             assert_eq!(borrowed[4], Value::Number(1.0));
         }
@@ -649,7 +649,7 @@ fn test_sort_empty_array() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -667,7 +667,7 @@ fn test_sort_single_element() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 1);
             assert_eq!(borrowed[0], Value::Number(42.0));
         }
@@ -688,7 +688,7 @@ fn test_sort_stability() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             // Should maintain original order when comparator returns 0
             assert_eq!(borrowed[0], Value::Number(3.0));
             assert_eq!(borrowed[1], Value::Number(1.0));
@@ -710,7 +710,7 @@ fn test_sort_with_equal_elements() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed[0], Value::Number(1.0));
             assert_eq!(borrowed[1], Value::Number(1.0));
             assert_eq!(borrowed[4], Value::Number(3.0));
@@ -735,7 +735,7 @@ fn test_sort_by_numeric_key() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             // Should be sorted by absolute value: [-1, 2, 3, -5]
             assert_eq!(borrowed[0], Value::Number(-1.0));
             assert_eq!(borrowed[3], Value::Number(-5.0));
@@ -756,7 +756,7 @@ fn test_sort_by_empty() {
     
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.borrow().len(), 0);
+            assert_eq!(arr.lock().unwrap().len(), 0);
         }
         _ => panic!("Expected array"),
     }
@@ -774,7 +774,7 @@ fn test_sort_by_single() {
     
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.borrow();
+            let borrowed = arr.lock().unwrap();
             assert_eq!(borrowed.len(), 1);
             assert_eq!(borrowed[0], Value::Number(99.0));
         }

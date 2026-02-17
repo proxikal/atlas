@@ -3,10 +3,9 @@
 use super::hash::HashKey;
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
-use std::cell::RefCell;
-use std::sync::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 /// Atlas HashMap - key-value collection with O(1) average operations
 ///
@@ -312,7 +311,8 @@ pub fn keys(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let map = extract_hashmap(&args[0], span)?;
     let keys: Vec<Value> = map
-        .lock().unwrap()
+        .lock()
+        .unwrap()
         .keys()
         .into_iter()
         .map(|k| k.to_value())
@@ -354,7 +354,8 @@ pub fn entries(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let map = extract_hashmap(&args[0], span)?;
     let entries: Vec<Value> = map
-        .lock().unwrap()
+        .lock()
+        .unwrap()
         .entries()
         .into_iter()
         .map(|(k, v)| {
