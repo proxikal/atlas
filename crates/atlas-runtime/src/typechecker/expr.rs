@@ -44,18 +44,20 @@ impl<'a> TypeChecker<'a> {
     fn check_binary(&mut self, binary: &BinaryExpr) -> Type {
         let left_type = self.check_expr(&binary.left);
         let right_type = self.check_expr(&binary.right);
+        let left_norm = left_type.normalized();
+        let right_norm = right_type.normalized();
 
         // Skip type checking if either side is Unknown (error recovery)
-        if left_type == Type::Unknown || right_type == Type::Unknown {
+        if left_norm == Type::Unknown || right_norm == Type::Unknown {
             return Type::Unknown;
         }
 
         match binary.op {
             BinaryOp::Add => {
-                if (left_type == Type::Number && right_type == Type::Number)
-                    || (left_type == Type::String && right_type == Type::String)
+                if (left_norm == Type::Number && right_norm == Type::Number)
+                    || (left_norm == Type::String && right_norm == Type::String)
                 {
-                    left_type
+                    left_norm
                 } else {
                     let help = suggestions::suggest_binary_operator_fix("+", &left_type, &right_type)
                         .unwrap_or_else(|| "ensure both operands are numbers (for addition) or both are strings (for concatenation)".to_string());
@@ -80,7 +82,7 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => {
-                if left_type == Type::Number && right_type == Type::Number {
+                if left_norm == Type::Number && right_norm == Type::Number {
                     Type::Number
                 } else {
                     self.diagnostics.push(
@@ -101,7 +103,7 @@ impl<'a> TypeChecker<'a> {
             }
             BinaryOp::Eq | BinaryOp::Ne => {
                 // Equality requires same types
-                if left_type != right_type {
+                if left_norm != right_norm {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3002",
@@ -119,7 +121,7 @@ impl<'a> TypeChecker<'a> {
                 Type::Bool
             }
             BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge => {
-                if left_type == Type::Number && right_type == Type::Number {
+                if left_norm == Type::Number && right_norm == Type::Number {
                     Type::Bool
                 } else {
                     self.diagnostics.push(
@@ -139,7 +141,7 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             BinaryOp::And | BinaryOp::Or => {
-                if left_type != Type::Bool || right_type != Type::Bool {
+                if left_norm != Type::Bool || right_norm != Type::Bool {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3002",
@@ -162,10 +164,11 @@ impl<'a> TypeChecker<'a> {
     /// Check a unary expression
     fn check_unary(&mut self, unary: &UnaryExpr) -> Type {
         let expr_type = self.check_expr(&unary.expr);
+        let expr_norm = expr_type.normalized();
 
         match unary.op {
             UnaryOp::Negate => {
-                if expr_type != Type::Number && expr_type != Type::Unknown {
+                if expr_norm != Type::Number && expr_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3002",
@@ -184,7 +187,7 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             UnaryOp::Not => {
-                if expr_type != Type::Bool && expr_type != Type::Unknown {
+                if expr_norm != Type::Bool && expr_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3002",
@@ -208,8 +211,9 @@ impl<'a> TypeChecker<'a> {
     /// Check a function call
     fn check_call(&mut self, call: &CallExpr) -> Type {
         let callee_type = self.check_expr(&call.callee);
+        let callee_norm = callee_type.normalized();
 
-        match &callee_type {
+        match &callee_norm {
             Type::Function {
                 type_params,
                 params,
@@ -246,7 +250,9 @@ impl<'a> TypeChecker<'a> {
                 for (i, arg) in call.args.iter().enumerate() {
                     let arg_type = self.check_expr(arg);
                     if let Some(expected_type) = params.get(i) {
-                        if !arg_type.is_assignable_to(expected_type) && arg_type != Type::Unknown {
+                        if !arg_type.is_assignable_to(expected_type)
+                            && arg_type.normalized() != Type::Unknown
+                        {
                             let help = suggestions::suggest_type_mismatch(expected_type, &arg_type)
                                 .unwrap_or_else(|| {
                                     format!(
@@ -374,7 +380,7 @@ impl<'a> TypeChecker<'a> {
         let target_type = self.check_expr(&member.target);
 
         // Skip error recovery cases
-        if target_type == Type::Unknown {
+        if target_type.normalized() == Type::Unknown {
             return Type::Unknown;
         }
 
@@ -412,7 +418,9 @@ impl<'a> TypeChecker<'a> {
                 for (i, arg) in args.iter().enumerate() {
                     let arg_type = self.check_expr(arg);
                     if let Some(expected_type) = method_sig.arg_types.get(i) {
-                        if !arg_type.is_assignable_to(expected_type) && arg_type != Type::Unknown {
+                        if !arg_type.is_assignable_to(expected_type)
+                            && arg_type.normalized() != Type::Unknown
+                        {
                             self.diagnostics.push(
                                 Diagnostic::error_with_code(
                                     "AT3001",
@@ -465,11 +473,13 @@ impl<'a> TypeChecker<'a> {
     fn check_index(&mut self, index: &IndexExpr) -> Type {
         let target_type = self.check_expr(&index.target);
         let index_type = self.check_expr(&index.index);
+        let target_norm = target_type.normalized();
+        let index_norm = index_type.normalized();
 
-        match target_type {
+        match target_norm {
             // Array indexing: requires number index, returns element type
             Type::Array(elem_type) => {
-                if index_type != Type::Number && index_type != Type::Unknown {
+                if index_norm != Type::Number && index_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -487,9 +497,9 @@ impl<'a> TypeChecker<'a> {
             }
             // JSON indexing: accepts string or number, always returns json
             Type::JsonValue => {
-                if index_type != Type::String
-                    && index_type != Type::Number
-                    && index_type != Type::Unknown
+                if index_norm != Type::String
+                    && index_norm != Type::Number
+                    && index_norm != Type::Unknown
                 {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
@@ -535,7 +545,7 @@ impl<'a> TypeChecker<'a> {
         // Check that all elements have the same type
         for (i, elem) in arr.elements.iter().enumerate().skip(1) {
             let elem_type = self.check_expr(elem);
-            if !elem_type.is_assignable_to(&first_type) && elem_type != Type::Unknown {
+            if !elem_type.is_assignable_to(&first_type) && elem_type.normalized() != Type::Unknown {
                 self.diagnostics.push(
                     Diagnostic::error_with_code(
                         "AT3001",
@@ -564,7 +574,7 @@ impl<'a> TypeChecker<'a> {
         // 1. Check scrutinee type
         let scrutinee_type = self.check_expr(&match_expr.scrutinee);
 
-        if scrutinee_type == Type::Unknown {
+        if scrutinee_type.normalized() == Type::Unknown {
             // Error in scrutinee, skip match checking
             return Type::Unknown;
         }
@@ -621,7 +631,7 @@ impl<'a> TypeChecker<'a> {
 
         // Check that all other arms have compatible types
         for (arm_type, arm_span, arm_idx) in &arm_types[1..] {
-            if !arm_type.is_assignable_to(first_type) && *arm_type != Type::Unknown {
+            if !arm_type.is_assignable_to(first_type) && arm_type.normalized() != Type::Unknown {
                 self.diagnostics.push(
                     Diagnostic::error_with_code(
                         "AT3021",
@@ -669,7 +679,8 @@ impl<'a> TypeChecker<'a> {
         }
 
         // Check exhaustiveness based on scrutinee type
-        match scrutinee_type {
+        let scrutinee_norm = scrutinee_type.normalized();
+        match scrutinee_norm {
             Type::Generic { name, .. } if name == "Option" => {
                 // Option<T> requires Some and None to be covered
                 let has_some = arms.iter().any(|arm| {
@@ -883,8 +894,9 @@ impl<'a> TypeChecker<'a> {
         span: Span,
     ) -> Vec<(String, Type, Span)> {
         let mut bindings = Vec::new();
+        let expected_norm = expected_type.normalized();
 
-        match expected_type {
+        match expected_norm {
             Type::Generic {
                 name: type_name,
                 type_args,
@@ -1037,12 +1049,13 @@ impl<'a> TypeChecker<'a> {
         span: Span,
     ) -> Vec<(String, Type, Span)> {
         let mut bindings = Vec::new();
+        let expected_norm = expected_type.normalized();
 
-        match expected_type {
+        match expected_norm {
             Type::Array(elem_type) => {
                 // Check each pattern element against the array element type
                 for pattern in elements {
-                    bindings.extend(self.check_pattern(pattern, elem_type));
+                    bindings.extend(self.check_pattern(pattern, &elem_type));
                 }
             }
             _ => {
@@ -1068,14 +1081,15 @@ impl<'a> TypeChecker<'a> {
     fn check_try(&mut self, try_expr: &TryExpr) -> Type {
         // Type check the expression being tried
         let expr_type = self.check_expr(&try_expr.expr);
+        let expr_norm = expr_type.normalized();
 
         // Skip if expression type is unknown (error already reported)
-        if expr_type == Type::Unknown {
+        if expr_norm == Type::Unknown {
             return Type::Unknown;
         }
 
         // Expression must be a Result<T, E>
-        let (ok_type, err_type) = match &expr_type {
+        let (ok_type, err_type) = match &expr_norm {
             Type::Generic { name, type_args } if name == "Result" && type_args.len() == 2 => {
                 (type_args[0].clone(), type_args[1].clone())
             }
@@ -1114,12 +1128,13 @@ impl<'a> TypeChecker<'a> {
         };
 
         // Function must return Result<T', E'>
-        match &function_return_type {
+        let function_return_norm = function_return_type.normalized();
+        match &function_return_norm {
             Type::Generic { name, type_args } if name == "Result" && type_args.len() == 2 => {
                 let function_err_type = &type_args[1];
 
                 // Error types must be compatible (for now, they must be the same)
-                if &err_type != function_err_type {
+                if err_type.normalized() != function_err_type.normalized() {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3029",

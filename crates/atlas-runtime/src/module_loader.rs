@@ -237,6 +237,7 @@ impl ModuleLoader {
                     let name = match &export_decl.item {
                         crate::ast::ExportItem::Function(func) => func.name.name.clone(),
                         crate::ast::ExportItem::Variable(var) => var.name.name.clone(),
+                        crate::ast::ExportItem::TypeAlias(alias) => alias.name.name.clone(),
                     };
                     exports.push(name);
                 }

@@ -216,6 +216,9 @@ impl Interpreter {
                             self.globals.insert(var.name.name.clone(), value);
                             last_value = Value::Null;
                         }
+                        crate::ast::ExportItem::TypeAlias(_) => {
+                            // Type aliases are compile-time only
+                        }
                     }
                 }
                 Item::Extern(extern_decl) => {
@@ -270,6 +273,9 @@ impl Interpreter {
                     });
                     self.globals.insert(extern_decl.name.clone(), func_value);
                     last_value = Value::Null;
+                }
+                Item::TypeAlias(_) => {
+                    // Type aliases are compile-time only
                 }
             }
         }

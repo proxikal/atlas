@@ -8,9 +8,9 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/typing/phase-02-repl-type-integration.md
-**Next Phase:** phases/typing/phase-03-type-aliases.md
-**Real Progress:** 76/99 phases complete (77%)
+**Last Completed:** phases/typing/phase-03-type-aliases.md
+**Next Phase:** phases/typing/phase-04-union-types.md
+**Real Progress:** 77/99 phases complete (78%)
 
 ---
 
@@ -22,7 +22,7 @@
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 8/8 (100%) | ✅ COMPLETE |
 | **3. Frontend** | 5/5 (100%) | ✅ COMPLETE |
-| **4. Typing** | 2/7 (29%) | 🔨 ACTIVE |
+| **4. Typing** | 3/7 (43%) | 🔨 ACTIVE |
 | **5. Interpreter** | 0/2 (0%) | ⬜ Pending |
 | **6. CLI** | 0/6 (0%) | ⬜ Pending |
 | **7. LSP** | 0/5 (0%) | ⬜ Pending |
@@ -30,7 +30,7 @@
 
 ---
 
-## 📋 Complete Phase List (73/99)
+## 📋 Complete Phase List (74/99)
 
 ### 0. Foundation (32/33) 🔨 ACTIVE
 
@@ -124,7 +124,7 @@
 
 ✅ phase-01-improved-type-errors-and-inference.md
 ✅ phase-02-repl-type-integration.md
-⬜ phase-03-type-aliases.md
+✅ phase-03-type-aliases.md
 ⬜ phase-04-union-types.md
 ⬜ phase-05-generic-constraints.md
 ⬜ phase-06-type-guards.md

@@ -401,3 +401,27 @@ pub enum Value {
 - DR-005: See `memory/patterns.md` (Intrinsic Pattern)
 - DR-007, DR-008: See `memory/gates.md` (Gate -1: Validation)
 - DR-009: See `crates/atlas-runtime/src/value.rs` (current collection types)
+
+---
+
+## DR-010: Type Alias Resolution and Metadata
+
+**Date:** 2026-02 (v0.2, Phase typing-03)
+**Status:** ✅ Active
+
+**Decision:**
+- Type aliases resolve structurally to their target type for assignability.
+- Alias names are preserved for display and diagnostics via `Type::Alias`.
+- Generic alias type arguments can be inferred from initializer context when omitted.
+- Circular alias definitions are rejected with explicit cycle diagnostics.
+- Doc comment tags `@deprecated` and `@since` are parsed for warnings/metadata.
+
+**Rationale:**
+- Preserves readability in errors while keeping structural type equivalence.
+- Enables ergonomic alias usage without sacrificing correctness.
+- Avoids infinite expansions by detecting cycles early.
+
+**Impact:**
+- `Type::Alias` added to type system.
+- Type checker resolves and caches aliases; warnings emitted on deprecated aliases.
+- Parser captures doc comments for alias declarations.

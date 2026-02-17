@@ -68,6 +68,19 @@ pub fn extract_document_symbols(program: &Program) -> Vec<DocumentSymbol> {
                     deprecated: None,
                 });
             }
+            Item::TypeAlias(alias) => {
+                #[allow(deprecated)]
+                symbols.push(DocumentSymbol {
+                    name: alias.name.name.clone(),
+                    detail: Some(format!("{:?}", alias.type_ref)),
+                    kind: SymbolKind::TYPE_PARAMETER,
+                    range: Range::default(),
+                    selection_range: Range::default(),
+                    children: None,
+                    tags: None,
+                    deprecated: None,
+                });
+            }
             _ => {}
         }
     }

@@ -1,4 +1,4 @@
-use atlas_runtime::repl::{ReplCore};
+use atlas_runtime::repl::ReplCore;
 use atlas_runtime::types::Type;
 use rstest::rstest;
 
@@ -6,7 +6,9 @@ fn type_name(ty: &Type) -> String {
     ty.display_name()
 }
 
-#[rstest(input, expected,
+#[rstest(
+    input,
+    expected,
     case("1 + 1;", "number"),
     case("\"hi\";", "string"),
     case("true;", "bool"),
@@ -32,7 +34,9 @@ fn type_of_expression_matches_expected(input: &str, expected: &str) {
     assert_eq!(type_name(&ty), expected);
 }
 
-#[rstest(input, expected_type,
+#[rstest(
+    input,
+    expected_type,
     case("let x = 42;", "number"),
     case("let name = \"atlas\";", "string"),
     case("var flag = true;", "bool"),
@@ -46,7 +50,11 @@ fn type_of_expression_matches_expected(input: &str, expected: &str) {
 fn let_binding_records_type(input: &str, expected_type: &str) {
     let mut repl = ReplCore::new();
     let result = repl.eval_line(input);
-    assert!(result.diagnostics.is_empty(), "Diagnostics: {:?}", result.diagnostics);
+    assert!(
+        result.diagnostics.is_empty(),
+        "Diagnostics: {:?}",
+        result.diagnostics
+    );
     assert!(
         !result.bindings.is_empty(),
         "expected binding info for {input}"
@@ -69,7 +77,11 @@ fn vars_snapshot_sorted(commands: Vec<&str>, expected_names: Vec<&str>) {
     let mut repl = ReplCore::new();
     for cmd in commands {
         let res = repl.eval_line(cmd);
-        assert!(res.diagnostics.is_empty(), "Diagnostics: {:?}", res.diagnostics);
+        assert!(
+            res.diagnostics.is_empty(),
+            "Diagnostics: {:?}",
+            res.diagnostics
+        );
     }
 
     let vars = repl.variables();

@@ -35,6 +35,10 @@ pub(super) enum Precedence {
 impl Parser {
     /// Create a new parser for the given tokens
     pub fn new(tokens: Vec<Token>) -> Self {
+        let tokens = tokens
+            .into_iter()
+            .filter(|token| !matches!(token.kind, TokenKind::LineComment | TokenKind::BlockComment))
+            .collect();
         Self {
             tokens,
             current: 0,
@@ -47,7 +51,11 @@ impl Parser {
         let mut items = Vec::new();
 
         while !self.is_at_end() {
-            match self.parse_item() {
+            let doc_comment = self.collect_doc_comments();
+            if self.is_at_end() {
+                break;
+            }
+            match self.parse_item(doc_comment) {
                 Ok(item) => items.push(item),
                 Err(_) => self.synchronize(),
             }
@@ -59,7 +67,7 @@ impl Parser {
     // === Top-level parsing ===
 
     /// Parse a top-level item (function, statement, import, export, or extern)
-    fn parse_item(&mut self) -> Result<Item, ()> {
+    fn parse_item(&mut self, doc_comment: Option<String>) -> Result<Item, ()> {
         if self.check(TokenKind::Import) {
             Ok(Item::Import(self.parse_import()?))
         } else if self.check(TokenKind::Export) {
@@ -68,6 +76,8 @@ impl Parser {
             Ok(Item::Extern(self.parse_extern()?))
         } else if self.check(TokenKind::Fn) {
             Ok(Item::Function(self.parse_function()?))
+        } else if self.check(TokenKind::Type) {
+            Ok(Item::TypeAlias(self.parse_type_alias(doc_comment)?))
         } else {
             Ok(Item::Statement(self.parse_statement()?))
         }
@@ -240,8 +250,10 @@ impl Parser {
                     return Err(());
                 }
             }
+        } else if self.check(TokenKind::Type) {
+            ExportItem::TypeAlias(self.parse_type_alias(None)?)
         } else {
-            self.error("Expected 'fn', 'let', or 'var' after 'export'");
+            self.error("Expected 'fn', 'let', 'var', or 'type' after 'export'");
             return Err(());
         };
 
@@ -250,6 +262,51 @@ impl Parser {
         Ok(ExportDecl {
             item,
             span: export_span.merge(end_span),
+        })
+    }
+
+    /// Parse a type alias declaration
+    fn parse_type_alias(&mut self, doc_comment: Option<String>) -> Result<TypeAliasDecl, ()> {
+        let type_span = self.consume(TokenKind::Type, "Expected 'type'")?.span;
+
+        let name_token = self.consume_identifier("a type alias name")?;
+        let name = Identifier {
+            name: name_token.lexeme.clone(),
+            span: name_token.span,
+        };
+
+        // Parse optional type parameters: <T, E, ...>
+        let mut type_params = Vec::new();
+        if self.match_token(TokenKind::Less) {
+            loop {
+                let type_param_start = self.peek().span;
+                let type_param_tok = self.consume_identifier("a type parameter name")?;
+
+                type_params.push(TypeParam {
+                    name: type_param_tok.lexeme.clone(),
+                    span: type_param_start.merge(type_param_tok.span),
+                });
+
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
+            self.consume(TokenKind::Greater, "Expected '>' after type parameters")?;
+        }
+
+        self.consume(TokenKind::Equal, "Expected '=' after type alias name")?;
+        let type_ref = self.parse_type_ref()?;
+
+        let end_span = self
+            .consume(TokenKind::Semicolon, "Expected ';' after type alias")?
+            .span;
+
+        Ok(TypeAliasDecl {
+            name,
+            type_params,
+            type_ref,
+            doc_comment,
+            span: type_span.merge(end_span),
         })
     }
 
@@ -409,6 +466,7 @@ impl Parser {
             TokenKind::Let
                 | TokenKind::Var
                 | TokenKind::Fn
+                | TokenKind::Type
                 | TokenKind::If
                 | TokenKind::Else
                 | TokenKind::While
@@ -467,6 +525,7 @@ impl Parser {
 
             match self.peek().kind {
                 TokenKind::Fn
+                | TokenKind::Type
                 | TokenKind::Let
                 | TokenKind::Var
                 | TokenKind::If
@@ -478,6 +537,25 @@ impl Parser {
                 }
             }
         }
+    }
+
+    fn collect_doc_comments(&mut self) -> Option<String> {
+        if !self.check(TokenKind::DocComment) {
+            return None;
+        }
+
+        let mut lines = Vec::new();
+        while self.check(TokenKind::DocComment) {
+            let token = self.advance();
+            let text = token
+                .lexeme
+                .trim_start_matches("///")
+                .trim_start()
+                .to_string();
+            lines.push(text);
+        }
+
+        Some(lines.join("\n"))
     }
 }
 

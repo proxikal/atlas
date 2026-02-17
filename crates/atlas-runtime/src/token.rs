@@ -51,6 +51,8 @@ pub enum TokenKind {
     Var,
     /// `fn` keyword (function declaration)
     Fn,
+    /// `type` keyword (type alias declaration)
+    Type,
     /// `if` keyword
     If,
     /// `else` keyword
@@ -186,6 +188,7 @@ impl TokenKind {
             "let" => Some(TokenKind::Let),
             "var" => Some(TokenKind::Var),
             "fn" => Some(TokenKind::Fn),
+            "type" => Some(TokenKind::Type),
             "if" => Some(TokenKind::If),
             "else" => Some(TokenKind::Else),
             "while" => Some(TokenKind::While),
@@ -219,6 +222,7 @@ impl TokenKind {
             TokenKind::Let => "let",
             TokenKind::Var => "var",
             TokenKind::Fn => "fn",
+            TokenKind::Type => "type",
             TokenKind::If => "if",
             TokenKind::Else => "else",
             TokenKind::While => "while",
@@ -295,6 +299,7 @@ mod tests {
         assert_eq!(TokenKind::is_keyword("let"), Some(TokenKind::Let));
         assert_eq!(TokenKind::is_keyword("var"), Some(TokenKind::Var));
         assert_eq!(TokenKind::is_keyword("fn"), Some(TokenKind::Fn));
+        assert_eq!(TokenKind::is_keyword("type"), Some(TokenKind::Type));
         assert_eq!(TokenKind::is_keyword("if"), Some(TokenKind::If));
         assert_eq!(TokenKind::is_keyword("else"), Some(TokenKind::Else));
         assert_eq!(TokenKind::is_keyword("while"), Some(TokenKind::While));

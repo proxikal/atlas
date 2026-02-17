@@ -9,7 +9,9 @@ use crate::types::Type;
 ///
 /// Returns `Some(suggestion)` if a common fix is known, `None` otherwise.
 pub fn suggest_type_mismatch(expected: &Type, found: &Type) -> Option<String> {
-    match (expected, found) {
+    let expected_norm = expected.normalized();
+    let found_norm = found.normalized();
+    match (&expected_norm, &found_norm) {
         // number expected, string found → suggest num()
         (Type::Number, Type::String) => {
             Some("convert the string to a number with `num(value)`".to_string())
@@ -44,7 +46,9 @@ pub fn suggest_type_mismatch(expected: &Type, found: &Type) -> Option<String> {
 
 /// Suggest a fix for a binary operator type error.
 pub fn suggest_binary_operator_fix(op: &str, left: &Type, right: &Type) -> Option<String> {
-    match (op, left, right) {
+    let left_norm = left.normalized();
+    let right_norm = right.normalized();
+    match (op, &left_norm, &right_norm) {
         // number + string → suggest str() conversion
         ("+", Type::Number, Type::String) => {
             Some("convert the number to string first: `str(left) + right`".to_string())
@@ -59,7 +63,7 @@ pub fn suggest_binary_operator_fix(op: &str, left: &Type, right: &Type) -> Optio
                 .to_string(),
         ),
         // Comparison with different types
-        ("==" | "!=", _, _) if left != right => Some(format!(
+        ("==" | "!=", _, _) if left_norm != right_norm => Some(format!(
             "both sides must have the same type; found {} and {}",
             left.display_name(),
             right.display_name()
@@ -91,7 +95,8 @@ pub fn suggest_binary_operator_fix(op: &str, left: &Type, right: &Type) -> Optio
 
 /// Suggest a fix when a condition is not bool.
 pub fn suggest_condition_fix(found: &Type) -> String {
-    match found {
+    let found_norm = found.normalized();
+    match &found_norm {
         Type::Number => "use a comparison: `value != 0` or `value > 0`".to_string(),
         Type::String => "use a comparison: `len(value) > 0` or `value != \"\"`".to_string(),
         Type::Null => "null is not a boolean; use an explicit check".to_string(),
@@ -105,7 +110,8 @@ pub fn suggest_condition_fix(found: &Type) -> String {
 
 /// Suggest a fix for calling a non-function.
 pub fn suggest_not_callable(found: &Type) -> String {
-    match found {
+    let found_norm = found.normalized();
+    match &found_norm {
         Type::String => {
             "strings are not callable; did you mean to use a string method?".to_string()
         }

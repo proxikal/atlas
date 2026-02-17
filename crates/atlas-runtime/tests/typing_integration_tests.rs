@@ -7,7 +7,9 @@ fn type_name(result: &ReplCore, input: &str) -> (Option<String>, Vec<atlas_runti
     (name, type_result.diagnostics)
 }
 
-#[rstest(input, expected,
+#[rstest(
+    input,
+    expected,
     case("1 + 2;", "number"),
     case("\"a\" + \"b\";", "string"),
     case("true && false;", "bool"),
@@ -36,7 +38,8 @@ fn typing_integration_infers_types(input: &str, expected: &str) {
     assert_eq!(ty.expect("type"), expected);
 }
 
-#[rstest(input,
+#[rstest(
+    input,
     case("1 + \"a\";"),
     case("if (1) { 1; }"),
     case("let check: bool = 1;"),
@@ -67,7 +70,8 @@ fn typing_integration_reports_errors(input: &str) {
     );
 }
 
-#[rstest(input,
+#[rstest(
+    input,
     case("let x = 1; let y = x + 2; y;"),
     case("let s = \"a\"; let t = s + \"b\"; t;"),
     case("let arr = [1,2]; arr[1];"),
@@ -92,5 +96,9 @@ fn typing_integration_reports_errors(input: &str) {
 fn typing_integration_regressions_remain_valid(input: &str) {
     let mut repl = ReplCore::new();
     let result = repl.eval_line(input);
-    assert!(result.diagnostics.is_empty(), "Diagnostics: {:?}", result.diagnostics);
+    assert!(
+        result.diagnostics.is_empty(),
+        "Diagnostics: {:?}",
+        result.diagnostics
+    );
 }

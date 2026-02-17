@@ -28,6 +28,8 @@ pub enum TypeKind {
     JsonValue,
     /// Generic type (has type arguments)
     Generic,
+    /// Type alias (has alias target)
+    Alias,
     /// Type parameter (unresolved)
     TypeParameter,
     /// Unknown type (error recovery)
@@ -77,6 +79,10 @@ pub struct TypeInfo {
     /// For generic types: type arguments
     /// Empty for non-generic types
     pub type_args: Vec<TypeInfo>,
+
+    /// For alias types: underlying type information
+    /// None for non-alias types
+    pub alias_target: Option<Box<TypeInfo>>,
 }
 
 impl TypeInfo {
@@ -91,6 +97,7 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             },
 
             Type::String => TypeInfo {
@@ -101,6 +108,7 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             },
 
             Type::Bool => TypeInfo {
@@ -111,6 +119,7 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             },
 
             Type::Null => TypeInfo {
@@ -121,6 +130,7 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             },
 
             Type::Void => TypeInfo {
@@ -131,6 +141,7 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             },
 
             Type::Array(inner) => {
@@ -143,6 +154,7 @@ impl TypeInfo {
                     return_type: None,
                     element_type: Some(Box::new(element)),
                     type_args: vec![],
+                    alias_target: None,
                 }
             }
 
@@ -163,6 +175,7 @@ impl TypeInfo {
                     return_type: Some(Box::new(return_info)),
                     element_type: None,
                     type_args: vec![],
+                    alias_target: None,
                 }
             }
 
@@ -174,6 +187,7 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             },
 
             Type::Generic { name, type_args } => {
@@ -193,6 +207,7 @@ impl TypeInfo {
                     return_type: None,
                     element_type: None,
                     type_args: arg_infos,
+                    alias_target: None,
                 }
             }
 
@@ -204,6 +219,7 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             },
 
             Type::Unknown => TypeInfo {
@@ -214,6 +230,7 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
             },
 
             Type::Extern(extern_type) => TypeInfo {
@@ -224,6 +241,18 @@ impl TypeInfo {
                 return_type: None,
                 element_type: None,
                 type_args: vec![],
+                alias_target: None,
+            },
+
+            Type::Alias { name, target, .. } => TypeInfo {
+                name: name.clone(),
+                kind: TypeKind::Alias,
+                fields: vec![],
+                parameters: vec![],
+                return_type: None,
+                element_type: None,
+                type_args: vec![],
+                alias_target: Some(Box::new(TypeInfo::from_type(target))),
             },
         }
     }
@@ -306,6 +335,14 @@ impl TypeInfo {
                     self.name,
                     self.type_args.len()
                 )
+            }
+
+            TypeKind::Alias => {
+                if let Some(target) = &self.alias_target {
+                    format!("alias {} for {}", self.name, target.name)
+                } else {
+                    format!("alias {}", self.name)
+                }
             }
 
             TypeKind::TypeParameter => {

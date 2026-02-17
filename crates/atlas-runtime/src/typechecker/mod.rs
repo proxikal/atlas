@@ -21,6 +21,18 @@ use crate::types::Type;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct AliasKey {
+    name: String,
+    type_args: Vec<Type>,
+}
+
+#[derive(Debug, Clone)]
+struct AliasMetadata {
+    deprecated: bool,
+    since: Option<String>,
+}
+
 /// Type checker state
 pub struct TypeChecker<'a> {
     /// Symbol table from binder
@@ -41,11 +53,18 @@ pub struct TypeChecker<'a> {
     pub(super) used_symbols: HashSet<String>,
     /// Method table for method resolution
     pub(super) method_table: methods::MethodTable,
+    /// Type alias declarations available in this module scope
+    type_aliases: HashMap<String, TypeAliasDecl>,
+    /// Cached alias resolutions (alias name + args -> resolved type)
+    alias_cache: HashMap<AliasKey, Type>,
+    /// Stack of aliases being resolved (circular detection)
+    alias_resolution_stack: Vec<String>,
 }
 
 impl<'a> TypeChecker<'a> {
     /// Create a new type checker
     pub fn new(symbol_table: &'a mut SymbolTable) -> Self {
+        let type_aliases = symbol_table.type_aliases().clone();
         Self {
             symbol_table,
             diagnostics: Vec::new(),
@@ -56,6 +75,9 @@ impl<'a> TypeChecker<'a> {
             declared_symbols: HashMap::new(),
             used_symbols: HashSet::new(),
             method_table: methods::MethodTable::new(),
+            type_aliases,
+            alias_cache: HashMap::new(),
+            alias_resolution_stack: Vec::new(),
         }
     }
 
@@ -68,6 +90,7 @@ impl<'a> TypeChecker<'a> {
 
     /// Type check a program
     pub fn check(&mut self, program: &Program) -> Vec<Diagnostic> {
+        self.validate_type_aliases(program);
         for item in &program.items {
             self.check_item(item);
         }
@@ -97,6 +120,7 @@ impl<'a> TypeChecker<'a> {
                 let name = match &export_decl.item {
                     crate::ast::ExportItem::Function(func) => &func.name.name,
                     crate::ast::ExportItem::Variable(var) => &var.name.name,
+                    crate::ast::ExportItem::TypeAlias(alias) => &alias.name.name,
                 };
 
                 if exported_names.contains(name) {
@@ -119,6 +143,7 @@ impl<'a> TypeChecker<'a> {
         }
 
         // Type check all items (imports already validated during binding)
+        self.validate_type_aliases(program);
         for item in &program.items {
             self.check_item(item);
         }
@@ -142,11 +167,17 @@ impl<'a> TypeChecker<'a> {
                     crate::ast::ExportItem::Variable(var) => {
                         self.check_statement(&crate::ast::Stmt::VarDecl(var.clone()));
                     }
+                    crate::ast::ExportItem::TypeAlias(_) => {
+                        // Type aliases are validated in a pre-pass
+                    }
                 }
             }
             Item::Extern(_) => {
                 // Extern type checking handled in phase-10b (FFI infrastructure)
                 // For now, just skip - full implementation pending
+            }
+            Item::TypeAlias(_) => {
+                // Type aliases are validated in a pre-pass
             }
         }
     }
@@ -190,24 +221,49 @@ impl<'a> TypeChecker<'a> {
         type_ref: &TypeRef,
         type_params: &[crate::ast::TypeParam],
     ) -> Type {
+        self.resolve_type_ref_with_params_and_context(type_ref, type_params, None)
+    }
+
+    fn resolve_type_ref_with_params_and_context(
+        &mut self,
+        type_ref: &TypeRef,
+        type_params: &[crate::ast::TypeParam],
+        expected: Option<&Type>,
+    ) -> Type {
         match type_ref {
-            TypeRef::Named(name, _) => {
-                // Check if this is a type parameter
+            TypeRef::Named(name, span) => {
                 if type_params.iter().any(|tp| tp.name == *name) {
                     return Type::TypeParameter { name: name.clone() };
                 }
-                // Otherwise resolve as normal
-                match name.as_str() {
-                    "number" => Type::Number,
-                    "string" => Type::String,
-                    "bool" => Type::Bool,
-                    "void" => Type::Void,
-                    "null" => Type::Null,
-                    _ => Type::Unknown,
+
+                if let Some(alias) = self.type_aliases.get(name).cloned() {
+                    if !alias.type_params.is_empty() {
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3001",
+                                format!(
+                                    "Type alias '{}' expects {} type argument(s)",
+                                    name,
+                                    alias.type_params.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("missing type arguments")
+                            .with_help(format!(
+                                "provide {} type argument(s) for '{}'",
+                                alias.type_params.len(),
+                                name
+                            )),
+                        );
+                        return Type::Unknown;
+                    }
+                    return self.resolve_type_alias(&alias, Vec::new(), *span);
                 }
+
+                self.resolve_type_ref_with_context(type_ref, expected)
             }
             TypeRef::Array(elem, _) => Type::Array(Box::new(
-                self.resolve_type_ref_with_params(elem, type_params),
+                self.resolve_type_ref_with_params_and_context(elem, type_params, None),
             )),
             TypeRef::Function {
                 params,
@@ -216,19 +272,91 @@ impl<'a> TypeChecker<'a> {
             } => {
                 let param_types = params
                     .iter()
-                    .map(|p| self.resolve_type_ref_with_params(p, type_params))
+                    .map(|p| self.resolve_type_ref_with_params_and_context(p, type_params, None))
                     .collect();
-                let ret_type =
-                    Box::new(self.resolve_type_ref_with_params(return_type, type_params));
+                let ret_type = Box::new(self.resolve_type_ref_with_params_and_context(
+                    return_type,
+                    type_params,
+                    None,
+                ));
                 Type::Function {
                     type_params: vec![],
                     params: param_types,
                     return_type: ret_type,
                 }
             }
-            TypeRef::Generic { .. } => {
-                // Just use the regular resolver for generics
-                self.resolve_type_ref(type_ref)
+            TypeRef::Generic {
+                name,
+                type_args,
+                span,
+            } => {
+                let resolved_args = type_args
+                    .iter()
+                    .map(|arg| {
+                        self.resolve_type_ref_with_params_and_context(arg, type_params, None)
+                    })
+                    .collect::<Vec<_>>();
+
+                if let Some(alias) = self.type_aliases.get(name).cloned() {
+                    if alias.type_params.len() != resolved_args.len() {
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3001",
+                                format!(
+                                    "Type alias '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    alias.type_params.len(),
+                                    resolved_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments")
+                            .with_help(format!(
+                                "provide exactly {} type argument(s) for '{}'",
+                                alias.type_params.len(),
+                                name
+                            )),
+                        );
+                        return Type::Unknown;
+                    }
+                    return self.resolve_type_alias(&alias, resolved_args, *span);
+                }
+
+                // Validate built-in generic types
+                let expected_arity = self.get_generic_type_arity(name);
+                if let Some(arity) = expected_arity {
+                    if resolved_args.len() != arity {
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3001",
+                                format!(
+                                    "Generic type '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    arity,
+                                    resolved_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments"),
+                        );
+                        return Type::Unknown;
+                    }
+                } else {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3001",
+                            format!("Unknown generic type '{}'", name),
+                            *span,
+                        )
+                        .with_label("unknown type"),
+                    );
+                    return Type::Unknown;
+                }
+
+                Type::Generic {
+                    name: name.clone(),
+                    type_args: resolved_args,
+                }
             }
         }
     }
@@ -282,8 +410,9 @@ impl<'a> TypeChecker<'a> {
         self.check_block(&func.body);
 
         // Check if all paths return (if return type != void/null)
-        if return_type != Type::Void
-            && return_type != Type::Null
+        let return_norm = return_type.normalized();
+        if return_norm != Type::Void
+            && return_norm != Type::Null
             && !self.block_always_returns(&func.body)
         {
             self.diagnostics.push(
@@ -408,7 +537,8 @@ impl<'a> TypeChecker<'a> {
                 let init_type = self.check_expr(&var.init);
 
                 if let Some(type_ref) = &var.type_ref {
-                    let declared_type = self.resolve_type_ref(type_ref);
+                    let declared_type =
+                        self.resolve_type_ref_with_context(type_ref, Some(&init_type));
                     if !init_type.is_assignable_to(&declared_type) {
                         let help = suggestions::suggest_type_mismatch(&declared_type, &init_type)
                             .unwrap_or_else(|| {
@@ -438,7 +568,7 @@ impl<'a> TypeChecker<'a> {
                     }
                 } else {
                     // No explicit type annotation - update symbol table with inferred type
-                    if init_type != Type::Unknown {
+                    if init_type.normalized() != Type::Unknown {
                         if let Some(symbol) = self.symbol_table.lookup_mut(&var.name.name) {
                             symbol.ty = init_type;
                         }
@@ -504,9 +634,11 @@ impl<'a> TypeChecker<'a> {
             Stmt::CompoundAssign(compound) => {
                 let value_type = self.check_expr(&compound.value);
                 let target_type = self.check_assign_target(&compound.target);
+                let target_norm = target_type.normalized();
+                let value_norm = value_type.normalized();
 
                 // Compound assignment requires both sides to be numbers (allow Unknown for error recovery)
-                if !matches!(target_type, Type::Number | Type::Unknown) {
+                if !matches!(target_norm, Type::Number | Type::Unknown) {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -523,7 +655,7 @@ impl<'a> TypeChecker<'a> {
                     );
                 }
 
-                if !matches!(value_type, Type::Number | Type::Unknown) {
+                if !matches!(value_norm, Type::Number | Type::Unknown) {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -555,9 +687,10 @@ impl<'a> TypeChecker<'a> {
             }
             Stmt::Increment(inc) => {
                 let target_type = self.check_assign_target(&inc.target);
+                let target_norm = target_type.normalized();
 
                 // Increment requires number type (allow Unknown for error recovery)
-                if !matches!(target_type, Type::Number | Type::Unknown) {
+                if !matches!(target_norm, Type::Number | Type::Unknown) {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -588,9 +721,10 @@ impl<'a> TypeChecker<'a> {
             }
             Stmt::Decrement(dec) => {
                 let target_type = self.check_assign_target(&dec.target);
+                let target_norm = target_type.normalized();
 
                 // Decrement requires number type (allow Unknown for error recovery)
-                if !matches!(target_type, Type::Number | Type::Unknown) {
+                if !matches!(target_norm, Type::Number | Type::Unknown) {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -621,7 +755,8 @@ impl<'a> TypeChecker<'a> {
             }
             Stmt::If(if_stmt) => {
                 let cond_type = self.check_expr(&if_stmt.cond);
-                if cond_type != Type::Bool && cond_type != Type::Unknown {
+                let cond_norm = cond_type.normalized();
+                if cond_norm != Type::Bool && cond_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -639,7 +774,8 @@ impl<'a> TypeChecker<'a> {
             }
             Stmt::While(while_stmt) => {
                 let cond_type = self.check_expr(&while_stmt.cond);
-                if cond_type != Type::Bool && cond_type != Type::Unknown {
+                let cond_norm = cond_type.normalized();
+                if cond_norm != Type::Bool && cond_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -658,7 +794,8 @@ impl<'a> TypeChecker<'a> {
             Stmt::For(for_stmt) => {
                 self.check_statement(&for_stmt.init);
                 let cond_type = self.check_expr(&for_stmt.cond);
-                if cond_type != Type::Bool && cond_type != Type::Unknown {
+                let cond_norm = cond_type.normalized();
+                if cond_norm != Type::Bool && cond_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -763,10 +900,11 @@ impl<'a> TypeChecker<'a> {
             Stmt::ForIn(for_in_stmt) => {
                 // Type check the iterable expression
                 let iterable_type = self.check_expr(&for_in_stmt.iterable);
+                let iterable_norm = iterable_type.normalized();
 
                 // Validate iterable is an array
                 // Note: Unknown types are allowed for now (will be inferred)
-                match iterable_type {
+                match iterable_norm {
                     Type::Array(_) | Type::Unknown => {
                         // Valid - continue
                     }
@@ -790,7 +928,7 @@ impl<'a> TypeChecker<'a> {
                 }
 
                 // Infer loop variable type from array element type
-                if let Type::Array(element_type) = &iterable_type {
+                if let Type::Array(element_type) = &iterable_norm {
                     // Update symbol table with inferred type
                     if let Some(symbol) = self.symbol_table.lookup_mut(&for_in_stmt.variable.name) {
                         symbol.ty = (**element_type).clone();
@@ -819,9 +957,11 @@ impl<'a> TypeChecker<'a> {
             AssignTarget::Index { target, index, .. } => {
                 let target_type = self.check_expr(target);
                 let index_type = self.check_expr(index);
+                let target_norm = target_type.normalized();
 
                 // Check that index is a number
-                if index_type != Type::Number && index_type != Type::Unknown {
+                let index_norm = index_type.normalized();
+                if index_norm != Type::Number && index_norm != Type::Unknown {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             "AT3001",
@@ -836,7 +976,7 @@ impl<'a> TypeChecker<'a> {
                 }
 
                 // Extract element type from array
-                match target_type {
+                match target_norm {
                     Type::Array(elem_type) => *elem_type,
                     Type::Unknown => Type::Unknown,
                     _ => {
@@ -872,25 +1012,75 @@ impl<'a> TypeChecker<'a> {
 
     /// Resolve a type reference to a Type
     pub(super) fn resolve_type_ref(&mut self, type_ref: &TypeRef) -> Type {
+        self.resolve_type_ref_with_context(type_ref, None)
+    }
+
+    fn resolve_type_ref_with_context(
+        &mut self,
+        type_ref: &TypeRef,
+        expected: Option<&Type>,
+    ) -> Type {
         match type_ref {
-            TypeRef::Named(name, _) => match name.as_str() {
+            TypeRef::Named(name, span) => match name.as_str() {
                 "number" => Type::Number,
                 "string" => Type::String,
                 "bool" => Type::Bool,
                 "void" => Type::Void,
                 "null" => Type::Null,
-                _ => Type::Unknown,
+                "json" => Type::JsonValue,
+                _ => {
+                    if let Some(alias) = self.type_aliases.get(name).cloned() {
+                        if alias.type_params.is_empty() {
+                            return self.resolve_type_alias(&alias, Vec::new(), *span);
+                        }
+                        if let Some(expected_type) = expected {
+                            if expected_type.normalized() != Type::Unknown {
+                                if let Some(args) =
+                                    self.infer_alias_type_args(&alias, expected_type, *span)
+                                {
+                                    return self.resolve_type_alias(&alias, args, *span);
+                                }
+                            }
+                        }
+
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3001",
+                                format!(
+                                    "Type alias '{}' expects {} type argument(s)",
+                                    name,
+                                    alias.type_params.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("missing type arguments")
+                            .with_help(format!(
+                                "provide {} type argument(s) for '{}'",
+                                alias.type_params.len(),
+                                name
+                            )),
+                        );
+                        return Type::Unknown;
+                    }
+
+                    Type::Unknown
+                }
             },
-            TypeRef::Array(elem, _) => Type::Array(Box::new(self.resolve_type_ref(elem))),
+            TypeRef::Array(elem, _) => {
+                Type::Array(Box::new(self.resolve_type_ref_with_context(elem, None)))
+            }
             TypeRef::Function {
                 params,
                 return_type,
                 ..
             } => {
-                let param_types = params.iter().map(|p| self.resolve_type_ref(p)).collect();
-                let ret_type = Box::new(self.resolve_type_ref(return_type));
+                let param_types = params
+                    .iter()
+                    .map(|p| self.resolve_type_ref_with_context(p, None))
+                    .collect();
+                let ret_type = Box::new(self.resolve_type_ref_with_context(return_type, None));
                 Type::Function {
-                    type_params: vec![], // Function types don't have type params (only decls do)
+                    type_params: vec![],
                     params: param_types,
                     return_type: ret_type,
                 }
@@ -900,18 +1090,48 @@ impl<'a> TypeChecker<'a> {
                 type_args,
                 span,
             } => {
-                // Validate generic type arity
+                let resolved_args = type_args
+                    .iter()
+                    .map(|arg| self.resolve_type_ref_with_context(arg, None))
+                    .collect::<Vec<_>>();
+
+                if let Some(alias) = self.type_aliases.get(name).cloned() {
+                    if alias.type_params.len() != resolved_args.len() {
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3001",
+                                format!(
+                                    "Type alias '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    alias.type_params.len(),
+                                    resolved_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments")
+                            .with_help(format!(
+                                "provide exactly {} type argument(s) for '{}'",
+                                alias.type_params.len(),
+                                name
+                            )),
+                        );
+                        return Type::Unknown;
+                    }
+                    return self.resolve_type_alias(&alias, resolved_args, *span);
+                }
+
+                // Validate built-in generic type arity
                 let expected_arity = self.get_generic_type_arity(name);
 
                 if let Some(arity) = expected_arity {
-                    if type_args.len() != arity {
+                    if resolved_args.len() != arity {
                         self.diagnostics.push(
                             Diagnostic::error(
                                 format!(
                                     "Generic type '{}' expects {} type argument(s), found {}",
                                     name,
                                     arity,
-                                    type_args.len()
+                                    resolved_args.len()
                                 ),
                                 *span,
                             )
@@ -928,11 +1148,168 @@ impl<'a> TypeChecker<'a> {
                     return Type::Unknown;
                 }
 
-                // Resolve type arguments
+                Type::Generic {
+                    name: name.clone(),
+                    type_args: resolved_args,
+                }
+            }
+        }
+    }
+
+    fn resolve_type_alias(
+        &mut self,
+        alias: &TypeAliasDecl,
+        type_args: Vec<Type>,
+        span: Span,
+    ) -> Type {
+        let alias_name = alias.name.name.clone();
+        let key = AliasKey {
+            name: alias_name.clone(),
+            type_args: type_args.clone(),
+        };
+        if let Some(cached) = self.alias_cache.get(&key) {
+            return cached.clone();
+        }
+
+        if let Some(index) = self
+            .alias_resolution_stack
+            .iter()
+            .position(|name| name == &alias_name)
+        {
+            let mut chain = self.alias_resolution_stack[index..].to_vec();
+            chain.push(alias_name.clone());
+            let mut diag = Diagnostic::error_with_code(
+                "AT3001",
+                format!("Circular type alias detected: {}", chain.join(" -> ")),
+                span,
+            )
+            .with_label("circular type alias");
+            diag = diag.with_related_location(crate::diagnostic::RelatedLocation {
+                file: "<input>".to_string(),
+                line: 1,
+                column: alias.name.span.start + 1,
+                length: alias.name.span.end.saturating_sub(alias.name.span.start),
+                message: format!("'{}' declared here", alias.name.name),
+            });
+            self.diagnostics.push(diag);
+            return Type::Unknown;
+        }
+
+        self.maybe_warn_deprecated_alias(alias, span);
+
+        let substitutions = alias
+            .type_params
+            .iter()
+            .map(|param| param.name.clone())
+            .zip(type_args.iter().cloned())
+            .collect::<HashMap<_, _>>();
+
+        self.alias_resolution_stack.push(alias_name.clone());
+        let resolved_target =
+            self.resolve_type_ref_with_substitutions(&alias.type_ref, &substitutions);
+        self.alias_resolution_stack.pop();
+
+        let alias_type = Type::Alias {
+            name: alias_name,
+            type_args,
+            target: Box::new(resolved_target),
+        };
+
+        self.alias_cache.insert(key, alias_type.clone());
+        alias_type
+    }
+
+    fn resolve_type_ref_with_substitutions(
+        &mut self,
+        type_ref: &TypeRef,
+        substitutions: &HashMap<String, Type>,
+    ) -> Type {
+        match type_ref {
+            TypeRef::Named(name, _span) => {
+                if let Some(sub) = substitutions.get(name) {
+                    return sub.clone();
+                }
+                self.resolve_type_ref_with_context(type_ref, Some(&Type::Unknown))
+            }
+            TypeRef::Array(elem, _) => Type::Array(Box::new(
+                self.resolve_type_ref_with_substitutions(elem, substitutions),
+            )),
+            TypeRef::Function {
+                params,
+                return_type,
+                ..
+            } => {
+                let param_types = params
+                    .iter()
+                    .map(|p| self.resolve_type_ref_with_substitutions(p, substitutions))
+                    .collect();
+                let ret_type =
+                    Box::new(self.resolve_type_ref_with_substitutions(return_type, substitutions));
+                Type::Function {
+                    type_params: vec![],
+                    params: param_types,
+                    return_type: ret_type,
+                }
+            }
+            TypeRef::Generic {
+                name,
+                type_args,
+                span,
+            } => {
                 let resolved_args = type_args
                     .iter()
-                    .map(|arg| self.resolve_type_ref(arg))
-                    .collect();
+                    .map(|arg| self.resolve_type_ref_with_substitutions(arg, substitutions))
+                    .collect::<Vec<_>>();
+
+                if let Some(alias) = self.type_aliases.get(name).cloned() {
+                    if alias.type_params.len() != resolved_args.len() {
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3001",
+                                format!(
+                                    "Type alias '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    alias.type_params.len(),
+                                    resolved_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments"),
+                        );
+                        return Type::Unknown;
+                    }
+                    return self.resolve_type_alias(&alias, resolved_args, *span);
+                }
+
+                let expected_arity = self.get_generic_type_arity(name);
+                if let Some(arity) = expected_arity {
+                    if resolved_args.len() != arity {
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3001",
+                                format!(
+                                    "Generic type '{}' expects {} type argument(s), found {}",
+                                    name,
+                                    arity,
+                                    resolved_args.len()
+                                ),
+                                *span,
+                            )
+                            .with_label("incorrect number of type arguments"),
+                        );
+                        return Type::Unknown;
+                    }
+                } else {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            "AT3001",
+                            format!("Unknown generic type '{}'", name),
+                            *span,
+                        )
+                        .with_label("unknown type"),
+                    );
+                    return Type::Unknown;
+                }
 
                 Type::Generic {
                     name: name.clone(),
@@ -940,6 +1317,134 @@ impl<'a> TypeChecker<'a> {
                 }
             }
         }
+    }
+
+    fn infer_alias_type_args(
+        &mut self,
+        alias: &TypeAliasDecl,
+        expected: &Type,
+        span: Span,
+    ) -> Option<Vec<Type>> {
+        let substitutions = alias
+            .type_params
+            .iter()
+            .map(|param| param.name.clone())
+            .zip(alias.type_params.iter().map(|param| Type::TypeParameter {
+                name: param.name.clone(),
+            }))
+            .collect::<HashMap<_, _>>();
+
+        let target = self.resolve_type_ref_with_substitutions(&alias.type_ref, &substitutions);
+
+        let mut inferer = generics::TypeInferer::new();
+        if inferer.unify(&target, expected).is_err() {
+            self.diagnostics.push(
+                Diagnostic::error_with_code(
+                    "AT3001",
+                    format!(
+                        "Cannot infer type arguments for alias '{}' from {}",
+                        alias.name.name,
+                        expected.display_name()
+                    ),
+                    span,
+                )
+                .with_label("cannot infer type arguments"),
+            );
+            return None;
+        }
+
+        let mut resolved_args = Vec::new();
+        for param in &alias.type_params {
+            if let Some(arg) = inferer.get_substitution(&param.name) {
+                resolved_args.push(arg.clone());
+            } else {
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        "AT3001",
+                        format!(
+                            "Cannot infer type argument '{}' for alias '{}'",
+                            param.name, alias.name.name
+                        ),
+                        span,
+                    )
+                    .with_label("cannot infer type argument"),
+                );
+                return None;
+            }
+        }
+
+        Some(resolved_args)
+    }
+
+    fn parse_alias_metadata(&self, alias: &TypeAliasDecl) -> AliasMetadata {
+        let mut metadata = AliasMetadata {
+            deprecated: false,
+            since: None,
+        };
+        let Some(doc) = alias.doc_comment.as_ref() else {
+            return metadata;
+        };
+
+        for line in doc.lines() {
+            let trimmed = line.trim();
+            let lower = trimmed.to_lowercase();
+            if lower.contains("@deprecated") || lower.starts_with("deprecated") {
+                metadata.deprecated = true;
+            }
+            if let Some(rest) = trimmed.strip_prefix("@since") {
+                let version = rest.trim();
+                if !version.is_empty() {
+                    metadata.since = Some(version.to_string());
+                }
+            }
+        }
+
+        metadata
+    }
+
+    fn maybe_warn_deprecated_alias(&mut self, alias: &TypeAliasDecl, span: Span) {
+        let metadata = self.parse_alias_metadata(alias);
+        if metadata.deprecated {
+            let mut diag = Diagnostic::warning_with_code(
+                "AT2009",
+                format!("Type alias '{}' is deprecated", alias.name.name),
+                span,
+            )
+            .with_label("deprecated type alias");
+
+            if let Some(since) = metadata.since {
+                diag = diag.with_note(format!("deprecated since {}", since));
+            }
+
+            self.diagnostics.push(diag);
+        }
+    }
+
+    fn validate_type_aliases(&mut self, program: &Program) {
+        for item in &program.items {
+            match item {
+                Item::TypeAlias(alias) => {
+                    self.validate_type_alias(alias);
+                }
+                Item::Export(export_decl) => {
+                    if let ExportItem::TypeAlias(alias) = &export_decl.item {
+                        self.validate_type_alias(alias);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn validate_type_alias(&mut self, alias: &TypeAliasDecl) {
+        let type_args = alias
+            .type_params
+            .iter()
+            .map(|param| Type::TypeParameter {
+                name: param.name.clone(),
+            })
+            .collect::<Vec<_>>();
+        let _ = self.resolve_type_alias(alias, type_args, alias.span);
     }
 }
 

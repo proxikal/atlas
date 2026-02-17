@@ -2,6 +2,7 @@
 
 use crate::ffi::ExternType;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Type representation
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -29,6 +30,12 @@ pub enum Type {
     JsonValue,
     /// Generic type with instantiated arguments (e.g., Result<number, string>)
     Generic { name: String, type_args: Vec<Type> },
+    /// Type alias with resolved target type
+    Alias {
+        name: String,
+        type_args: Vec<Type>,
+        target: Box<Type>,
+    },
     /// Type parameter (unresolved variable, e.g., T in Result<T, E>)
     TypeParameter { name: String },
     /// Unknown type (for error recovery)
@@ -40,12 +47,15 @@ pub enum Type {
 impl Type {
     /// Check if this type is compatible with another type
     pub fn is_assignable_to(&self, other: &Type) -> bool {
+        let self_norm = self.normalized();
+        let other_norm = other.normalized();
+
         // Unknown type is assignable to anything (error recovery)
-        if matches!(self, Type::Unknown) || matches!(other, Type::Unknown) {
+        if matches!(self_norm, Type::Unknown) || matches!(other_norm, Type::Unknown) {
             return true;
         }
 
-        match (self, other) {
+        match (&self_norm, &other_norm) {
             // Same type is always assignable
             (a, b) if a == b => true,
 
@@ -57,16 +67,32 @@ impl Type {
                 Type::Function {
                     params: p1,
                     return_type: r1,
+                    type_params: tp1,
                     ..
                 },
                 Type::Function {
                     params: p2,
                     return_type: r2,
+                    type_params: tp2,
                     ..
                 },
             ) => {
-                p1.len() == p2.len()
-                    && p1.iter().zip(p2.iter()).all(|(a, b)| a.is_assignable_to(b))
+                if p1.len() != p2.len() {
+                    return false;
+                }
+
+                // Allow generic functions to be assigned to concrete signatures
+                if !tp1.is_empty() && tp2.is_empty() {
+                    let mut substitutions = HashMap::new();
+                    for (actual_param, expected_param) in p1.iter().zip(p2.iter()) {
+                        if !match_type_params(actual_param, expected_param, &mut substitutions) {
+                            return false;
+                        }
+                    }
+                    return match_type_params(r1, r2, &mut substitutions);
+                }
+
+                p1.iter().zip(p2.iter()).all(|(a, b)| a.is_assignable_to(b))
                     && r1.is_assignable_to(r2)
             }
 
@@ -118,10 +144,112 @@ impl Type {
                     .join(", ");
                 format!("{}<{}>", name, args)
             }
+            Type::Alias {
+                name, type_args, ..
+            } => {
+                if type_args.is_empty() {
+                    name.clone()
+                } else {
+                    let args = type_args
+                        .iter()
+                        .map(|t| t.display_name())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    format!("{}<{}>", name, args)
+                }
+            }
             Type::TypeParameter { name } => name.clone(),
             Type::Unknown => "?".to_string(),
             Type::Extern(extern_type) => extern_type.display_name().to_string(),
         }
+    }
+
+    /// Return a normalized type with aliases fully expanded.
+    pub fn normalized(&self) -> Type {
+        match self {
+            Type::Alias { target, .. } => target.normalized(),
+            Type::Array(inner) => Type::Array(Box::new(inner.normalized())),
+            Type::Function {
+                type_params,
+                params,
+                return_type,
+            } => Type::Function {
+                type_params: type_params.clone(),
+                params: params.iter().map(|p| p.normalized()).collect(),
+                return_type: Box::new(return_type.normalized()),
+            },
+            Type::Generic { name, type_args } => Type::Generic {
+                name: name.clone(),
+                type_args: type_args.iter().map(|t| t.normalized()).collect(),
+            },
+            other => other.clone(),
+        }
+    }
+}
+
+fn match_type_params(
+    template: &Type,
+    expected: &Type,
+    substitutions: &mut HashMap<String, Type>,
+) -> bool {
+    let template_norm = template.normalized();
+    let expected_norm = expected.normalized();
+
+    match (&template_norm, &expected_norm) {
+        (Type::TypeParameter { name }, actual) => {
+            if let Some(existing) = substitutions.get(name) {
+                existing.normalized() == *actual
+            } else {
+                substitutions.insert(name.clone(), actual.clone());
+                true
+            }
+        }
+        (Type::Array(inner_template), Type::Array(inner_expected)) => {
+            match_type_params(inner_template, inner_expected, substitutions)
+        }
+        (
+            Type::Function {
+                type_params: tp1,
+                params: p1,
+                return_type: r1,
+            },
+            Type::Function {
+                type_params: tp2,
+                params: p2,
+                return_type: r2,
+            },
+        ) => {
+            if tp1.len() != tp2.len() || p1.len() != p2.len() {
+                return false;
+            }
+            for (param1, param2) in p1.iter().zip(p2.iter()) {
+                if !match_type_params(param1, param2, substitutions) {
+                    return false;
+                }
+            }
+            match_type_params(r1, r2, substitutions)
+        }
+        (
+            Type::Generic {
+                name: n1,
+                type_args: a1,
+            },
+            Type::Generic {
+                name: n2,
+                type_args: a2,
+            },
+        ) => {
+            if n1 != n2 || a1.len() != a2.len() {
+                return false;
+            }
+            for (arg1, arg2) in a1.iter().zip(a2.iter()) {
+                if !match_type_params(arg1, arg2, substitutions) {
+                    return false;
+                }
+            }
+            true
+        }
+        (a, b) => a == b,
     }
 }
 

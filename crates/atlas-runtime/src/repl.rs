@@ -8,8 +8,8 @@ use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::security::SecurityContext;
 use crate::symbol::{SymbolKind, SymbolTable};
-use crate::types::Type;
 use crate::typechecker::TypeChecker;
+use crate::types::Type;
 use crate::value::Value;
 
 /// A captured variable binding for REPL display
@@ -87,7 +87,10 @@ impl ReplCore {
         diagnostics.extend(lex_diags);
 
         if !diagnostics.is_empty() {
-            return TypeQueryResult { ty: None, diagnostics };
+            return TypeQueryResult {
+                ty: None,
+                diagnostics,
+            };
         }
 
         let mut parser = Parser::new(tokens);
@@ -95,7 +98,10 @@ impl ReplCore {
         diagnostics.extend(parse_diags);
 
         if !diagnostics.is_empty() {
-            return TypeQueryResult { ty: None, diagnostics };
+            return TypeQueryResult {
+                ty: None,
+                diagnostics,
+            };
         }
 
         // Bind using a clone so we don't mutate live REPL state
@@ -104,7 +110,10 @@ impl ReplCore {
         diagnostics.extend(bind_diags);
 
         if !diagnostics.is_empty() {
-            return TypeQueryResult { ty: None, diagnostics };
+            return TypeQueryResult {
+                ty: None,
+                diagnostics,
+            };
         }
 
         let mut typechecker = TypeChecker::new(&mut bound_symbols);
@@ -112,7 +121,10 @@ impl ReplCore {
         diagnostics.extend(type_diags);
 
         if !diagnostics.is_empty() {
-            return TypeQueryResult { ty: None, diagnostics };
+            return TypeQueryResult {
+                ty: None,
+                diagnostics,
+            };
         }
 
         TypeQueryResult {

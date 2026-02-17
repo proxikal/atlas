@@ -36,10 +36,11 @@ impl TypeInferer {
     /// Unify two types, building substitution map
     ///
     /// Returns Ok(()) if unification succeeds, Err otherwise.
+    #[allow(clippy::result_large_err)]
     pub fn unify(&mut self, expected: &Type, actual: &Type) -> Result<(), InferenceError> {
         // Apply existing substitutions to both types before unifying
-        let expected = self.apply_substitutions(expected);
-        let actual = self.apply_substitutions(actual);
+        let expected = self.apply_substitutions(expected).normalized();
+        let actual = self.apply_substitutions(actual).normalized();
 
         match (&expected, &actual) {
             // Type parameter unifies with anything (binds to it)
@@ -144,6 +145,7 @@ impl TypeInferer {
     }
 
     /// Add a substitution for a type parameter
+    #[allow(clippy::result_large_err)]
     fn add_substitution(&mut self, param: &str, ty: Type) -> Result<(), InferenceError> {
         // If we already have a substitution, unify with existing
         if let Some(existing) = self.substitutions.get(param).cloned() {
@@ -189,6 +191,12 @@ impl TypeInferer {
             Type::Generic { type_args, .. } => {
                 type_args.iter().any(|arg| self.occurs_in(param, arg))
             }
+            Type::Alias {
+                type_args, target, ..
+            } => {
+                type_args.iter().any(|arg| self.occurs_in(param, arg))
+                    || self.occurs_in(param, target)
+            }
             _ => false,
         }
     }
@@ -222,6 +230,18 @@ impl TypeInferer {
                     .iter()
                     .map(|arg| self.apply_substitutions(arg))
                     .collect(),
+            },
+            Type::Alias {
+                name,
+                type_args,
+                target,
+            } => Type::Alias {
+                name: name.clone(),
+                type_args: type_args
+                    .iter()
+                    .map(|arg| self.apply_substitutions(arg))
+                    .collect(),
+                target: Box::new(self.apply_substitutions(target)),
             },
             // Other types don't contain type parameters
             _ => ty.clone(),

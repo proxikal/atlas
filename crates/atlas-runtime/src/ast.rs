@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// This version number is included in JSON dumps to ensure compatibility.
 /// Increment when making breaking changes to the AST structure.
-pub const AST_VERSION: u32 = 1;
+pub const AST_VERSION: u32 = 2;
 
 /// Top-level program containing all items
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -64,6 +64,7 @@ pub enum Item {
     Import(ImportDecl),
     Export(ExportDecl),
     Extern(ExternDecl),
+    TypeAlias(TypeAliasDecl),
 }
 
 /// Import declaration
@@ -104,6 +105,8 @@ pub enum ExportItem {
     Function(FunctionDecl),
     /// Export variable: `export let x = 5`
     Variable(VarDecl),
+    /// Export type alias: `export type Foo = bar`
+    TypeAlias(TypeAliasDecl),
 }
 
 /// Extern function declaration (FFI)
@@ -116,6 +119,22 @@ pub struct ExternDecl {
     pub symbol: Option<String>, // Optional symbol name (if different from name)
     pub params: Vec<(String, ExternTypeAnnotation)>,
     pub return_type: ExternTypeAnnotation,
+    pub span: Span,
+}
+
+/// Type alias declaration
+///
+/// Syntax: `type Name = type_expr;`
+/// Supports optional type parameters: `type Result<T, E> = ...;`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeAliasDecl {
+    pub name: Identifier,
+    /// Type parameters (e.g., <T, E> in type Foo<T, E> = ...)
+    pub type_params: Vec<TypeParam>,
+    /// Aliased type expression
+    pub type_ref: TypeRef,
+    /// Optional doc comment text (without leading ///)
+    pub doc_comment: Option<String>,
     pub span: Span,
 }
 
@@ -718,8 +737,8 @@ mod tests {
 
     #[test]
     fn test_ast_version_constant() {
-        // Verify AST_VERSION is set to 1
-        assert_eq!(AST_VERSION, 1);
+        // Verify AST_VERSION is set to 2
+        assert_eq!(AST_VERSION, 2);
     }
 
     #[test]
@@ -728,7 +747,7 @@ mod tests {
         let versioned = VersionedProgram::new(program);
 
         assert_eq!(versioned.ast_version, AST_VERSION);
-        assert_eq!(versioned.ast_version, 1);
+        assert_eq!(versioned.ast_version, 2);
         assert_eq!(versioned.program.items.len(), 0);
     }
 
@@ -737,7 +756,7 @@ mod tests {
         let program = Program { items: vec![] };
         let versioned: VersionedProgram = program.into();
 
-        assert_eq!(versioned.ast_version, 1);
+        assert_eq!(versioned.ast_version, 2);
     }
 
     #[test]
@@ -749,20 +768,20 @@ mod tests {
 
         // Verify JSON contains ast_version field
         assert!(json.contains("\"ast_version\""));
-        assert!(json.contains("\"ast_version\": 1"));
+        assert!(json.contains("\"ast_version\": 2"));
         assert!(json.contains("\"items\""));
     }
 
     #[test]
     fn test_versioned_program_from_json() {
         let json = r#"{
-            "ast_version": 1,
+            "ast_version": 2,
             "items": []
         }"#;
 
         let versioned = VersionedProgram::from_json(json).expect("Failed to parse JSON");
 
-        assert_eq!(versioned.ast_version, 1);
+        assert_eq!(versioned.ast_version, 2);
         assert_eq!(versioned.program.items.len(), 0);
     }
 
@@ -780,7 +799,7 @@ mod tests {
         let json = versioned.to_json().expect("Failed to serialize");
 
         // Verify version is included in JSON with content
-        assert!(json.contains("\"ast_version\": 1"));
+        assert!(json.contains("\"ast_version\": 2"));
         assert!(json.contains("\"items\""));
     }
 
@@ -803,7 +822,7 @@ mod tests {
         let deserialized = VersionedProgram::from_json(&json).expect("Failed to deserialize");
 
         // Verify version is preserved
-        assert_eq!(deserialized.ast_version, 1);
+        assert_eq!(deserialized.ast_version, 2);
         assert_eq!(deserialized.program.items.len(), 1);
     }
 
@@ -811,7 +830,7 @@ mod tests {
     fn test_version_mismatch_detection() {
         // Test with a future version number (forward compatibility test)
         let json_future = r#"{
-            "ast_version": 2,
+            "ast_version": 3,
             "items": []
         }"#;
 
@@ -822,7 +841,7 @@ mod tests {
         if let Ok(versioned) = result {
             // Can detect version mismatch
             assert_ne!(versioned.ast_version, AST_VERSION);
-            assert_eq!(versioned.ast_version, 2);
+            assert_eq!(versioned.ast_version, 3);
         }
     }
 
