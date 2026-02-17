@@ -82,24 +82,24 @@ fn test_build_profile_release() {
 
 #[test]
 fn test_build_with_scripts() {
-    let scripts = vec![
-        BuildScript::shell("pre", "echo 'pre-build'", ScriptPhase::PreBuild),
-        BuildScript::shell("post", "echo 'post-build'", ScriptPhase::PostBuild),
-    ];
+    let pre = BuildScript::shell("pre", "echo 'pre-build'", ScriptPhase::PreBuild);
+    let post = BuildScript::shell("post", "echo 'post-build'", ScriptPhase::PostBuild);
 
-    assert_eq!(scripts.len(), 2);
-    assert_eq!(scripts[0].phase, ScriptPhase::PreBuild);
-    assert_eq!(scripts[1].phase, ScriptPhase::PostBuild);
+    assert_eq!(pre.phase, ScriptPhase::PreBuild);
+    assert_eq!(post.phase, ScriptPhase::PostBuild);
 }
 
 #[test]
 fn test_clean_build() {
     let project = create_test_project();
-    let mut builder = Builder::new(project.path()).unwrap();
+    // Use a custom target dir so clean() removes exactly what we expect
+    let target_dir = project.path().join("custom_target");
+    let mut builder = Builder::new(project.path())
+        .unwrap()
+        .with_target_dir(target_dir.clone());
 
     // Create fake target directory
-    let target_dir = project.path().join("target");
-    fs::create_dir(&target_dir).unwrap();
+    fs::create_dir_all(&target_dir).unwrap();
     fs::write(target_dir.join("test.txt"), "test").unwrap();
 
     // Clean should remove it
@@ -124,7 +124,7 @@ fn test_builder_with_custom_target_dir() {
 fn test_output_mode_selection() {
     assert_eq!(OutputMode::default(), OutputMode::Normal);
 
-    let modes = vec![
+    let modes = [
         OutputMode::Normal,
         OutputMode::Verbose,
         OutputMode::Quiet,

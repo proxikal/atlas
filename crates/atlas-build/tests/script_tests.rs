@@ -1,22 +1,28 @@
 //! Build script execution tests
 
 use atlas_build::{BuildScript, Profile, ScriptContext, ScriptExecutor, ScriptPhase};
-use std::path::PathBuf;
 use std::time::Duration;
+use tempfile::TempDir;
 
-fn test_context() -> ScriptContext {
-    ScriptContext::new(
+fn test_context() -> (TempDir, ScriptContext) {
+    let dir = TempDir::new().unwrap();
+    let src_dir = dir.path().join("src");
+    let target_dir = dir.path().join("target");
+    std::fs::create_dir_all(&src_dir).unwrap();
+    std::fs::create_dir_all(&target_dir).unwrap();
+    let ctx = ScriptContext::new(
         Profile::Dev,
-        PathBuf::from("/tmp/target"),
-        PathBuf::from("/tmp/src"),
+        target_dir,
+        src_dir,
         "test-package".to_string(),
         "1.0.0".to_string(),
-    )
+    );
+    (dir, ctx)
 }
 
 #[test]
 fn test_execute_pre_build_script() {
-    let ctx = test_context();
+    let (_dir, ctx) = test_context();
     let executor = ScriptExecutor::new(ctx);
     let script = BuildScript::shell("test", "echo 'pre-build'", ScriptPhase::PreBuild);
 
@@ -27,7 +33,7 @@ fn test_execute_pre_build_script() {
 
 #[test]
 fn test_execute_post_build_script() {
-    let ctx = test_context();
+    let (_dir, ctx) = test_context();
     let executor = ScriptExecutor::new(ctx);
     let script = BuildScript::shell("test", "echo 'post-build'", ScriptPhase::PostBuild);
 
@@ -38,15 +44,14 @@ fn test_execute_post_build_script() {
 
 #[test]
 fn test_script_access_to_build_context() {
-    let ctx = test_context();
+    let (dir, ctx) = test_context();
     let env = ctx.environment();
 
     assert_eq!(env.get("ATLAS_PROFILE"), Some(&"dev".to_string()));
-    assert_eq!(
-        env.get("ATLAS_TARGET_DIR"),
-        Some(&"/tmp/target".to_string())
-    );
-    assert_eq!(env.get("ATLAS_SOURCE_DIR"), Some(&"/tmp/src".to_string()));
+    let expected_target = dir.path().join("target").to_string_lossy().to_string();
+    let expected_src = dir.path().join("src").to_string_lossy().to_string();
+    assert_eq!(env.get("ATLAS_TARGET_DIR"), Some(&expected_target));
+    assert_eq!(env.get("ATLAS_SOURCE_DIR"), Some(&expected_src));
     assert_eq!(env.get("ATLAS_VERSION"), Some(&"0.2.0".to_string()));
     assert_eq!(
         env.get("ATLAS_PACKAGE_NAME"),
@@ -57,7 +62,7 @@ fn test_script_access_to_build_context() {
 
 #[test]
 fn test_script_failure_aborts_build() {
-    let ctx = test_context();
+    let (_dir, ctx) = test_context();
     let executor = ScriptExecutor::new(ctx);
     let script = BuildScript::shell("test", "exit 1", ScriptPhase::PreBuild);
 
@@ -77,7 +82,7 @@ fn test_script_timeout_enforcement() {
 
 #[test]
 fn test_script_output_capture() {
-    let ctx = test_context();
+    let (_dir, ctx) = test_context();
     let executor = ScriptExecutor::new(ctx);
     let script = BuildScript::shell("test", "echo 'stdout line'", ScriptPhase::PreBuild);
 
@@ -101,7 +106,7 @@ fn test_sandboxing_build_scripts() {
 
 #[test]
 fn test_script_phase_ordering() {
-    let ctx = test_context();
+    let (_dir, ctx) = test_context();
     let executor = ScriptExecutor::new(ctx);
 
     let scripts = vec![
@@ -119,7 +124,7 @@ fn test_script_phase_ordering() {
 
 #[test]
 fn test_script_env_vars_in_context() {
-    let mut ctx = test_context();
+    let (_dir, mut ctx) = test_context();
     ctx.env_vars
         .insert("CUSTOM_VAR".to_string(), "custom_value".to_string());
 

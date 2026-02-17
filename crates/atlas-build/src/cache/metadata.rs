@@ -222,7 +222,7 @@ mod tests {
         fs::write(&file_path, "content").unwrap();
 
         let mut detector = ChangeDetector::new();
-        let changes = detector.detect_changes(&[file_path.clone()]);
+        let changes = detector.detect_changes(std::slice::from_ref(&file_path));
 
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].path, file_path);
@@ -236,13 +236,13 @@ mod tests {
         fs::write(&file_path, "original").unwrap();
 
         let mut detector = ChangeDetector::new();
-        detector.detect_changes(&[file_path.clone()]);
+        detector.detect_changes(std::slice::from_ref(&file_path));
 
         // Modify file
         thread::sleep(Duration::from_millis(10));
         fs::write(&file_path, "modified").unwrap();
 
-        let changes = detector.detect_changes(&[file_path.clone()]);
+        let changes = detector.detect_changes(std::slice::from_ref(&file_path));
 
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].change_type, ChangeType::Modified);
@@ -255,7 +255,7 @@ mod tests {
         fs::write(&file_path, "content").unwrap();
 
         let mut detector = ChangeDetector::new();
-        detector.detect_changes(&[file_path.clone()]);
+        detector.detect_changes(std::slice::from_ref(&file_path));
 
         // Remove file
         fs::remove_file(&file_path).unwrap();
@@ -273,10 +273,10 @@ mod tests {
         fs::write(&file_path, "content").unwrap();
 
         let mut detector = ChangeDetector::new();
-        detector.detect_changes(&[file_path.clone()]);
+        detector.detect_changes(std::slice::from_ref(&file_path));
 
         // No modification
-        let changes = detector.detect_changes(&[file_path.clone()]);
+        let changes = detector.detect_changes(std::slice::from_ref(&file_path));
 
         assert_eq!(changes.len(), 0);
     }

@@ -9,8 +9,8 @@
 ## 🎯 Current Phase
 
 **Last Completed:** phases/frontend/phase-05-incremental-compilation.md
-**Next Phase:** phases/typing/phase-01-improved-type-errors-and-inference.md
-**Real Progress:** 73/98 phases complete (74%)
+**Next Phase:** phases/foundation/phase-21a-cross-module-symbol-resolution.md
+**Real Progress:** 73/99 phases complete (74%)
 
 ---
 
@@ -18,7 +18,7 @@
 
 | Category | Progress | Status |
 |----------|----------|--------|
-| **0. Foundation** | 32/32 (100%) | ✅ COMPLETE |
+| **0. Foundation** | 32/33 (97%) | 🔨 ACTIVE |
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 8/8 (100%) | ✅ COMPLETE |
 | **3. Frontend** | 5/5 (100%) | ✅ COMPLETE |
@@ -32,7 +32,7 @@
 
 ## 📋 Complete Phase List (72/98)
 
-### 0. Foundation (32/32) ✅ COMPLETE
+### 0. Foundation (32/33) 🔨 ACTIVE
 
 ✅ phase-16-method-call-syntax-frontend.md
 ✅ phase-17-method-call-syntax-backend.md
@@ -67,6 +67,7 @@
 ✅ phase-20b-for-in-semantic.md
 ✅ phase-20c-for-in-backend.md
 ✅ phase-20d-for-in-testing-demos.md
+⬜ phase-21a-cross-module-symbol-resolution.md
 
 ### 1. Stdlib (28/30) ✅ Near Complete
 
@@ -289,4 +290,5 @@ v0.2 transforms Atlas into a production-ready language:
 
 ---
 
-**Next phase: `phases/typing/phase-01-improved-type-errors-and-inference.md`**
+**Next phase: `phases/foundation/phase-21a-cross-module-symbol-resolution.md`**
+**Then:** `phases/typing/phase-01-improved-type-errors-and-inference.md`
