@@ -54,13 +54,7 @@ impl Interpreter {
             Stmt::If(if_stmt) => self.eval_if(if_stmt),
             Stmt::While(while_stmt) => self.eval_while(while_stmt),
             Stmt::For(for_stmt) => self.eval_for(for_stmt),
-            Stmt::ForIn(for_in_stmt) => {
-                // TODO(Phase-20c): Implement for-in execution
-                Err(RuntimeError::TypeError {
-                    msg: "For-in loops are not yet implemented in the interpreter".to_string(),
-                    span: for_in_stmt.span,
-                })
-            }
+            Stmt::ForIn(for_in_stmt) => self.eval_for_in(for_in_stmt),
             Stmt::Return(return_stmt) => self.eval_return(return_stmt),
             Stmt::Break(_) => {
                 self.control_flow = ControlFlow::Break;
@@ -371,6 +365,61 @@ impl Interpreter {
 
             // Execute step
             self.eval_statement(&for_stmt.step)?;
+        }
+
+        self.pop_scope();
+        Ok(last_value)
+    }
+
+    /// Evaluate a for-in loop
+    fn eval_for_in(&mut self, for_in_stmt: &ForInStmt) -> Result<Value, RuntimeError> {
+        // Evaluate the iterable expression to get the array
+        let iterable = self.eval_expr(&for_in_stmt.iterable)?;
+
+        // Extract array elements
+        let elements = match &iterable {
+            Value::Array(arr) => {
+                let arr_ref = arr.lock().unwrap();
+                arr_ref.clone()
+            }
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: format!("for-in requires an array, found {}", iterable.type_name()),
+                    span: for_in_stmt.iterable.span(),
+                });
+            }
+        };
+
+        // Push new scope for loop variable
+        self.push_scope();
+
+        let mut last_value = Value::Null;
+
+        // Iterate over each element
+        for element in elements {
+            // Bind loop variable to current element
+            let scope = self.locals.last_mut().unwrap();
+            scope.insert(for_in_stmt.variable.name.clone(), element);
+
+            // Execute body
+            last_value = self.eval_block(&for_in_stmt.body)?;
+
+            // Handle control flow
+            match self.control_flow {
+                ControlFlow::Break => {
+                    self.control_flow = ControlFlow::None;
+                    break;
+                }
+                ControlFlow::Continue => {
+                    self.control_flow = ControlFlow::None;
+                    // Continue to next iteration
+                }
+                ControlFlow::Return(_) => {
+                    // Propagate return up
+                    break;
+                }
+                ControlFlow::None => {}
+            }
         }
 
         self.pop_scope();

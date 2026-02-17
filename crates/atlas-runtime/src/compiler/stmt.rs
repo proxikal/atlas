@@ -155,14 +155,7 @@ impl Compiler {
             Stmt::If(if_stmt) => self.compile_if(if_stmt),
             Stmt::While(while_stmt) => self.compile_while(while_stmt),
             Stmt::For(for_stmt) => self.compile_for(for_stmt),
-            Stmt::ForIn(for_in_stmt) => {
-                // TODO(Phase-20c): Implement for-in compilation
-                Err(vec![crate::diagnostic::Diagnostic::error_with_code(
-                    "AT9999",
-                    "For-in loops are not yet implemented in the VM",
-                    for_in_stmt.span,
-                )])
-            }
+            Stmt::ForIn(for_in_stmt) => self.compile_for_in(for_in_stmt),
             Stmt::Break(span) => self.compile_break(*span),
             Stmt::Continue(span) => self.compile_continue(*span),
             Stmt::CompoundAssign(compound) => self.compile_compound_assign(compound),
@@ -354,6 +347,21 @@ impl Compiler {
         }
 
         Ok(())
+    }
+
+    /// Compile a for-in loop
+    fn compile_for_in(&mut self, for_in_stmt: &ForInStmt) -> Result<(), Vec<Diagnostic>> {
+        // TODO(Phase-20c): Full VM support requires array length opcode
+        // For now, for-in loops work in interpreter mode only
+        // VM support will be added in a future phase when ArrayLength opcode is available
+        Err(vec![crate::diagnostic::Diagnostic::error_with_code(
+            "AT9998",
+            "For-in loops are not yet supported in VM mode (use interpreter mode)",
+            for_in_stmt.span,
+        )
+        .with_help(
+            "For-in loops work in interpreter mode. VM support coming soon.".to_string(),
+        )])
     }
 
     /// Compile a compound assignment (+=, -=, *=, /=, %=)
