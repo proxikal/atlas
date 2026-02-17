@@ -10,7 +10,7 @@ use crate::value::Value;
 use chrono::{Datelike, Local, TimeZone, Timelike, Utc, Weekday};
 use chrono_tz::Tz;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 // ============================================================================
 // DateTime Construction
@@ -33,7 +33,7 @@ pub fn date_time_now(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
     }
 
     let now = Utc::now();
-    Ok(Value::DateTime(Rc::new(now)))
+    Ok(Value::DateTime(Arc::new(now)))
 }
 
 /// Create DateTime from Unix timestamp (seconds since epoch)
@@ -59,7 +59,7 @@ pub fn date_time_from_timestamp(args: &[Value], span: Span) -> Result<Value, Run
     let timestamp_i64 = timestamp as i64;
 
     match Utc.timestamp_opt(timestamp_i64, 0) {
-        chrono::LocalResult::Single(dt) => Ok(Value::DateTime(Rc::new(dt))),
+        chrono::LocalResult::Single(dt) => Ok(Value::DateTime(Arc::new(dt))),
         _ => Err(RuntimeError::TypeError {
             msg: format!("dateTimeFromTimestamp: invalid timestamp: {}", timestamp),
             span,
@@ -138,7 +138,7 @@ pub fn date_time_from_components(args: &[Value], span: Span) -> Result<Value, Ru
     }
 
     match Utc.with_ymd_and_hms(year, month, day, hour, minute, second) {
-        chrono::LocalResult::Single(dt) => Ok(Value::DateTime(Rc::new(dt))),
+        chrono::LocalResult::Single(dt) => Ok(Value::DateTime(Arc::new(dt))),
         _ => Err(RuntimeError::TypeError {
             msg: format!(
                 "dateTimeFromComponents: invalid date/time: {}-{:02}-{:02} {:02}:{:02}:{:02}",
@@ -171,7 +171,7 @@ pub fn date_time_parse_iso(args: &[Value], span: Span) -> Result<Value, RuntimeE
     let text = expect_string(&args[0], "text", span)?;
 
     match text.parse::<chrono::DateTime<Utc>>() {
-        Ok(dt) => Ok(Value::DateTime(Rc::new(dt))),
+        Ok(dt) => Ok(Value::DateTime(Arc::new(dt))),
         Err(e) => Err(RuntimeError::TypeError {
             msg: format!("dateTimeParseIso: failed to parse '{}': {}", text, e),
             span,
@@ -376,7 +376,7 @@ pub fn date_time_add_seconds(args: &[Value], span: Span) -> Result<Value, Runtim
 
     let duration = chrono::Duration::seconds(seconds as i64);
     match dt.checked_add_signed(duration) {
-        Some(new_dt) => Ok(Value::DateTime(Rc::new(new_dt))),
+        Some(new_dt) => Ok(Value::DateTime(Arc::new(new_dt))),
         None => Err(RuntimeError::TypeError {
             msg: "dateTimeAddSeconds: overflow when adding seconds".to_string(),
             span,
@@ -404,7 +404,7 @@ pub fn date_time_add_minutes(args: &[Value], span: Span) -> Result<Value, Runtim
 
     let duration = chrono::Duration::minutes(minutes as i64);
     match dt.checked_add_signed(duration) {
-        Some(new_dt) => Ok(Value::DateTime(Rc::new(new_dt))),
+        Some(new_dt) => Ok(Value::DateTime(Arc::new(new_dt))),
         None => Err(RuntimeError::TypeError {
             msg: "dateTimeAddMinutes: overflow when adding minutes".to_string(),
             span,
@@ -432,7 +432,7 @@ pub fn date_time_add_hours(args: &[Value], span: Span) -> Result<Value, RuntimeE
 
     let duration = chrono::Duration::hours(hours as i64);
     match dt.checked_add_signed(duration) {
-        Some(new_dt) => Ok(Value::DateTime(Rc::new(new_dt))),
+        Some(new_dt) => Ok(Value::DateTime(Arc::new(new_dt))),
         None => Err(RuntimeError::TypeError {
             msg: "dateTimeAddHours: overflow when adding hours".to_string(),
             span,
@@ -460,7 +460,7 @@ pub fn date_time_add_days(args: &[Value], span: Span) -> Result<Value, RuntimeEr
 
     let duration = chrono::Duration::days(days as i64);
     match dt.checked_add_signed(duration) {
-        Some(new_dt) => Ok(Value::DateTime(Rc::new(new_dt))),
+        Some(new_dt) => Ok(Value::DateTime(Arc::new(new_dt))),
         None => Err(RuntimeError::TypeError {
             msg: "dateTimeAddDays: overflow when adding days".to_string(),
             span,
@@ -689,7 +689,7 @@ pub fn date_time_parse(args: &[Value], span: Span) -> Result<Value, RuntimeError
     match chrono::NaiveDateTime::parse_from_str(&text, &format) {
         Ok(naive_dt) => {
             let dt = Utc.from_utc_datetime(&naive_dt);
-            Ok(Value::DateTime(Rc::new(dt)))
+            Ok(Value::DateTime(Arc::new(dt)))
         }
         Err(e) => Err(RuntimeError::TypeError {
             msg: format!(
@@ -723,7 +723,7 @@ pub fn date_time_parse_rfc3339(args: &[Value], span: Span) -> Result<Value, Runt
     let text = expect_string(&args[0], "text", span)?;
 
     match chrono::DateTime::parse_from_rfc3339(&text) {
-        Ok(dt) => Ok(Value::DateTime(Rc::new(dt.with_timezone(&Utc)))),
+        Ok(dt) => Ok(Value::DateTime(Arc::new(dt.with_timezone(&Utc)))),
         Err(e) => Err(RuntimeError::TypeError {
             msg: format!("dateTimeParseRfc3339: failed to parse '{}': {}", text, e),
             span,
@@ -753,7 +753,7 @@ pub fn date_time_parse_rfc2822(args: &[Value], span: Span) -> Result<Value, Runt
     let text = expect_string(&args[0], "text", span)?;
 
     match chrono::DateTime::parse_from_rfc2822(&text) {
-        Ok(dt) => Ok(Value::DateTime(Rc::new(dt.with_timezone(&Utc)))),
+        Ok(dt) => Ok(Value::DateTime(Arc::new(dt.with_timezone(&Utc)))),
         Err(e) => Err(RuntimeError::TypeError {
             msg: format!("dateTimeParseRfc2822: failed to parse '{}': {}", text, e),
             span,
@@ -789,7 +789,7 @@ pub fn date_time_try_parse(args: &[Value], span: Span) -> Result<Value, RuntimeE
             if let Ok(naive_dt) = chrono::NaiveDateTime::parse_from_str(&text, format_str.as_ref())
             {
                 let dt = Utc.from_utc_datetime(&naive_dt);
-                return Ok(Value::DateTime(Rc::new(dt)));
+                return Ok(Value::DateTime(Arc::new(dt)));
             }
         }
     }
@@ -827,7 +827,7 @@ pub fn date_time_to_utc(args: &[Value], span: Span) -> Result<Value, RuntimeErro
     }
 
     let dt = expect_datetime(&args[0], "datetime", span)?;
-    Ok(Value::DateTime(Rc::new(dt)))
+    Ok(Value::DateTime(Arc::new(dt)))
 }
 
 /// Convert DateTime to local timezone
@@ -851,7 +851,7 @@ pub fn date_time_to_local(args: &[Value], span: Span) -> Result<Value, RuntimeEr
 
     let dt = expect_datetime(&args[0], "datetime", span)?;
     let local = dt.with_timezone(&Local);
-    Ok(Value::DateTime(Rc::new(local.with_timezone(&Utc))))
+    Ok(Value::DateTime(Arc::new(local.with_timezone(&Utc))))
 }
 
 /// Convert DateTime to named timezone
@@ -888,7 +888,7 @@ pub fn date_time_to_timezone(args: &[Value], span: Span) -> Result<Value, Runtim
     };
 
     let converted = dt.with_timezone(&tz);
-    Ok(Value::DateTime(Rc::new(converted.with_timezone(&Utc))))
+    Ok(Value::DateTime(Arc::new(converted.with_timezone(&Utc))))
 }
 
 /// Get timezone name from DateTime
@@ -974,7 +974,7 @@ pub fn date_time_in_timezone(args: &[Value], span: Span) -> Result<Value, Runtim
     // Get naive datetime components and reconstruct in target timezone
     let naive = dt.naive_utc();
     match tz.from_local_datetime(&naive).single() {
-        Some(local_dt) => Ok(Value::DateTime(Rc::new(local_dt.with_timezone(&Utc)))),
+        Some(local_dt) => Ok(Value::DateTime(Arc::new(local_dt.with_timezone(&Utc)))),
         None => Err(RuntimeError::TypeError {
             msg: format!(
                 "dateTimeInTimezone: ambiguous or invalid datetime in timezone '{}'",
@@ -1196,7 +1196,7 @@ fn expect_array(
     value: &Value,
     arg_name: &str,
     span: Span,
-) -> Result<Rc<RefCell<Vec<Value>>>, RuntimeError> {
+) -> Result<Arc<RefCell<Vec<Value>>>, RuntimeError> {
     match value {
         Value::Array(arr) => Ok(arr.clone()),
         _ => Err(RuntimeError::TypeError {
@@ -1215,7 +1215,7 @@ fn expect_hashmap(
     value: &Value,
     arg_name: &str,
     span: Span,
-) -> Result<Rc<RefCell<AtlasHashMap>>, RuntimeError> {
+) -> Result<Arc<RefCell<AtlasHashMap>>, RuntimeError> {
     match value {
         Value::HashMap(map) => Ok(map.clone()),
         _ => Err(RuntimeError::TypeError {
@@ -1231,7 +1231,7 @@ fn expect_hashmap(
 
 /// Get number value from HashMap
 fn get_number_from_map(map: &AtlasHashMap, key: &str, span: Span) -> Result<i64, RuntimeError> {
-    let hash_key = HashKey::String(Rc::new(key.to_string()));
+    let hash_key = HashKey::String(Arc::new(key.to_string()));
     match map.get(&hash_key) {
         Some(Value::Number(n)) => Ok(*n as i64),
         Some(_) => Err(RuntimeError::TypeError {
@@ -1256,7 +1256,7 @@ fn create_duration_map(total_seconds: i64) -> Value {
 
     let mut map = AtlasHashMap::new();
     map.insert(
-        HashKey::String(Rc::new("days".to_string())),
+        HashKey::String(Arc::new("days".to_string())),
         Value::Number(if is_negative {
             -(days as f64)
         } else {
@@ -1264,7 +1264,7 @@ fn create_duration_map(total_seconds: i64) -> Value {
         }),
     );
     map.insert(
-        HashKey::String(Rc::new("hours".to_string())),
+        HashKey::String(Arc::new("hours".to_string())),
         Value::Number(if is_negative {
             -(hours as f64)
         } else {
@@ -1272,7 +1272,7 @@ fn create_duration_map(total_seconds: i64) -> Value {
         }),
     );
     map.insert(
-        HashKey::String(Rc::new("minutes".to_string())),
+        HashKey::String(Arc::new("minutes".to_string())),
         Value::Number(if is_negative {
             -(minutes as f64)
         } else {
@@ -1280,7 +1280,7 @@ fn create_duration_map(total_seconds: i64) -> Value {
         }),
     );
     map.insert(
-        HashKey::String(Rc::new("seconds".to_string())),
+        HashKey::String(Arc::new("seconds".to_string())),
         Value::Number(if is_negative {
             -(seconds as f64)
         } else {
@@ -1288,5 +1288,5 @@ fn create_duration_map(total_seconds: i64) -> Value {
         }),
     );
 
-    Value::HashMap(Rc::new(RefCell::new(map)))
+    Value::HashMap(Arc::new(RefCell::new(map)))
 }

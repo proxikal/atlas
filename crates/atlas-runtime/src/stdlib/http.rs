@@ -9,7 +9,7 @@ use crate::stdlib::collections::hashmap::AtlasHashMap;
 use crate::value::{RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Duration;
 
 /// HTTP Request configuration
@@ -236,7 +236,7 @@ pub fn http_request(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let request = HttpRequest::new(method_upper, url);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Create GET request (convenience function)
@@ -311,7 +311,7 @@ pub fn http_set_header(args: &[Value], span: Span) -> Result<Value, RuntimeError
     let value = expect_string(&args[2], "value", span)?;
 
     let new_request = request.clone().with_header(key, value);
-    Ok(Value::HttpRequest(Rc::new(new_request)))
+    Ok(Value::HttpRequest(Arc::new(new_request)))
 }
 
 /// Set body on request
@@ -338,7 +338,7 @@ pub fn http_set_body(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
     let body = expect_string(&args[1], "body", span)?;
 
     let new_request = request.clone().with_body(body);
-    Ok(Value::HttpRequest(Rc::new(new_request)))
+    Ok(Value::HttpRequest(Arc::new(new_request)))
 }
 
 /// Set timeout on request
@@ -372,7 +372,7 @@ pub fn http_set_timeout(args: &[Value], span: Span) -> Result<Value, RuntimeErro
     }
 
     let new_request = request.clone().with_timeout(seconds as u64);
-    Ok(Value::HttpRequest(Rc::new(new_request)))
+    Ok(Value::HttpRequest(Arc::new(new_request)))
 }
 
 // ============================================================================
@@ -485,12 +485,12 @@ pub fn http_headers(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let mut atlas_map = AtlasHashMap::new();
     for (key, value) in response.headers() {
         atlas_map.insert(
-            HashKey::String(Rc::new(key.clone())),
+            HashKey::String(Arc::new(key.clone())),
             Value::string(value.clone()),
         );
     }
 
-    Ok(Value::HashMap(Rc::new(RefCell::new(atlas_map))))
+    Ok(Value::HashMap(Arc::new(RefCell::new(atlas_map))))
 }
 
 /// Get final URL from response (after redirects)
@@ -651,7 +651,7 @@ pub fn http_send(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     };
 
     let http_response = HttpResponse::new(status, headers_map, body, final_url);
-    Ok(Value::Result(Ok(Box::new(Value::HttpResponse(Rc::new(
+    Ok(Value::Result(Ok(Box::new(Value::HttpResponse(Arc::new(
         http_response,
     ))))))
 }
@@ -778,7 +778,7 @@ pub fn http_parse_json(args: &[Value], span: Span) -> Result<Value, RuntimeError
     match serde_json::from_str::<serde_json::Value>(body) {
         Ok(serde_json) => {
             let atlas_json = serde_to_atlas_json(serde_json);
-            Ok(Value::Result(Ok(Box::new(Value::JsonValue(Rc::new(
+            Ok(Value::Result(Ok(Box::new(Value::JsonValue(Arc::new(
                 atlas_json,
             ))))))
         }
@@ -816,7 +816,7 @@ pub fn http_request_put(args: &[Value], span: Span) -> Result<Value, RuntimeErro
     }
 
     let request = HttpRequest::new("PUT".to_string(), url).with_body(body);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Create DELETE request (convenience function)
@@ -841,7 +841,7 @@ pub fn http_request_delete(args: &[Value], span: Span) -> Result<Value, RuntimeE
     }
 
     let request = HttpRequest::new("DELETE".to_string(), url);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Create PATCH request (convenience function)
@@ -867,7 +867,7 @@ pub fn http_request_patch(args: &[Value], span: Span) -> Result<Value, RuntimeEr
     }
 
     let request = HttpRequest::new("PATCH".to_string(), url).with_body(body);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Simple PUT request
@@ -923,7 +923,7 @@ pub fn http_set_query(args: &[Value], span: Span) -> Result<Value, RuntimeError>
     let value = expect_string(&args[2], "value", span)?;
 
     request = request.with_query_param(key, value);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Set follow redirects option
@@ -939,7 +939,7 @@ pub fn http_set_follow_redirects(args: &[Value], span: Span) -> Result<Value, Ru
     let follow = expect_bool(&args[1], "follow", span)?;
 
     request = request.with_follow_redirects(follow);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Set max redirects
@@ -955,7 +955,7 @@ pub fn http_set_max_redirects(args: &[Value], span: Span) -> Result<Value, Runti
     let max = expect_number(&args[1], "max", span)? as u32;
 
     request = request.with_max_redirects(max);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Set User-Agent header
@@ -971,7 +971,7 @@ pub fn http_set_user_agent(args: &[Value], span: Span) -> Result<Value, RuntimeE
     let agent = expect_string(&args[1], "agent", span)?;
 
     request = request.with_header("User-Agent".to_string(), agent);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Set basic authentication
@@ -994,7 +994,7 @@ pub fn http_set_auth(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
     let auth_header = format!("Basic {}", encoded);
 
     request = request.with_header("Authorization".to_string(), auth_header);
-    Ok(Value::HttpRequest(Rc::new(request)))
+    Ok(Value::HttpRequest(Arc::new(request)))
 }
 
 /// Get status text from status code
@@ -1254,7 +1254,7 @@ fn expect_json_value(
     value: &Value,
     arg_name: &str,
     span: Span,
-) -> Result<Rc<JsonValue>, RuntimeError> {
+) -> Result<Arc<JsonValue>, RuntimeError> {
     match value {
         Value::JsonValue(json) => Ok(json.clone()),
         _ => Err(RuntimeError::TypeError {

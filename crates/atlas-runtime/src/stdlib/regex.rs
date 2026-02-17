@@ -19,7 +19,7 @@ use crate::stdlib::collections::hashmap::AtlasHashMap;
 use crate::value::{RuntimeError, Value};
 use regex::{Regex, RegexBuilder};
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 // ============================================================================
 // Construction Functions
@@ -47,7 +47,7 @@ pub fn regex_new(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     match Regex::new(pattern_str) {
         Ok(regex) => {
-            let regex_value = Value::Regex(Rc::new(regex));
+            let regex_value = Value::Regex(Arc::new(regex));
             // Return Result::Ok(regex)
             Ok(Value::Result(Ok(Box::new(regex_value))))
         }
@@ -111,7 +111,7 @@ pub fn regex_new_with_flags(args: &[Value], span: Span) -> Result<Value, Runtime
 
     match builder.build() {
         Ok(regex) => {
-            let regex_value = Value::Regex(Rc::new(regex));
+            let regex_value = Value::Regex(Arc::new(regex));
             Ok(Value::Result(Ok(Box::new(regex_value))))
         }
         Err(err) => {
@@ -205,19 +205,19 @@ pub fn regex_find(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if let Some(mat) = regex.find(text) {
         let mut map = AtlasHashMap::new();
         map.insert(
-            HashKey::String(Rc::new("text".to_string())),
+            HashKey::String(Arc::new("text".to_string())),
             Value::string(mat.as_str()),
         );
         map.insert(
-            HashKey::String(Rc::new("start".to_string())),
+            HashKey::String(Arc::new("start".to_string())),
             Value::Number(mat.start() as f64),
         );
         map.insert(
-            HashKey::String(Rc::new("end".to_string())),
+            HashKey::String(Arc::new("end".to_string())),
             Value::Number(mat.end() as f64),
         );
 
-        let hashmap_value = Value::HashMap(Rc::new(RefCell::new(map)));
+        let hashmap_value = Value::HashMap(Arc::new(RefCell::new(map)));
         Ok(Value::Option(Some(Box::new(hashmap_value))))
     } else {
         Ok(Value::Option(None))
@@ -253,19 +253,19 @@ pub fn regex_find_all(args: &[Value], span: Span) -> Result<Value, RuntimeError>
     for mat in regex.find_iter(text) {
         let mut map = AtlasHashMap::new();
         map.insert(
-            HashKey::String(Rc::new("text".to_string())),
+            HashKey::String(Arc::new("text".to_string())),
             Value::string(mat.as_str()),
         );
         map.insert(
-            HashKey::String(Rc::new("start".to_string())),
+            HashKey::String(Arc::new("start".to_string())),
             Value::Number(mat.start() as f64),
         );
         map.insert(
-            HashKey::String(Rc::new("end".to_string())),
+            HashKey::String(Arc::new("end".to_string())),
             Value::Number(mat.end() as f64),
         );
 
-        matches.push(Value::HashMap(Rc::new(RefCell::new(map))));
+        matches.push(Value::HashMap(Arc::new(RefCell::new(map))));
     }
 
     Ok(Value::array(matches))
@@ -347,7 +347,7 @@ pub fn regex_captures_named(args: &[Value], span: Span) -> Result<Value, Runtime
 
         // Iterate over named groups
         for name in regex.capture_names().flatten() {
-            let key = HashKey::String(Rc::new(name.to_string()));
+            let key = HashKey::String(Arc::new(name.to_string()));
             if let Some(group) = caps.name(name) {
                 map.insert(key, Value::string(group.as_str()));
             } else {
@@ -356,7 +356,7 @@ pub fn regex_captures_named(args: &[Value], span: Span) -> Result<Value, Runtime
             }
         }
 
-        let hashmap_value = Value::HashMap(Rc::new(RefCell::new(map)));
+        let hashmap_value = Value::HashMap(Arc::new(RefCell::new(map)));
         Ok(Value::Option(Some(Box::new(hashmap_value))))
     } else {
         Ok(Value::Option(None))
