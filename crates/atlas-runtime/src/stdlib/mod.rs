@@ -4,6 +4,7 @@ pub mod array;
 pub mod async_io;
 pub mod async_primitives;
 pub mod collections;
+pub mod compression;
 pub mod datetime;
 pub mod fs;
 pub mod future;
@@ -156,6 +157,9 @@ pub fn is_builtin(name: &str) -> bool {
             | "fsTmpfile" | "fsTmpdir" | "fsTmpfileNamed" | "fsGetTempDir"
             // File system operations - symlinks
             | "fsSymlink" | "fsReadlink" | "fsResolveSymlink"
+            // Compression - gzip
+            | "gzipCompress" | "gzipDecompress" | "gzipDecompressString"
+            | "gzipIsGzip" | "gzipCompressionRatio"
     )
 }
 
@@ -1263,6 +1267,39 @@ pub fn call_builtin(
             }
             let path = extract_string(&args[0], call_span)?;
             fs::resolve_symlink(path, call_span)
+        }
+
+        // Compression - gzip
+        "gzipCompress" => {
+            if args.is_empty() || args.len() > 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let level_opt = args.get(1);
+            compression::gzip::gzip_compress(&args[0], level_opt, call_span)
+        }
+        "gzipDecompress" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::gzip::gzip_decompress(&args[0], call_span)
+        }
+        "gzipDecompressString" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::gzip::gzip_decompress_string(&args[0], call_span)
+        }
+        "gzipIsGzip" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::gzip::gzip_is_gzip(&args[0], call_span)
+        }
+        "gzipCompressionRatio" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            compression::gzip::gzip_compression_ratio(&args[0], &args[1], call_span)
         }
 
         _ => Err(RuntimeError::UnknownFunction {
