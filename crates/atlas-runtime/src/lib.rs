@@ -23,6 +23,7 @@ pub mod json_value;
 pub mod lexer;
 pub mod module_executor;
 pub mod module_loader;
+pub mod optimizer;
 pub mod parser;
 pub mod reflect;
 pub mod repl;

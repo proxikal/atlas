@@ -12,6 +12,7 @@ mod stmt;
 use crate::ast::*;
 use crate::bytecode::{Bytecode, Opcode, Optimizer};
 use crate::diagnostic::Diagnostic;
+use crate::optimizer::{ConstantFoldingPass, DeadCodeEliminationPass, PeepholePass};
 use crate::span::Span;
 
 /// Local variable information
@@ -73,17 +74,21 @@ impl Compiler {
         }
     }
 
-    /// Enable bytecode optimization with default passes
-    ///
-    /// In v0.1, this enables placeholder optimization passes.
-    /// Future versions will implement actual optimizations.
+    /// Enable bytecode optimization with all three passes:
+    /// constant folding, dead code elimination, and peephole optimizations.
     pub fn with_optimization() -> Self {
+        let mut optimizer = Optimizer::new();
+        optimizer.set_enabled(true);
+        optimizer.add_pass(Box::new(ConstantFoldingPass));
+        optimizer.add_pass(Box::new(DeadCodeEliminationPass));
+        optimizer.add_pass(Box::new(PeepholePass));
+
         Self {
             bytecode: Bytecode::new(),
             locals: Vec::new(),
             scope_depth: 0,
             loops: Vec::new(),
-            optimizer: Some(Optimizer::with_default_passes()),
+            optimizer: Some(optimizer),
             monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
             next_func_id: 0,
             current_function_base: 0,

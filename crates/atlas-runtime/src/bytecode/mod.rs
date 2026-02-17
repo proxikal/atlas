@@ -11,7 +11,10 @@ pub mod validator;
 
 pub use disasm::disassemble;
 pub use opcode::Opcode;
-pub use optimizer::{ConstantFoldingPass, OptimizationPass, Optimizer};
+pub use optimizer::{
+    ConstantFoldingPass, DeadCodeEliminationPass, OptimizationPass, OptimizationStats, Optimizer,
+    PeepholePass,
+};
 use serialize::{deserialize_span, deserialize_value, serialize_span, serialize_value};
 pub use validator::{validate, ValidationError, ValidationErrorKind};
 
