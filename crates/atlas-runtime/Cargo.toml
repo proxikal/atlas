@@ -24,6 +24,10 @@ futures-util = "0.3"
 libloading = "0.8"
 libffi = "5.1"
 
+# Path manipulation (phase-13a)
+pathdiff = "0.2"
+dirs = "5.0"
+
 [dev-dependencies]
 insta.workspace = true
 rstest.workspace = true

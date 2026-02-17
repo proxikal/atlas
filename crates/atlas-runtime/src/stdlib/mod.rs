@@ -10,6 +10,7 @@ pub mod http;
 pub mod io;
 pub mod json;
 pub mod math;
+pub mod path;
 pub mod process;
 pub mod reflect;
 pub mod regex;
@@ -137,6 +138,13 @@ pub fn is_builtin(name: &str) -> bool {
             // Process management
             | "exec" | "shell" | "getEnv" | "setEnv" | "unsetEnv" | "listEnv"
             | "getCwd" | "getPid"
+            // Path manipulation
+            | "pathJoinArray" | "pathParse" | "pathNormalize" | "pathAbsolute" | "pathRelative"
+            | "pathParent" | "pathBasename" | "pathDirname" | "pathExtension"
+            | "pathIsAbsolute" | "pathIsRelative" | "pathExists" | "pathCanonical" | "pathEquals"
+            | "pathHomedir" | "pathCwd" | "pathTempdir"
+            | "pathSeparator" | "pathDelimiter" | "pathExtSeparator" | "pathDrive"
+            | "pathToPlatform" | "pathToPosix" | "pathToWindows"
     )
 }
 
@@ -875,6 +883,201 @@ pub fn call_builtin(
         "listEnv" => process::list_env(args, call_span, security),
         "getCwd" => process::get_cwd(args, call_span, security),
         "getPid" => process::get_pid(args, call_span, security),
+
+        // Path manipulation - construction and parsing
+        "pathJoinArray" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let segments = extract_array(&args[0], call_span)?;
+            let result = path::path_join(&segments, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathParse" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            path::path_parse(path_str, call_span)
+        }
+        "pathNormalize" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_normalize(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathAbsolute" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_absolute(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathRelative" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let from = extract_string(&args[0], call_span)?;
+            let to = extract_string(&args[1], call_span)?;
+            let result = path::path_relative(from, to, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathParent" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_parent(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathBasename" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_basename(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathDirname" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_dirname(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathExtension" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_extension(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+
+        // Path manipulation - validation
+        "pathIsAbsolute" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_is_absolute(path_str, call_span)?;
+            Ok(Value::Bool(result))
+        }
+        "pathIsRelative" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_is_relative(path_str, call_span)?;
+            Ok(Value::Bool(result))
+        }
+        "pathExists" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_exists(path_str, call_span)?;
+            Ok(Value::Bool(result))
+        }
+        "pathCanonical" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_canonical(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathEquals" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path1 = extract_string(&args[0], call_span)?;
+            let path2 = extract_string(&args[1], call_span)?;
+            let result = path::path_equals(path1, path2, call_span)?;
+            Ok(Value::Bool(result))
+        }
+
+        // Path manipulation - utilities
+        "pathHomedir" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let result = path::path_homedir(call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathCwd" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let result = path::path_cwd(call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathTempdir" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let result = path::path_tempdir(call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathSeparator" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let result = path::path_separator(call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathDelimiter" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let result = path::path_delimiter(call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathExtSeparator" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let result = path::path_ext_separator(call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathDrive" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_drive(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+
+        // Path manipulation - format conversion
+        "pathToPlatform" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_to_platform(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathToPosix" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_to_posix(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
+        "pathToWindows" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path_str = extract_string(&args[0], call_span)?;
+            let result = path::path_to_windows(path_str, call_span)?;
+            Ok(Value::string(result))
+        }
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),
