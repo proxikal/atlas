@@ -224,6 +224,42 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             element_type: None,
             type_args: vec![],
         },
+        Value::TaskHandle(_) => TypeInfo {
+            name: "TaskHandle".to_string(),
+            kind: TypeKind::Generic,
+            fields: vec![],
+            parameters: vec![],
+            return_type: None,
+            element_type: None,
+            type_args: vec![],
+        },
+        Value::ChannelSender(_) => TypeInfo {
+            name: "ChannelSender".to_string(),
+            kind: TypeKind::Generic,
+            fields: vec![],
+            parameters: vec![],
+            return_type: None,
+            element_type: None,
+            type_args: vec![],
+        },
+        Value::ChannelReceiver(_) => TypeInfo {
+            name: "ChannelReceiver".to_string(),
+            kind: TypeKind::Generic,
+            fields: vec![],
+            parameters: vec![],
+            return_type: None,
+            element_type: None,
+            type_args: vec![],
+        },
+        Value::AsyncMutex(_) => TypeInfo {
+            name: "AsyncMutex".to_string(),
+            kind: TypeKind::Generic,
+            fields: vec![],
+            parameters: vec![],
+            return_type: None,
+            element_type: None,
+            type_args: vec![],
+        },
     }
 }
 

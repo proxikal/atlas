@@ -110,6 +110,10 @@ fn type_name(value: &Value) -> &'static str {
         Value::HttpRequest(_) => "HttpRequest",
         Value::HttpResponse(_) => "HttpResponse",
         Value::Future(_) => "future",
+        Value::TaskHandle(_) => "TaskHandle",
+        Value::ChannelSender(_) => "ChannelSender",
+        Value::ChannelReceiver(_) => "ChannelReceiver",
+        Value::AsyncMutex(_) => "AsyncMutex",
     }
 }
 

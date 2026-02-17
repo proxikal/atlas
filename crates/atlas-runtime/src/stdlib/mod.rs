@@ -2,6 +2,7 @@
 
 pub mod array;
 pub mod async_io;
+pub mod async_primitives;
 pub mod collections;
 pub mod datetime;
 pub mod future;
@@ -120,6 +121,18 @@ pub fn is_builtin(name: &str) -> bool {
             | "readFileAsync" | "writeFileAsync" | "appendFileAsync"
             | "httpSendAsync" | "httpGetAsync" | "httpPostAsync" | "httpPutAsync" | "httpDeleteAsync"
             | "await"
+            // Async primitives - tasks
+            | "spawn" | "taskJoin" | "taskStatus" | "taskCancel"
+            | "taskId" | "taskName" | "joinAll"
+            // Async primitives - channels
+            | "channelBounded" | "channelUnbounded" | "channelSend" | "channelReceive"
+            | "channelSelect" | "channelIsClosed"
+            // Async primitives - sleep/timers
+            | "sleep" | "timer" | "interval"
+            // Async primitives - timeout
+            | "timeout"
+            // Async primitives - mutex
+            | "asyncMutex" | "asyncMutexGet" | "asyncMutexSet"
     )
 }
 
@@ -818,6 +831,36 @@ pub fn call_builtin(
         "httpPutAsync" => async_io::http_put_async(args, call_span),
         "httpDeleteAsync" => async_io::http_delete_async(args, call_span),
         "await" => async_io::await_future(args, call_span),
+
+        // Async primitives - tasks
+        "spawn" => async_primitives::spawn(args, call_span),
+        "taskJoin" => async_primitives::task_join(args, call_span),
+        "taskStatus" => async_primitives::task_status(args, call_span),
+        "taskCancel" => async_primitives::task_cancel(args, call_span),
+        "taskId" => async_primitives::task_id(args, call_span),
+        "taskName" => async_primitives::task_name(args, call_span),
+        "joinAll" => async_primitives::join_all(args, call_span),
+
+        // Async primitives - channels
+        "channelBounded" => async_primitives::channel_bounded(args, call_span),
+        "channelUnbounded" => async_primitives::channel_unbounded(args, call_span),
+        "channelSend" => async_primitives::channel_send(args, call_span),
+        "channelReceive" => async_primitives::channel_receive(args, call_span),
+        "channelSelect" => async_primitives::channel_select(args, call_span),
+        "channelIsClosed" => async_primitives::channel_is_closed(args, call_span),
+
+        // Async primitives - sleep/timers
+        "sleep" => async_primitives::sleep_fn(args, call_span),
+        "timer" => async_primitives::timer_fn(args, call_span),
+        "interval" => async_primitives::interval_fn(args, call_span),
+
+        // Async primitives - timeout
+        "timeout" => async_primitives::timeout_fn(args, call_span),
+
+        // Async primitives - mutex
+        "asyncMutex" => async_primitives::async_mutex_new(args, call_span),
+        "asyncMutexGet" => async_primitives::async_mutex_get(args, call_span),
+        "asyncMutexSet" => async_primitives::async_mutex_set(args, call_span),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),

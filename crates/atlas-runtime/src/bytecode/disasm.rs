@@ -185,6 +185,10 @@ fn format_value(value: &crate::value::Value) -> String {
         Value::HttpRequest(req) => format!("<HttpRequest {} {}>", req.method(), req.url()),
         Value::HttpResponse(res) => format!("<HttpResponse {}>", res.status()),
         Value::Future(f) => format!("<{}>", f.as_ref()),
+        Value::TaskHandle(h) => format!("<TaskHandle #{}>", h.lock().unwrap().id()),
+        Value::ChannelSender(_) => "<ChannelSender>".to_string(),
+        Value::ChannelReceiver(_) => "<ChannelReceiver>".to_string(),
+        Value::AsyncMutex(_) => "<AsyncMutex>".to_string(),
     }
 }
 

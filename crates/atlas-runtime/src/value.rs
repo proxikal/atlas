@@ -60,6 +60,14 @@ pub enum Value {
     HttpResponse(Arc<crate::stdlib::http::HttpResponse>),
     /// Future value (async computation)
     Future(Arc<crate::async_runtime::AtlasFuture>),
+    /// Task handle (spawned async task)
+    TaskHandle(Arc<Mutex<crate::async_runtime::task::TaskHandle>>),
+    /// Channel sender (for message passing)
+    ChannelSender(Arc<Mutex<crate::async_runtime::channel::ChannelSender>>),
+    /// Channel receiver (for message passing)
+    ChannelReceiver(Arc<Mutex<crate::async_runtime::channel::ChannelReceiver>>),
+    /// Async mutex (for async synchronization)
+    AsyncMutex(Arc<tokio::sync::Mutex<Value>>),
 }
 
 /// Function reference
@@ -109,6 +117,10 @@ impl Value {
             Value::HttpRequest(_) => "HttpRequest",
             Value::HttpResponse(_) => "HttpResponse",
             Value::Future(_) => "future",
+            Value::TaskHandle(_) => "TaskHandle",
+            Value::ChannelSender(_) => "ChannelSender",
+            Value::ChannelReceiver(_) => "ChannelReceiver",
+            Value::AsyncMutex(_) => "AsyncMutex",
         }
     }
 
@@ -162,6 +174,16 @@ impl PartialEq for Value {
             (Value::HttpRequest(a), Value::HttpRequest(b)) => Arc::ptr_eq(a, b),
             // HttpResponse uses reference identity
             (Value::HttpResponse(a), Value::HttpResponse(b)) => Arc::ptr_eq(a, b),
+            // Future uses reference identity
+            (Value::Future(a), Value::Future(b)) => Arc::ptr_eq(a, b),
+            // TaskHandle uses reference identity
+            (Value::TaskHandle(a), Value::TaskHandle(b)) => Arc::ptr_eq(a, b),
+            // ChannelSender uses reference identity
+            (Value::ChannelSender(a), Value::ChannelSender(b)) => Arc::ptr_eq(a, b),
+            // ChannelReceiver uses reference identity
+            (Value::ChannelReceiver(a), Value::ChannelReceiver(b)) => Arc::ptr_eq(a, b),
+            // AsyncMutex uses reference identity
+            (Value::AsyncMutex(a), Value::AsyncMutex(b)) => Arc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -208,6 +230,10 @@ impl fmt::Display for Value {
             Value::HttpRequest(req) => write!(f, "<HttpRequest {} {}>", req.method(), req.url()),
             Value::HttpResponse(res) => write!(f, "<HttpResponse {}>", res.status()),
             Value::Future(future) => write!(f, "{}", future.as_ref()),
+            Value::TaskHandle(handle) => write!(f, "<TaskHandle #{}>", handle.lock().unwrap().id()),
+            Value::ChannelSender(_) => write!(f, "<ChannelSender>"),
+            Value::ChannelReceiver(_) => write!(f, "<ChannelReceiver>"),
+            Value::AsyncMutex(_) => write!(f, "<AsyncMutex>"),
         }
     }
 }
@@ -237,6 +263,10 @@ impl fmt::Debug for Value {
             Value::HttpRequest(req) => write!(f, "HttpRequest({} {})", req.method(), req.url()),
             Value::HttpResponse(res) => write!(f, "HttpResponse({})", res.status()),
             Value::Future(future) => write!(f, "{:?}", future.as_ref()),
+            Value::TaskHandle(handle) => write!(f, "TaskHandle(#{})", handle.lock().unwrap().id()),
+            Value::ChannelSender(_) => write!(f, "ChannelSender"),
+            Value::ChannelReceiver(_) => write!(f, "ChannelReceiver"),
+            Value::AsyncMutex(_) => write!(f, "AsyncMutex"),
         }
     }
 }

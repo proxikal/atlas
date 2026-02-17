@@ -220,6 +220,10 @@ pub fn type_of(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::DateTime(_) => "datetime",
         Value::HttpRequest(_) => "HttpRequest",
         Value::HttpResponse(_) => "HttpResponse",
+        Value::TaskHandle(_) => "TaskHandle",
+        Value::ChannelSender(_) => "ChannelSender",
+        Value::ChannelReceiver(_) => "ChannelReceiver",
+        Value::AsyncMutex(_) => "AsyncMutex",
     };
 
     Ok(Value::string(type_name))
@@ -337,6 +341,10 @@ pub fn to_string(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::HttpRequest(req) => format!("<HttpRequest {} {}>", req.method(), req.url()),
         Value::HttpResponse(res) => format!("<HttpResponse {}>", res.status()),
         Value::Future(f) => f.to_string(),
+        Value::TaskHandle(h) => format!("[TaskHandle #{}]", h.lock().unwrap().id()),
+        Value::ChannelSender(_) => "[ChannelSender]".to_string(),
+        Value::ChannelReceiver(_) => "[ChannelReceiver]".to_string(),
+        Value::AsyncMutex(_) => "[AsyncMutex]".to_string(),
     };
 
     Ok(Value::string(string_value))
@@ -413,7 +421,11 @@ pub fn to_bool(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         | Value::DateTime(_)
         | Value::HttpRequest(_)
         | Value::HttpResponse(_)
-        | Value::Future(_) => true,
+        | Value::Future(_)
+        | Value::TaskHandle(_)
+        | Value::ChannelSender(_)
+        | Value::ChannelReceiver(_)
+        | Value::AsyncMutex(_) => true,
     };
 
     Ok(Value::Bool(bool_value))
@@ -553,6 +565,10 @@ fn type_name(value: &Value) -> &str {
         Value::HttpRequest(_) => "HttpRequest",
         Value::HttpResponse(_) => "HttpResponse",
         Value::Future(_) => "future",
+        Value::TaskHandle(_) => "TaskHandle",
+        Value::ChannelSender(_) => "ChannelSender",
+        Value::ChannelReceiver(_) => "ChannelReceiver",
+        Value::AsyncMutex(_) => "AsyncMutex",
     }
 }
 
@@ -584,6 +600,10 @@ fn value_to_display_string(value: &Value) -> String {
         Value::HttpRequest(req) => format!("[HttpRequest {} {}]", req.method(), req.url()),
         Value::HttpResponse(res) => format!("[HttpResponse {}]", res.status()),
         Value::Future(f) => format!("[{}]", f.as_ref()),
+        Value::TaskHandle(h) => format!("[TaskHandle #{}]", h.lock().unwrap().id()),
+        Value::ChannelSender(_) => "[ChannelSender]".to_string(),
+        Value::ChannelReceiver(_) => "[ChannelReceiver]".to_string(),
+        Value::AsyncMutex(_) => "[AsyncMutex]".to_string(),
     }
 }
 

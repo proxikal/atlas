@@ -427,6 +427,22 @@ fn value_to_json(
             msg: "Cannot serialize Future to JSON".to_string(),
             span,
         }),
+        Value::TaskHandle(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize TaskHandle to JSON".to_string(),
+            span,
+        }),
+        Value::ChannelSender(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize ChannelSender to JSON".to_string(),
+            span,
+        }),
+        Value::ChannelReceiver(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize ChannelReceiver to JSON".to_string(),
+            span,
+        }),
+        Value::AsyncMutex(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize AsyncMutex to JSON".to_string(),
+            span,
+        }),
     }
 }
 

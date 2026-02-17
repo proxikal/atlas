@@ -100,6 +100,18 @@ pub(super) fn serialize_value(value: &Value, bytes: &mut Vec<u8>) {
             // They are runtime-only values
             panic!("Cannot serialize Future values in bytecode constants");
         }
+        Value::TaskHandle(_) => {
+            panic!("Cannot serialize TaskHandle values in bytecode constants");
+        }
+        Value::ChannelSender(_) => {
+            panic!("Cannot serialize ChannelSender values in bytecode constants");
+        }
+        Value::ChannelReceiver(_) => {
+            panic!("Cannot serialize ChannelReceiver values in bytecode constants");
+        }
+        Value::AsyncMutex(_) => {
+            panic!("Cannot serialize AsyncMutex values in bytecode constants");
+        }
     }
 }
 
