@@ -7,9 +7,9 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/bytecode-vm/phase-02-complete-optimizer.md
-**Next Phase:** phases/bytecode-vm/phase-03-complete-profiler.md
-**Real Progress:** 62/98 phases complete (63%)
+**Last Completed:** phases/bytecode-vm/phase-03-complete-profiler.md
+**Next Phase:** phases/bytecode-vm/phase-04-debugger-infrastructure.md
+**Real Progress:** 63/98 phases complete (64%)
 
 ---
 
@@ -19,7 +19,7 @@
 |----------|----------|--------|
 | **0. Foundation** | 32/32 (100%) | ✅ COMPLETE |
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
-| **2. Bytecode-VM** | 2/8 (25%) | 🔨 ACTIVE |
+| **2. Bytecode-VM** | 3/8 (38%) | 🔨 ACTIVE |
 | **3. Frontend** | 0/5 (0%) | ⬜ Pending |
 | **4. Typing** | 0/7 (0%) | ⬜ Pending |
 | **5. Interpreter** | 0/2 (0%) | ⬜ Pending |
@@ -99,11 +99,11 @@
 ✅ phase-15-testing-primitives.md
 ⬜ phase-16-through-25 (TBD)
 
-### 2. Bytecode-VM (1/8) 🔨 ACTIVE
+### 2. Bytecode-VM (3/8) 🔨 ACTIVE
 
 ✅ phase-01-short-circuit-and-validation.md
 ✅ phase-02-complete-optimizer.md
-⬜ phase-03-complete-profiler.md
+✅ phase-03-complete-profiler.md
 ⬜ phase-04-debugger-infrastructure.md
 ⬜ phase-05-debugger-execution-control.md
 ⬜ phase-06-vm-performance-improvements.md

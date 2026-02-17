@@ -268,7 +268,20 @@ impl VM {
     ) -> Result<Option<Value>, RuntimeError> {
         // Store security context for builtin calls
         self.current_security = Some(security as *const _);
-        self.execute_until_end()
+        // Start profiling timer if profiler is enabled
+        if let Some(ref mut profiler) = self.profiler {
+            if profiler.is_enabled() {
+                profiler.start_timing();
+            }
+        }
+        let result = self.execute_until_end();
+        // Stop profiling timer
+        if let Some(ref mut profiler) = self.profiler {
+            if profiler.is_enabled() {
+                profiler.stop_timing();
+            }
+        }
+        result
     }
 
     /// Execute bytecode until reaching the end of instructions
@@ -322,7 +335,10 @@ impl VM {
             // Record instruction for profiling (zero overhead when disabled)
             if let Some(ref mut profiler) = self.profiler {
                 if profiler.is_enabled() {
-                    profiler.record_instruction(opcode);
+                    let instruction_ip = self.ip - 1; // ip already advanced by read_opcode
+                    profiler.record_instruction_at(opcode, instruction_ip);
+                    profiler.update_value_stack_depth(self.stack.len());
+                    profiler.update_frame_depth(self.frames.len());
                 }
             }
 
@@ -691,6 +707,12 @@ impl VM {
 
                                 // Push the frame
                                 self.frames.push(frame);
+                                // Record function call in profiler
+                                if let Some(ref mut profiler) = self.profiler {
+                                    if profiler.is_enabled() {
+                                        profiler.record_function_call(&func.name);
+                                    }
+                                }
 
                                 // Jump to function bytecode
                                 self.ip = func.bytecode_offset;

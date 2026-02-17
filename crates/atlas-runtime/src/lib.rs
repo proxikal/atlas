@@ -25,6 +25,7 @@ pub mod module_executor;
 pub mod module_loader;
 pub mod optimizer;
 pub mod parser;
+pub mod profiler;
 pub mod reflect;
 pub mod repl;
 pub mod resolver;

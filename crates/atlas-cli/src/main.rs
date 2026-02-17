@@ -71,6 +71,20 @@ enum Commands {
         /// Path to the Atlas source file
         file: String,
     },
+    /// Profile an Atlas source file (VM execution analysis)
+    Profile {
+        /// Path to the Atlas source file
+        file: String,
+        /// Hotspot detection threshold percentage (default: 1.0)
+        #[arg(long, default_value = "1.0")]
+        threshold: f64,
+        /// Save profile report to this file
+        #[arg(long, short = 'o')]
+        output: Option<String>,
+        /// Print summary only (no detailed report)
+        #[arg(long)]
+        summary: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -125,6 +139,18 @@ fn main() -> Result<()> {
         }
         Commands::Typecheck { file } => {
             commands::typecheck::run(&file)?;
+        }
+        Commands::Profile {
+            file,
+            threshold,
+            output,
+            summary,
+        } => {
+            let mut args = commands::profile::ProfileArgs::new(file);
+            args.hotspot_threshold = threshold;
+            args.output_file = output.map(std::path::PathBuf::from);
+            args.detailed = !summary;
+            commands::profile::run(args)?;
         }
     }
 
