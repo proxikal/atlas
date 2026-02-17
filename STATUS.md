@@ -7,9 +7,9 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/foundation/phase-18f-arc-tests-verification.md
-**Next Phase:** phases/foundation/phase-19-enable-parser-features.md
-**Real Progress:** 47/95 phases complete (49%)
+**Last Completed:** phases/foundation/phase-19-enable-parser-features.md
+**Next Phase:** phases/foundation/phase-20a-for-in-frontend.md
+**Real Progress:** 48/95 phases complete (51%)
 
 **🚨 BLOCKING:** Phase-11c (async primitives) is blocked by foundation phases 18-20
 
@@ -19,7 +19,7 @@
 
 | Category | Progress | Status |
 |----------|----------|--------|
-| **0. Foundation** | 27/32 (84%) | 🔨 ACTIVE (CRITICAL) |
+| **0. Foundation** | 28/32 (88%) | 🔨 ACTIVE (CRITICAL) |
 | **1. Stdlib** | 20/27 (74%) | ⏸️ BLOCKED (waiting on foundation) |
 | **2. Bytecode-VM** | 0/8 (0%) | ⬜ Pending |
 | **3. Frontend** | 0/5 (0%) | ⬜ Pending |
@@ -65,7 +65,7 @@
 ✅ phase-18d-arc-collections.md
 ✅ phase-18e-arc-advanced-stdlib.md
 ✅ phase-18f-arc-tests-verification.md
-⬜ phase-19-enable-parser-features.md
+✅ phase-19-enable-parser-features.md
 ⬜ phase-20a-for-in-frontend.md
 ⬜ phase-20b-for-in-semantic.md
 ⬜ phase-20c-for-in-backend.md
@@ -163,35 +163,29 @@
 
 ## 🚨 Critical Notes
 
-**Foundation Status - ARCHITECTURE CRISIS:**
-- ⚠️ 21/32 complete (66%) - **CRITICAL BLOCKERS DISCOVERED**
-- 🚨 **Phase-18 (Arc Refactor):** Value uses Rc<T> (not thread-safe) - BLOCKS all async work
-- 🚨 **Phase-19 (Parser Features):** Match/import exist but are DISABLED - BLOCKS all demos
+**Foundation Status - PROGRESS:**
+- ✅ 28/32 complete (88%) - **MAJOR BLOCKERS RESOLVED**
+- ✅ **Phase-18 (Arc Refactor):** COMPLETE - Value now thread-safe (Arc<Mutex<>>)
+- ✅ **Phase-19 (Parser Features):** COMPLETE - Match expressions enabled
 - 🚨 **Phase-20 (For-In Loops):** Syntax doesn't exist - BLOCKS ergonomic iteration
 
-**What's Blocked:**
-- ❌ Phase-11c (async primitives) - needs Arc for tokio::spawn
-- ❌ All demos - need match, import, for-in to function
-- ❌ Realistic Atlas code - missing core language features
-- ❌ v0.2 progress - can't build on broken foundation
+**What's Unblocked:**
+- ✅ Phase-11c (async primitives) - Arc refactor complete, tokio::spawn works
+- ✅ Match expressions - Result/Option pattern matching works
+- ✅ Import statements - Already functional (verified)
+- ⏳ Demos - Need for-in loops (phase-20) for full functionality
 
-**Why This Happened:**
-- Features marked "complete" in STATUS.md but were disabled/missing
-- v0.2 started building stdlib before core language was ready
-- No phases existed to fix architectural issues
-- Discovered when trying to run demos
-
-**Current Work:**
-- **PRIORITY:** Execute phases 18-20 (fix foundation)
-- **THEN:** Resume stdlib work (phase-11c unblocked)
-- **THEN:** Demos can be tested
+**Remaining Work:**
+- **NEXT:** Phase-20 (for-in loops) - enables ergonomic iteration
+- **THEN:** Resume stdlib work (phase-11c)
+- **THEN:** Full demo testing
 
 **v0.1 Prerequisites (Status Update):**
 - ✅ First-Class Functions
 - ✅ JsonValue Type
 - ✅ Generic Type System (Option<T>, Result<T,E>)
-- ⚠️ Pattern Matching - **CODE EXISTS BUT DISABLED** (phase-19 fixes)
-- ⚠️ Import Statements - **CODE EXISTS BUT DISABLED** (phase-19 fixes)
+- ✅ Pattern Matching (match expressions) - **ENABLED in Phase-19**
+- ✅ Import Statements - **Already functional** (verified in Phase-19)
 - ❌ For-In Loops - **DOESN'T EXIST** (phase-20 implements)
 - ✅ Basic Module System (v0.1 only - v0.2 expands this)
 

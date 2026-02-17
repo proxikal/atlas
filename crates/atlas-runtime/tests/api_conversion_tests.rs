@@ -5,9 +5,9 @@
 
 use atlas_runtime::api::{ConversionError, FromAtlas, ToAtlas};
 use atlas_runtime::Value;
-use std::sync::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 // f64 Conversion Tests
 

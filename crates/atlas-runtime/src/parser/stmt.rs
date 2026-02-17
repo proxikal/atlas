@@ -29,10 +29,6 @@ impl Parser {
                 self.error("Import statements are not supported in Atlas v0.1");
                 Err(())
             }
-            TokenKind::Match => {
-                self.error("Match expressions are not supported in Atlas v0.1");
-                Err(())
-            }
             _ => self.parse_assign_or_expr_stmt(),
         }
     }
