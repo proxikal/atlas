@@ -27,6 +27,8 @@ pub struct TypeChecker<'a> {
     symbol_table: &'a mut SymbolTable,
     /// Collected diagnostics
     pub(super) diagnostics: Vec<Diagnostic>,
+    /// Type of the last expression statement processed
+    last_expr_type: Option<Type>,
     /// Current function's return type (for return statement checking)
     current_function_return_type: Option<Type>,
     /// Current function's name and return type span (for related locations)
@@ -47,6 +49,7 @@ impl<'a> TypeChecker<'a> {
         Self {
             symbol_table,
             diagnostics: Vec::new(),
+            last_expr_type: None,
             current_function_return_type: None,
             current_function_info: None,
             in_loop: false,
@@ -54,6 +57,13 @@ impl<'a> TypeChecker<'a> {
             used_symbols: HashSet::new(),
             method_table: methods::MethodTable::new(),
         }
+    }
+
+    /// Get the most recent expression type processed during checking.
+    /// Useful for REPL scenarios where we want to display the type of the
+    /// last evaluated expression without re-walking the AST.
+    pub fn last_expression_type(&self) -> Option<Type> {
+        self.last_expr_type.clone()
     }
 
     /// Type check a program
@@ -742,7 +752,8 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             Stmt::Expr(expr_stmt) => {
-                self.check_expr(&expr_stmt.expr);
+                let expr_type = self.check_expr(&expr_stmt.expr);
+                self.last_expr_type = Some(expr_type);
             }
             Stmt::FunctionDecl(func) => {
                 // Nested function declaration - type check it
