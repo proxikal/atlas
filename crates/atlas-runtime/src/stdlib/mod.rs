@@ -10,6 +10,7 @@ pub mod http;
 pub mod io;
 pub mod json;
 pub mod math;
+pub mod process;
 pub mod reflect;
 pub mod regex;
 pub mod string;
@@ -133,6 +134,9 @@ pub fn is_builtin(name: &str) -> bool {
             | "timeout"
             // Async primitives - mutex
             | "asyncMutex" | "asyncMutexGet" | "asyncMutexSet"
+            // Process management
+            | "exec" | "shell" | "getEnv" | "setEnv" | "unsetEnv" | "listEnv"
+            | "getCwd" | "getPid"
     )
 }
 
@@ -861,6 +865,16 @@ pub fn call_builtin(
         "asyncMutex" => async_primitives::async_mutex_new(args, call_span),
         "asyncMutexGet" => async_primitives::async_mutex_get(args, call_span),
         "asyncMutexSet" => async_primitives::async_mutex_set(args, call_span),
+
+        // Process management
+        "exec" => process::exec(args, call_span, security),
+        "shell" => process::shell(args, call_span, security),
+        "getEnv" => process::get_env(args, call_span, security),
+        "setEnv" => process::set_env(args, call_span, security),
+        "unsetEnv" => process::unset_env(args, call_span, security),
+        "listEnv" => process::list_env(args, call_span, security),
+        "getCwd" => process::get_cwd(args, call_span, security),
+        "getPid" => process::get_pid(args, call_span, security),
 
         _ => Err(RuntimeError::UnknownFunction {
             name: name.to_string(),
