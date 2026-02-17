@@ -726,16 +726,45 @@ impl<'a> TypeChecker<'a> {
                 self.check_function(func);
             }
             Stmt::ForIn(for_in_stmt) => {
-                // TODO(Phase-20b): Implement for-in desugaring
-                self.diagnostics.push(
-                    Diagnostic::error_with_code(
-                        "AT9999",
-                        "For-in loops are not yet implemented",
-                        for_in_stmt.span,
-                    )
-                    .with_label("not implemented")
-                    .with_help("For-in loops will be available in Phase-20b".to_string()),
-                );
+                // Type check the iterable expression
+                let iterable_type = self.check_expr(&for_in_stmt.iterable);
+
+                // Validate iterable is an array
+                // Note: Unknown types are allowed for now (will be inferred)
+                match iterable_type {
+                    Type::Array(_) | Type::Unknown => {
+                        // Valid - continue
+                    }
+                    _ => {
+                        // Invalid type
+                        self.diagnostics.push(
+                            Diagnostic::error_with_code(
+                                "AT3001",
+                                format!(
+                                    "for-in requires an array, found {}",
+                                    iterable_type.display_name()
+                                ),
+                                for_in_stmt.iterable.span(),
+                            )
+                            .with_label("type mismatch")
+                            .with_help("for-in loops can only iterate over arrays".to_string()),
+                        );
+                    }
+                }
+
+                // Infer loop variable type from array element type
+                if let Type::Array(element_type) = &iterable_type {
+                    // Update symbol table with inferred type
+                    if let Some(symbol) = self.symbol_table.lookup_mut(&for_in_stmt.variable.name) {
+                        symbol.ty = (**element_type).clone();
+                    }
+                }
+
+                // Type check the loop body
+                let old_in_loop = self.in_loop;
+                self.in_loop = true;
+                self.check_block(&for_in_stmt.body);
+                self.in_loop = old_in_loop;
             }
         }
     }

@@ -639,10 +639,49 @@ impl Binder {
                 self.symbol_table.exit_scope();
             }
             Stmt::ForIn(for_in_stmt) => {
-                // TODO(Phase-20b): Implement proper for-in binding
-                // For now, just bind the iterable and body
+                // Bind iterable expression in current scope
                 self.bind_expr(&for_in_stmt.iterable);
+
+                // Create new scope for loop body (includes loop variable)
+                self.symbol_table.enter_scope();
+
+                // Add loop variable to scope (type will be inferred by typechecker)
+                let symbol = Symbol {
+                    name: for_in_stmt.variable.name.clone(),
+                    ty: Type::Unknown, // Will be inferred from array element type
+                    mutable: false,    // Loop variables are immutable
+                    kind: SymbolKind::Variable,
+                    span: for_in_stmt.variable.span,
+                    exported: false,
+                };
+
+                if let Err(err) = self.symbol_table.define(symbol) {
+                    let (msg, existing) = *err;
+                    let mut diag =
+                        Diagnostic::error_with_code("AT2003", &msg, for_in_stmt.variable.span)
+                            .with_label("variable redeclaration");
+
+                    if let Some(existing_symbol) = existing {
+                        diag = diag.with_related_location(crate::diagnostic::RelatedLocation {
+                            file: "<input>".to_string(),
+                            line: 1,
+                            column: existing_symbol.span.start + 1,
+                            length: existing_symbol
+                                .span
+                                .end
+                                .saturating_sub(existing_symbol.span.start),
+                            message: format!("'{}' first defined here", existing_symbol.name),
+                        });
+                    }
+
+                    self.diagnostics.push(diag);
+                }
+
+                // Bind body statements
                 self.bind_block(&for_in_stmt.body);
+
+                // Exit loop scope
+                self.symbol_table.exit_scope();
             }
             Stmt::Return(ret) => {
                 if let Some(expr) = &ret.value {
