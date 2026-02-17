@@ -9,7 +9,6 @@ use atlas_runtime::stdlib::async_io;
 use atlas_runtime::value::Value;
 use rstest::*;
 use std::fs;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 // ============================================================================
@@ -914,8 +913,6 @@ fn test_future_race_for_first_completed() {
 
 #[rstest]
 fn test_error_in_parallel_operations() {
-    use atlas_runtime::async_runtime::future_all;
-
     let temp_dir = TempDir::new().unwrap();
     let file1 = temp_dir.path().join("exists.txt");
     fs::write(&file1, "data").unwrap();
