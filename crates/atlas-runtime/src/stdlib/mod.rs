@@ -5,6 +5,7 @@ pub mod async_io;
 pub mod async_primitives;
 pub mod collections;
 pub mod datetime;
+pub mod fs;
 pub mod future;
 pub mod http;
 pub mod io;
@@ -145,6 +146,16 @@ pub fn is_builtin(name: &str) -> bool {
             | "pathHomedir" | "pathCwd" | "pathTempdir"
             | "pathSeparator" | "pathDelimiter" | "pathExtSeparator" | "pathDrive"
             | "pathToPlatform" | "pathToPosix" | "pathToWindows"
+            // File system operations - directory operations
+            | "fsMkdir" | "fsMkdirp" | "fsRmdir" | "fsRmdirRecursive"
+            | "fsReaddir" | "fsWalk" | "fsFilterEntries" | "fsSortEntries"
+            // File system operations - metadata
+            | "fsSize" | "fsMtime" | "fsCtime" | "fsAtime" | "fsPermissions"
+            | "fsIsDir" | "fsIsFile" | "fsIsSymlink" | "fsInode"
+            // File system operations - temporary files
+            | "fsTmpfile" | "fsTmpdir" | "fsTmpfileNamed" | "fsGetTempDir"
+            // File system operations - symlinks
+            | "fsSymlink" | "fsReadlink" | "fsResolveSymlink"
     )
 }
 
@@ -1077,6 +1088,181 @@ pub fn call_builtin(
             let path_str = extract_string(&args[0], call_span)?;
             let result = path::path_to_windows(path_str, call_span)?;
             Ok(Value::string(result))
+        }
+
+        // File system operations - directory operations
+        "fsMkdir" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::mkdir(path, call_span)
+        }
+        "fsMkdirp" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::mkdirp(path, call_span)
+        }
+        "fsRmdir" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::rmdir(path, call_span)
+        }
+        "fsRmdirRecursive" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::rmdir_recursive(path, call_span)
+        }
+        "fsReaddir" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::readdir(path, call_span)
+        }
+        "fsWalk" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::walk(path, call_span)
+        }
+        "fsFilterEntries" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let entries = extract_array(&args[0], call_span)?;
+            let pattern = extract_string(&args[1], call_span)?;
+            fs::filter_entries(&entries, pattern, call_span)
+        }
+        "fsSortEntries" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let entries = extract_array(&args[0], call_span)?;
+            fs::sort_entries(&entries, call_span)
+        }
+
+        // File system operations - metadata
+        "fsSize" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::size(path, call_span)
+        }
+        "fsMtime" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::mtime(path, call_span)
+        }
+        "fsCtime" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::ctime(path, call_span)
+        }
+        "fsAtime" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::atime(path, call_span)
+        }
+        "fsPermissions" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::permissions(path, call_span)
+        }
+        "fsIsDir" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::is_dir(path, call_span)
+        }
+        "fsIsFile" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::is_file(path, call_span)
+        }
+        "fsIsSymlink" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::is_symlink(path, call_span)
+        }
+        "fsInode" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::inode(path, call_span)
+        }
+
+        // File system operations - temporary files
+        "fsTmpfile" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            fs::tmpfile(call_span)
+        }
+        "fsTmpdir" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            fs::tmpdir(call_span)
+        }
+        "fsTmpfileNamed" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let prefix = extract_string(&args[0], call_span)?;
+            fs::tmpfile_named(prefix, call_span)
+        }
+        "fsGetTempDir" => {
+            if !args.is_empty() {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            fs::get_temp_dir(call_span)
+        }
+
+        // File system operations - symlinks
+        "fsSymlink" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let target = extract_string(&args[0], call_span)?;
+            let link = extract_string(&args[1], call_span)?;
+            fs::symlink(target, link, call_span)
+        }
+        "fsReadlink" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::readlink(path, call_span)
+        }
+        "fsResolveSymlink" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::InvalidStdlibArgument { span: call_span });
+            }
+            let path = extract_string(&args[0], call_span)?;
+            fs::resolve_symlink(path, call_span)
         }
 
         _ => Err(RuntimeError::UnknownFunction {
