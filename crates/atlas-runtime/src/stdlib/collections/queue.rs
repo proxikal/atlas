@@ -152,12 +152,12 @@ impl Default for AtlasQueue {
 use crate::span::Span;
 use crate::value::RuntimeError;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Extract queue from value
-fn extract_queue(value: &Value, span: Span) -> Result<Rc<RefCell<AtlasQueue>>, RuntimeError> {
+fn extract_queue(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasQueue>>, RuntimeError> {
     match value {
-        Value::Queue(queue) => Ok(Rc::clone(queue)),
+        Value::Queue(queue) => Ok(Arc::clone(queue)),
         _ => Err(RuntimeError::TypeError {
             msg: format!("Expected Queue, got {}", value.type_name()),
             span,
@@ -170,7 +170,7 @@ pub fn new_queue(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
-    Ok(Value::Queue(Rc::new(RefCell::new(AtlasQueue::new()))))
+    Ok(Value::Queue(Arc::new(RefCell::new(AtlasQueue::new()))))
 }
 
 /// Add element to back of queue
@@ -257,7 +257,7 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let queue = extract_queue(&args[0], span)?;
     let elements = queue.borrow().to_vec();
-    Ok(Value::Array(Rc::new(RefCell::new(elements))))
+    Ok(Value::Array(Arc::new(RefCell::new(elements))))
 }
 
 #[cfg(test)]

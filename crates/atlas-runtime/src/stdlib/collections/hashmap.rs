@@ -5,7 +5,7 @@ use crate::span::Span;
 use crate::value::{RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Atlas HashMap - key-value collection with O(1) average operations
 ///
@@ -92,17 +92,17 @@ impl Default for AtlasHashMap {
 }
 
 /// Extract array from value with better error message
-fn extract_array(value: &Value, span: Span) -> Result<Rc<RefCell<Vec<Value>>>, RuntimeError> {
+fn extract_array(value: &Value, span: Span) -> Result<Arc<RefCell<Vec<Value>>>, RuntimeError> {
     match value {
-        Value::Array(arr) => Ok(Rc::clone(arr)),
+        Value::Array(arr) => Ok(Arc::clone(arr)),
         _ => Err(RuntimeError::InvalidStdlibArgument { span }),
     }
 }
 
 /// Extract hashmap from value
-fn extract_hashmap(value: &Value, span: Span) -> Result<Rc<RefCell<AtlasHashMap>>, RuntimeError> {
+fn extract_hashmap(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasHashMap>>, RuntimeError> {
     match value {
-        Value::HashMap(map) => Ok(Rc::clone(map)),
+        Value::HashMap(map) => Ok(Arc::clone(map)),
         _ => Err(RuntimeError::TypeError {
             msg: format!("Expected HashMap, got {}", value.type_name()),
             span,
@@ -121,7 +121,7 @@ pub fn new_map(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
-    Ok(Value::HashMap(Rc::new(RefCell::new(AtlasHashMap::new()))))
+    Ok(Value::HashMap(Arc::new(RefCell::new(AtlasHashMap::new()))))
 }
 
 /// Create HashMap from array of [key, value] entries
@@ -155,7 +155,7 @@ pub fn from_entries(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         map.insert(key, value);
     }
 
-    Ok(Value::HashMap(Rc::new(RefCell::new(map))))
+    Ok(Value::HashMap(Arc::new(RefCell::new(map))))
 }
 
 /// Insert or update key-value pair
@@ -316,7 +316,7 @@ pub fn keys(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         .into_iter()
         .map(|k| k.to_value())
         .collect();
-    Ok(Value::Array(Rc::new(RefCell::new(keys))))
+    Ok(Value::Array(Arc::new(RefCell::new(keys))))
 }
 
 /// Get all values as array
@@ -336,7 +336,7 @@ pub fn values(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         let borrowed = map.borrow();
         borrowed.values()
     };
-    Ok(Value::Array(Rc::new(RefCell::new(vals))))
+    Ok(Value::Array(Arc::new(RefCell::new(vals))))
 }
 
 /// Get all entries as array of [key, value] pairs
@@ -358,10 +358,10 @@ pub fn entries(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         .into_iter()
         .map(|(k, v)| {
             let pair = vec![k.to_value(), v];
-            Value::Array(Rc::new(RefCell::new(pair)))
+            Value::Array(Arc::new(RefCell::new(pair)))
         })
         .collect();
-    Ok(Value::Array(Rc::new(RefCell::new(entries))))
+    Ok(Value::Array(Arc::new(RefCell::new(entries))))
 }
 
 #[cfg(test)]

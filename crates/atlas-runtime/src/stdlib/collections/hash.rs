@@ -8,7 +8,7 @@ use crate::value::{RuntimeError, Value};
 use ordered_float::OrderedFloat;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Wrapper type for hashable Atlas values
 ///
@@ -19,7 +19,7 @@ pub enum HashKey {
     /// Number value with IEEE 754 canonicalization
     Number(OrderedFloat<f64>),
     /// String value (reference-counted)
-    String(Rc<String>),
+    String(Arc<String>),
     /// Boolean value
     Bool(bool),
     /// Null value
@@ -39,7 +39,7 @@ impl HashKey {
                 let normalized = if n.is_nan() { f64::NAN } else { *n };
                 Ok(HashKey::Number(OrderedFloat(normalized)))
             }
-            Value::String(s) => Ok(HashKey::String(Rc::clone(s))),
+            Value::String(s) => Ok(HashKey::String(Arc::clone(s))),
             Value::Bool(b) => Ok(HashKey::Bool(*b)),
             Value::Null => Ok(HashKey::Null),
             _ => Err(RuntimeError::UnhashableType {
@@ -53,7 +53,7 @@ impl HashKey {
     pub fn to_value(&self) -> Value {
         match self {
             HashKey::Number(n) => Value::Number(n.0),
-            HashKey::String(s) => Value::String(Rc::clone(s)),
+            HashKey::String(s) => Value::String(Arc::clone(s)),
             HashKey::Bool(b) => Value::Bool(*b),
             HashKey::Null => Value::Null,
         }

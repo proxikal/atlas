@@ -131,7 +131,7 @@ impl Default for AtlasHashSet {
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Create a new empty HashSet
 pub fn new_set(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
@@ -139,7 +139,7 @@ pub fn new_set(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
 
-    Ok(Value::HashSet(Rc::new(RefCell::new(AtlasHashSet::new()))))
+    Ok(Value::HashSet(Arc::new(RefCell::new(AtlasHashSet::new()))))
 }
 
 /// Create HashSet from array of hashable elements
@@ -156,7 +156,7 @@ pub fn from_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         set.insert(key);
     }
 
-    Ok(Value::HashSet(Rc::new(RefCell::new(set))))
+    Ok(Value::HashSet(Arc::new(RefCell::new(set))))
 }
 
 /// Add element to HashSet
@@ -241,7 +241,7 @@ pub fn union(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_b = extract_hashset(&args[1], span)?;
 
     let result = set_a.borrow().union(&set_b.borrow());
-    Ok(Value::HashSet(Rc::new(RefCell::new(result))))
+    Ok(Value::HashSet(Arc::new(RefCell::new(result))))
 }
 
 /// Intersection of two HashSets
@@ -254,7 +254,7 @@ pub fn intersection(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_b = extract_hashset(&args[1], span)?;
 
     let result = set_a.borrow().intersection(&set_b.borrow());
-    Ok(Value::HashSet(Rc::new(RefCell::new(result))))
+    Ok(Value::HashSet(Arc::new(RefCell::new(result))))
 }
 
 /// Difference of two HashSets (elements in A but not in B)
@@ -267,7 +267,7 @@ pub fn difference(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_b = extract_hashset(&args[1], span)?;
 
     let result = set_a.borrow().difference(&set_b.borrow());
-    Ok(Value::HashSet(Rc::new(RefCell::new(result))))
+    Ok(Value::HashSet(Arc::new(RefCell::new(result))))
 }
 
 /// Symmetric difference of two HashSets (elements in exactly one set)
@@ -280,7 +280,7 @@ pub fn symmetric_difference(args: &[Value], span: Span) -> Result<Value, Runtime
     let set_b = extract_hashset(&args[1], span)?;
 
     let result = set_a.borrow().symmetric_difference(&set_b.borrow());
-    Ok(Value::HashSet(Rc::new(RefCell::new(result))))
+    Ok(Value::HashSet(Arc::new(RefCell::new(result))))
 }
 
 /// Check if set A is subset of set B
@@ -322,7 +322,7 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         .into_iter()
         .map(|key| key.to_value())
         .collect();
-    Ok(Value::Array(Rc::new(RefCell::new(elements))))
+    Ok(Value::Array(Arc::new(RefCell::new(elements))))
 }
 
 // ============================================================================
@@ -330,9 +330,9 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 // ============================================================================
 
 /// Extract HashSet from value
-fn extract_hashset(value: &Value, span: Span) -> Result<Rc<RefCell<AtlasHashSet>>, RuntimeError> {
+fn extract_hashset(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasHashSet>>, RuntimeError> {
     match value {
-        Value::HashSet(set) => Ok(Rc::clone(set)),
+        Value::HashSet(set) => Ok(Arc::clone(set)),
         _ => Err(RuntimeError::InvalidStdlibArgument { span }),
     }
 }

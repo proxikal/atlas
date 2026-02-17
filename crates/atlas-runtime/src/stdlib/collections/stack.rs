@@ -149,12 +149,12 @@ impl Default for AtlasStack {
 use crate::span::Span;
 use crate::value::RuntimeError;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Extract stack from value
-fn extract_stack(value: &Value, span: Span) -> Result<Rc<RefCell<AtlasStack>>, RuntimeError> {
+fn extract_stack(value: &Value, span: Span) -> Result<Arc<RefCell<AtlasStack>>, RuntimeError> {
     match value {
-        Value::Stack(stack) => Ok(Rc::clone(stack)),
+        Value::Stack(stack) => Ok(Arc::clone(stack)),
         _ => Err(RuntimeError::TypeError {
             msg: format!("Expected Stack, got {}", value.type_name()),
             span,
@@ -167,7 +167,7 @@ pub fn new_stack(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
-    Ok(Value::Stack(Rc::new(RefCell::new(AtlasStack::new()))))
+    Ok(Value::Stack(Arc::new(RefCell::new(AtlasStack::new()))))
 }
 
 /// Push element onto top of stack
@@ -254,7 +254,7 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let stack = extract_stack(&args[0], span)?;
     let elements = stack.borrow().to_vec();
-    Ok(Value::Array(Rc::new(RefCell::new(elements))))
+    Ok(Value::Array(Arc::new(RefCell::new(elements))))
 }
 
 #[cfg(test)]
