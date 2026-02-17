@@ -2,18 +2,18 @@
 import { regexNew, regexTest } from "std:regex";
 
 // Check if URL is valid HTTP/HTTPS
-export fn isValidUrl(url: string) -> bool {
+export fn isValidUrl(url: string) => bool {
     let pattern: string = "^https?://[^\\s/$.?#].[^\\s]*$";
     let regex: Result<Regex, string> = regexNew(pattern);
 
     match regex {
-        Ok(re) -> return regexTest(re, url),
-        Err(_) -> return false
+        Ok(re) => return regexTest(re, url),
+        Err(_) => return false
     }
 }
 
 // Normalize URL (remove trailing slash, fragments)
-export fn normalizeUrl(url: string) -> string {
+export fn normalizeUrl(url: string) => string {
     let normalized: string = url;
 
     // Remove fragment (#section)
@@ -31,7 +31,7 @@ export fn normalizeUrl(url: string) -> string {
 }
 
 // Extract domain from URL
-export fn extractDomain(url: string) -> string {
+export fn extractDomain(url: string) => string {
     // Remove protocol
     let withoutProtocol: string = replace(url, "https://", "");
     withoutProtocol = replace(withoutProtocol, "http://", "");
@@ -46,7 +46,7 @@ export fn extractDomain(url: string) -> string {
 }
 
 // Convert relative URL to absolute
-export fn makeAbsolute(baseUrl: string, relativeUrl: string) -> string {
+export fn makeAbsolute(baseUrl: string, relativeUrl: string) => string {
     // Already absolute
     if startsWith(relativeUrl, "http://") || startsWith(relativeUrl, "https://") {
         return relativeUrl;
@@ -72,7 +72,7 @@ export fn makeAbsolute(baseUrl: string, relativeUrl: string) -> string {
 }
 
 // Check if URL should be crawled (same domain)
-export fn shouldCrawl(url: string, baseDomain: string) -> bool {
+export fn shouldCrawl(url: string, baseDomain: string) => bool {
     let domain: string = extractDomain(url);
     return domain == baseDomain;
 }

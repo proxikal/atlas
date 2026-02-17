@@ -3,7 +3,7 @@ import { regexNew, regexFindAll } from "std:regex";
 import { setNew, setAdd, setHas } from "std:collections";
 
 // Extract all links from HTML
-export fn extractLinks(html: string) -> array {
+export fn extractLinks(html: string) => array {
     let links: array = [];
 
     // Pattern for href attributes
@@ -11,7 +11,7 @@ export fn extractLinks(html: string) -> array {
     let regex: Result<Regex, string> = regexNew(pattern);
 
     match regex {
-        Ok(re) -> {
+        Ok(re) => {
             let matches: array = regexFindAll(re, html);
 
             for match in matches {
@@ -22,14 +22,14 @@ export fn extractLinks(html: string) -> array {
                 }
             }
         },
-        Err(_) -> {}
+        Err(_) => {}
     }
 
     return links;
 }
 
 // Extract email addresses
-export fn extractEmails(html: string) -> array {
+export fn extractEmails(html: string) => array {
     let emails: HashSet = setNew();
 
     // Email pattern
@@ -37,7 +37,7 @@ export fn extractEmails(html: string) -> array {
     let regex: Result<Regex, string> = regexNew(pattern);
 
     match regex {
-        Ok(re) -> {
+        Ok(re) => {
             let matches: array = regexFindAll(re, html);
 
             for match in matches {
@@ -45,7 +45,7 @@ export fn extractEmails(html: string) -> array {
                 setAdd(emails, email);
             }
         },
-        Err(_) -> {}
+        Err(_) => {}
     }
 
     // Convert set to array
@@ -56,7 +56,7 @@ export fn extractEmails(html: string) -> array {
 }
 
 // Extract phone numbers (US format)
-export fn extractPhones(html: string) -> array {
+export fn extractPhones(html: string) => array {
     let phones: HashSet = setNew();
 
     // Phone pattern (simplified)
@@ -64,7 +64,7 @@ export fn extractPhones(html: string) -> array {
     let regex: Result<Regex, string> = regexNew(pattern);
 
     match regex {
-        Ok(re) -> {
+        Ok(re) => {
             let matches: array = regexFindAll(re, html);
 
             for match in matches {
@@ -72,7 +72,7 @@ export fn extractPhones(html: string) -> array {
                 setAdd(phones, phone);
             }
         },
-        Err(_) -> {}
+        Err(_) => {}
     }
 
     let result: array = [];
@@ -80,12 +80,12 @@ export fn extractPhones(html: string) -> array {
 }
 
 // Extract page title
-export fn extractTitle(html: string) -> string {
+export fn extractTitle(html: string) => string {
     let pattern: string = "<title>([^<]+)</title>";
     let regex: Result<Regex, string> = regexNew(pattern);
 
     match regex {
-        Ok(re) -> {
+        Ok(re) => {
             let matches: array = regexFindAll(re, html);
 
             if len(matches) > 0 {
@@ -96,19 +96,19 @@ export fn extractTitle(html: string) -> string {
                 }
             }
         },
-        Err(_) -> {}
+        Err(_) => {}
     }
 
     return "No title";
 }
 
 // Extract meta description
-export fn extractDescription(html: string) -> string {
+export fn extractDescription(html: string) => string {
     let pattern: string = "<meta\\s+name=\"description\"\\s+content=\"([^\"]+)\"";
     let regex: Result<Regex, string> = regexNew(pattern);
 
     match regex {
-        Ok(re) -> {
+        Ok(re) => {
             let matches: array = regexFindAll(re, html);
 
             if len(matches) > 0 {
@@ -119,14 +119,14 @@ export fn extractDescription(html: string) -> string {
                 }
             }
         },
-        Err(_) -> {}
+        Err(_) => {}
     }
 
     return "";
 }
 
 // Count word occurrences
-export fn countWords(text: string) -> number {
+export fn countWords(text: string) => number {
     // Remove HTML tags (simplified)
     let cleaned: string = replace(text, "<[^>]+>", " ");
 

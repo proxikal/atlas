@@ -93,7 +93,7 @@
 ✅ phase-10b-http-advanced.md
 ✅ phase-11a-async-foundation.md
 ✅ phase-11b-async-io-operations.md
-🚫 phase-11c-async-primitives.md ← **BLOCKED by phase-18 (Arc refactor)**
+🟡 phase-11c-async-primitives.md ← **IN PROGRESS (Arc unblocked, needs stdlib registration)**
 ⬜ phase-12-process-management.md
 ⬜ phase-13-path-manipulation.md
 ⬜ phase-14-compression.md

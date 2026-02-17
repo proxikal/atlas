@@ -5,7 +5,7 @@ import { crawl } from "./crawler";
 import { generateSummary, calculateAverageLinks, findMostLinked } from "./analyzer";
 import { exportResults, exportSummary, exportPages } from "./export";
 
-fn displaySummary(summary: JsonValue) -> void {
+fn displaySummary(summary: JsonValue) => void {
     print("");
     print("═══════════════════════════════════════");
     print("  Crawl Summary");
@@ -17,7 +17,7 @@ fn displaySummary(summary: JsonValue) -> void {
     print("");
 }
 
-fn displayPages(pages: array) -> void {
+fn displayPages(pages: array) => void {
     print("Pages Discovered:");
     print("─────────────────────────────────────");
 
@@ -36,7 +36,7 @@ fn displayPages(pages: array) -> void {
     }
 }
 
-fn main() -> void {
+fn main() => void {
     print("╔═══════════════════════════════════════╗");
     print("║     Web Crawler & Link Analyzer      ║");
     print("╚═══════════════════════════════════════╝");
@@ -55,7 +55,7 @@ fn main() -> void {
     let crawlResult: Result<JsonValue, string> = crawl(startUrl, maxPages);
 
     match crawlResult {
-        Ok(result) -> {
+        Ok(result) => {
             let pages: array = jsonAsArray(result["pages"]);
 
             print("");
@@ -80,7 +80,7 @@ fn main() -> void {
             print("");
             print("✅ All data exported successfully!");
         },
-        Err(e) -> {
+        Err(e) => {
             print("");
             print("❌ Crawl failed: " + e);
             print("");

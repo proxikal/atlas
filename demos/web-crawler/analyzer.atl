@@ -2,7 +2,7 @@
 import { mapNew, mapSet, mapGet, mapHas, mapKeys } from "std:collections";
 
 // Find most linked-to pages
-export fn findMostLinked(pages: array, linkGraph: HashMap) -> array {
+export fn findMostLinked(pages: array, linkGraph: HashMap) => array {
     let linkCounts: HashMap = mapNew();
 
     // Count incoming links
@@ -41,7 +41,7 @@ export fn findMostLinked(pages: array, linkGraph: HashMap) -> array {
 }
 
 // Calculate average links per page
-export fn calculateAverageLinks(pages: array) -> number {
+export fn calculateAverageLinks(pages: array) => number {
     if len(pages) == 0 {
         return 0;
     }
@@ -57,7 +57,7 @@ export fn calculateAverageLinks(pages: array) -> number {
 }
 
 // Find pages with most outgoing links
-export fn findMostLinks(pages: array) -> array {
+export fn findMostLinks(pages: array) => array {
     // Sort by linkCount (simplified - returns first 5)
     let result: array = [];
     let count: number = 0;
@@ -73,7 +73,7 @@ export fn findMostLinks(pages: array) -> array {
 }
 
 // Generate crawl summary
-export fn generateSummary(result: JsonValue) -> JsonValue {
+export fn generateSummary(result: JsonValue) => JsonValue {
     let stats: JsonValue = result["stats"];
     let pages: array = jsonAsArray(result["pages"]);
 

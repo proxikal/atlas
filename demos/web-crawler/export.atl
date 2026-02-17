@@ -5,7 +5,7 @@ import { toJSON, prettifyJSON } from "std:json";
 import { timestampNow } from "std:datetime";
 
 // Export crawl results to JSON
-export fn exportResults(result: JsonValue, filename: string) -> Result<void, string> {
+export fn exportResults(result: JsonValue, filename: string) => Result<void, string> {
     let filepath: string = pathJoin(["./output", filename]);
 
     // Add metadata
@@ -19,16 +19,16 @@ export fn exportResults(result: JsonValue, filename: string) -> Result<void, str
     let writeResult: Result<void, string> = writeFile(filepath, json);
 
     match writeResult {
-        Ok(_) -> {
+        Ok(_) => {
             print("📄 Results exported to: " + filepath);
             return Ok(void);
         },
-        Err(e) -> return Err("Failed to export results: " + e)
+        Err(e) => return Err("Failed to export results: " + e)
     }
 }
 
 // Export summary only
-export fn exportSummary(summary: JsonValue, filename: string) -> Result<void, string> {
+export fn exportSummary(summary: JsonValue, filename: string) => Result<void, string> {
     let filepath: string = pathJoin(["./output", filename]);
 
     let json: string = prettifyJSON(summary);
@@ -36,16 +36,16 @@ export fn exportSummary(summary: JsonValue, filename: string) -> Result<void, st
     let writeResult: Result<void, string> = writeFile(filepath, json);
 
     match writeResult {
-        Ok(_) -> {
+        Ok(_) => {
             print("📄 Summary exported to: " + filepath);
             return Ok(void);
         },
-        Err(e) -> return Err("Failed to export summary: " + e)
+        Err(e) => return Err("Failed to export summary: " + e)
     }
 }
 
 // Export page list
-export fn exportPages(pages: array, filename: string) -> Result<void, string> {
+export fn exportPages(pages: array, filename: string) => Result<void, string> {
     let filepath: string = pathJoin(["./output", filename]);
 
     let pagesObj: JsonValue = jsonObject([
@@ -58,10 +58,10 @@ export fn exportPages(pages: array, filename: string) -> Result<void, string> {
     let writeResult: Result<void, string> = writeFile(filepath, json);
 
     match writeResult {
-        Ok(_) -> {
+        Ok(_) => {
             print("📄 Pages exported to: " + filepath);
             return Ok(void);
         },
-        Err(e) -> return Err("Failed to export pages: " + e)
+        Err(e) => return Err("Failed to export pages: " + e)
     }
 }
