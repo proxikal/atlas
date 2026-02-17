@@ -30,9 +30,12 @@
 //! let _response = session.run_until_pause(&security);
 //! ```
 
+pub mod breakpoints;
+pub mod inspection;
 pub mod protocol;
 pub mod source_map;
 pub mod state;
+pub mod stepping;
 
 // Re-export the most commonly used types at the `debugger` crate level.
 pub use protocol::{
@@ -41,6 +44,10 @@ pub use protocol::{
 };
 pub use source_map::SourceMap;
 pub use state::{DebuggerState, ExecutionMode, StepMode};
+
+pub use breakpoints::{BreakpointCondition, BreakpointEntry, BreakpointManager, ShouldFire};
+pub use inspection::{EvalResult, Inspector, ScopedVariable, VariableScope, WatchResult};
+pub use stepping::{StepRequest, StepTracker};
 
 use crate::bytecode::Bytecode;
 use crate::interpreter::Interpreter;
