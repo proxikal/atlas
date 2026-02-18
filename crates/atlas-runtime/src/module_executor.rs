@@ -44,31 +44,39 @@ impl ModuleCache {
 }
 
 /// Module executor for interpreter-based execution
-pub struct ModuleExecutor {
+///
+/// Borrows an interpreter to ensure imports populate the caller's state.
+/// See DR-013 in memory/decisions.md.
+pub struct ModuleExecutor<'a> {
     /// Module loader for resolving and loading dependencies
     loader: ModuleLoader,
     /// Module resolver for path resolution
     resolver: ModuleResolver,
     /// Cache of executed modules
     cache: ModuleCache,
-    /// Shared interpreter instance
-    interpreter: Interpreter,
+    /// Borrowed interpreter instance (ensures imports populate caller's interpreter)
+    interpreter: &'a mut Interpreter,
     /// Security context for permission checks
-    security: SecurityContext,
+    security: &'a SecurityContext,
 }
 
-impl ModuleExecutor {
+impl<'a> ModuleExecutor<'a> {
     /// Create a new module executor
     ///
     /// # Arguments
-    /// * `root` - Project root directory for module resolution
+    /// * `interpreter` - Borrowed interpreter to populate with imports
     /// * `security` - Security context for permission checks
-    pub fn new(root: PathBuf, security: SecurityContext) -> Self {
+    /// * `root` - Project root directory for module resolution
+    pub fn new(
+        interpreter: &'a mut Interpreter,
+        security: &'a SecurityContext,
+        root: PathBuf,
+    ) -> Self {
         Self {
             loader: ModuleLoader::new(root.clone()),
             resolver: ModuleResolver::new(root),
             cache: ModuleCache::new(),
-            interpreter: Interpreter::new(),
+            interpreter,
             security,
         }
     }
@@ -115,10 +123,13 @@ impl ModuleExecutor {
             self.process_import(import, &module.path)?;
         }
 
+        // Set module path for the interpreter (enables inline import resolution if needed)
+        self.interpreter.set_module_path(Some(module.path.clone()));
+
         // Execute the module
         let result = self
             .interpreter
-            .eval(&module.ast, &self.security)
+            .eval(&module.ast, self.security)
             .map_err(|e| {
                 vec![Diagnostic::error(
                     format!("Runtime error in module {}: {}", module.path.display(), e),
@@ -237,8 +248,13 @@ mod tests {
     #[test]
     fn test_module_executor_creation() {
         let temp_dir = TempDir::new().unwrap();
-        let _executor =
-            ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+        let mut interpreter = Interpreter::new();
+        let security = SecurityContext::allow_all();
+        let _executor = ModuleExecutor::new(
+            &mut interpreter,
+            &security,
+            temp_dir.path().to_path_buf(),
+        );
         // Executor can be created successfully
     }
 
@@ -247,8 +263,13 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let module_path = create_test_module(temp_dir.path(), "main", "let x: number = 42;\nx;");
 
-        let mut executor =
-            ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+        let mut interpreter = Interpreter::new();
+        let security = SecurityContext::allow_all();
+        let mut executor = ModuleExecutor::new(
+            &mut interpreter,
+            &security,
+            temp_dir.path().to_path_buf(),
+        );
         let result = executor.execute_module(&module_path);
 
         match result {
@@ -267,8 +288,13 @@ mod tests {
             "export fn add(a: number, b: number) -> number { return a + b; }",
         );
 
-        let mut executor =
-            ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+        let mut interpreter = Interpreter::new();
+        let security = SecurityContext::allow_all();
+        let mut executor = ModuleExecutor::new(
+            &mut interpreter,
+            &security,
+            temp_dir.path().to_path_buf(),
+        );
         let result = executor.execute_module(&module_path);
 
         assert!(result.is_ok());

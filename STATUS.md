@@ -1,14 +1,14 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-18
-**Version:** v0.2 | **Progress:** 104/131 phases (79%)
+**Version:** v0.2 | **Progress:** 105/131 phases (80%)
 
 ---
 
 ## Current Phase
 
-**Last Completed:** phases/correctness/phase-06-immutability-enforcement.md
-**Next Phase:** phases/correctness/phase-07a-interpreter-import-wiring.md
+**Last Completed:** phases/correctness/phase-07a-interpreter-import-wiring.md
+**Next Phase:** phases/correctness/phase-07b-compiler-import-prepass.md
 
 > **Execution order:** Correctness (12) → Interpreter (2) → CLI (6) → LSP (5) → Polish (5)
 > Correctness phases are BLOCKING — they fix structural compiler bugs that must be resolved before features.
@@ -20,7 +20,7 @@
 | Category | Done | Status |
 |----------|------|--------|
 | **Infra** | 20/20 | ✅ Complete |
-| **Correctness** | 6/12 | 🚧 In progress |
+| **Correctness** | 7/12 | 🚧 In progress |
 | **Foundation** | 33/33 | ✅ Archived |
 | **Stdlib** | 28/30 | ✅ Near complete (phase-16+ TBD) |
 | **Bytecode-VM** | 8/8 | ✅ Archived |
@@ -40,7 +40,7 @@
 ✅ phase-06-fuzz-testing.md — cargo-fuzz on lexer/parser/typechecker/eval
 ✅ phase-07-benchmark-suite.md — Criterion benchmarks, baseline committed
 
-### Correctness (5/12) — Do after Infra
+### Correctness (7/12) — Do after Infra
 
 **Structural safety:**
 ✅ phase-01-security-context-threading.md — Replace *const SecurityContext with Arc<SecurityContext>
@@ -53,7 +53,7 @@
 
 **Language semantics:**
 ✅ phase-06-immutability-enforcement.md — Activate let/var enforcement (data tracked, never used)
-⬜ phase-07a-interpreter-import-wiring.md — Wire interpreter imports to ModuleExecutor, resolve architecture
+✅ phase-07a-interpreter-import-wiring.md — Wire interpreter imports to ModuleExecutor, resolve architecture
 ⬜ phase-07b-compiler-import-prepass.md — Add import pre-pass for VM path, parity tests, corpus files
 
 **Soundness:**

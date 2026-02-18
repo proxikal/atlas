@@ -10,10 +10,13 @@
 mod expr;
 mod stmt;
 
-use crate::ast::{Block, Item, Param, Program};
+use crate::ast::{Block, ImportDecl, ImportSpecifier, Item, Param, Program};
 use crate::ffi::{CallbackHandle, ExternFunction, LibraryLoader};
+use crate::module_loader::ModuleLoader;
+use crate::resolver::ModuleResolver;
 use crate::value::{FunctionRef, RuntimeError, Value};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Control flow signal for handling break, continue, and return
@@ -58,6 +61,10 @@ pub struct Interpreter {
     extern_functions: HashMap<String, ExternFunction>,
     /// Registered callbacks for C→Atlas calls (phase-10c)
     callbacks: Vec<CallbackHandle>,
+    /// Current module path for resolving relative imports (set by ModuleExecutor or eval_file)
+    current_module_path: Option<PathBuf>,
+    /// Cache of module exports (path -> exports map) for inline import processing
+    module_exports_cache: HashMap<PathBuf, HashMap<String, Value>>,
 }
 
 impl Interpreter {
@@ -75,6 +82,8 @@ impl Interpreter {
             library_loader: LibraryLoader::new(),
             extern_functions: HashMap::new(),
             callbacks: Vec::new(),
+            current_module_path: None,
+            module_exports_cache: HashMap::new(),
         };
 
         // Register builtin functions in globals
@@ -191,9 +200,11 @@ impl Interpreter {
                         break;
                     }
                 }
-                Item::Import(_) => {
-                    // Import execution handled in BLOCKER 04-D (module loading)
-                    // For now, just skip - imports are syntactically valid but not yet functional
+                Item::Import(import_decl) => {
+                    // Process the import: load module, evaluate, bind exports
+                    // When called via ModuleExecutor, imports are pre-processed.
+                    // When called directly (e.g., eval_file), we process inline.
+                    self.process_import(import_decl)?;
                 }
                 Item::Export(export_decl) => {
                     // Export wraps an item - evaluate the inner item
@@ -530,6 +541,8 @@ impl Interpreter {
                 library_loader: LibraryLoader::new(),
                 extern_functions: HashMap::new(),
                 callbacks: Vec::new(),
+                current_module_path: None,
+                module_exports_cache: HashMap::new(),
             };
 
             // Get function body
@@ -586,6 +599,169 @@ impl Interpreter {
     /// Get the number of registered callbacks
     pub fn callback_count(&self) -> usize {
         self.callbacks.len()
+    }
+
+    /// Set the current module path for import resolution
+    ///
+    /// Called by ModuleExecutor before eval() to enable relative import resolution.
+    /// Also used by Runtime.eval_file() for file-based execution.
+    pub fn set_module_path(&mut self, path: Option<PathBuf>) {
+        self.current_module_path = path;
+    }
+
+    /// Get the current module path
+    pub fn module_path(&self) -> Option<&PathBuf> {
+        self.current_module_path.as_ref()
+    }
+
+    /// Process an import declaration
+    ///
+    /// Loads the imported module, evaluates it (if not cached), and binds
+    /// the imported symbols into the current interpreter's globals.
+    ///
+    /// # Arguments
+    /// * `import` - The import declaration to process
+    ///
+    /// # Returns
+    /// * `Ok(())` if imports were processed successfully
+    /// * `Err(RuntimeError)` if module not found, circular import, or export not found
+    fn process_import(&mut self, import: &ImportDecl) -> Result<(), RuntimeError> {
+        // Get current module path - required for relative import resolution
+        let current_path = self.current_module_path.clone().ok_or_else(|| {
+            RuntimeError::TypeError {
+                msg: "Cannot process imports without a module context. Use eval_file() for file-based execution.".to_string(),
+                span: import.span,
+            }
+        })?;
+
+        // Determine project root from current path (parent directory)
+        let project_root = current_path
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."));
+
+        // Resolve the import path
+        let mut resolver = ModuleResolver::new(project_root.clone());
+        let import_path = resolver
+            .resolve_path(&import.source, &current_path, import.span)
+            .map_err(|diag| RuntimeError::TypeError {
+                msg: diag.message,
+                span: import.span,
+            })?;
+
+        // Check cache first
+        if let Some(exports) = self.module_exports_cache.get(&import_path) {
+            return self.bind_imports(import, exports.clone());
+        }
+
+        // Load and evaluate the module
+        let mut loader = ModuleLoader::new(project_root);
+        let modules = loader.load_module(&import_path).map_err(|diags| {
+            let msg = diags
+                .iter()
+                .map(|d| d.message.clone())
+                .collect::<Vec<_>>()
+                .join("; ");
+            RuntimeError::TypeError {
+                msg,
+                span: import.span,
+            }
+        })?;
+
+        // Get security context (required for eval)
+        let security = self
+            .current_security
+            .clone()
+            .unwrap_or_else(|| Arc::new(crate::security::SecurityContext::allow_all()));
+
+        // Evaluate each module in dependency order
+        for module in &modules {
+            // Skip if already cached
+            if self.module_exports_cache.contains_key(&module.path) {
+                continue;
+            }
+
+            // Set module path for recursive imports
+            let prev_path = self.current_module_path.take();
+            self.current_module_path = Some(module.path.clone());
+
+            // Evaluate the module
+            self.eval(&module.ast, &security)?;
+
+            // Extract and cache exports
+            let exports = self.extract_module_exports(module);
+            self.module_exports_cache
+                .insert(module.path.clone(), exports);
+
+            // Restore previous path
+            self.current_module_path = prev_path;
+        }
+
+        // Get the requested module's exports and bind imports
+        let exports = self
+            .module_exports_cache
+            .get(&import_path)
+            .cloned()
+            .unwrap_or_default();
+        self.bind_imports(import, exports)
+    }
+
+    /// Bind imported symbols to globals
+    fn bind_imports(
+        &mut self,
+        import: &ImportDecl,
+        exports: HashMap<String, Value>,
+    ) -> Result<(), RuntimeError> {
+        for specifier in &import.specifiers {
+            match specifier {
+                ImportSpecifier::Named { name, span } => {
+                    let value = exports.get(&name.name).ok_or_else(|| RuntimeError::TypeError {
+                        msg: format!(
+                            "'{}' is not exported from module '{}'",
+                            name.name, import.source
+                        ),
+                        span: *span,
+                    })?;
+                    // Imported values are immutable bindings
+                    self.globals.insert(name.name.clone(), (value.clone(), false));
+                }
+                ImportSpecifier::Namespace { alias: _, span } => {
+                    return Err(RuntimeError::TypeError {
+                        msg: "Namespace imports (import * as) not yet implemented".to_string(),
+                        span: *span,
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Extract exports from an evaluated module
+    fn extract_module_exports(
+        &self,
+        module: &crate::module_loader::LoadedModule,
+    ) -> HashMap<String, Value> {
+        let mut exports = HashMap::new();
+        for item in &module.ast.items {
+            if let Item::Export(export_decl) = item {
+                match &export_decl.item {
+                    crate::ast::ExportItem::Function(func) => {
+                        if let Some((value, _)) = self.globals.get(&func.name.name) {
+                            exports.insert(func.name.name.clone(), value.clone());
+                        }
+                    }
+                    crate::ast::ExportItem::Variable(var) => {
+                        if let Some((value, _)) = self.globals.get(&var.name.name) {
+                            exports.insert(var.name.name.clone(), value.clone());
+                        }
+                    }
+                    crate::ast::ExportItem::TypeAlias(_) => {
+                        // Type aliases are compile-time only
+                    }
+                }
+            }
+        }
+        exports
     }
 }
 

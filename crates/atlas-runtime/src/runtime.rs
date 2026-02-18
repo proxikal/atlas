@@ -201,7 +201,8 @@ impl Atlas {
                 .unwrap_or_else(|| Path::new("."))
                 .to_path_buf();
 
-            let mut executor = ModuleExecutor::new(root, self.security.clone());
+            let mut interpreter = self.interpreter.borrow_mut();
+            let mut executor = ModuleExecutor::new(&mut interpreter, &self.security, root);
             executor.execute_module(&abs_path)
         } else {
             // Simple single-file program - use regular eval

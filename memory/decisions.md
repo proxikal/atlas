@@ -18,6 +18,7 @@
 | 010 | Type alias resolution | 2026-02 | Structural resolution, alias names preserved for display. Circular = rejected. |
 | 011 | Built-in constraints | 2026-02 | `Comparable`/`Numeric` → number. `Equatable` → number\|string\|bool\|null. No trait system. |
 | 012 | Structural width subtyping | 2026-02-17 | Extra fields OK for assignability. Missing required fields = fail. |
+| 013 | ModuleExecutor borrows interpreter | 2026-02-18 | ModuleExecutor takes `&mut Interpreter` to ensure imports populate caller's interpreter. |
 
 ## Superseded
 
@@ -88,3 +89,26 @@ hashSetFilter(set, fn(elem) { elem > 10; });      // → new HashSet
 **Alternatives:** ❌ Alt1: [why rejected]
 **Impact:** [What it affects]
 ```
+
+---
+
+## Detail: DR-013 — ModuleExecutor Borrows Interpreter
+
+**Date:** 2026-02-18 | **Status:** ✅ Active
+
+**Decision:** Refactor `ModuleExecutor` to borrow `&mut Interpreter` instead of owning one.
+
+**Rationale:**
+- `ModuleExecutor` previously owned its own `Interpreter` instance
+- Imports processed by ModuleExecutor populated ITS interpreter, not Runtime's
+- This caused imports to silently fail when using `Runtime.eval()`
+- Borrowing ensures imports populate the SAME interpreter that callers use
+
+**Alternatives:**
+❌ Merge interpreters after execution: Complex, error-prone, state sync issues
+❌ Share via Arc<Mutex<Interpreter>>: Overkill, adds locking overhead
+
+**Impact:**
+- `ModuleExecutor::new()` signature changes to accept `&mut Interpreter`
+- `Runtime` must pass its interpreter to ModuleExecutor for file execution
+- Enables proper import execution for both Runtime and standalone use

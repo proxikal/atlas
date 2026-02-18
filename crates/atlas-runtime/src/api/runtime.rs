@@ -22,12 +22,15 @@ use crate::compiler::Compiler;
 use crate::diagnostic::Diagnostic;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
+use crate::module_executor::ModuleExecutor;
+use crate::span::Span;
 use crate::parser::Parser;
 use crate::security::SecurityContext;
 use crate::typechecker::TypeChecker;
 use crate::value::{RuntimeError, Value};
 use crate::vm::VM;
 use std::cell::RefCell;
+use std::path::Path;
 
 /// Execution mode for the runtime
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -365,6 +368,59 @@ impl Runtime {
                 result
             }
         }
+    }
+
+    /// Evaluate an Atlas file with full module support
+    ///
+    /// Loads the file and all its dependencies in topological order,
+    /// executes them, and returns the entry module's result. Imports
+    /// are properly resolved and executed.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the Atlas file to execute
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Value)` - Result of execution
+    /// * `Err(EvalError)` - Parse, type, or runtime error
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use atlas_runtime::api::{Runtime, ExecutionMode};
+    /// use std::path::Path;
+    ///
+    /// let mut runtime = Runtime::new(ExecutionMode::Interpreter);
+    /// let result = runtime.eval_file(Path::new("main.atlas")).unwrap();
+    /// ```
+    pub fn eval_file(&mut self, path: &Path) -> Result<Value, EvalError> {
+        // Determine project root from file path
+        let project_root = path
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+        // Use ModuleExecutor for file-based execution with import support
+        let mut interpreter = self.interpreter.borrow_mut();
+        let mut executor = ModuleExecutor::new(&mut interpreter, &self.security, project_root);
+
+        executor.execute_module(path).map_err(|diags| {
+            if diags.iter().any(|d| d.message.contains("Runtime error")) {
+                // Runtime errors from execution
+                EvalError::RuntimeError(RuntimeError::TypeError {
+                    msg: diags
+                        .iter()
+                        .map(|d| d.message.clone())
+                        .collect::<Vec<_>>()
+                        .join("; "),
+                    span: Span::dummy(),
+                })
+            } else {
+                // Parse/load errors
+                EvalError::ParseError(diags)
+            }
+        })
     }
 
     /// Call an Atlas function by name with arguments

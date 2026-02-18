@@ -391,8 +391,9 @@ fn test_single_module_no_imports() {
     let temp_dir = TempDir::new().unwrap();
     let main = create_module(temp_dir.path(), "main", "let x: number = 42;\nx;");
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -411,8 +412,9 @@ fn test_single_module_with_function() {
         "fn add(a: number, b: number) -> number { return a + b; }\nadd(10, 20);",
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -431,8 +433,9 @@ fn test_module_with_export_function() {
         "export fn multiply(a: number, b: number) -> number { return a * b; }",
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&math);
 
     assert!(result.is_ok());
@@ -447,8 +450,9 @@ fn test_module_with_export_variable() {
         "export let PI: number = 3.14159;",
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&constants);
 
     assert!(result.is_ok());
@@ -477,8 +481,9 @@ add(5, 7);
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -512,8 +517,9 @@ sum + diff;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -542,8 +548,9 @@ SCALE * 2;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -575,8 +582,9 @@ scale(5);
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -614,8 +622,9 @@ DOUBLED;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -658,8 +667,9 @@ Z;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -707,8 +717,9 @@ LEFT + RIGHT;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -748,8 +759,9 @@ first + second;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     // Both imports should get count=1 (module executed once)
@@ -805,8 +817,9 @@ A_COUNT + B_COUNT;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     // shared module executes once, so both get counter=1
@@ -840,8 +853,9 @@ subtract(5, 3);
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     assert!(result.is_err());
@@ -864,8 +878,9 @@ foo;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     assert!(result.is_err());
@@ -874,6 +889,56 @@ foo;
         assert!(
             diagnostics[0].message.contains("not found")
                 || diagnostics[0].message.contains("Module not found")
+        );
+    }
+}
+
+#[test]
+fn test_circular_import_error() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create circular dependency: a imports b, b imports a
+    create_module(
+        temp_dir.path(),
+        "a",
+        r#"
+import { b_val } from "./b";
+export let a_val: number = b_val + 1;
+"#,
+    );
+
+    create_module(
+        temp_dir.path(),
+        "b",
+        r#"
+import { a_val } from "./a";
+export let b_val: number = a_val + 1;
+"#,
+    );
+
+    let main = create_module(
+        temp_dir.path(),
+        "main",
+        r#"
+import { a_val } from "./a";
+a_val;
+"#,
+    );
+
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
+    let result = executor.execute_module(&main);
+
+    // Should fail with circular dependency error, NOT infinite loop
+    assert!(result.is_err());
+    if let Err(diagnostics) = result {
+        assert!(!diagnostics.is_empty());
+        assert!(
+            diagnostics[0].message.contains("Circular")
+                || diagnostics[0].message.contains("circular"),
+            "Expected circular dependency error, got: {}",
+            diagnostics[0].message
         );
     }
 }
@@ -915,8 +980,9 @@ add(50, 50);
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -953,8 +1019,9 @@ double(21);
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -988,8 +1055,9 @@ multiply(10);
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -1016,8 +1084,9 @@ VALUE;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -1044,8 +1113,9 @@ PORT;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -1082,8 +1152,9 @@ concatStrings("Hello", " World");
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -1114,8 +1185,9 @@ len(numbers);
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     match result {
@@ -1156,8 +1228,9 @@ private_helper(5);
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     // Should fail - private_helper is not exported
@@ -1186,8 +1259,9 @@ SECRET;
 "#,
     );
 
-    let mut executor =
-        ModuleExecutor::new(temp_dir.path().to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, temp_dir.path().to_path_buf());
     let result = executor.execute_module(&main);
 
     // Should fail - SECRET is not exported
@@ -1203,7 +1277,9 @@ SECRET;
 
 /// Helper to execute a module using the VM
 fn execute_with_vm(entry_path: &std::path::Path, root: &std::path::Path) -> Result<Value, String> {
-    let mut executor = ModuleExecutor::new(root.to_path_buf(), SecurityContext::allow_all());
+    let mut interp = atlas_runtime::Interpreter::new();
+    let sec = SecurityContext::allow_all();
+    let mut executor = ModuleExecutor::new(&mut interp, &sec, root.to_path_buf());
 
     // Load and execute with interpreter first to get the result
     let result = executor.execute_module(entry_path);

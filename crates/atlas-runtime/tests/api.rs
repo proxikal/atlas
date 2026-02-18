@@ -2948,3 +2948,90 @@ fn test_eval_file_with_real_file() {
         _ => panic!("Expected Null"),
     }
 }
+
+// ============================================================================
+// Runtime.eval_file() Tests (Phase 07a: Interpreter Import Wiring)
+// ============================================================================
+
+#[test]
+fn test_eval_file_simple_module() {
+    use tempfile::TempDir;
+    use std::fs;
+
+    let temp_dir = TempDir::new().unwrap();
+    let main_path = temp_dir.path().join("main.atl");
+    fs::write(&main_path, "let x: number = 42;\nx;").unwrap();
+
+    let mut runtime = Runtime::new(ExecutionMode::Interpreter);
+    let result = runtime.eval_file(&main_path);
+
+    match result {
+        Ok(Value::Number(n)) => assert_eq!(n, 42.0),
+        Ok(v) => panic!("Expected Number(42.0), got {:?}", v),
+        Err(e) => panic!("eval_file failed: {:?}", e),
+    }
+}
+
+#[test]
+fn test_eval_file_with_imports() {
+    use tempfile::TempDir;
+    use std::fs;
+
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create math module
+    fs::write(
+        temp_dir.path().join("math.atl"),
+        "export fn add(a: number, b: number) -> number { return a + b; }",
+    ).unwrap();
+
+    // Create main module that imports from math
+    fs::write(
+        temp_dir.path().join("main.atl"),
+        r#"
+import { add } from "./math";
+add(10, 20);
+"#,
+    ).unwrap();
+
+    let main_path = temp_dir.path().join("main.atl");
+    let mut runtime = Runtime::new(ExecutionMode::Interpreter);
+    let result = runtime.eval_file(&main_path);
+
+    match result {
+        Ok(Value::Number(n)) => assert_eq!(n, 30.0),
+        Ok(v) => panic!("Expected Number(30.0), got {:?}", v),
+        Err(e) => panic!("eval_file failed: {:?}", e),
+    }
+}
+
+#[test]
+fn test_eval_file_import_variable() {
+    use tempfile::TempDir;
+    use std::fs;
+
+    let temp_dir = TempDir::new().unwrap();
+
+    fs::write(
+        temp_dir.path().join("constants.atl"),
+        "export let PI: number = 3.14159;",
+    ).unwrap();
+
+    fs::write(
+        temp_dir.path().join("main.atl"),
+        r#"
+import { PI } from "./constants";
+PI * 2;
+"#,
+    ).unwrap();
+
+    let main_path = temp_dir.path().join("main.atl");
+    let mut runtime = Runtime::new(ExecutionMode::Interpreter);
+    let result = runtime.eval_file(&main_path);
+
+    match result {
+        Ok(Value::Number(n)) => assert!((n - 6.28318).abs() < 0.0001),
+        Ok(v) => panic!("Expected Number(~6.28318), got {:?}", v),
+        Err(e) => panic!("eval_file failed: {:?}", e),
+    }
+}
