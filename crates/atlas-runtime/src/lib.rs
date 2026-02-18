@@ -22,6 +22,7 @@ pub mod ffi;
 pub mod interpreter;
 pub mod json_value;
 pub mod lexer;
+pub mod method_dispatch;
 pub mod module_executor;
 pub mod module_loader;
 pub mod optimizer;

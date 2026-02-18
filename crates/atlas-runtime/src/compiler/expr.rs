@@ -87,10 +87,18 @@ impl Compiler {
     /// The function name is determined from the method name using a standard mapping:
     ///   value.as_string() → jsonAsString(value)
     fn compile_member(&mut self, member: &MemberExpr) -> Result<(), Vec<Diagnostic>> {
-        // Determine the desugared function name from the method name
-        // Since we don't have runtime type info, we use the method name pattern
-        // Type checker has already validated this is a valid method
-        let func_name = method_name_to_function(&member.member.name);
+        // Resolve method via shared dispatch table (type tag set by typechecker)
+        let type_tag = member
+            .type_tag
+            .get()
+            .expect("TypeTag not set — typechecker must run before compile");
+        let func_name = crate::method_dispatch::resolve_method(type_tag, &member.member.name)
+            .ok_or_else(|| {
+                vec![crate::diagnostic::Diagnostic::error(
+                    format!("No method '{}' on type {:?}", member.member.name, type_tag),
+                    member.span,
+                )]
+            })?;
 
         // Load the stdlib function as a Builtin constant
         let func_value = crate::value::Value::Builtin(std::sync::Arc::from(func_name.as_str()));
@@ -748,39 +756,4 @@ impl Compiler {
 
         Ok(())
     }
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/// Convert method name to stdlib function name
-///
-/// Maps method names to their corresponding stdlib functions:
-///   "as_string" → "jsonAsString"
-///   "as_number" → "jsonAsNumber"
-///   "as_bool" → "jsonAsBool"
-///   "is_null" → "jsonIsNull"
-///
-/// This mapping must match the method table in typechecker/methods.rs
-fn method_name_to_function(method: &str) -> String {
-    // All currently supported methods are JSON methods
-    // Type checker ensures only valid methods reach here
-    format!("json{}", capitalize_first(method))
-}
-
-/// Capitalize first letter and convert to camelCase
-///
-/// "as_string" → "AsString"
-/// "is_null" → "IsNull"
-fn capitalize_first(s: &str) -> String {
-    s.split('_')
-        .map(|word| {
-            let mut chars = word.chars();
-            match chars.next() {
-                Some(first) => first.to_uppercase().chain(chars).collect(),
-                None => String::new(),
-            }
-        })
-        .collect()
 }

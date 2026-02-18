@@ -323,8 +323,22 @@ impl Interpreter {
         // 1. Evaluate target expression
         let target_value = self.eval_expr(&member.target)?;
 
-        // 2. Build desugared function name from target type and method name
-        let func_name = method_to_function_name(&target_value, &member.member.name);
+        // 2. Build desugared function name via shared dispatch table
+        let type_tag = member.type_tag.get().unwrap_or_else(|| {
+            // Fallback: infer TypeTag from runtime value when typechecker hasn't annotated
+            match &target_value {
+                Value::JsonValue(_) => crate::method_dispatch::TypeTag::JsonValue,
+                _ => panic!(
+                    "TypeTag not set and runtime type '{}' has no method dispatch",
+                    target_value.type_name()
+                ),
+            }
+        });
+        let func_name = crate::method_dispatch::resolve_method(type_tag, &member.member.name)
+            .ok_or_else(|| RuntimeError::TypeError {
+                msg: format!("No method '{}' on type {:?}", member.member.name, type_tag),
+                span: member.span,
+            })?;
 
         // 3. Build argument list (target + method args)
         let mut args = vec![target_value];
@@ -1936,46 +1950,4 @@ impl Interpreter {
             }),
         }
     }
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/// Convert method call to stdlib function name
-///
-/// Maps (type, method) pairs to function names:
-///   (JsonValue, "as_string") → "jsonAsString"
-///   (JsonValue, "as_number") → "jsonAsNumber"
-///   (JsonValue, "as_bool") → "jsonAsBool"
-///   (JsonValue, "is_null") → "jsonIsNull"
-fn method_to_function_name(target: &Value, method: &str) -> String {
-    match target {
-        Value::JsonValue(_) => {
-            // JSON methods: json.as_string() → jsonAsString()
-            format!("json{}", capitalize_first(method))
-        }
-        // Future: Add more types here (String, Array, etc.)
-        _ => {
-            // Fallback (should not happen due to type checking)
-            format!("unknown_{}", method)
-        }
-    }
-}
-
-/// Capitalize first letter and convert to camelCase
-///
-/// "as_string" → "AsString"
-/// "is_null" → "IsNull"
-fn capitalize_first(s: &str) -> String {
-    // Handle snake_case methods
-    s.split('_')
-        .map(|word| {
-            let mut chars = word.chars();
-            match chars.next() {
-                Some(first) => first.to_uppercase().chain(chars).collect(),
-                None => String::new(),
-            }
-        })
-        .collect()
 }

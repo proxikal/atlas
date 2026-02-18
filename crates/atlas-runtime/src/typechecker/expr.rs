@@ -517,6 +517,13 @@ impl<'a> TypeChecker<'a> {
         // Type-check the target expression
         let target_type = self.check_expr(&member.target);
 
+        // Annotate MemberExpr with TypeTag for method dispatch parity
+        let type_tag = match target_type.normalized() {
+            Type::JsonValue => Some(crate::method_dispatch::TypeTag::JsonValue),
+            _ => None,
+        };
+        member.type_tag.set(type_tag);
+
         // Skip error recovery cases
         if target_type.normalized() == Type::Unknown {
             return Type::Unknown;

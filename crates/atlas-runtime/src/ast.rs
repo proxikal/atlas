@@ -2,8 +2,10 @@
 //!
 //! Complete AST implementation matching the Atlas specification.
 
+use crate::method_dispatch::TypeTag;
 use crate::span::Span;
 use serde::{Deserialize, Serialize};
+use std::cell::Cell;
 
 /// AST schema version
 ///
@@ -392,6 +394,9 @@ pub struct MemberExpr {
     pub member: Identifier,
     /// Arguments if this is a method call, None if property access
     pub args: Option<Vec<Expr>>,
+    /// Type tag for method dispatch (set by typechecker, used by interpreter/compiler)
+    #[serde(skip)]
+    pub type_tag: Cell<Option<TypeTag>>,
     pub span: Span,
 }
 

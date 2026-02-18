@@ -307,6 +307,7 @@ impl Parser {
             target: Box::new(target),
             member,
             args,
+            type_tag: std::cell::Cell::new(None),
             span: target_span.merge(end_span),
         }))
     }
