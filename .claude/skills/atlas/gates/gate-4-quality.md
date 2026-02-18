@@ -4,41 +4,27 @@
 
 ---
 
-## 🚨 THIS IS THE ONLY TIME YOU RUN FULL TEST SUITE
-
-**In previous gates (GATE 2), you ran TARGETED tests only.**
-**Now in GATE 4, you run the FULL suite for the FIRST TIME.**
-
----
-
 ## Action
 
-1. **Run all tests (FULL SUITE - first time):**
+1. **Run clippy:**
    ```bash
-   cargo test -p atlas-runtime
-   ```
-   **MUST:** 100% pass rate
-
-   **If tests fail:**
-   - Fix the ONE failing test
-   - Re-run ONLY that test: `cargo test -p atlas-runtime --test failing_test`
-   - Don't re-run full suite unless you broke multiple things
-
-2. **Run clippy:**
-   ```bash
-   cargo clippy -- -D warnings
+   cargo clippy -p atlas-runtime -- -D warnings
    ```
    **MUST:** Zero warnings
 
-3. **Run formatter check:**
+2. **Run formatter:**
    ```bash
-   cargo fmt -- --check
+   cargo fmt -p atlas-runtime -- --check
    ```
    **MUST:** All files formatted
 
 ---
 
-**BLOCKING:** All three must pass. No exceptions.
+**Note:** Full test suite runs at GATE 6 (handoff), not here. See `memory/testing-patterns.md` for the complete testing protocol.
+
+---
+
+**BLOCKING:** Both must pass. No exceptions.
 
 ---
 
@@ -46,7 +32,6 @@
 
 - All pass → GATE 5
 - Any fail → Fix → Retry
-- Max 2 retry attempts → Escalate
 
 ---
 

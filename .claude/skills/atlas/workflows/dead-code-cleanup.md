@@ -192,7 +192,7 @@ PROTECTED (NOT deleted):
 VERIFICATION:
 1. Delete items
 2. cargo check
-3. cargo test (all 1,391+ pass)
+3. cargo nextest run -p atlas-runtime (all 1,391+ pass)
 4. cargo clippy
 
 Total lines: N
@@ -258,7 +258,7 @@ cargo check --all-targets --all-features
 
 **Full test suite:**
 ```bash
-cargo test
+cargo nextest run -p atlas-runtime
 ```
 
 **ALL must pass:**
@@ -304,7 +304,7 @@ Protected:
 
 Verification:
 ✓ cargo check passed
-✓ cargo test passed (1,391/1,391)
+✓ cargo nextest run -p atlas-runtime passed (1,391/1,391)
 ✓ cargo clippy passed
 ✓ cargo fmt passed
 
@@ -363,6 +363,6 @@ Run Dead Code Cleanup? [yes/no]
 - **Test-backed** - Full suite must pass
 - **Protection-aware** - Respects stubs
 - **Explicit approval** - User approves first
-- **Cost: ~$0.01** - cargo test is cheap
+- **Cost: ~$0.01** - cargo nextest run -p atlas-runtime is cheap
 
 **Philosophy:** Measure twice, cut once.

@@ -28,7 +28,7 @@ Refactoring uses **GATE 0 and GATE 5** from central gate workflow, plus refactor
 
 **Before starting:**
 ```bash
-cargo test
+cargo nextest run -p atlas-runtime
 ```
 
 **All tests must pass.** This is your baseline.
@@ -75,7 +75,7 @@ cargo test
 
 **After EVERY change:**
 ```bash
-cargo test
+cargo nextest run -p atlas-runtime
 ```
 
 **Tests should pass at each step.**
@@ -88,7 +88,7 @@ cargo test
 
 **After refactoring, run GATE 5 checks:**
 ```bash
-cargo test           # 100% pass (same as before)
+cargo nextest run -p atlas-runtime           # 100% pass (same as before)
 cargo clippy         # Zero warnings
 cargo fmt -- --check # Formatted
 ```

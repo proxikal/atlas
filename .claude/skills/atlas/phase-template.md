@@ -10,7 +10,7 @@
 ls [critical files]
 
 # Verify functionality
-cargo test -p atlas-runtime [relevant_tests] -- --nocapture
+cargo nextest run -p atlas-runtime --test <domain_file>
 
 # Clean build check
 cargo clean && cargo check -p atlas-runtime
@@ -107,7 +107,7 @@ cargo clean && cargo check -p atlas-runtime
 - ✅ 100% interpreter/VM parity verified
 - ✅ Documentation complete in [location]
 - ✅ No clippy warnings
-- ✅ cargo test -p atlas-runtime passes
+- ✅ cargo nextest run -p atlas-runtime passes
 - ✅ Decision logs [DR-XXX, DR-YYY] referenced/created
 
 ---

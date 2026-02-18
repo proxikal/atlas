@@ -57,7 +57,7 @@ cargo run -- --dump-ast test.atl
 cargo run -- --dump-bytecode test.atl
 
 # Run with specific test
-cargo test test_name -- --nocapture
+cargo nextest run -p atlas-runtime test_name -- --nocapture
 
 # Run clippy for hints
 cargo clippy
@@ -177,22 +177,22 @@ cargo run -- --dump-bytecode file.atl
 cargo run -- --dump-typecheck file.atl
 
 # Run with test
-cargo test test_name -- --nocapture
+cargo nextest run -p atlas-runtime test_name -- --nocapture
 ```
 
 ### Rust debugging
 ```bash
 # Run with backtrace
-RUST_BACKTRACE=1 cargo test
+RUST_BACKTRACE=1 cargo nextest run -p atlas-runtime
 
 # Run with full backtrace
-RUST_BACKTRACE=full cargo test
+RUST_BACKTRACE=full cargo nextest run -p atlas-runtime
 
 # Clippy for hints
 cargo clippy
 
 # Check specific test
-cargo test --test specific_test
+cargo nextest run -p atlas-runtime --test specific_test
 ```
 
 ---

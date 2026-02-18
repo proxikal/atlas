@@ -18,7 +18,7 @@ Bug fixes use **GATE 0, 1.5, 2, 3, 4, 5** with **TDD approach at GATE 2**.
 | 1.5 | **Foundation Check** | Check existing code before fix |
 | 2 | **Implement + Test** | **TDD: Write FAILING test FIRST** |
 | 3 | **Verify Parity** | Both engines work correctly |
-| 4 | **Quality Gates** | cargo test, clippy, fmt |
+| 4 | **Quality Gates** | cargo nextest run -p atlas-runtime, clippy, fmt |
 | 5 | **Doc Update** | Update docs if needed |
 
 **Key difference:** GATE 2 uses TDD (test FIRST, then fix). Structured dev uses implementation-driven (implement first, test alongside).
@@ -108,7 +108,7 @@ fn test_bug_parity() {
 
 **Test should now pass (GREEN):**
 ```bash
-cargo test test_bug_ISSUE_NUMBER
+cargo nextest run -p atlas-runtime test_bug_ISSUE_NUMBER
 ```
 
 ---
@@ -117,7 +117,7 @@ cargo test test_bug_ISSUE_NUMBER
 
 **After quality gates, run full suite:**
 ```bash
-cargo test
+cargo nextest run -p atlas-runtime
 ```
 
 **Ensure no regressions.** If other tests fail, your fix broke something - refine the fix.

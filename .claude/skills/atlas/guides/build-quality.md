@@ -1,34 +1,22 @@
 # Build & Quality Commands
 
-## During Development (ALWAYS)
+## During Development
 
 ```bash
-cargo clean && cargo check -p atlas-runtime       # Clean + verify compilation
-cargo clippy -p atlas-runtime -- -D warnings      # Zero warnings
-cargo fmt -p atlas-runtime                        # Format code
-cargo test -p atlas-runtime test_exact_name -- --exact  # ONE test ONLY
+cargo clean && cargo check -p atlas-runtime                          # Verify
+cargo clippy -p atlas-runtime -- -D warnings                        # Zero warnings
+cargo fmt -p atlas-runtime                                          # Format
+cargo nextest run -p atlas-runtime -E 'test(exact_name)'            # ONE test
+cargo nextest run -p atlas-runtime --test <domain_file>             # Domain file
+```
+
+## Before Handoff (GATE 6)
+
+```bash
+cargo nextest run -p atlas-runtime                                   # Full suite (~15-20s)
+cargo clippy -p atlas-runtime -- -D warnings                        # Zero warnings
 ```
 
 ---
 
-## NEVER During Development
-
-```bash
-cargo test                    # NO - full suite (1400+ tests)
-cargo test -p atlas-runtime   # NO - package suite
-cargo test --test file_tests  # NO - full test file
-```
-
----
-
-## End of Phase Only (GATE 4)
-
-**User will tell you when to run full suite:**
-
-```bash
-cargo test -p atlas-runtime   # Full suite ONE time
-```
-
----
-
-**See guides/testing-protocol.md for complete testing rules.**
+**See `memory/testing-patterns.md` for complete testing rules, domain file list, and corpus workflow.**

@@ -35,7 +35,7 @@ Check 2: Does it match spec?
 - Verify behavior matches documented semantics
 
 Check 3: Is it complete or partial?
-- Run its tests: `cargo test feature_tests`
+- Run its tests: `cargo nextest run -p atlas-runtime --test <domain_file>`
 - Check if marked complete in STATUS.md
 - Verify quality (not a stub)
 

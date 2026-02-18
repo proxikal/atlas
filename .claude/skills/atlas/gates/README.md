@@ -76,8 +76,8 @@ All gates MANDATORY and BLOCKING. Cannot skip.
 
 **Verification:**
 ```bash
-cargo test interpreter_tests  # Must pass
-cargo test vm_tests            # Must pass
+cargo nextest run -p atlas-runtime interpreter_tests  # Must pass
+cargo nextest run -p atlas-runtime vm_tests            # Must pass
 ```
 
 **Parity Requirements:**
@@ -112,9 +112,9 @@ cargo test vm_tests            # Must pass
 
 **Commands:**
 ```bash
-cargo test              # All tests
-cargo test --lib        # Library tests only
-cargo test integration  # Integration tests
+cargo nextest run -p atlas-runtime              # All tests
+cargo nextest run -p atlas-runtime --lib        # Library tests only
+cargo nextest run -p atlas-runtime integration  # Integration tests
 ```
 
 ---

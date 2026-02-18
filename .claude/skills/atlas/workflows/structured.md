@@ -100,7 +100,7 @@ Structured development uses **GATE 0, 0.5, 1, 1.5, 2-6** from central gate workf
 
 **If quality gates fail:**
 - Fix issues at GATE 4
-- All must pass: cargo test, clippy, fmt
+- All must pass: cargo nextest run -p atlas-runtime, clippy, fmt
 - Max 2 retry attempts
 
 ---

@@ -2,7 +2,7 @@
 
 **Condition:** Size estimated, plan ready
 
-**⚠️ TESTING REMINDER:** Run TARGETED tests only. Full suite is GATE 4. See protocol below.
+**⚠️ TESTING REMINDER:** Run TARGETED tests only. Full suite is GATE 6. See `memory/testing-patterns.md`.
 
 **IMPORTANT:** This gate differs based on workflow type.
 
@@ -37,36 +37,22 @@
 
 ---
 
-## 🚨 TESTING PROTOCOL (READ BEFORE RUNNING TESTS)
+## 🚨 TESTING PROTOCOL
 
-**CRITICAL:** Do NOT run full test suite in GATE 2. That's GATE 4 only.
-
-**In GATE 2, run TARGETED tests ONLY:**
+**Do NOT run full test suite in GATE 2. That's GATE 6 only.**
 
 ```bash
-# If you wrote new test files:
-cargo test -p atlas-runtime --test your_new_test_file
+# Single test (during dev)
+cargo nextest run -p atlas-runtime -E 'test(exact_name)'
 
-# If you modified existing functionality:
-cargo test -p atlas-runtime --test affected_test_file
+# Domain file (validate your work area)
+cargo nextest run -p atlas-runtime --test <domain_file>
 
-# NEVER run:
-cargo test -p atlas-runtime  # ❌ This is GATE 4 only
-cargo test                    # ❌ This is GATE 4 only
+# Full suite — GATE 6 ONLY (~15-20s)
+cargo nextest run -p atlas-runtime
 ```
 
-**Run tests ONCE:**
-- Write test → run ONCE → if it passes, STOP
-- Don't "verify" by running again
-- Don't run full suite to "make sure nothing broke"
-- Trust your targeted tests
-
-**Do NOT use background mode:**
-- Tests finish in 1-5 seconds
-- Just run them normally and wait
-- Background mode is for operations >30 seconds
-
-**Full test suite is GATE 4 ONLY** (one time at the end)
+**Complete rules:** See `memory/testing-patterns.md` for domain file list, corpus workflow, parity helpers, and `#[ignore]` rules.
 
 ---
 
