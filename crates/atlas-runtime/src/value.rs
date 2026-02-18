@@ -34,6 +34,8 @@ pub enum Value {
     Array(Arc<Mutex<Vec<Value>>>),
     /// Function reference (bytecode or builtin)
     Function(FunctionRef),
+    /// Builtin stdlib function (dispatched through the registry by name)
+    Builtin(Arc<str>),
     /// Native function (Rust closure callable from Atlas)
     NativeFunction(NativeFn),
     /// JSON value (isolated dynamic type for JSON interop)
@@ -104,6 +106,7 @@ impl Value {
             Value::Null => "null",
             Value::Array(_) => "array",
             Value::Function(_) => "function",
+            Value::Builtin(_) => "builtin",
             Value::NativeFunction(_) => "function",
             Value::JsonValue(_) => "json",
             Value::Option(_) => "Option",
@@ -150,6 +153,8 @@ impl PartialEq for Value {
             (Value::Array(a), Value::Array(b)) => Arc::ptr_eq(a, b),
             // Functions are equal if they have the same name
             (Value::Function(a), Value::Function(b)) => a.name == b.name,
+            // Builtins are equal if they have the same name
+            (Value::Builtin(a), Value::Builtin(b)) => a == b,
             // Native functions use pointer equality
             (Value::NativeFunction(a), Value::NativeFunction(b)) => Arc::ptr_eq(a, b),
             // JsonValue uses structural equality
@@ -211,6 +216,7 @@ impl fmt::Display for Value {
                 write!(f, "[{}]", elements.join(", "))
             }
             Value::Function(func) => write!(f, "<fn {}>", func.name),
+            Value::Builtin(name) => write!(f, "<builtin {}>", name),
             Value::NativeFunction(_) => write!(f, "<native fn>"),
             Value::JsonValue(json) => write!(f, "{}", json),
             Value::Option(opt) => match opt {
@@ -250,6 +256,7 @@ impl fmt::Debug for Value {
                 write!(f, "Array({:?})", &*borrowed)
             }
             Value::Function(func) => write!(f, "Function({:?})", func),
+            Value::Builtin(name) => write!(f, "Builtin({:?})", name),
             Value::NativeFunction(_) => write!(f, "NativeFunction(<closure>)"),
             Value::JsonValue(json) => write!(f, "JsonValue({:?})", json),
             Value::Option(opt) => write!(f, "Option({:?})", opt),

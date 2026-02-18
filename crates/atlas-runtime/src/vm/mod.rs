@@ -586,13 +586,8 @@ impl VM {
                     } else if crate::stdlib::is_builtin(&name)
                         || crate::stdlib::is_array_intrinsic(&name)
                     {
-                        // Builtin or intrinsic - return function value
-                        Value::Function(crate::value::FunctionRef {
-                            name: name.clone(),
-                            arity: 0,
-                            bytecode_offset: 0,
-                            local_count: 0,
-                        })
+                        // Builtin or intrinsic - return builtin value
+                        Value::Builtin(std::sync::Arc::from(name.as_str()))
                     } else {
                         // Check math constants
                         match name.as_str() {
@@ -788,11 +783,9 @@ impl VM {
                     let function = self.peek(arg_count).clone();
 
                     match function {
-                        Value::Function(func) => {
-                            // Check array intrinsics FIRST (before builtins)
-                            // This is critical because intrinsics have bytecode_offset == 0
-                            if self.is_array_intrinsic(&func.name) {
-                                // Array intrinsic (callback-based)
+                        Value::Builtin(ref name) => {
+                            // Check array intrinsics first (callback-based)
+                            if self.is_array_intrinsic(name) {
                                 let mut args = Vec::with_capacity(arg_count);
                                 for _ in 0..arg_count {
                                     args.push(self.pop());
@@ -800,20 +793,43 @@ impl VM {
                                 args.reverse();
                                 self.pop(); // Pop function value
 
-                                let result = self.call_array_intrinsic(&func.name, &args)?;
+                                let result = self.call_array_intrinsic(name, &args)?;
                                 self.push(result);
-                            } else if let Some(extern_fn) =
-                                self.extern_functions.get(&func.name).cloned()
-                            {
-                                // Extern function (FFI call)
+                            } else {
+                                // Stdlib builtin - call directly
                                 let mut args = Vec::with_capacity(arg_count);
                                 for _ in 0..arg_count {
                                     args.push(self.pop());
                                 }
-                                args.reverse(); // Args were pushed in reverse order
+                                args.reverse();
                                 self.pop(); // Pop function value
 
-                                // Call the extern function
+                                let security = self
+                                    .current_security
+                                    .as_ref()
+                                    .expect("Security context not set");
+                                let result = crate::stdlib::call_builtin(
+                                    name,
+                                    &args,
+                                    self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                                    security,
+                                    &self.output_writer,
+                                )?;
+
+                                self.push(result);
+                            }
+                        }
+                        Value::Function(func) => {
+                            // Check for extern functions
+                            if let Some(extern_fn) = self.extern_functions.get(&func.name).cloned()
+                            {
+                                let mut args = Vec::with_capacity(arg_count);
+                                for _ in 0..arg_count {
+                                    args.push(self.pop());
+                                }
+                                args.reverse();
+                                self.pop(); // Pop function value
+
                                 let result = unsafe { extern_fn.call(&args) }.map_err(|e| {
                                     RuntimeError::TypeError {
                                         msg: format!("FFI call error: {}", e),
@@ -823,34 +839,6 @@ impl VM {
                                     }
                                 })?;
 
-                                self.push(result);
-                            } else if func.bytecode_offset == 0
-                                || crate::stdlib::is_builtin(&func.name)
-                            {
-                                // Builtin function - call directly
-                                let mut args = Vec::with_capacity(arg_count);
-                                for _ in 0..arg_count {
-                                    args.push(self.pop());
-                                }
-                                args.reverse(); // Args were pushed in reverse order
-
-                                // Pop the function value
-                                self.pop();
-
-                                // Call the builtin
-                                let security = self
-                                    .current_security
-                                    .as_ref()
-                                    .expect("Security context not set");
-                                let result = crate::stdlib::call_builtin(
-                                    &func.name,
-                                    &args,
-                                    self.current_span().unwrap_or_else(crate::span::Span::dummy),
-                                    security,
-                                    &self.output_writer,
-                                )?;
-
-                                // Push the result
                                 self.push(result);
                             } else {
                                 // User-defined function
@@ -2354,22 +2342,14 @@ impl VM {
         span: crate::span::Span,
     ) -> Result<Value, RuntimeError> {
         match func {
+            Value::Builtin(name) => {
+                let security = self
+                    .current_security
+                    .as_ref()
+                    .expect("Security context not set");
+                crate::stdlib::call_builtin(name, &args, span, security, &self.output_writer)
+            }
             Value::Function(func_ref) => {
-                // Check for builtins
-                if crate::stdlib::is_builtin(&func_ref.name) {
-                    let security = self
-                        .current_security
-                        .as_ref()
-                        .expect("Security context not set");
-                    return crate::stdlib::call_builtin(
-                        &func_ref.name,
-                        &args,
-                        span,
-                        security,
-                        &self.output_writer,
-                    );
-                }
-
                 // User-defined function - execute via VM
                 let saved_ip = self.ip;
                 let saved_frame_depth = self.frames.len();

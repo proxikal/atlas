@@ -379,7 +379,7 @@ fn value_to_json(
             // Serialize JsonValue directly
             json_value_to_string(json, span)
         }
-        Value::Function(_) => Err(RuntimeError::TypeError {
+        Value::Function(_) | Value::Builtin(_) => Err(RuntimeError::TypeError {
             msg: "Cannot serialize function to JSON".to_string(),
             span,
         }),

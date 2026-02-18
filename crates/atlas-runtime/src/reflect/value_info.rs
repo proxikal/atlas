@@ -102,7 +102,10 @@ impl ValueInfo {
 
     /// Check if value is a function
     pub fn is_function(&self) -> bool {
-        matches!(self.value, Value::Function(_) | Value::NativeFunction(_))
+        matches!(
+            self.value,
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_)
+        )
     }
 
     /// Check if value is an array

@@ -209,6 +209,7 @@ pub fn type_of(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::String(_) => "string",
         Value::Array(_) => "array",
         Value::Function(_) => "function",
+        Value::Builtin(_) => "builtin",
         Value::NativeFunction(_) => "function",
         Value::JsonValue(_) => "json",
         Value::Option(_) => "option",
@@ -282,7 +283,10 @@ pub fn is_function(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(RuntimeError::InvalidStdlibArgument { span });
     }
 
-    Ok(Value::Bool(matches!(args[0], Value::Function(_))))
+    Ok(Value::Bool(matches!(
+        args[0],
+        Value::Function(_) | Value::Builtin(_)
+    )))
 }
 
 /// Check if value is a JSON object
@@ -464,6 +468,7 @@ pub fn to_string(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::String(s) => s.as_ref().clone(),
         Value::Array(_) => "[Array]".to_string(),
         Value::Function(_) => "[Function]".to_string(),
+        Value::Builtin(name) => format!("[Builtin {}]", name),
         Value::NativeFunction(_) => "[Native Function]".to_string(),
         Value::JsonValue(_) => "[JSON]".to_string(),
         Value::Option(Some(v)) => format!("Some({})", value_to_display_string(v)),
@@ -547,6 +552,7 @@ pub fn to_bool(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::Null => false,
         Value::Array(_)
         | Value::Function(_)
+        | Value::Builtin(_)
         | Value::NativeFunction(_)
         | Value::JsonValue(_)
         | Value::Option(_)
@@ -690,6 +696,7 @@ fn type_name(value: &Value) -> &str {
         Value::String(_) => "string",
         Value::Array(_) => "array",
         Value::Function(_) => "function",
+        Value::Builtin(_) => "builtin",
         Value::NativeFunction(_) => "function",
         Value::JsonValue(_) => "json",
         Value::Option(_) => "option",
@@ -725,6 +732,7 @@ fn value_to_display_string(value: &Value) -> String {
         Value::String(s) => format!("\"{}\"", s),
         Value::Array(_) => "[Array]".to_string(),
         Value::Function(_) => "[Function]".to_string(),
+        Value::Builtin(name) => format!("[Builtin {}]", name),
         Value::NativeFunction(_) => "[Native Function]".to_string(),
         Value::JsonValue(_) => "[JSON]".to_string(),
         Value::Option(_) => "[Option]".to_string(),

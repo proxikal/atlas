@@ -97,6 +97,7 @@ fn type_name(value: &Value) -> &'static str {
         Value::String(_) => "string",
         Value::Array(_) => "array",
         Value::Function(_) => "function",
+        Value::Builtin(_) => "builtin",
         Value::NativeFunction(_) => "function",
         Value::JsonValue(_) => "json",
         Value::Option(_) => "option",

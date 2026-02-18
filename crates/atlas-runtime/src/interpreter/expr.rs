@@ -244,24 +244,9 @@ impl Interpreter {
 
         // Callee must be a function value
         match callee_value {
-            Value::Function(func_ref) => {
-                // Check for stdlib functions first
-                if crate::stdlib::is_builtin(&func_ref.name) {
-                    let security = self
-                        .current_security
-                        .as_ref()
-                        .expect("Security context not set");
-                    return crate::stdlib::call_builtin(
-                        &func_ref.name,
-                        &args,
-                        call.span,
-                        security,
-                        &self.output_writer,
-                    );
-                }
-
+            Value::Builtin(ref name) => {
                 // Check for array intrinsics (callback-based functions)
-                match func_ref.name.as_str() {
+                match name.as_ref() {
                     "map" => return self.intrinsic_map(&args, call.span),
                     "filter" => return self.intrinsic_filter(&args, call.span),
                     "reduce" => return self.intrinsic_reduce(&args, call.span),
@@ -273,20 +258,16 @@ impl Interpreter {
                     "every" => return self.intrinsic_every(&args, call.span),
                     "sort" => return self.intrinsic_sort(&args, call.span),
                     "sortBy" => return self.intrinsic_sort_by(&args, call.span),
-                    // Result intrinsics (callback-based)
                     "result_map" => return self.intrinsic_result_map(&args, call.span),
                     "result_map_err" => return self.intrinsic_result_map_err(&args, call.span),
                     "result_and_then" => return self.intrinsic_result_and_then(&args, call.span),
                     "result_or_else" => return self.intrinsic_result_or_else(&args, call.span),
-                    // HashMap intrinsics (callback-based)
                     "hashMapForEach" => return self.intrinsic_hashmap_for_each(&args, call.span),
                     "hashMapMap" => return self.intrinsic_hashmap_map(&args, call.span),
                     "hashMapFilter" => return self.intrinsic_hashmap_filter(&args, call.span),
-                    // HashSet intrinsics (callback-based)
                     "hashSetForEach" => return self.intrinsic_hashset_for_each(&args, call.span),
                     "hashSetMap" => return self.intrinsic_hashset_map(&args, call.span),
                     "hashSetFilter" => return self.intrinsic_hashset_filter(&args, call.span),
-                    // Regex intrinsics (callback-based)
                     "regexReplaceWith" => {
                         return self.intrinsic_regex_replace_with(&args, call.span)
                     }
@@ -296,6 +277,14 @@ impl Interpreter {
                     _ => {}
                 }
 
+                // Stdlib builtin dispatch
+                let security = self
+                    .current_security
+                    .as_ref()
+                    .expect("Security context not set");
+                crate::stdlib::call_builtin(name, &args, call.span, security, &self.output_writer)
+            }
+            Value::Function(func_ref) => {
                 // Extern function - check if it's an FFI function
                 if let Some(extern_fn) = self.extern_functions.get(&func_ref.name) {
                     // Call the extern function using FFI
@@ -697,7 +686,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "map() second argument must be function".to_string(),
@@ -740,7 +729,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "filter() second argument must be function".to_string(),
@@ -791,7 +780,7 @@ impl Interpreter {
         };
 
         let reducer = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "reduce() second argument must be function".to_string(),
@@ -832,7 +821,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "forEach() second argument must be function".to_string(),
@@ -872,7 +861,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "find() second argument must be function".to_string(),
@@ -922,7 +911,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "findIndex() second argument must be function".to_string(),
@@ -972,7 +961,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "flatMap() second argument must be function".to_string(),
@@ -1019,7 +1008,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "some() second argument must be function".to_string(),
@@ -1069,7 +1058,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "every() second argument must be function".to_string(),
@@ -1121,7 +1110,7 @@ impl Interpreter {
         };
 
         let comparator = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sort() second argument must be function".to_string(),
@@ -1183,7 +1172,7 @@ impl Interpreter {
         };
 
         let key_extractor = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sortBy() second argument must be function".to_string(),
@@ -1238,7 +1227,7 @@ impl Interpreter {
 
         let result_val = &args[0];
         let transform_fn = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "result_map() second argument must be function".to_string(),
@@ -1275,7 +1264,7 @@ impl Interpreter {
 
         let result_val = &args[0];
         let transform_fn = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "result_map_err() second argument must be function".to_string(),
@@ -1312,7 +1301,7 @@ impl Interpreter {
 
         let result_val = &args[0];
         let next_fn = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "result_and_then() second argument must be function".to_string(),
@@ -1349,7 +1338,7 @@ impl Interpreter {
 
         let result_val = &args[0];
         let recovery_fn = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "result_or_else() second argument must be function".to_string(),
@@ -1395,7 +1384,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapForEach() second argument must be function".to_string(),
@@ -1436,7 +1425,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapMap() second argument must be function".to_string(),
@@ -1481,7 +1470,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapFilter() second argument must be function".to_string(),
@@ -1538,7 +1527,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetForEach() second argument must be function".to_string(),
@@ -1579,7 +1568,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetMap() second argument must be function".to_string(),
@@ -1622,7 +1611,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetFilter() second argument must be function".to_string(),
@@ -1688,7 +1677,7 @@ impl Interpreter {
         };
 
         let callback = match &args[2] {
-            Value::Function(_) => &args[2],
+            Value::Function(_) | Value::Builtin(_) => &args[2],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "regexReplaceWith() third argument must be function".to_string(),
@@ -1813,7 +1802,7 @@ impl Interpreter {
         };
 
         let callback = match &args[2] {
-            Value::Function(_) => &args[2],
+            Value::Function(_) | Value::Builtin(_) => &args[2],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "regexReplaceAllWith() third argument must be function".to_string(),
@@ -1922,22 +1911,14 @@ impl Interpreter {
         span: crate::span::Span,
     ) -> Result<Value, RuntimeError> {
         match func {
+            Value::Builtin(name) => {
+                let security = self
+                    .current_security
+                    .as_ref()
+                    .expect("Security context not set");
+                crate::stdlib::call_builtin(name, &args, span, security, &self.output_writer)
+            }
             Value::Function(func_ref) => {
-                // Check for builtins
-                if crate::stdlib::is_builtin(&func_ref.name) {
-                    let security = self
-                        .current_security
-                        .as_ref()
-                        .expect("Security context not set");
-                    return crate::stdlib::call_builtin(
-                        &func_ref.name,
-                        &args,
-                        span,
-                        security,
-                        &self.output_writer,
-                    );
-                }
-
                 // User-defined function
                 if let Some(user_func) = self.function_bodies.get(&func_ref.name).cloned() {
                     return self.call_user_function(&user_func, args, span);

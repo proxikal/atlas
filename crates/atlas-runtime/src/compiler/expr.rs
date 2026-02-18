@@ -92,14 +92,8 @@ impl Compiler {
         // Type checker has already validated this is a valid method
         let func_name = method_name_to_function(&member.member.name);
 
-        // Load the stdlib function
-        let func_ref = crate::value::FunctionRef {
-            name: func_name.clone(),
-            arity: 1 + member.args.as_ref().map(|a| a.len()).unwrap_or(0),
-            bytecode_offset: 0, // Builtins have offset 0
-            local_count: 0,
-        };
-        let func_value = crate::value::Value::Function(func_ref);
+        // Load the stdlib function as a Builtin constant
+        let func_value = crate::value::Value::Builtin(std::sync::Arc::from(func_name.as_str()));
         let const_idx = self.bytecode.add_constant(func_value);
 
         // Load the function constant

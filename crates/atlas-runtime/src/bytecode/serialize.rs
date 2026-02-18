@@ -34,6 +34,12 @@ pub(super) fn serialize_value(value: &Value, bytes: &mut Vec<u8>) {
             // Serialize bytecode offset
             bytes.extend_from_slice(&(func.bytecode_offset as u32).to_be_bytes());
         }
+        Value::Builtin(name) => {
+            bytes.push(0x05); // Type tag for Builtin
+            let name_bytes = name.as_bytes();
+            bytes.extend_from_slice(&(name_bytes.len() as u32).to_be_bytes());
+            bytes.extend_from_slice(name_bytes);
+        }
         Value::NativeFunction(_) => {
             // Native functions cannot be serialized in constant pool
             // They are runtime-only closures
@@ -174,6 +180,21 @@ pub(super) fn deserialize_value(bytes: &[u8]) -> Result<(Value, usize), String> 
                     local_count: 0, // Deserialized from old format, will be set correctly on recompile
                 }),
                 10 + name_len,
+            ))
+        }
+        0x05 => {
+            if bytes.len() < 5 {
+                return Err("Truncated builtin value".to_string());
+            }
+            let name_len = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
+            if bytes.len() < 5 + name_len {
+                return Err("Truncated builtin name".to_string());
+            }
+            let name = String::from_utf8(bytes[5..5 + name_len].to_vec())
+                .map_err(|e| format!("Invalid UTF-8 in builtin name: {}", e))?;
+            Ok((
+                Value::Builtin(std::sync::Arc::from(name.as_str())),
+                5 + name_len,
             ))
         }
         _ => Err(format!("Unknown value type tag: {:#x}", tag)),

@@ -14,6 +14,7 @@ use crate::ast::{Block, Item, Param, Program};
 use crate::ffi::{CallbackHandle, ExternFunction, LibraryLoader};
 use crate::value::{FunctionRef, RuntimeError, Value};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Control flow signal for handling break, continue, and return
 #[derive(Debug, Clone, PartialEq)]
@@ -111,14 +112,9 @@ impl Interpreter {
     }
 
     /// Register a builtin function in globals
-    fn register_builtin(&mut self, name: &str, arity: usize) {
-        let func_value = Value::Function(FunctionRef {
-            name: name.to_string(),
-            arity,
-            bytecode_offset: 0, // Not used in interpreter
-            local_count: 0,     // Not used in interpreter
-        });
-        self.globals.insert(name.to_string(), func_value);
+    fn register_builtin(&mut self, name: &str, _arity: usize) {
+        self.globals
+            .insert(name.to_string(), Value::Builtin(Arc::from(name)));
     }
 
     /// Get a cloned variable by name (search locals then globals).
@@ -326,24 +322,14 @@ impl Interpreter {
             return Ok(value.clone());
         }
 
-        // Check builtins - return a function value for builtin functions
+        // Check builtins - return a builtin value
         if crate::stdlib::is_builtin(name) {
-            return Ok(Value::Function(crate::value::FunctionRef {
-                name: name.to_string(),
-                arity: 0, // Arity not used for builtins
-                bytecode_offset: 0,
-                local_count: 0,
-            }));
+            return Ok(Value::Builtin(Arc::from(name)));
         }
 
-        // Check array intrinsics - return a function value
+        // Check array intrinsics - return a builtin value
         if crate::stdlib::is_array_intrinsic(name) {
-            return Ok(Value::Function(crate::value::FunctionRef {
-                name: name.to_string(),
-                arity: 0, // Arity checked at call site
-                bytecode_offset: 0,
-                local_count: 0,
-            }));
+            return Ok(Value::Builtin(Arc::from(name)));
         }
 
         // Check math constants

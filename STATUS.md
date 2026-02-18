@@ -1,14 +1,14 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-19
-**Version:** v0.2 | **Progress:** 100/130 phases (77%)
+**Last Updated:** 2026-02-18
+**Version:** v0.2 | **Progress:** 101/130 phases (78%)
 
 ---
 
 ## Current Phase
 
-**Last Completed:** phases/correctness/phase-02-builtin-dispatch-registry.md
-**Next Phase:** phases/correctness/phase-03-value-builtin-variant.md
+**Last Completed:** phases/correctness/phase-03-value-builtin-variant.md
+**Next Phase:** phases/correctness/phase-04-parity-callback-fixes.md
 
 > **Execution order:** Correctness (11) → Interpreter (2) → CLI (6) → LSP (5) → Polish (5)
 > Correctness phases are BLOCKING — they fix structural compiler bugs that must be resolved before features.
@@ -20,7 +20,7 @@
 | Category | Done | Status |
 |----------|------|--------|
 | **Infra** | 20/20 | ✅ Complete |
-| **Correctness** | 2/11 | 🚧 In progress |
+| **Correctness** | 3/11 | 🚧 In progress |
 | **Foundation** | 33/33 | ✅ Archived |
 | **Stdlib** | 28/30 | ✅ Near complete (phase-16+ TBD) |
 | **Bytecode-VM** | 8/8 | ✅ Archived |
@@ -45,7 +45,7 @@
 **Structural safety:**
 ✅ phase-01-security-context-threading.md — Replace *const SecurityContext with Arc<SecurityContext>
 ✅ phase-02-builtin-dispatch-registry.md — Unified OnceLock registry (eliminate dual match)
-⬜ phase-03-value-builtin-variant.md — Value::Builtin(Arc<str>); separate builtins from user fns
+✅ phase-03-value-builtin-variant.md — Value::Builtin(Arc<str>); separate builtins from user fns
 
 **Engine parity:**
 ⬜ phase-04-parity-callback-fixes.md — NativeFunction in call_value + callback validation alignment

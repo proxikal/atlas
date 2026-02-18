@@ -79,7 +79,7 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             }
         }
 
-        Value::Function(_) | Value::NativeFunction(_) => {
+        Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => {
             // Functions at runtime don't carry full type information
             // Report generic "function" type
             TypeInfo {
