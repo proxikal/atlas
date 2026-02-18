@@ -13,7 +13,7 @@ use std::fs;
 use tempfile::TempDir;
 
 
-// ===== async_future_tests.rs =====
+// --- Future/Promise type and async foundation ---
 
 // Integration tests for Future/Promise type and async foundation
 //
@@ -456,7 +456,7 @@ fn test_vm_future_race() {
     assert_eq!(result, Value::Bool(true));
 }
 
-// ===== async_io_tests.rs =====
+// --- Async I/O (file and network operations) ---
 
 // Async I/O tests
 //
@@ -1515,7 +1515,7 @@ fn test_await_rejected_future() {
     assert!(result.is_err());
 }
 
-// ===== async_primitives_tests.rs =====
+// --- Async primitives (tasks, channels, timers, mutex, timeout) ---
 
 // Comprehensive async primitives tests (Phase-11c)
 //
