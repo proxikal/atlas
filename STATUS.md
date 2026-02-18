@@ -10,11 +10,11 @@
 
 **Last Completed:** phases/typing/phase-07-advanced-inference.md
 **Next Phase:** phases/infra/phase-01-test-consolidation-frontend.md
-**Real Progress:** 81/102 phases complete (79%)
+**Real Progress:** 81/106 phases complete (76%)
 
 > ⚠️ **INFRASTRUCTURE BLOCKER:** Test suite has 125 separate binaries (~2.3GB, 60-90s run time).
-> Must complete Infra phases 01-03 before resuming feature work.
-> After infra: ~17 binaries, sub-20s runs, then back to `interpreter/phase-01`.
+> Must complete all 7 Infra phases before resuming feature work.
+> After infra: ~17 binaries, sub-20s runs, fuzz tested, benchmarked, corpus-driven.
 
 ---
 
@@ -22,7 +22,7 @@
 
 | Category | Progress | Status |
 |----------|----------|--------|
-| **Infra** | 0/3 (0%) | 🚨 BLOCKING — do first |
+| **Infra** | 0/7 (0%) | 🚨 BLOCKING — do first |
 | **0. Foundation** | 33/33 (100%) | ✅ COMPLETE |
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 8/8 (100%) | ✅ COMPLETE |
@@ -35,16 +35,22 @@
 
 ---
 
-## 📋 Complete Phase List (81/102)
+## 📋 Complete Phase List (81/106)
 
-### Infra — Test Infrastructure (0/3) 🚨 BLOCKING
+### Infra — Test Infrastructure (0/7) 🚨 BLOCKING
 
-⬜ phase-01-test-consolidation-frontend.md
-⬜ phase-02-test-consolidation-core.md
-⬜ phase-03-test-consolidation-specialized.md
+**Structural consolidation (do first):**
+⬜ phase-01-test-consolidation-frontend.md       — 20 files → 3, nextest.toml
+⬜ phase-02-test-consolidation-core.md           — 70 files → 6, fix fib timeout
+⬜ phase-03-test-consolidation-specialized.md   — 38 files → 10, final structure
 
-> These phases consolidate 125 test binaries → ~17. Must complete before any feature work.
-> After completion: restore Next Phase to `phases/interpreter/phase-01-debugger-repl-improvements.md`
+**Quality standards (do after 01-03):**
+⬜ phase-04-ignore-audit.md                     — Zero bare #[ignore], all reasons documented
+⬜ phase-05-file-based-test-corpus.md           — .atlas corpus files (pass/fail/warn)
+⬜ phase-06-fuzz-testing.md                     — cargo-fuzz on lexer/parser/typechecker/eval
+⬜ phase-07-benchmark-suite.md                  — Criterion benchmarks, baseline committed
+
+> After all 7 complete: restore Next Phase to `phases/interpreter/phase-01-debugger-repl-improvements.md`
 
 ---
 
@@ -307,4 +313,4 @@ v0.2 transforms Atlas into a production-ready language:
 ---
 
 **Next phase: `phases/infra/phase-01-test-consolidation-frontend.md`**
-**After infra complete: `phases/interpreter/phase-01-debugger-repl-improvements.md`**
+**After all 7 infra phases: `phases/interpreter/phase-01-debugger-repl-improvements.md`**
