@@ -21,7 +21,7 @@ tokio = { version = "1.49", features = ["rt", "sync", "time", "fs", "io-util", "
 futures-util = "0.3"
 
 # FFI support (phase-10b/10c)
-libloading = "0.8"
+libloading = "0.9"
 libffi = "5.1"
 
 # Path manipulation (phase-13a)
