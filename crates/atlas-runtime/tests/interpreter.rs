@@ -3,15 +3,12 @@
 mod common;
 
 use atlas_runtime::binder::Binder;
-use atlas_runtime::compiler::Compiler;
 use atlas_runtime::diagnostic::{Diagnostic, DiagnosticLevel};
 use atlas_runtime::interpreter::Interpreter;
 use atlas_runtime::lexer::Lexer;
 use atlas_runtime::parser::Parser;
 use atlas_runtime::security::SecurityContext;
-use atlas_runtime::typechecker::generics::Monomorphizer;
 use atlas_runtime::typechecker::TypeChecker;
-use atlas_runtime::types::{Type, TypeParamDef};
 use atlas_runtime::value::Value;
 use atlas_runtime::Atlas;
 use common::*;
