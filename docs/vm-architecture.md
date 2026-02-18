@@ -207,14 +207,11 @@ Static O(1) opcode dispatch using a lookup table instead of match-based dispatch
 ### Running Tests
 
 ```bash
-# Specific test file
-cargo test -p atlas-runtime --test vm_integration_tests
+# VM test domain file (post-consolidation: all VM tests are in tests/vm.rs)
+cargo nextest run -p atlas-runtime --test vm
 
 # Specific test
-cargo test -p atlas-runtime test_name -- --exact
-
-# All VM tests
-cargo test -p atlas-runtime --test vm_integration_tests --test vm_complex_programs --test vm_regression_tests
+cargo nextest run -p atlas-runtime -E 'test(test_name)'
 ```
 
 ## File Layout

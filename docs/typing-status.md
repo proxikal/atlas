@@ -84,11 +84,11 @@ Key outcomes:
     strengthened type checker and REPL pipeline.
 
 ### Commands Run
-- `cargo test -p atlas-runtime --test type_improvements_tests`
-- `cargo test -p atlas-runtime --test type_inference_tests`
-- New test files are designed for targeted execution:
-  - `cargo test -p atlas-runtime --test repl_types_tests`
-  - `cargo test -p atlas-runtime --test typing_integration_tests`
+- `cargo nextest run -p atlas-runtime --test typesystem`
+- `cargo nextest run -p atlas-runtime --test repl`
+- All type system and REPL tests are consolidated into domain files (post-infra phases):
+  - Type inference, constraints, aliases, guards, unions → `tests/typesystem.rs`
+  - REPL type integration → `tests/repl.rs`
 
 ---
 
