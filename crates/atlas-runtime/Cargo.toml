@@ -31,7 +31,7 @@ dirs = "5.0"
 # Compression (phase-14a, 14b, 14c)
 flate2 = "1.0"
 tar = "0.4"
-zip = "0.6"
+zip = "8.1"
 termcolor = "1.4.1"
 
 [dev-dependencies]
