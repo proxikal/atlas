@@ -6,7 +6,10 @@
 #![allow(dead_code)]
 
 use atlas_runtime::diagnostic::Diagnostic;
+use atlas_runtime::security::SecurityContext;
 use atlas_runtime::{Atlas, Value};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 // Re-export testing utilities
 pub use pretty_assertions::assert_eq;
@@ -177,6 +180,61 @@ pub fn run_bytecode(
     use atlas_runtime::SecurityContext;
     let mut vm = VM::new(bytecode);
     vm.run(&SecurityContext::allow_all())
+}
+
+// ============================================================
+// Shared helpers extracted from test files (phases 03d-03m)
+// ============================================================
+
+/// Evaluate Atlas code, return Value. Panics on error.
+pub fn eval_ok(code: &str) -> Value {
+    let runtime = Atlas::new_with_security(SecurityContext::allow_all());
+    runtime.eval(code).unwrap()
+}
+
+/// Extract f64 from a Value::Number. Panics if wrong type.
+pub fn extract_number(value: &Value) -> f64 {
+    match value {
+        Value::Number(n) => *n,
+        _ => panic!("Expected number value, got {:?}", value),
+    }
+}
+
+/// Extract bool from a Value::Bool. Panics if wrong type.
+pub fn extract_bool(value: &Value) -> bool {
+    match value {
+        Value::Bool(b) => *b,
+        _ => panic!("Expected bool value, got {:?}", value),
+    }
+}
+
+/// Wrap a &str into a Value::String.
+pub fn str_value(s: &str) -> Value {
+    Value::string(s.to_string())
+}
+
+/// Wrap a slice of &str into a Value::Array of Value::String.
+pub fn str_array_value(paths: &[&str]) -> Value {
+    let values: Vec<Value> = paths.iter().map(|p| str_value(p)).collect();
+    Value::array(values)
+}
+
+/// Return a SecurityContext with all permissions allowed.
+pub fn security() -> SecurityContext {
+    SecurityContext::allow_all()
+}
+
+/// Create a file in `dir` with `name` and `content`.
+pub fn create_test_file(dir: &Path, name: &str, content: &str) {
+    let path = dir.join(name);
+    fs::write(path, content).unwrap();
+}
+
+/// Create a subdirectory `name` inside `dir`. Returns the new path.
+pub fn create_test_dir(dir: &Path, name: &str) -> PathBuf {
+    let path = dir.join(name);
+    fs::create_dir(&path).unwrap();
+    path
 }
 
 /// Helper to create a snapshot name from test function name
