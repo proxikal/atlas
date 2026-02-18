@@ -1594,8 +1594,8 @@ fn test_return_after_loop() {
     let diagnostics = typecheck_source(
         r#"
         fn sum(n: number) -> number {
-            let s: number = 0;
-            let i: number = 0;
+            var s: number = 0;
+            var i: number = 0;
             while (i < n) {
                 s = s + i;
                 i = i + 1;
@@ -1612,7 +1612,7 @@ fn test_return_in_for_loop_not_sufficient() {
     let diagnostics = typecheck_source(
         r#"
         fn test() -> number {
-            for (let i: number = 0; i < 10; i = i + 1) {
+            for (var i: number = 0; i < 10; i = i + 1) {
                 return i;
             }
         }
@@ -1626,8 +1626,8 @@ fn test_return_after_for_loop() {
     let diagnostics = typecheck_source(
         r#"
         fn sum() -> number {
-            let s: number = 0;
-            for (let i: number = 0; i < 10; i = i + 1) {
+            var s: number = 0;
+            for (var i: number = 0; i < 10; i = i + 1) {
                 s = s + i;
             }
             return s;
@@ -1683,9 +1683,9 @@ fn test_nested_loops_with_return() {
     let diagnostics = typecheck_source(
         r#"
         fn test() -> number {
-            let i: number = 0;
+            var i: number = 0;
             while (i < 10) {
-                let j: number = 0;
+                var j: number = 0;
                 while (j < 10) {
                     j = j + 1;
                 }

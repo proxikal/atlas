@@ -4931,7 +4931,7 @@ fn test_csv_conditional_transformation() {
         fn addGrade(row: string) -> string {{
             let fields: string[] = split(row, ",");
             let score: number = parseFloat(fields[1]);
-            let grade: string = "F";
+            var grade: string = "F";
             if (score >= 90.0) {{
                 grade = "A";
             }} else {{
@@ -9474,7 +9474,7 @@ fn test_option_chain_with_assertions() {
     eval_ok(
         r#"
         fn find_value(arr: array, target: number) -> Option<number> {
-            let found = None();
+            var found = None();
             for item in arr {
                 if (item == target) {
                     found = Some(item);

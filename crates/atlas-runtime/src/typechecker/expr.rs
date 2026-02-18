@@ -24,7 +24,8 @@ impl<'a> TypeChecker<'a> {
                 if let Some(symbol) = self.symbol_table.lookup(&id.name) {
                     symbol.ty.clone()
                 } else {
-                    // Binder should have caught this
+                    // Symbol not found - may be a builtin or undefined variable
+                    // Binder should have caught undefined variables, so this is likely a builtin
                     Type::Unknown
                 }
             }

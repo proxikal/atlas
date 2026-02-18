@@ -324,16 +324,11 @@ impl Interpreter {
         let target_value = self.eval_expr(&member.target)?;
 
         // 2. Build desugared function name via shared dispatch table
-        let type_tag = member.type_tag.get().unwrap_or_else(|| {
-            // Fallback: infer TypeTag from runtime value when typechecker hasn't annotated
-            match &target_value {
-                Value::JsonValue(_) => crate::method_dispatch::TypeTag::JsonValue,
-                _ => panic!(
-                    "TypeTag not set and runtime type '{}' has no method dispatch",
-                    target_value.type_name()
-                ),
-            }
-        });
+        // The typechecker must have annotated the MemberExpr with a TypeTag.
+        // If this expect fails, it means the typechecker failed to visit this expression.
+        let type_tag = member.type_tag.get().expect(
+            "TypeTag not set by typechecker - this indicates a typechecker traversal bug"
+        );
         let func_name = crate::method_dispatch::resolve_method(type_tag, &member.member.name)
             .ok_or_else(|| RuntimeError::TypeError {
                 msg: format!("No method '{}' on type {:?}", member.member.name, type_tag),

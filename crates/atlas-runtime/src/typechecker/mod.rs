@@ -592,7 +592,8 @@ impl<'a> TypeChecker<'a> {
 
                 let init_type = self.check_expr(&var.init);
 
-                if let Some(type_ref) = &var.type_ref {
+                // Determine the final type for this variable
+                let final_type = if let Some(type_ref) = &var.type_ref {
                     let declared_type =
                         self.resolve_type_ref_with_context(type_ref, Some(&init_type));
                     if !init_type.is_assignable_to(&declared_type) {
@@ -622,13 +623,31 @@ impl<'a> TypeChecker<'a> {
                             .with_help(help),
                         );
                     }
+                    declared_type
                 } else {
-                    // No explicit type annotation - update symbol table with inferred type
-                    if init_type.normalized() != Type::Unknown {
-                        if let Some(symbol) = self.symbol_table.lookup_mut(&var.name.name) {
-                            symbol.ty = init_type;
-                        }
-                    }
+                    // No explicit type annotation - use inferred type
+                    init_type
+                };
+
+                // Update the symbol's type in the symbol table.
+                // The binder already defined the symbol but may have set Unknown type
+                // if there was no type annotation. We now have the inferred/declared type.
+                if let Some(symbol) = self.symbol_table.lookup_mut(&var.name.name) {
+                    symbol.ty = final_type;
+                } else {
+                    // Symbol doesn't exist - this can happen for variables declared in
+                    // inner scopes (the binder exited those scopes, removing the symbols).
+                    // Define the symbol in the current scope.
+                    let symbol = crate::symbol::Symbol {
+                        name: var.name.name.clone(),
+                        ty: final_type,
+                        span: var.name.span,
+                        mutable: var.mutable,
+                        kind: crate::symbol::SymbolKind::Variable,
+                        exported: false,
+                    };
+                    // Ignore redefinition errors - the binder already validated this
+                    let _ = self.symbol_table.define(symbol);
                 }
             }
             Stmt::Assign(assign) => {

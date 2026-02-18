@@ -3067,7 +3067,7 @@ fn test_while_loop_with_continue() {
 fn test_for_loop() {
     let code = r#"
         var sum: number = 0;
-        for (let i: number = 0; i < 5; i = i + 1) {
+        for (var i: number = 0; i < 5; i = i + 1) {
             sum = sum + i;
         }
         sum
@@ -3079,7 +3079,7 @@ fn test_for_loop() {
 fn test_for_loop_with_break() {
     let code = r#"
         var result: number = 0;
-        for (let i: number = 0; i < 10; i = i + 1) {
+        for (var i: number = 0; i < 10; i = i + 1) {
             if (i == 5) {
                 break;
             }
@@ -3094,7 +3094,7 @@ fn test_for_loop_with_break() {
 fn test_for_loop_with_continue() {
     let code = r#"
         var sum: number = 0;
-        for (let i: number = 0; i < 5; i = i + 1) {
+        for (var i: number = 0; i < 5; i = i + 1) {
             if (i == 2) {
                 continue;
             }

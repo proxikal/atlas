@@ -702,6 +702,48 @@ impl SymbolTable {
             })
             .ok();
 
+        // JSON functions
+        table.define_builtin(
+            "parseJSON",
+            Type::Function {
+                type_params: vec![],
+                params: vec![Type::String],
+                return_type: Box::new(Type::JsonValue),
+            },
+        );
+        table.define_builtin(
+            "toJSON",
+            Type::Function {
+                type_params: vec![],
+                params: vec![Type::Unknown], // Accepts any serializable value
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "isValidJSON",
+            Type::Function {
+                type_params: vec![],
+                params: vec![Type::String],
+                return_type: Box::new(Type::Bool),
+            },
+        );
+        table.define_builtin(
+            "prettifyJSON",
+            Type::Function {
+                type_params: vec![],
+                params: vec![Type::String, Type::Number], // JSON string, indent size
+                return_type: Box::new(Type::String),
+            },
+        );
+        table.define_builtin(
+            "minifyJSON",
+            Type::Function {
+                type_params: vec![],
+                params: vec![Type::String],
+                return_type: Box::new(Type::String),
+            },
+        );
+
         table
     }
 
