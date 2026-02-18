@@ -8,8 +8,8 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/infra/phase-03m-flatten-system.md
-**Next Phase:** phases/infra/phase-04-ignore-audit.md
+**Last Completed:** phases/infra/phase-04-ignore-audit.md
+**Next Phase:** phases/infra/phase-05-file-based-test-corpus.md
 **Real Progress:** 94/118 phases complete (80%)
 
 > ⚠️ **INFRASTRUCTURE BLOCKER:** Test suite consolidation in progress (7 infra phases).
@@ -22,7 +22,7 @@
 
 | Category | Progress | Status |
 |----------|----------|--------|
-| **Infra** | 15/19 (79%) | 🚨 BLOCKING — do first |
+| **Infra** | 16/19 (84%) | 🚨 BLOCKING — do first |
 | **0. Foundation** | 33/33 (100%) | ✅ COMPLETE |
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 8/8 (100%) | ✅ COMPLETE |
@@ -59,7 +59,7 @@
 ✅ phase-03m-flatten-system.md                  — system.rs: remove 6 mod wrappers (3,821 lines)
 
 **Stage 3 — Quality standards (do after 03d-03m):**
-⬜ phase-04-ignore-audit.md                     — Zero bare #[ignore], all reasons documented
+✅ phase-04-ignore-audit.md                     — Zero bare #[ignore], all reasons documented
 ⬜ phase-05-file-based-test-corpus.md           — .atlas corpus files (pass/fail/warn)
 ⬜ phase-06-fuzz-testing.md                     — cargo-fuzz on lexer/parser/typechecker/eval
 ⬜ phase-07-benchmark-suite.md                  — Criterion benchmarks, baseline committed

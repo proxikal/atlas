@@ -8309,7 +8309,7 @@ fn test_function_variable_with_same_name() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_function_variable_in_block() {
     let source = r#"
         fn square(x: number) -> number { return x * x; }
@@ -8323,7 +8323,7 @@ fn test_function_variable_in_block() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_function_variable_shadowing() {
     let source = r#"
         fn add(a: number, b: number) -> number { return a + b; }
@@ -8343,7 +8343,7 @@ fn test_function_variable_shadowing() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_pass_function_as_argument() {
     let source = r#"
         fn apply(f: (number) -> number, x: number) -> number {
@@ -8357,7 +8357,7 @@ fn test_pass_function_as_argument() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_pass_builtin_as_argument() {
     let source = r#"
         fn applyStr(f: (number) -> string, x: number) -> string {
@@ -8370,7 +8370,7 @@ fn test_pass_builtin_as_argument() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_pass_function_through_variable() {
     let source = r#"
         fn apply(f: (number) -> number, x: number) -> number {
@@ -8385,7 +8385,7 @@ fn test_pass_function_through_variable() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_multiple_function_parameters() {
     let source = r#"
         fn compose(
@@ -8404,7 +8404,7 @@ fn test_multiple_function_parameters() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_function_parameter_called_multiple_times() {
     let source = r#"
         fn applyTwice(f: (number) -> number, x: number) -> number {
@@ -8418,7 +8418,7 @@ fn test_function_parameter_called_multiple_times() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_function_parameter_with_string() {
     let source = r#"
         fn apply(f: (string) -> number, s: string) -> number {
@@ -8431,7 +8431,7 @@ fn test_function_parameter_with_string() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_function_parameter_two_args() {
     let source = r#"
         fn applyBinary(
@@ -8464,7 +8464,7 @@ fn test_conditional_function_call() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_function_in_loop() {
     let source = r#"
         fn apply(f: (number) -> number, x: number) -> number {
@@ -8486,7 +8486,7 @@ fn test_function_in_loop() {
 
 // Requires nested function declarations (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested function declarations — deferred to v0.3+"]
 fn test_return_function() {
     let source = r#"
         fn getDouble() -> (number) -> number {
@@ -8526,7 +8526,7 @@ fn test_return_function_from_parameter() {
 
 // Requires nested function declarations (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested function declarations — deferred to v0.3+"]
 fn test_conditional_function_return() {
     let source = r#"
         fn getFunc(flag: bool) -> (number) -> number {
@@ -8545,7 +8545,7 @@ fn test_conditional_function_return() {
 
 // Requires nested function declarations (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested function declarations — deferred to v0.3+"]
 fn test_return_function_and_call_immediately() {
     let source = r#"
         fn getDouble() -> (number) -> number {
@@ -8581,7 +8581,7 @@ fn test_type_error_not_a_function() {
 
 // Requires nested function declarations (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested function declarations — deferred to v0.3+"]
 fn test_type_error_wrong_return_type() {
     let source = r#"
         fn getString() -> string {
@@ -8604,7 +8604,7 @@ fn test_type_valid_function_assignment() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_type_valid_function_parameter() {
     let source = r#"
         fn apply(f: (string) -> number, s: string) -> number {
@@ -8667,7 +8667,7 @@ fn test_function_with_many_params() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_function_variable_in_global_scope() {
     let source = r#"
         fn double(x: number) -> number { return x * 2; }
@@ -8686,7 +8686,7 @@ fn test_function_variable_in_global_scope() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_map_pattern_with_function() {
     let source = r#"
         fn applyToArray(arr: number[], f: (number) -> number) -> number[] {
@@ -8706,7 +8706,7 @@ fn test_map_pattern_with_function() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_filter_pattern_with_function() {
     let source = r#"
         fn filterArray(arr: number[], predicate: (number) -> bool) -> number[] {
@@ -8749,7 +8749,7 @@ fn test_reduce_pattern_with_function() {
 
 // Requires nested function declarations (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested function declarations — deferred to v0.3+"]
 fn test_function_composition() {
     let source = r#"
         fn compose(
@@ -8771,7 +8771,7 @@ fn test_function_composition() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_callback_pattern() {
     let source = r#"
         fn processValue(
@@ -8792,7 +8792,7 @@ fn test_callback_pattern() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_function_array_element() {
     let source = r#"
         fn double(x: number) -> number { return x * 2; }
@@ -8805,7 +8805,7 @@ fn test_function_array_element() {
 
 // Requires nested functions or closure capture (deferred to v0.3+)
 #[test]
-#[ignore]
+#[ignore = "requires nested functions or closure capture — deferred to v0.3+"]
 fn test_complex_function_passing() {
     let source = r#"
         fn transform(

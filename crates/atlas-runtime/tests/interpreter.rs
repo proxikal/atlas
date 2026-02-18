@@ -3411,7 +3411,7 @@ fn test_string_concatenation() {
 
 // TODO: Enable when typechecker supports string indexing
 #[test]
-#[ignore]
+#[ignore = "typechecker does not yet support string indexing"]
 fn test_string_indexing() {
     let code = r#"
         let s: string = "Hello";

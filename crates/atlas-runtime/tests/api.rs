@@ -2879,7 +2879,7 @@ fn test_no_cli_dependency() {
 // Future tests (currently ignored until implementation)
 
 #[test]
-#[ignore]
+#[ignore = "not yet implemented: high-level Atlas::eval() persistent-state API"]
 fn test_eval_returns_value() {
     let runtime = Atlas::new();
     let result = runtime.eval("42");
@@ -2891,7 +2891,7 @@ fn test_eval_returns_value() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "not yet implemented: high-level Atlas::eval() persistent-state API"]
 fn test_eval_preserves_state() {
     let runtime = Atlas::new();
 
@@ -2908,7 +2908,7 @@ fn test_eval_preserves_state() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "not yet implemented: high-level Atlas::eval() persistent-state API"]
 fn test_eval_file_with_real_file() {
     use std::fs;
     use std::io::Write;

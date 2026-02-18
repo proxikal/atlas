@@ -986,7 +986,7 @@ fn test_append_empty_string() {
 // ============================================================================
 
 #[rstest]
-#[ignore] // Requires network - run with --ignored
+#[ignore = "requires network"]
 fn test_get_request_async() {
     let args = [Value::string("https://httpbin.org/get")];
 
@@ -1008,7 +1008,7 @@ fn test_get_request_async() {
 }
 
 #[rstest]
-#[ignore] // Requires network
+#[ignore = "requires network"]
 fn test_post_request_async() {
     let args = [
         Value::string("https://httpbin.org/post"),
@@ -1033,7 +1033,7 @@ fn test_post_request_async() {
 }
 
 #[rstest]
-#[ignore] // Requires network
+#[ignore = "requires network"]
 fn test_put_request_async() {
     let args = [
         Value::string("https://httpbin.org/put"),
@@ -1051,7 +1051,7 @@ fn test_put_request_async() {
 }
 
 #[rstest]
-#[ignore] // Requires network
+#[ignore = "requires network"]
 fn test_delete_request_async() {
     let args = [Value::string("https://httpbin.org/delete")];
 
@@ -1066,7 +1066,7 @@ fn test_delete_request_async() {
 }
 
 #[rstest]
-#[ignore] // Requires network
+#[ignore = "requires network"]
 fn test_multiple_concurrent_requests() {
     let args1 = [Value::string("https://httpbin.org/get")];
     let args2 = [Value::string("https://httpbin.org/headers")];
@@ -1147,7 +1147,7 @@ fn test_network_error_handling() {
 }
 
 #[rstest]
-#[ignore] // Requires network
+#[ignore = "requires network"]
 fn test_large_response_handling() {
     let args = [Value::string("https://httpbin.org/bytes/100000")];
 
@@ -1169,7 +1169,7 @@ fn test_large_response_handling() {
 }
 
 #[rstest]
-#[ignore] // Requires network
+#[ignore = "requires network"]
 fn test_concurrent_requests_different_hosts() {
     let args1 = [Value::string("https://httpbin.org/get")];
     let args2 = [Value::string(
@@ -1190,7 +1190,7 @@ fn test_concurrent_requests_different_hosts() {
 }
 
 #[rstest]
-#[ignore] // Requires network
+#[ignore = "requires network"]
 fn test_request_with_custom_headers_async() {
     use atlas_runtime::stdlib::http::HttpRequest;
     use std::sync::Arc;
@@ -1271,7 +1271,7 @@ fn test_parallel_file_reads_with_future_all() {
 }
 
 #[rstest]
-#[ignore] // Requires network
+#[ignore = "requires network"]
 fn test_parallel_http_requests_with_future_all() {
     use atlas_runtime::async_runtime::future_all;
 
