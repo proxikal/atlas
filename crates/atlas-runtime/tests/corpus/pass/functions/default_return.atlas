@@ -1,0 +1,11 @@
+fn log_message(msg: string) {
+    print("LOG: " + msg);
+}
+
+fn no_op() {
+}
+
+log_message("hello");
+log_message("world");
+let result: null = no_op();
+print(result);

@@ -1,0 +1,10 @@
+let ok_result: Result<number, string> = Ok(100);
+let err_result: Result<number, string> = Err("failed");
+
+print(is_ok(ok_result));
+print(is_err(ok_result));
+print(is_ok(err_result));
+print(is_err(err_result));
+
+let val: number = unwrap(ok_result);
+print(val);

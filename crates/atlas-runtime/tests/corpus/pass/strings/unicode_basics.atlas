@@ -1,0 +1,6 @@
+let emoji: string = "Hello 🌍";
+let japanese: string = "日本語";
+print(len(emoji));
+print(len(japanese));
+print(emoji);
+print(japanese);

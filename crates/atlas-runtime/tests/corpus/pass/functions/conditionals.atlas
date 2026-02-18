@@ -1,0 +1,15 @@
+fn classify(n: number) -> string {
+    if (n < 0) {
+        return "negative";
+    } else {
+        if (n == 0) {
+            return "zero";
+        } else {
+            return "positive";
+        }
+    }
+}
+
+print(classify(-5));
+print(classify(0));
+print(classify(42));

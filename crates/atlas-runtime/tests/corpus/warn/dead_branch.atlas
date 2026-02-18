@@ -1,0 +1,8 @@
+fn get_value() -> number {
+    let result: number = 42;
+    return result;
+    let never_reached: number = 0;
+    return never_reached;
+}
+
+print(get_value());

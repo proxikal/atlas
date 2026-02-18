@@ -1,0 +1,10 @@
+let q = queueNew();
+queueEnqueue(q, "first");
+queueEnqueue(q, "second");
+queueEnqueue(q, "third");
+
+print(queueSize(q));
+
+let item: string = unwrap(queueDequeue(q));
+print(item);
+print(queueSize(q));

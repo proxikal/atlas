@@ -1,0 +1,7 @@
+fn mixed(a: number, b: number) -> number {
+    let unused1: number = 10;
+    let unused2: number = 20;
+    return a + b;
+}
+
+print(mixed(3, 4));

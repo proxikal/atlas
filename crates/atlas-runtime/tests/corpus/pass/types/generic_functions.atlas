@@ -1,0 +1,16 @@
+fn identity<T>(x: T) -> T {
+    return x;
+}
+
+fn wrap_in_option<T>(x: T) -> Option<T> {
+    return Some(x);
+}
+
+let n: number = identity(42);
+let s: string = identity("hello");
+print(n);
+print(s);
+
+let opt: Option<number> = wrap_in_option(99);
+print(is_some(opt));
+print(unwrap(opt));

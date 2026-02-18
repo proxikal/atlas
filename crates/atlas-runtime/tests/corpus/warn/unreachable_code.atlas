@@ -1,0 +1,7 @@
+fn early_return(x: number) -> number {
+    return x * 2;
+    let dead: number = 99;
+    return dead;
+}
+
+print(early_return(5));

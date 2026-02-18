@@ -1,0 +1,11 @@
+let hm = hashMapNew();
+hashMapPut(hm, "name", "Alice");
+hashMapPut(hm, "age", "30");
+hashMapPut(hm, "city", "Paris");
+
+print(hashMapSize(hm));
+print(hashMapHas(hm, "name"));
+print(hashMapHas(hm, "missing"));
+
+let val: string = unwrap(hashMapGet(hm, "name"));
+print(val);

@@ -1,0 +1,11 @@
+var greeting: string = "Hello";
+var name: string = "Atlas";
+var message: string = greeting + ", " + name + "!";
+print(message);
+
+var count: number = 3;
+var i: number = 1;
+while (i <= count) {
+    print(str(i));
+    i = i + 1;
+}

@@ -1,0 +1,9 @@
+print(abs(-5));
+print(abs(3));
+print(floor(3.7));
+print(ceil(3.2));
+print(round(3.5));
+print(sqrt(16));
+print(pow(2, 10));
+print(min(3, 7));
+print(max(3, 7));

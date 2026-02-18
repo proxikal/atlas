@@ -1,0 +1,10 @@
+print(isNumber(42));
+print(isNumber("hello"));
+print(isString("hello"));
+print(isString(42));
+print(isBool(true));
+print(isBool(1));
+print(isNull(null));
+print(isNull(0));
+print(isArray([1, 2, 3]));
+print(isArray(42));

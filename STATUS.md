@@ -1,6 +1,6 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-18
+**Last Updated:** 2026-02-19
 **Version:** v0.2 (building production infrastructure)
 
 
@@ -8,9 +8,9 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/infra/phase-05a-runtime-output-writer.md
-**Next Phase:** phases/infra/phase-05b-file-based-test-corpus.md
-**Real Progress:** 95/126 phases complete (75%)
+**Last Completed:** phases/infra/phase-05b-file-based-test-corpus.md
+**Next Phase:** phases/infra/phase-06-fuzz-testing.md
+**Real Progress:** 96/126 phases complete (76%)
 
 > ⚠️ **INFRASTRUCTURE BLOCKER:** Infra phases in progress. After Infra completes, do
 > Correctness phases (01–07) before resuming Interpreter/CLI/LSP/Polish work.
@@ -23,7 +23,7 @@
 
 | Category | Progress | Status |
 |----------|----------|--------|
-| **Infra** | 17/20 (85%) | 🚨 BLOCKING — do first |
+| **Infra** | 18/20 (90%) | 🚨 BLOCKING — do first |
 | **0. Foundation** | 33/33 (100%) | ✅ COMPLETE |
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 8/8 (100%) | ✅ COMPLETE |
@@ -63,7 +63,7 @@
 **Stage 3 — Quality standards (do after 03d-03m):**
 ✅ phase-04-ignore-audit.md                     — Zero bare #[ignore], all reasons documented
 ✅ phase-05a-runtime-output-writer.md           — Add configurable OutputWriter to RuntimeConfig (prereq for corpus)
-⬜ phase-05b-file-based-test-corpus.md          — .atlas corpus files (pass/fail/warn) built on OutputWriter
+✅ phase-05b-file-based-test-corpus.md          — .atlas corpus files (pass/fail/warn) built on OutputWriter
 ⬜ phase-06-fuzz-testing.md                     — cargo-fuzz on lexer/parser/typechecker/eval
 ⬜ phase-07-benchmark-suite.md                  — Criterion benchmarks, baseline committed
 

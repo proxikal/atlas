@@ -1,0 +1,13 @@
+let s = stackNew();
+stackPush(s, 10);
+stackPush(s, 20);
+stackPush(s, 30);
+
+print(stackSize(s));
+
+let top: number = unwrap(stackPeek(s));
+print(top);
+
+let popped: number = unwrap(stackPop(s));
+print(popped);
+print(stackSize(s));

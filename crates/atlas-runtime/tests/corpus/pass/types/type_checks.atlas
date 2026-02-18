@@ -1,0 +1,9 @@
+print(typeof(42));
+print(typeof("hello"));
+print(typeof(true));
+print(typeof(null));
+print(isNumber(42));
+print(isString("hello"));
+print(isBool(true));
+print(isNull(null));
+print(isNull(42));

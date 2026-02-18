@@ -1,0 +1,10 @@
+let opt_some: Option<number> = Some(42);
+let opt_none: Option<number> = None();
+
+print(is_some(opt_some));
+print(is_none(opt_some));
+print(is_some(opt_none));
+print(is_none(opt_none));
+
+let val: number = unwrap(opt_some);
+print(val);

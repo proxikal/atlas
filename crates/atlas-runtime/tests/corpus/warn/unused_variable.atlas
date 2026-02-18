@@ -1,0 +1,6 @@
+fn compute() -> number {
+    let unused: number = 42;
+    return 100;
+}
+
+print(compute());

@@ -1,0 +1,9 @@
+let hs = hashSetNew();
+hashSetAdd(hs, "apple");
+hashSetAdd(hs, "banana");
+hashSetAdd(hs, "cherry");
+hashSetAdd(hs, "apple");
+
+print(hashSetSize(hs));
+print(hashSetHas(hs, "banana"));
+print(hashSetHas(hs, "grape"));

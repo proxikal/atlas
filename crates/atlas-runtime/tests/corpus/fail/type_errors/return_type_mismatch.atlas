@@ -1,0 +1,3 @@
+fn get_number() -> number {
+    return "not a number";
+}

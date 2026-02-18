@@ -1,0 +1,1 @@
+Runtime error: TypeError { msg: "Cannot pop from empty array", span: Span { start: 38, end: 46 } }

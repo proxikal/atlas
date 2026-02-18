@@ -1,0 +1,3 @@
+let opt: Option<number> = None;
+let val: number = unwrap(opt);
+print(val);

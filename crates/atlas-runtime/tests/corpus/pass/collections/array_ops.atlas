@@ -1,0 +1,8 @@
+let arr: number[] = [10, 20, 30, 40, 50];
+print(len(arr));
+print(arr[0]);
+print(arr[4]);
+
+let strings: string[] = ["a", "b", "c"];
+print(len(strings));
+print(strings[1]);

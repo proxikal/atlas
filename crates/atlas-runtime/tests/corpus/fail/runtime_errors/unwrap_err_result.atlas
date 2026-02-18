@@ -1,0 +1,3 @@
+let res: Result<number, string> = Err("something went wrong");
+let val: number = unwrap(res);
+print(val);

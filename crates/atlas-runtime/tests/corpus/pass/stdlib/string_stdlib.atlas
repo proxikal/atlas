@@ -1,0 +1,5 @@
+let s: string = "Hello, World!";
+print(substring(s, 7, 12));
+print(replace(s, "World", "Atlas"));
+print(indexOf(s, "o"));
+print(len(s));

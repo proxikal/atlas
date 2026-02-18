@@ -1,0 +1,5 @@
+fn always_one(x: number, y: number) -> number {
+    return x;
+}
+
+print(always_one(1, 99));
