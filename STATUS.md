@@ -8,8 +8,8 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/infra/phase-03l-flatten-api.md
-**Next Phase:** phases/infra/phase-03m-flatten-system.md
+**Last Completed:** phases/infra/phase-03m-flatten-system.md
+**Next Phase:** phases/infra/phase-04-ignore-audit.md
 **Real Progress:** 94/118 phases complete (80%)
 
 > ⚠️ **INFRASTRUCTURE BLOCKER:** Test suite consolidation in progress (7 infra phases).
@@ -22,7 +22,7 @@
 
 | Category | Progress | Status |
 |----------|----------|--------|
-| **Infra** | 14/19 (74%) | 🚨 BLOCKING — do first |
+| **Infra** | 15/19 (79%) | 🚨 BLOCKING — do first |
 | **0. Foundation** | 33/33 (100%) | ✅ COMPLETE |
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 8/8 (100%) | ✅ COMPLETE |
@@ -56,7 +56,7 @@
 ✅ phase-03j-flatten-debugger.md                — debugger.rs: remove mod execution/inspection/protocol (1,921 lines)
 ✅ phase-03k-clean-async-runtime.md             — async_runtime.rs: replace file banners with section comments (2,336 lines)
 ✅ phase-03l-flatten-api.md                     — api.rs: remove 7 mod wrappers (2,955 lines)
-⬜ phase-03m-flatten-system.md                  — system.rs: remove 6 mod wrappers (3,821 lines)
+✅ phase-03m-flatten-system.md                  — system.rs: remove 6 mod wrappers (3,821 lines)
 
 **Stage 3 — Quality standards (do after 03d-03m):**
 ⬜ phase-04-ignore-audit.md                     — Zero bare #[ignore], all reasons documented
