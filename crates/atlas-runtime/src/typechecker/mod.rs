@@ -8,12 +8,14 @@
 
 mod constraints;
 mod expr;
+pub mod flow_sensitive;
 pub mod generics;
 pub mod inference;
 mod methods;
 mod narrowing;
 pub mod suggestions;
 mod type_guards;
+pub mod unification;
 
 use crate::ast::*;
 use crate::diagnostic::Diagnostic;
