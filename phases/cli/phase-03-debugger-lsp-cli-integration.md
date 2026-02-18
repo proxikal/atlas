@@ -7,8 +7,8 @@
 ```bash
 ls crates/atlas-runtime/src/debugger/mod.rs
 ls crates/atlas-lsp/src/server.rs
-cargo test debugger_execution_tests
-cargo test lsp
+cargo nextest run -p atlas-runtime -E 'test(debugger_execution_tests)'
+cargo nextest run -p atlas-lsp
 ```
 
 **What's needed:**
@@ -118,4 +118,4 @@ Test debugger CLI with various programs. Test breakpoint operations. Test steppi
 - Debugger REPL user-friendly
 - Error messages clear
 - No clippy warnings
-- cargo test passes
+- cargo nextest run -p atlas-cli passes

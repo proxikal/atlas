@@ -6,7 +6,7 @@
 **Verification:**
 ```bash
 ls crates/atlas-cli/src/commands/
-cargo test --all
+cargo nextest run
 cargo run --bin atlas -- --help
 ```
 
@@ -144,5 +144,5 @@ Update STATUS.md marking CLI category as 4/6 complete with phases 01-04 checked 
 - Total CLI test count 300+
 - User experience polished
 - No clippy warnings
-- cargo test passes
+- cargo nextest run -p atlas-cli passes
 - CLI production-ready for v0.2

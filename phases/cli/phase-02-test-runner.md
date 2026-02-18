@@ -14,7 +14,7 @@ cargo run --bin atlas -- --help
 
 # Testing primitives exist
 grep -n "fn assert\|fn assertEqual" crates/atlas-runtime/src/stdlib/test.rs
-cargo test -p atlas-runtime test_primitives
+cargo nextest run -p atlas-runtime -E 'test(test_primitives)'
 ```
 
 **What's needed:**
@@ -106,7 +106,7 @@ cargo check -p atlas-cli
 cargo check -p atlas-runtime
 
 # Verify stdlib testing primitives exist
-cargo test -p atlas-runtime test_primitives -- --exact
+cargo nextest run -p atlas-runtime -E 'test(test_primitives)'
 ```
 
 ---
@@ -261,7 +261,7 @@ fn discover_tests_in_file(path: &Path) -> Result<Vec<TestFunction>, String> {
 
 **Test:**
 ```bash
-cargo test -p atlas-cli test_discovery -- --exact
+cargo nextest run -p atlas-cli -E 'test(test_discovery)'
 ```
 
 **Acceptance:**
@@ -386,7 +386,7 @@ impl TestRunner {
 
 **Test:**
 ```bash
-cargo test -p atlas-cli test_runner -- --exact
+cargo nextest run -p atlas-cli -E 'test(test_runner)'
 ```
 
 **Acceptance:**
@@ -508,7 +508,7 @@ impl TestReporter {
 
 **Test:**
 ```bash
-cargo test -p atlas-cli test_reporter -- --exact
+cargo nextest run -p atlas-cli -E 'test(test_reporter)'
 ```
 
 **Acceptance:**
@@ -701,7 +701,7 @@ fn test_runner_fails_on_assertion_failure() {
 
 **Test:**
 ```bash
-cargo test -p atlas-cli test_runner_integration
+cargo nextest run -p atlas-cli -E 'test(test_runner_integration)'
 ```
 
 **Acceptance:**

@@ -7,7 +7,7 @@
 ```bash
 ls crates/atlas-package/src/resolver.rs
 ls crates/atlas-package/src/manifest.rs
-cargo test --package atlas-package
+cargo nextest run -p atlas-package
 ```
 
 **What's needed:**
@@ -89,4 +89,4 @@ Show clear progress during operations. Spinner for long operations. Progress bar
 - Error messages helpful
 - 50+ tests pass
 - Documentation comprehensive
-- cargo test passes
+- cargo nextest run -p atlas-cli passes

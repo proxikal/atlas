@@ -7,7 +7,7 @@
 ```bash
 ls crates/atlas-formatter/src/formatter.rs
 ls crates/atlas-cli/src/main.rs
-cargo test formatter_tests
+cargo nextest run -p atlas-cli -E 'test(formatter_tests)'
 cargo run --bin atlas -- --help
 ```
 
@@ -106,4 +106,4 @@ Handle all error conditions gracefully. Report parse errors with file location. 
 - Error messages clear and actionable
 - Exit status codes appropriate
 - No clippy warnings
-- cargo test passes
+- cargo nextest run -p atlas-cli passes

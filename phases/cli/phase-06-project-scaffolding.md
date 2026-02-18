@@ -6,7 +6,7 @@
 **Verification:**
 ```bash
 ls crates/atlas-cli/src/commands/init.rs
-cargo test package_cli
+cargo nextest run -p atlas-cli -E 'test(package_cli)'
 ```
 
 **What's needed:**
@@ -80,4 +80,4 @@ Create new project from template. Specify template type. Interactive or non-inte
 - Documentation generated
 - 40+ tests pass
 - Template guide complete
-- cargo test passes
+- cargo nextest run -p atlas-cli passes
