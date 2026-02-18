@@ -8,6 +8,11 @@
 
 ## File Index
 
+**language-classification.md** - Language tier and evolution path
+- Current: Application language (Go-tier), Interpreter + VM
+- Future: Systems language path via LLVM backend (v1.0+)
+- Frontend work is 100% reusable for native codegen
+
 **patterns.md** - Codebase implementation patterns
 - **Grammar quick reference** (syntax for if/while/for/fn/types — CHECK BEFORE WRITING ATLAS CODE)
 - Collection types (`Arc<Mutex<T>>`, `.lock().unwrap()`)
