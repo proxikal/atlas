@@ -1,0 +1,37 @@
+---
+source: crates/atlas-runtime/tests/stdlib.rs
+expression: diagnostics
+---
+- diag_version: 1
+  level: error
+  code: AT1012
+  message: "Cannot shadow prelude builtin 'print' in global scope"
+  file: "<unknown>"
+  line: 1
+  column: 62
+  length: 5
+  snippet: ""
+  label: shadows prelude builtin
+  help: Prelude builtins cannot be redefined at the top level. Use a different name or shadow in a nested scope.
+- diag_version: 1
+  level: error
+  code: AT1012
+  message: "Cannot shadow prelude builtin 'len' in global scope"
+  file: "<unknown>"
+  line: 1
+  column: 85
+  length: 3
+  snippet: ""
+  label: shadows prelude builtin
+  help: Prelude builtins cannot be redefined at the top level. Use a different name or shadow in a nested scope.
+- diag_version: 1
+  level: error
+  code: AT1012
+  message: "Cannot shadow prelude builtin 'str' in global scope"
+  file: "<unknown>"
+  line: 1
+  column: 99
+  length: 3
+  snippet: ""
+  label: shadows prelude builtin
+  help: Prelude builtins cannot be redefined at the top level. Use a different name or shadow in a nested scope.

@@ -1,0 +1,20 @@
+---
+source: crates/atlas-runtime/tests/interpreter.rs
+expression: "program.items[0]"
+---
+Statement:
+  Assign:
+    target:
+      Name:
+        name: myVariable
+        span:
+          start: 0
+          end: 10
+    value:
+      Literal:
+        - Number: 100
+        - start: 13
+          end: 16
+    span:
+      start: 0
+      end: 17
