@@ -107,6 +107,40 @@ fn assert_parity(source: &str) {
     );
 }
 
+/// Assert both engines produce the same error message for invalid programs
+fn assert_error_parity(source: &str) {
+    // VM
+    let mut lexer = Lexer::new(source.to_string());
+    let (tokens, _) = lexer.tokenize();
+    let mut parser = Parser::new(tokens);
+    let (program, _) = parser.parse();
+    let mut compiler = Compiler::new();
+    let bytecode = compiler.compile(&program).expect("Compilation failed");
+    let mut vm = VM::new(bytecode);
+    let vm_err = vm
+        .run(&SecurityContext::allow_all())
+        .expect_err("VM should have errored");
+
+    // Interpreter
+    let mut lexer2 = Lexer::new(source.to_string());
+    let (tokens2, _) = lexer2.tokenize();
+    let mut parser2 = Parser::new(tokens2);
+    let (program2, _) = parser2.parse();
+    let mut interpreter = Interpreter::new();
+    let interp_err = interpreter
+        .eval(&program2, &SecurityContext::allow_all())
+        .expect_err("Interpreter should have errored");
+
+    assert_eq!(
+        format!("{}", vm_err),
+        format!("{}", interp_err),
+        "Error parity mismatch for:\n{}\nVM:    {}\nInterp: {}",
+        source,
+        vm_err,
+        interp_err
+    );
+}
+
 // ============================================================================
 // From vm_integration_tests.rs
 // ============================================================================
@@ -4655,4 +4689,86 @@ fn test_for_in_in_function() {
     let result = runtime.eval(source);
 
     assert_eq!(result.unwrap(), Value::Number(60.0));
+}
+
+// ============================================================================
+// Correctness-04: Callback intrinsic parity tests
+// ============================================================================
+
+// --- Invalid callback argument: error message parity ---
+
+#[test]
+fn test_parity_map_invalid_callback() {
+    // Debug: check what each engine returns
+    assert_error_parity(r#"map([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_filter_invalid_callback() {
+    assert_error_parity(r#"filter([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_reduce_invalid_callback() {
+    assert_error_parity(r#"reduce([1,2,3], "not a function", 0);"#);
+}
+
+#[test]
+fn test_parity_foreach_invalid_callback() {
+    assert_error_parity(r#"forEach([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_find_invalid_callback() {
+    assert_error_parity(r#"find([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_find_index_invalid_callback() {
+    assert_error_parity(r#"findIndex([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_flat_map_invalid_callback() {
+    assert_error_parity(r#"flatMap([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_some_invalid_callback() {
+    assert_error_parity(r#"some([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_every_invalid_callback() {
+    assert_error_parity(r#"every([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_sort_invalid_callback() {
+    assert_error_parity(r#"sort([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_sort_by_invalid_callback() {
+    assert_error_parity(r#"sortBy([1,2,3], "not a function");"#);
+}
+
+#[test]
+fn test_parity_result_map_invalid_callback() {
+    assert_error_parity(r#"result_map(Ok(1), "not a function");"#);
+}
+
+#[test]
+fn test_parity_result_map_err_invalid_callback() {
+    assert_error_parity(r#"result_map_err(Err("e"), "not a function");"#);
+}
+
+#[test]
+fn test_parity_result_and_then_invalid_callback() {
+    assert_error_parity(r#"result_and_then(Ok(1), "not a function");"#);
+}
+
+#[test]
+fn test_parity_result_or_else_invalid_callback() {
+    assert_error_parity(r#"result_or_else(Err("e"), "not a function");"#);
 }

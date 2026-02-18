@@ -1,14 +1,14 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-18
-**Version:** v0.2 | **Progress:** 101/130 phases (78%)
+**Version:** v0.2 | **Progress:** 102/130 phases (78%)
 
 ---
 
 ## Current Phase
 
-**Last Completed:** phases/correctness/phase-03-value-builtin-variant.md
-**Next Phase:** phases/correctness/phase-04-parity-callback-fixes.md
+**Last Completed:** phases/correctness/phase-04-parity-callback-fixes.md
+**Next Phase:** phases/correctness/phase-05-parity-method-dispatch.md
 
 > **Execution order:** Correctness (11) → Interpreter (2) → CLI (6) → LSP (5) → Polish (5)
 > Correctness phases are BLOCKING — they fix structural compiler bugs that must be resolved before features.
@@ -20,7 +20,7 @@
 | Category | Done | Status |
 |----------|------|--------|
 | **Infra** | 20/20 | ✅ Complete |
-| **Correctness** | 3/11 | 🚧 In progress |
+| **Correctness** | 4/11 | 🚧 In progress |
 | **Foundation** | 33/33 | ✅ Archived |
 | **Stdlib** | 28/30 | ✅ Near complete (phase-16+ TBD) |
 | **Bytecode-VM** | 8/8 | ✅ Archived |
@@ -48,7 +48,7 @@
 ✅ phase-03-value-builtin-variant.md — Value::Builtin(Arc<str>); separate builtins from user fns
 
 **Engine parity:**
-⬜ phase-04-parity-callback-fixes.md — NativeFunction in call_value + callback validation alignment
+✅ phase-04-parity-callback-fixes.md — NativeFunction in call_value + callback validation alignment
 ⬜ phase-05-parity-method-dispatch.md — Shared TypeTag dispatch table
 
 **Language semantics:**

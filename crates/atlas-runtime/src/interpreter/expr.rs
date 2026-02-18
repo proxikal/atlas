@@ -686,7 +686,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "map() second argument must be function".to_string(),
@@ -729,7 +729,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "filter() second argument must be function".to_string(),
@@ -780,7 +780,7 @@ impl Interpreter {
         };
 
         let reducer = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "reduce() second argument must be function".to_string(),
@@ -821,7 +821,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "forEach() second argument must be function".to_string(),
@@ -861,7 +861,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "find() second argument must be function".to_string(),
@@ -911,7 +911,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "findIndex() second argument must be function".to_string(),
@@ -961,7 +961,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "flatMap() second argument must be function".to_string(),
@@ -1008,7 +1008,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "some() second argument must be function".to_string(),
@@ -1058,7 +1058,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "every() second argument must be function".to_string(),
@@ -1110,7 +1110,7 @@ impl Interpreter {
         };
 
         let comparator = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sort() second argument must be function".to_string(),
@@ -1172,7 +1172,7 @@ impl Interpreter {
         };
 
         let key_extractor = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sortBy() second argument must be function".to_string(),
@@ -1227,7 +1227,7 @@ impl Interpreter {
 
         let result_val = &args[0];
         let transform_fn = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "result_map() second argument must be function".to_string(),
@@ -1264,7 +1264,7 @@ impl Interpreter {
 
         let result_val = &args[0];
         let transform_fn = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "result_map_err() second argument must be function".to_string(),
@@ -1301,7 +1301,7 @@ impl Interpreter {
 
         let result_val = &args[0];
         let next_fn = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "result_and_then() second argument must be function".to_string(),
@@ -1338,7 +1338,7 @@ impl Interpreter {
 
         let result_val = &args[0];
         let recovery_fn = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "result_or_else() second argument must be function".to_string(),
@@ -1384,7 +1384,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapForEach() second argument must be function".to_string(),
@@ -1425,7 +1425,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapMap() second argument must be function".to_string(),
@@ -1470,7 +1470,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapFilter() second argument must be function".to_string(),
@@ -1527,7 +1527,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetForEach() second argument must be function".to_string(),
@@ -1568,7 +1568,7 @@ impl Interpreter {
         };
 
         let callback = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetMap() second argument must be function".to_string(),
@@ -1611,7 +1611,7 @@ impl Interpreter {
         };
 
         let predicate = match &args[1] {
-            Value::Function(_) | Value::Builtin(_) => &args[1],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetFilter() second argument must be function".to_string(),
@@ -1677,7 +1677,7 @@ impl Interpreter {
         };
 
         let callback = match &args[2] {
-            Value::Function(_) | Value::Builtin(_) => &args[2],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[2],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "regexReplaceWith() third argument must be function".to_string(),
@@ -1802,7 +1802,7 @@ impl Interpreter {
         };
 
         let callback = match &args[2] {
-            Value::Function(_) | Value::Builtin(_) => &args[2],
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[2],
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "regexReplaceAllWith() third argument must be function".to_string(),
@@ -1929,6 +1929,7 @@ impl Interpreter {
                     span,
                 })
             }
+            Value::NativeFunction(native_fn) => native_fn(&args),
             _ => Err(RuntimeError::TypeError {
                 msg: "Expected function value".to_string(),
                 span,

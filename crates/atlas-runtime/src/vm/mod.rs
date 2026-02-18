@@ -1229,20 +1229,7 @@ impl VM {
     // ========================================================================
 
     fn is_array_intrinsic(&self, name: &str) -> bool {
-        matches!(
-            name,
-            "map"
-                | "filter"
-                | "reduce"
-                | "forEach"
-                | "find"
-                | "findIndex"
-                | "flatMap"
-                | "some"
-                | "every"
-                | "sort"
-                | "sortBy"
-        )
+        crate::stdlib::is_array_intrinsic(name)
     }
 
     fn call_array_intrinsic(&mut self, name: &str, args: &[Value]) -> Result<Value, RuntimeError> {
@@ -1305,7 +1292,16 @@ impl VM {
             }
         };
 
-        let callback = &args[1];
+        let callback = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "map() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
+
         let mut result = Vec::with_capacity(arr.len());
 
         for elem in arr {
@@ -1338,7 +1334,16 @@ impl VM {
             }
         };
 
-        let predicate = &args[1];
+        let predicate = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "filter() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
+
         let mut result = Vec::new();
 
         for elem in arr {
@@ -1380,7 +1385,15 @@ impl VM {
             }
         };
 
-        let reducer = &args[1];
+        let reducer = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "reduce() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
         let mut accumulator = args[2].clone();
 
         for elem in arr {
@@ -1412,7 +1425,15 @@ impl VM {
             }
         };
 
-        let callback = &args[1];
+        let callback = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "forEach() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
         for elem in arr {
             self.vm_call_function_value(callback, vec![elem], span)?;
         }
@@ -1442,7 +1463,15 @@ impl VM {
             }
         };
 
-        let predicate = &args[1];
+        let predicate = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "find() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
         for elem in arr {
             let pred_result = self.vm_call_function_value(predicate, vec![elem.clone()], span)?;
             match pred_result {
@@ -1482,7 +1511,15 @@ impl VM {
             }
         };
 
-        let predicate = &args[1];
+        let predicate = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "findIndex() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
         for (i, elem) in arr.iter().enumerate() {
             let pred_result = self.vm_call_function_value(predicate, vec![elem.clone()], span)?;
             match pred_result {
@@ -1522,7 +1559,15 @@ impl VM {
             }
         };
 
-        let callback = &args[1];
+        let callback = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "flatMap() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
         let mut result = Vec::new();
 
         for elem in arr {
@@ -1560,7 +1605,15 @@ impl VM {
             }
         };
 
-        let predicate = &args[1];
+        let predicate = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "some() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
         for elem in arr {
             let pred_result = self.vm_call_function_value(predicate, vec![elem], span)?;
             match pred_result {
@@ -1600,7 +1653,15 @@ impl VM {
             }
         };
 
-        let predicate = &args[1];
+        let predicate = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "every() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
         for elem in arr {
             let pred_result = self.vm_call_function_value(predicate, vec![elem], span)?;
             match pred_result {
@@ -1640,7 +1701,15 @@ impl VM {
             }
         };
 
-        let comparator = &args[1];
+        let comparator = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "sort() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         // Insertion sort for stability
         let mut sorted = arr;
@@ -1693,7 +1762,15 @@ impl VM {
             }
         };
 
-        let key_extractor = &args[1];
+        let key_extractor = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "sortBy() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         // Extract keys
         let mut keyed: Vec<(Value, Value)> = Vec::new();
@@ -1758,7 +1835,15 @@ impl VM {
         }
 
         let result_val = &args[0];
-        let transform_fn = &args[1];
+        let transform_fn = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "result_map() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         match result_val {
             Value::Result(Ok(val)) => {
@@ -1787,7 +1872,15 @@ impl VM {
         }
 
         let result_val = &args[0];
-        let transform_fn = &args[1];
+        let transform_fn = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "result_map_err() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         match result_val {
             Value::Result(Ok(val)) => Ok(Value::Result(Ok(val.clone()))),
@@ -1816,7 +1909,15 @@ impl VM {
         }
 
         let result_val = &args[0];
-        let next_fn = &args[1];
+        let next_fn = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "result_and_then() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         match result_val {
             Value::Result(Ok(val)) => {
@@ -1844,7 +1945,15 @@ impl VM {
         }
 
         let result_val = &args[0];
-        let recovery_fn = &args[1];
+        let recovery_fn = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "result_or_else() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         match result_val {
             Value::Result(Ok(val)) => Ok(Value::Result(Ok(val.clone()))),
@@ -1881,7 +1990,15 @@ impl VM {
             }
         };
 
-        let callback = &args[1];
+        let callback = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "hashMapForEach() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         for (key, value) in map {
             self.vm_call_function_value(callback, vec![value, key.to_value()], span)?;
@@ -1912,7 +2029,15 @@ impl VM {
             }
         };
 
-        let callback = &args[1];
+        let callback = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "hashMapMap() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         let mut result_map = crate::stdlib::collections::hashmap::AtlasHashMap::new();
         for (key, value) in map {
@@ -1948,7 +2073,15 @@ impl VM {
             }
         };
 
-        let predicate = &args[1];
+        let predicate = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "hashMapFilter() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         let mut result_map = crate::stdlib::collections::hashmap::AtlasHashMap::new();
         for (key, value) in map {
@@ -1998,7 +2131,15 @@ impl VM {
             }
         };
 
-        let callback = &args[1];
+        let callback = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "hashSetForEach() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         for element in set {
             self.vm_call_function_value(callback, vec![element.to_value()], span)?;
@@ -2029,7 +2170,15 @@ impl VM {
             }
         };
 
-        let callback = &args[1];
+        let callback = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "hashSetMap() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         let mut result = Vec::new();
         for element in set {
@@ -2063,7 +2212,15 @@ impl VM {
             }
         };
 
-        let predicate = &args[1];
+        let predicate = match &args[1] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[1],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "hashSetFilter() second argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         let mut result_set = crate::stdlib::collections::hashset::AtlasHashSet::new();
         for element in set {
@@ -2121,7 +2278,15 @@ impl VM {
             }
         };
 
-        let callback = &args[2];
+        let callback = match &args[2] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[2],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "regexReplaceWith() third argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         // Find first match
         if let Some(mat) = regex.find(text) {
@@ -2239,7 +2404,15 @@ impl VM {
             }
         };
 
-        let callback = &args[2];
+        let callback = match &args[2] {
+            Value::Function(_) | Value::Builtin(_) | Value::NativeFunction(_) => &args[2],
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: "regexReplaceAllWith() third argument must be function".to_string(),
+                    span,
+                })
+            }
+        };
 
         // Find all matches and collect them
         let matches: Vec<_> = regex.find_iter(text).collect();
