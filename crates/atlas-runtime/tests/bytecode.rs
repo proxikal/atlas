@@ -111,11 +111,11 @@ fn execute_source(source: &str) -> Result<Option<Value>, atlas_runtime::value::R
 // ============================================================================
 
 #[rstest]
-#[case("let x = 10; x += 5; x;", 15.0)]
-#[case("let x = 10; x -= 3; x;", 7.0)]
-#[case("let x = 4; x *= 3; x;", 12.0)]
-#[case("let x = 20; x /= 4; x;", 5.0)]
-#[case("let x = 17; x %= 5; x;", 2.0)]
+#[case("var x = 10; x += 5; x;", 15.0)]
+#[case("var x = 10; x -= 3; x;", 7.0)]
+#[case("var x = 4; x *= 3; x;", 12.0)]
+#[case("var x = 20; x /= 4; x;", 5.0)]
+#[case("var x = 17; x %= 5; x;", 2.0)]
 fn test_compound_assignments(#[case] source: &str, #[case] expected: f64) {
     let result = execute_source(source);
     assert!(result.is_ok());
@@ -127,8 +127,8 @@ fn test_compound_assignments(#[case] source: &str, #[case] expected: f64) {
 // ============================================================================
 
 #[rstest]
-#[case("let x = 5; x++; x;", 6.0)]
-#[case("let x = 5; x--; x;", 4.0)]
+#[case("var x = 5; x++; x;", 6.0)]
+#[case("var x = 5; x--; x;", 4.0)]
 fn test_increment_decrement(#[case] source: &str, #[case] expected: f64) {
     let result = execute_source(source);
     assert!(result.is_ok());
@@ -246,7 +246,7 @@ fn test_function_calling_function() {
 fn test_multiple_compound_assignments() {
     let result = execute_source(
         r#"
-        let x = 10;
+        var x = 10;
         x += 5;
         x *= 2;
         x -= 3;
@@ -261,7 +261,7 @@ fn test_multiple_compound_assignments() {
 fn test_mixed_operators() {
     let result = execute_source(
         r#"
-        let x = 5;
+        var x = 5;
         x++;
         x *= 2;
         x--;
@@ -296,8 +296,8 @@ fn test_array_in_function() {
 fn test_loop_with_compound_assignment() {
     let result = execute_source(
         r#"
-        let sum = 0;
-        let i = 0;
+        var sum = 0;
+        var i = 0;
         while (i < 5) {
             sum += i;
             i++;
@@ -679,12 +679,12 @@ fn test_dce_all_reachable_unchanged() {
 
 #[test]
 fn test_dce_preserves_while_loop() {
-    assert_same_result("let x = 0; while (x < 5) { x = x + 1; }");
+    assert_same_result("var x = 0; while (x < 5) { x = x + 1; }");
 }
 
 #[test]
 fn test_dce_preserves_if_else() {
-    assert_same_result("let x = 5; if (x > 3) { x = 1; } else { x = 2; }");
+    assert_same_result("var x = 5; if (x > 3) { x = 1; } else { x = 2; }");
 }
 
 #[test]
@@ -763,12 +763,12 @@ fn test_peep_jump_zero_eliminated() {
 
 #[test]
 fn test_peep_preserves_if_else() {
-    assert_same_result("let x = 3; if (x > 2) { x = 10; }");
+    assert_same_result("var x = 3; if (x > 2) { x = 10; }");
 }
 
 #[test]
 fn test_peep_preserves_while() {
-    assert_same_result("let i = 0; while (i < 3) { i = i + 1; }");
+    assert_same_result("var i = 0; while (i < 3) { i = i + 1; }");
 }
 
 #[test]
@@ -813,12 +813,12 @@ fn test_full_pipeline_semantics_function() {
 
 #[test]
 fn test_full_pipeline_semantics_if() {
-    assert_same_result("let x = 10; if (x > 5) { x = x - 1; }");
+    assert_same_result("var x = 10; if (x > 5) { x = x - 1; }");
 }
 
 #[test]
 fn test_full_pipeline_semantics_while() {
-    assert_same_result("let sum = 0; let i = 0; while (i < 5) { sum = sum + i; i = i + 1; }");
+    assert_same_result("var sum = 0; var i = 0; while (i < 5) { sum = sum + i; i = i + 1; }");
 }
 
 #[test]
@@ -881,7 +881,7 @@ fn test_optimized_bytecode_valid_if_else() {
 
 #[test]
 fn test_optimized_bytecode_valid_while() {
-    let bc = compile("let i = 0; while (i < 3) { i = i + 1; }");
+    let bc = compile("var i = 0; while (i < 3) { i = i + 1; }");
     let (optimized, _) = run_all(bc);
     atlas_runtime::bytecode::validate(&optimized)
         .expect("Optimized bytecode should be valid (while)");
@@ -903,7 +903,7 @@ fn test_dce_preserves_validator() {
 
 #[test]
 fn test_peep_preserves_validator() {
-    let bc = compile("let x = 5; if (x > 3) { x = 1; }");
+    let bc = compile("var x = 5; if (x > 3) { x = 1; }");
     let (optimized, _) = run_peep(bc);
     atlas_runtime::bytecode::validate(&optimized).expect("Peephole should produce valid bytecode");
 }
@@ -1099,28 +1099,28 @@ fn test_short_circuit_or() {
 
 #[test]
 fn test_if_then() {
-    assert_semantics("let x = 5; if (x > 3) { x = 10; }");
-    assert_semantics("let x = 1; if (x > 3) { x = 10; }");
+    assert_semantics("var x = 5; if (x > 3) { x = 10; }");
+    assert_semantics("var x = 1; if (x > 3) { x = 10; }");
 }
 
 #[test]
 fn test_if_else() {
-    assert_semantics("let x = 5; if (x > 3) { x = 1; } else { x = 2; }");
+    assert_semantics("var x = 5; if (x > 3) { x = 1; } else { x = 2; }");
 }
 
 #[test]
 fn test_while_loop() {
-    assert_semantics("let i = 0; while (i < 5) { i = i + 1; }");
+    assert_semantics("var i = 0; while (i < 5) { i = i + 1; }");
 }
 
 #[test]
 fn test_nested_if() {
-    assert_semantics("let x = 5; let y = 3; if (x > 0) { if (y > 0) { x = x + y; } }");
+    assert_semantics("var x = 5; var y = 3; if (x > 0) { if (y > 0) { x = x + y; } }");
 }
 
 #[test]
 fn test_loop_with_sum() {
-    assert_semantics("let sum = 0; let i = 0; while (i < 10) { sum = sum + i; i = i + 1; }");
+    assert_semantics("var sum = 0; var i = 0; while (i < 10) { sum = sum + i; i = i + 1; }");
 }
 
 // ============================================================================
@@ -1232,7 +1232,7 @@ fn test_validity_function_program() {
 
 #[test]
 fn test_validity_loop_program() {
-    assert_valid("let i = 0; while (i < 5) { i = i + 1; }");
+    assert_valid("var i = 0; while (i < 5) { i = i + 1; }");
 }
 
 #[test]

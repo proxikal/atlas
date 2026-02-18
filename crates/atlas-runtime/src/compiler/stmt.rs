@@ -178,6 +178,10 @@ impl Compiler {
             self.bytecode.emit(Opcode::SetGlobal, decl.span);
             self.bytecode.emit_u16(name_idx);
             self.bytecode.emit(Opcode::Pop, decl.span);
+
+            // Track global mutability
+            self.global_mutability
+                .insert(decl.name.name.clone(), decl.mutable);
         } else {
             // Local variable - add to locals list
             // Value stays on stack (locals are stack-allocated)
@@ -196,15 +200,52 @@ impl Compiler {
     fn compile_assign(&mut self, assign: &Assign) -> Result<(), Vec<Diagnostic>> {
         match &assign.target {
             AssignTarget::Name(ident) => {
-                // For name assignment: compile value first, then set
-                self.compile_expr(&assign.value)?;
+                // Check mutability before compiling
+                if let Some((local_idx, mutable)) = self.resolve_local_with_mutability(&ident.name)
+                {
+                    // Local variable - check mutability
+                    if !mutable {
+                        return Err(vec![Diagnostic::error(
+                            format!(
+                                "Cannot assign to immutable variable '{}' — declared with 'let'",
+                                ident.name
+                            ),
+                            assign.span,
+                        )
+                        .with_label("assignment to immutable variable")
+                        .with_note(
+                            "Use 'var' instead of 'let' to declare a mutable variable".to_string(),
+                        )]);
+                    }
 
-                // Try to find local first
-                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                    // Compile value and emit SetLocal
+                    self.compile_expr(&assign.value)?;
                     self.bytecode.emit(Opcode::SetLocal, assign.span);
                     self.bytecode.emit_u16(local_idx as u16);
                 } else {
-                    // Global variable
+                    // Global variable - check mutability
+                    if let Some(mutable) = self.is_global_mutable(&ident.name) {
+                        if !mutable {
+                            return Err(vec![Diagnostic::error(
+                                format!(
+                                    "Cannot assign to immutable variable '{}' — declared with 'let'",
+                                    ident.name
+                                ),
+                                assign.span,
+                            )
+                            .with_label("assignment to immutable variable")
+                            .with_note(
+                                "Use 'var' instead of 'let' to declare a mutable variable"
+                                    .to_string(),
+                            )]);
+                        }
+                    }
+                    // If global not found in mutability map, it's either:
+                    // - An undeclared variable (runtime error)
+                    // - A builtin function (shouldn't be assigned to, but not our concern here)
+
+                    // Compile value and emit SetGlobal
+                    self.compile_expr(&assign.value)?;
                     let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
                     self.bytecode.emit(Opcode::SetGlobal, assign.span);
                     self.bytecode.emit_u16(name_idx);
@@ -214,6 +255,8 @@ impl Compiler {
                 // For array index assignment: compile array, index, value (in that order)
                 // SetIndex pops: value (top), index, array (bottom)
                 // So we need stack: [array, index, value]
+                // NOTE: Index assignment does NOT mutate the binding itself,
+                // it mutates the array contents. This is allowed even for `let` bindings.
 
                 // Compile the array target
                 self.compile_expr(target)?;
@@ -371,11 +414,47 @@ impl Compiler {
     ) -> Result<(), Vec<Diagnostic>> {
         match &compound.target {
             AssignTarget::Name(ident) => {
-                // Get current value
-                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                // Check mutability before compiling
+                if let Some((local_idx, mutable)) = self.resolve_local_with_mutability(&ident.name)
+                {
+                    // Local variable - check mutability
+                    if !mutable {
+                        return Err(vec![Diagnostic::error(
+                            format!(
+                                "Cannot assign to immutable variable '{}' — declared with 'let'",
+                                ident.name
+                            ),
+                            compound.span,
+                        )
+                        .with_label("assignment to immutable variable")
+                        .with_note(
+                            "Use 'var' instead of 'let' to declare a mutable variable".to_string(),
+                        )]);
+                    }
+
+                    // Get current value
                     self.bytecode.emit(Opcode::GetLocal, compound.span);
                     self.bytecode.emit_u16(local_idx as u16);
                 } else {
+                    // Global variable - check mutability
+                    if let Some(mutable) = self.is_global_mutable(&ident.name) {
+                        if !mutable {
+                            return Err(vec![Diagnostic::error(
+                                format!(
+                                    "Cannot assign to immutable variable '{}' — declared with 'let'",
+                                    ident.name
+                                ),
+                                compound.span,
+                            )
+                            .with_label("assignment to immutable variable")
+                            .with_note(
+                                "Use 'var' instead of 'let' to declare a mutable variable"
+                                    .to_string(),
+                            )]);
+                        }
+                    }
+
+                    // Get current value
                     let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
                     self.bytecode.emit(Opcode::GetGlobal, compound.span);
                     self.bytecode.emit_u16(name_idx);
@@ -545,11 +624,47 @@ impl Compiler {
     fn compile_increment(&mut self, inc: &IncrementStmt) -> Result<(), Vec<Diagnostic>> {
         match &inc.target {
             AssignTarget::Name(ident) => {
-                // Get current value
-                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                // Check mutability before compiling
+                if let Some((local_idx, mutable)) = self.resolve_local_with_mutability(&ident.name)
+                {
+                    // Local variable - check mutability
+                    if !mutable {
+                        return Err(vec![Diagnostic::error(
+                            format!(
+                                "Cannot assign to immutable variable '{}' — declared with 'let'",
+                                ident.name
+                            ),
+                            inc.span,
+                        )
+                        .with_label("assignment to immutable variable")
+                        .with_note(
+                            "Use 'var' instead of 'let' to declare a mutable variable".to_string(),
+                        )]);
+                    }
+
+                    // Get current value
                     self.bytecode.emit(Opcode::GetLocal, inc.span);
                     self.bytecode.emit_u16(local_idx as u16);
                 } else {
+                    // Global variable - check mutability
+                    if let Some(mutable) = self.is_global_mutable(&ident.name) {
+                        if !mutable {
+                            return Err(vec![Diagnostic::error(
+                                format!(
+                                    "Cannot assign to immutable variable '{}' — declared with 'let'",
+                                    ident.name
+                                ),
+                                inc.span,
+                            )
+                            .with_label("assignment to immutable variable")
+                            .with_note(
+                                "Use 'var' instead of 'let' to declare a mutable variable"
+                                    .to_string(),
+                            )]);
+                        }
+                    }
+
+                    // Get current value
                     let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
                     self.bytecode.emit(Opcode::GetGlobal, inc.span);
                     self.bytecode.emit_u16(name_idx);
@@ -609,11 +724,47 @@ impl Compiler {
     fn compile_decrement(&mut self, dec: &DecrementStmt) -> Result<(), Vec<Diagnostic>> {
         match &dec.target {
             AssignTarget::Name(ident) => {
-                // Get current value
-                if let Some(local_idx) = self.resolve_local(&ident.name) {
+                // Check mutability before compiling
+                if let Some((local_idx, mutable)) = self.resolve_local_with_mutability(&ident.name)
+                {
+                    // Local variable - check mutability
+                    if !mutable {
+                        return Err(vec![Diagnostic::error(
+                            format!(
+                                "Cannot assign to immutable variable '{}' — declared with 'let'",
+                                ident.name
+                            ),
+                            dec.span,
+                        )
+                        .with_label("assignment to immutable variable")
+                        .with_note(
+                            "Use 'var' instead of 'let' to declare a mutable variable".to_string(),
+                        )]);
+                    }
+
+                    // Get current value
                     self.bytecode.emit(Opcode::GetLocal, dec.span);
                     self.bytecode.emit_u16(local_idx as u16);
                 } else {
+                    // Global variable - check mutability
+                    if let Some(mutable) = self.is_global_mutable(&ident.name) {
+                        if !mutable {
+                            return Err(vec![Diagnostic::error(
+                                format!(
+                                    "Cannot assign to immutable variable '{}' — declared with 'let'",
+                                    ident.name
+                                ),
+                                dec.span,
+                            )
+                            .with_label("assignment to immutable variable")
+                            .with_note(
+                                "Use 'var' instead of 'let' to declare a mutable variable"
+                                    .to_string(),
+                            )]);
+                        }
+                    }
+
+                    // Get current value
                     let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
                     self.bytecode.emit(Opcode::GetGlobal, dec.span);
                     self.bytecode.emit_u16(name_idx);

@@ -1,0 +1,7 @@
+// Tests that var variables can be reassigned
+fn test() {
+    var x: number = 1;
+    x = 2;
+    print(x);
+}
+test();

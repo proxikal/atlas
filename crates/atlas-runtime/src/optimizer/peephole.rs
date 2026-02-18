@@ -384,8 +384,9 @@ mod tests {
 
     #[test]
     fn test_preserves_while_loop() {
+        // Use 'var' because x is reassigned
         let source = r#"
-            let x = 0;
+            var x = 0;
             while (x < 5) { x = x + 1; }
         "#;
         let bc = compile_source(source);
@@ -397,7 +398,8 @@ mod tests {
 
     #[test]
     fn test_preserves_if_else() {
-        let source = "let x = 5; if (x > 3) { x = 1; } else { x = 2; }";
+        // Use 'var' because x is reassigned
+        let source = "var x = 5; if (x > 3) { x = 1; } else { x = 2; }";
         let bc = compile_source(source);
         let result_orig = run_bytecode(bc.clone());
         let (optimized, _) = run_peep(bc);

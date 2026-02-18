@@ -33,16 +33,17 @@ impl Interpreter {
                     local_count: 0,     // Not used in interpreter
                 });
 
-                // Store in current scope
+                // Store in current scope (functions are immutable bindings)
                 if self.locals.is_empty() {
                     // Global scope (shouldn't happen for nested functions, but handle it)
-                    self.globals.insert(func.name.name.clone(), func_value);
+                    self.globals
+                        .insert(func.name.name.clone(), (func_value, false));
                 } else {
                     // Local scope - this is the normal case for nested functions
                     self.locals
                         .last_mut()
                         .unwrap()
-                        .insert(func.name.name.clone(), func_value);
+                        .insert(func.name.name.clone(), (func_value, false));
                 }
 
                 Ok(Value::Null)
@@ -72,7 +73,8 @@ impl Interpreter {
     fn eval_var_decl(&mut self, var: &VarDecl) -> Result<Value, RuntimeError> {
         let value = self.eval_expr(&var.init)?;
         let scope = self.locals.last_mut().unwrap();
-        scope.insert(var.name.name.clone(), value);
+        // Store with mutability flag from the declaration
+        scope.insert(var.name.name.clone(), (value, var.mutable));
         Ok(Value::Null)
     }
 
@@ -397,9 +399,9 @@ impl Interpreter {
 
         // Iterate over each element
         for element in elements {
-            // Bind loop variable to current element
+            // Bind loop variable to current element (loop variables are mutable)
             let scope = self.locals.last_mut().unwrap();
-            scope.insert(for_in_stmt.variable.name.clone(), element);
+            scope.insert(for_in_stmt.variable.name.clone(), (element, true));
 
             // Execute body
             last_value = self.eval_block(&for_in_stmt.body)?;

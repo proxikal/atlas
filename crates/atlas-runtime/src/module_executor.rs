@@ -196,13 +196,17 @@ impl ModuleExecutor {
                 match &export_decl.item {
                     crate::ast::ExportItem::Function(func) => {
                         // Get function value from interpreter globals
-                        if let Some(value) = self.interpreter.globals.get(&func.name.name) {
+                        if let Some((value, _mutable)) =
+                            self.interpreter.globals.get(&func.name.name)
+                        {
                             exports.insert(func.name.name.clone(), value.clone());
                         }
                     }
                     crate::ast::ExportItem::Variable(var) => {
                         // Get variable value from interpreter globals
-                        if let Some(value) = self.interpreter.globals.get(&var.name.name) {
+                        if let Some((value, _mutable)) =
+                            self.interpreter.globals.get(&var.name.name)
+                        {
                             exports.insert(var.name.name.clone(), value.clone());
                         }
                     }

@@ -3483,6 +3483,8 @@ fn test_increment_in_loop() {
 #[rstest]
 #[case("let x: number = 5; x++; x", "AT3003")]
 #[case("let x: number = 10; x += 5; x", "AT3003")]
+#[case("let x: number = 1; x = 2; x", "AT3003")] // Basic assignment to let
+#[case("let x: number = 5; x--; x", "AT3003")] // Decrement
 fn test_immutable_mutation_errors(#[case] code: &str, #[case] error_code: &str) {
     assert_error_code(code, error_code);
 }
@@ -3493,7 +3495,10 @@ fn test_immutable_mutation_errors(#[case] code: &str, #[case] error_code: &str) 
 #[case("var x: number = 7; x *= 3; x", 21.0)]
 #[case("var x: number = 50; x /= 5; x", 10.0)]
 #[case("var x: number = 17; x %= 5; x", 2.0)]
-fn test_string_concat_assignments(#[case] code: &str, #[case] expected: f64) {
+#[case("var x: number = 1; x = 2; x", 2.0)] // Basic assignment to var
+#[case("var x: number = 5; x++; x", 6.0)] // Increment
+#[case("var x: number = 5; x--; x", 4.0)] // Decrement
+fn test_mutable_var_assignments(#[case] code: &str, #[case] expected: f64) {
     assert_eval_number(code, expected);
 }
 

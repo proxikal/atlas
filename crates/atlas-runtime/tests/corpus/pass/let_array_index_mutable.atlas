@@ -1,0 +1,8 @@
+// Tests that array index assignment is allowed on let binding
+// The binding is immutable, but the array contents are mutable
+fn test() {
+    let arr: number[] = [1, 2, 3];
+    arr[0] = 9;
+    print(arr[0]);
+}
+test();

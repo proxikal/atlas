@@ -170,7 +170,7 @@ fn test_opt_debug_simple_program() {
 
 #[test]
 fn test_opt_debug_breakpoint_creation() {
-    let source = "let x = 10;\nlet y = 20;\nlet z = x + y;\nz;";
+    let source = "var x = 10;\nlet y = 20;\nlet z = x + y;\nz;";
     let bc = compile(source);
     let mut session = DebuggerSession::new(bc, source, "test.atlas");
     let response = session.process_request(DebugRequest::SetBreakpoint {
@@ -184,7 +184,7 @@ fn test_opt_debug_breakpoint_creation() {
 
 #[test]
 fn test_opt_debug_optimized_breakpoint() {
-    let source = "let x = 10;\nlet y = 20;\nlet z = x + y;\nz;";
+    let source = "var x = 10;\nlet y = 20;\nlet z = x + y;\nz;";
     let bc = compile_optimized(source);
     let mut session = DebuggerSession::new(bc, source, "test.atlas");
     let response = session.process_request(DebugRequest::SetBreakpoint {
@@ -244,7 +244,7 @@ fn test_opt_debug_arithmetic_optimized_semantic() {
 
 #[test]
 fn test_opt_debug_loop_semantics_preserved() {
-    let source = "let sum = 0; let i = 0; while (i < 10) { sum = sum + i; i = i + 1; } sum;";
+    let source = "var sum = 0; var i = 0; while (i < 10) { sum = sum + i; i = i + 1; } sum;";
     let plain = vm_eval(source);
     let opt = vm_eval_opt(source);
     assert_eq!(plain, opt);
@@ -467,7 +467,7 @@ fn test_debugger_remove_breakpoint() {
 
 #[test]
 fn test_debugger_run_until_pause() {
-    let source = "let x = 10;\nlet y = 20;\nlet z = x + y;\nz;";
+    let source = "var x = 10;\nlet y = 20;\nlet z = x + y;\nz;";
     let bc = compile(source);
     let mut session = DebuggerSession::new(bc, source, "test.atlas");
     session.process_request(DebugRequest::SetBreakpoint {
@@ -526,7 +526,7 @@ fn test_all_features_arithmetic() {
 
 #[test]
 fn test_all_features_variables() {
-    let source = "let x = 10; let y = 20; x + y;";
+    let source = "var x = 10; let y = 20; x + y;";
     let opt = vm_eval_opt(source);
     let plain = vm_eval(source);
     assert_eq!(opt, plain);
@@ -534,7 +534,7 @@ fn test_all_features_variables() {
 
 #[test]
 fn test_all_features_conditionals() {
-    let source = "let x = 10; if (x > 5) { x = x * 2; } x;";
+    let source = "var x = 10; if (x > 5) { x = x * 2; } x;";
     let opt = vm_eval_opt(source);
     let plain = vm_eval(source);
     assert_eq!(opt, plain);
@@ -542,7 +542,7 @@ fn test_all_features_conditionals() {
 
 #[test]
 fn test_all_features_while_loop() {
-    let source = "let sum = 0; let i = 0; while (i < 50) { sum = sum + i; i = i + 1; } sum;";
+    let source = "var sum = 0; var i = 0; while (i < 50) { sum = sum + i; i = i + 1; } sum;";
     let opt = vm_eval_opt(source);
     let plain = vm_eval(source);
     assert_eq!(opt, plain);
@@ -625,7 +625,7 @@ fn test_optimizer_constant_folding_mul() {
 
 #[test]
 fn test_optimizer_preserves_side_effects() {
-    let source = "let x = 0; x = x + 1; x = x + 1; x = x + 1; x;";
+    let source = "var x = 0; x = x + 1; x = x + 1; x = x + 1; x;";
     let opt = vm_number_opt(source);
     assert_eq!(opt, 3.0);
 }
@@ -639,7 +639,7 @@ fn test_optimizer_nested_arithmetic() {
 
 #[test]
 fn test_optimizer_mixed_types() {
-    let source = r#"let x = 5; let s = "hello"; x;"#;
+    let source = r#"let x = 5; var s = "hello"; x;"#;
     let opt = vm_eval_opt(source);
     let plain = vm_eval(source);
     assert_eq!(opt, plain);
@@ -647,7 +647,7 @@ fn test_optimizer_mixed_types() {
 
 #[test]
 fn test_optimizer_loop_invariant() {
-    let source = "let sum = 0; let i = 0; while (i < 100) { sum = sum + 2 * 3; i = i + 1; } sum;";
+    let source = "var sum = 0; var i = 0; while (i < 100) { sum = sum + 2 * 3; i = i + 1; } sum;";
     let opt = vm_number_opt(source);
     assert_eq!(opt, 600.0);
 }
@@ -708,14 +708,14 @@ fn test_validate_function_program() {
 
 #[test]
 fn test_validate_loop_program() {
-    let bc = compile("let i = 0; while (i < 10) { i = i + 1; } i;");
+    let bc = compile("var i = 0; while (i < 10) { i = i + 1; } i;");
     let result = atlas_runtime::bytecode::validate(&bc);
     assert!(result.is_ok(), "Validation failed: {:?}", result);
 }
 
 #[test]
 fn test_validate_conditional_program() {
-    let bc = compile("let x = 10; if (x > 5) { x = 20; } else { x = 0; } x;");
+    let bc = compile("var x = 10; if (x > 5) { x = 20; } else { x = 0; } x;");
     let result = atlas_runtime::bytecode::validate(&bc);
     assert!(result.is_ok(), "Validation failed: {:?}", result);
 }
@@ -842,7 +842,7 @@ fn test_cross_basic_arithmetic(#[case] source: &str, #[case] expected: f64) {
 #[rstest]
 #[case("let x = 5; x;", 5.0)]
 #[case("let x = 5; let y = 10; x + y;", 15.0)]
-#[case("let x = 5; x = x + 1; x;", 6.0)]
+#[case("var x = 5; x = x + 1; x;", 6.0)] // var because x is reassigned
 #[case("let x = 100; let y = x / 2; y;", 50.0)]
 fn test_cross_variables(#[case] source: &str, #[case] expected: f64) {
     let plain = vm_number(source);
@@ -852,10 +852,10 @@ fn test_cross_variables(#[case] source: &str, #[case] expected: f64) {
 }
 
 #[rstest]
-#[case("let r = 0; if (true) { r = 1; } else { r = 2; } r;", 1.0)]
-#[case("let r = 0; if (false) { r = 1; } else { r = 2; } r;", 2.0)]
-#[case("let r = 0; if (1 < 2) { r = 10; } else { r = 20; } r;", 10.0)]
-#[case("let r = 0; if (1 > 2) { r = 10; } else { r = 20; } r;", 20.0)]
+#[case("var r = 0; if (true) { r = 1; } else { r = 2; } r;", 1.0)]
+#[case("var r = 0; if (false) { r = 1; } else { r = 2; } r;", 2.0)]
+#[case("var r = 0; if (1 < 2) { r = 10; } else { r = 20; } r;", 10.0)]
+#[case("var r = 0; if (1 > 2) { r = 10; } else { r = 20; } r;", 20.0)]
 fn test_cross_conditionals(#[case] source: &str, #[case] expected: f64) {
     let plain = vm_number(source);
     let opt = vm_number_opt(source);
@@ -874,7 +874,7 @@ fn test_cross_fibonacci_parity() {
 
 #[test]
 fn test_cross_string_concatenation() {
-    let source = r#"let s = "a"; s = s + "b"; s = s + "c"; s;"#;
+    let source = r#"var s = "a"; s = s + "b"; s = s + "c"; s;"#;
     let plain = vm_string(source);
     assert_eq!(plain, "abc");
 }
@@ -890,7 +890,7 @@ fn test_cross_array_manipulation() {
 
 #[test]
 fn test_cross_nested_loops() {
-    let source = "let total = 0; let i = 0; while (i < 5) { let j = 0; while (j < 5) { total = total + 1; j = j + 1; } i = i + 1; } total;";
+    let source = "var total = 0; var i = 0; while (i < 5) { var j = 0; while (j < 5) { total = total + 1; j = j + 1; } i = i + 1; } total;";
     let plain = vm_number(source);
     let opt = vm_number_opt(source);
     assert_eq!(plain, opt);
@@ -899,7 +899,7 @@ fn test_cross_nested_loops() {
 
 #[test]
 fn test_cross_comparison_chain() {
-    let source = "let count = 0; if (1 < 2) { count = count + 1; } if (2 <= 2) { count = count + 1; } if (3 > 2) { count = count + 1; } if (3 >= 3) { count = count + 1; } count;";
+    let source = "var count = 0; if (1 < 2) { count = count + 1; } if (2 <= 2) { count = count + 1; } if (3 > 2) { count = count + 1; } if (3 >= 3) { count = count + 1; } count;";
     let plain = vm_number(source);
     let opt = vm_number_opt(source);
     assert_eq!(plain, 4.0);
@@ -1282,9 +1282,9 @@ a(0);
 #[test]
 fn test_iterative_fibonacci() {
     let source = r#"
-let a = 0;
-let b = 1;
-let i = 0;
+var a = 0;
+var b = 1;
+var i = 0;
 while (i < 30) {
     let temp = a + b;
     a = b;
@@ -1299,8 +1299,8 @@ b;
 #[test]
 fn test_iterative_sum_of_squares() {
     let source = r#"
-let sum = 0;
-let i = 1;
+var sum = 0;
+var i = 1;
 while (i <= 10) {
     sum = sum + i * i;
     i = i + 1;
@@ -1314,8 +1314,8 @@ sum;
 fn test_iterative_collatz_steps() {
     // Count Collatz steps for n=27 (famous for taking 111 steps)
     let source = r#"
-let n = 27;
-let steps = 0;
+var n = 27;
+var steps = 0;
 while (n != 1) {
     if (n % 2 == 0) {
         n = n / 2;
@@ -1333,10 +1333,10 @@ steps;
 fn test_iterative_bubble_sort_simulation() {
     let source = r#"
 let arr = [5, 3, 8, 1, 9, 2, 7, 4, 6, 0];
-let n = 10;
-let i = 0;
+var n = 10;
+var i = 0;
 while (i < n) {
-    let j = 0;
+    var j = 0;
     while (j < n - 1 - i) {
         if (arr[j] > arr[j + 1]) {
             let temp = arr[j];
@@ -1356,10 +1356,10 @@ arr[0];
 fn test_iterative_bubble_sort_last() {
     let source = r#"
 let arr = [5, 3, 8, 1, 9, 2, 7, 4, 6, 0];
-let n = 10;
-let i = 0;
+var n = 10;
+var i = 0;
 while (i < n) {
-    let j = 0;
+    var j = 0;
     while (j < n - 1 - i) {
         if (arr[j] > arr[j + 1]) {
             let temp = arr[j];
@@ -1379,8 +1379,8 @@ arr[9];
 fn test_iterative_find_max() {
     let source = r#"
 let arr = [3, 7, 1, 9, 4, 6, 8, 2, 5, 0];
-let max_val = arr[0];
-let i = 1;
+var max_val = arr[0];
+var i = 1;
 while (i < 10) {
     if (arr[i] > max_val) {
         max_val = arr[i];
@@ -1396,8 +1396,8 @@ max_val;
 fn test_iterative_find_min() {
     let source = r#"
 let arr = [3, 7, 1, 9, 4, 6, 8, 2, 5, 10];
-let min_val = arr[0];
-let i = 1;
+var min_val = arr[0];
+var i = 1;
 while (i < 10) {
     if (arr[i] < min_val) {
         min_val = arr[i];
@@ -1412,8 +1412,8 @@ min_val;
 #[test]
 fn test_iterative_count_evens() {
     let source = r#"
-let count = 0;
-let i = 0;
+var count = 0;
+var i = 0;
 while (i < 100) {
     if (i % 2 == 0) {
         count = count + 1;
@@ -1428,8 +1428,8 @@ count;
 #[test]
 fn test_iterative_running_average() {
     let source = r#"
-let sum = 0;
-let i = 1;
+var sum = 0;
+var i = 1;
 while (i <= 100) {
     sum = sum + i;
     i = i + 1;
@@ -1443,9 +1443,9 @@ sum / 100;
 fn test_iterative_geometric_series() {
     // Sum of 1 + 1/2 + 1/4 + 1/8 + ... (20 terms)
     let source = r#"
-let sum = 0;
-let term = 1;
-let i = 0;
+var sum = 0;
+var term = 1;
+var i = 0;
 while (i < 20) {
     sum = sum + term;
     term = term / 2;
@@ -1462,8 +1462,8 @@ fn test_iterative_matrix_diagonal_sum() {
     // Simulate a 3x3 matrix as flat array and sum diagonal
     let source = r#"
 let matrix = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-let diag_sum = 0;
-let i = 0;
+var diag_sum = 0;
+var i = 0;
 while (i < 3) {
     diag_sum = diag_sum + matrix[i * 3 + i];
     i = i + 1;
@@ -1477,9 +1477,9 @@ diag_sum;
 fn test_iterative_linear_search() {
     let source = r#"
 let arr = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-let target = 70;
-let found = -1;
-let i = 0;
+var target = 70;
+var found = -1;
+var i = 0;
 while (i < 10) {
     if (arr[i] == target) {
         found = i;
@@ -1495,8 +1495,8 @@ found;
 fn test_iterative_reverse_array() {
     let source = r#"
 let arr = [1, 2, 3, 4, 5];
-let left = 0;
-let right = 4;
+var left = 0;
+var right = 4;
 while (left < right) {
     let temp = arr[left];
     arr[left] = arr[right];
@@ -1512,8 +1512,8 @@ arr[0] * 10000 + arr[1] * 1000 + arr[2] * 100 + arr[3] * 10 + arr[4];
 #[test]
 fn test_iterative_power_of_two() {
     let source = r#"
-let result = 1;
-let i = 0;
+var result = 1;
+var i = 0;
 while (i < 20) {
     result = result * 2;
     i = i + 1;
@@ -1526,12 +1526,12 @@ result;
 #[test]
 fn test_iterative_triple_nested_loops() {
     let source = r#"
-let count = 0;
-let i = 0;
+var count = 0;
+var i = 0;
 while (i < 10) {
-    let j = 0;
+    var j = 0;
     while (j < 10) {
-        let k = 0;
+        var k = 0;
         while (k < 10) {
             count = count + 1;
             k = k + 1;
@@ -1576,7 +1576,7 @@ fn test_function_higher_order_map_simulation() {
     let source = r#"
 fn double(x: number) -> number { return x * 2; }
 let arr = [1, 2, 3, 4, 5];
-let i = 0;
+var i = 0;
 while (i < 5) {
     arr[i] = double(arr[i]);
     i = i + 1;
@@ -1593,8 +1593,8 @@ fn accumulate(arr_sum: number, val: number) -> number {
     return arr_sum + val;
 }
 let arr = [10, 20, 30, 40, 50];
-let total = 0;
-let i = 0;
+var total = 0;
+var i = 0;
 while (i < 5) {
     total = accumulate(total, arr[i]);
     i = i + 1;
@@ -1609,8 +1609,8 @@ fn test_function_predicate_filter_simulation() {
     let source = r#"
 fn is_positive(x: number) -> bool { return x > 0; }
 let arr = [-3, -1, 0, 2, 5, -4, 7, 1];
-let count = 0;
-let i = 0;
+var count = 0;
+var i = 0;
 while (i < 8) {
     if (is_positive(arr[i])) {
         count = count + 1;
@@ -1651,8 +1651,8 @@ classify(5) + classify(-3) + classify(0);
 fn test_function_string_builder_simulation() {
     let source = r#"
 fn repeat_char(ch: string, n: number) -> string {
-    let result = "";
-    let i = 0;
+    var result = "";
+    var i = 0;
     while (i < n) {
         result = result + ch;
         i = i + 1;
@@ -1694,8 +1694,8 @@ min(3, 7) + max(3, 7);
 fn test_array_sum_elements() {
     let source = r#"
 let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-let sum = 0;
-let i = 0;
+var sum = 0;
+var i = 0;
 while (i < 10) {
     sum = sum + arr[i];
     i = i + 1;
@@ -1710,8 +1710,8 @@ fn test_array_dot_product() {
     let source = r#"
 let a = [1, 2, 3, 4, 5];
 let b = [5, 4, 3, 2, 1];
-let dot = 0;
-let i = 0;
+var dot = 0;
+var i = 0;
 while (i < 5) {
     dot = dot + a[i] * b[i];
     i = i + 1;
@@ -1725,18 +1725,18 @@ dot;
 fn test_array_selection_sort() {
     let source = r#"
 let arr = [64, 25, 12, 22, 11];
-let n = 5;
-let i = 0;
+var n = 5;
+var i = 0;
 while (i < n - 1) {
-    let min_idx = i;
-    let j = i + 1;
+    var min_idx = i;
+    var j = i + 1;
     while (j < n) {
         if (arr[j] < arr[min_idx]) {
             min_idx = j;
         }
         j = j + 1;
     }
-    let temp = arr[min_idx];
+    var temp = arr[min_idx];
     arr[min_idx] = arr[i];
     arr[i] = temp;
     i = i + 1;
@@ -1750,9 +1750,9 @@ arr[0] * 10000 + arr[1] * 1000 + arr[2] * 100 + arr[3] * 10 + arr[4];
 fn test_array_count_occurrences() {
     let source = r#"
 let arr = [1, 2, 3, 2, 1, 2, 3, 2, 1, 2];
-let target = 2;
-let count = 0;
-let i = 0;
+var target = 2;
+var count = 0;
+var i = 0;
 while (i < 10) {
     if (arr[i] == target) {
         count = count + 1;
@@ -1770,7 +1770,7 @@ fn test_array_prefix_sum() {
 let arr = [1, 2, 3, 4, 5];
 let prefix = [0, 0, 0, 0, 0];
 prefix[0] = arr[0];
-let i = 1;
+var i = 1;
 while (i < 5) {
     prefix[i] = prefix[i - 1] + arr[i];
     i = i + 1;
@@ -1786,10 +1786,10 @@ fn test_array_two_sum() {
     let source = r#"
 let arr = [2, 7, 11, 15];
 let target = 9;
-let found = false;
-let i = 0;
+var found = false;
+var i = 0;
 while (i < 4) {
-    let j = i + 1;
+    var j = i + 1;
     while (j < 4) {
         if (arr[i] + arr[j] == target) {
             found = true;
@@ -1824,7 +1824,7 @@ fn test_array_element_wise_operations() {
 let a = [1, 2, 3, 4, 5];
 let b = [5, 4, 3, 2, 1];
 let result = [0, 0, 0, 0, 0];
-let i = 0;
+var i = 0;
 while (i < 5) {
     result[i] = a[i] + b[i];
     i = i + 1;
@@ -1840,8 +1840,8 @@ fn test_array_partition() {
     let source = r#"
 let arr = [3, 7, 1, 9, 4, 6, 8, 2, 5, 0];
 let pivot = 5;
-let less_count = 0;
-let i = 0;
+var less_count = 0;
+var i = 0;
 while (i < 10) {
     if (arr[i] < pivot) {
         less_count = less_count + 1;
@@ -1857,10 +1857,10 @@ less_count;
 fn test_array_consecutive_differences() {
     let source = r#"
 let arr = [1, 4, 2, 8, 5];
-let max_diff = 0;
-let i = 0;
+var max_diff = 0;
+var i = 0;
 while (i < 4) {
-    let diff = arr[i + 1] - arr[i];
+    var diff = arr[i + 1] - arr[i];
     if (diff < 0) { diff = -diff; }
     if (diff > max_diff) { max_diff = diff; }
     i = i + 1;
@@ -1877,8 +1877,8 @@ max_diff;
 #[test]
 fn test_string_build_sequence() {
     let source = r#"
-let result = "";
-let i = 0;
+var result = "";
+var i = 0;
 while (i < 3) {
     result = result + "abc";
     i = i + 1;
@@ -1904,8 +1904,8 @@ a + b + c + d;
 fn test_string_repeat_pattern() {
     let source = r#"
 fn repeat(s: string, n: number) -> string {
-    let result = "";
-    let i = 0;
+    var result = "";
+    var i = 0;
     while (i < n) {
         result = result + s;
         i = i + 1;
@@ -1920,8 +1920,8 @@ repeat("ab", 4);
 #[test]
 fn test_string_conditional_build() {
     let source = r#"
-let result = "";
-let i = 0;
+var result = "";
+var i = 0;
 while (i < 5) {
     if (i % 2 == 0) {
         result = result + "E";
@@ -1938,7 +1938,7 @@ result;
 #[test]
 fn test_string_empty_operations() {
     let source = r#"
-let s = "";
+var s = "";
 s = s + "";
 s = s + "a";
 s = s + "";
@@ -1961,8 +1961,8 @@ result;
 #[test]
 fn test_string_long_concatenation() {
     let source = r#"
-let s = "";
-let i = 0;
+var s = "";
+var i = 0;
 while (i < 100) {
     s = s + "x";
     i = i + 1;
@@ -1994,8 +1994,8 @@ fn test_math_sum_formula_verification() {
     // Verify sum formula: sum(1..n) = n*(n+1)/2
     let source = r#"
 let n = 100;
-let loop_sum = 0;
-let i = 1;
+var loop_sum = 0;
+var i = 1;
 while (i <= n) {
     loop_sum = loop_sum + i;
     i = i + 1;
@@ -2009,8 +2009,8 @@ loop_sum == formula_sum;
 #[test]
 fn test_math_sum_of_cubes() {
     let source = r#"
-let sum = 0;
-let i = 1;
+var sum = 0;
+var i = 1;
 while (i <= 5) {
     sum = sum + i * i * i;
     i = i + 1;
@@ -2023,8 +2023,8 @@ sum;
 #[test]
 fn test_math_harmonic_sum() {
     let source = r#"
-let sum = 0;
-let i = 1;
+var sum = 0;
+var i = 1;
 while (i <= 10) {
     sum = sum + 1 / i;
     i = i + 1;
@@ -2039,9 +2039,9 @@ sum;
 fn test_math_alternating_series() {
     // 1 - 1/3 + 1/5 - 1/7 + ... (converges to pi/4)
     let source = r#"
-let sum = 0;
-let sign = 1;
-let i = 0;
+var sum = 0;
+var sign = 1;
+var i = 0;
 while (i < 1000) {
     sum = sum + sign / (2 * i + 1);
     sign = -sign;
@@ -2058,8 +2058,8 @@ sum;
 fn test_math_integer_sqrt_approx() {
     // Newton's method for sqrt(2)
     let source = r#"
-let x = 1;
-let i = 0;
+var x = 1;
+var i = 0;
 while (i < 20) {
     x = (x + 2 / x) / 2;
     i = i + 1;
@@ -2074,9 +2074,9 @@ x;
 fn test_math_exponential_approx() {
     // e ≈ sum(1/n!) for n=0..10
     let source = r#"
-let e = 0;
-let factorial = 1;
-let i = 0;
+var e = 0;
+var factorial = 1;
+var i = 0;
 while (i < 10) {
     e = e + 1 / factorial;
     i = i + 1;
@@ -2127,7 +2127,7 @@ fn test_math_fibonacci_parametric(#[case] n: i32, #[case] expected: f64) {
 fn test_control_nested_if_else() {
     let source = r#"
 let x = 15;
-let result = 0;
+var result = 0;
 if (x > 20) {
     result = 3;
 } else {
@@ -2146,9 +2146,9 @@ result;
 fn test_control_while_with_break_simulation() {
     // Simulate break with a flag
     let source = r#"
-let i = 0;
-let found = -1;
-let done = false;
+var i = 0;
+var found = -1;
+var done = false;
 while (i < 100) {
     if (!done) {
         if (i * i > 50) {
@@ -2166,10 +2166,10 @@ found;
 #[test]
 fn test_control_fizzbuzz_count() {
     let source = r#"
-let fizz = 0;
-let buzz = 0;
-let fizzbuzz = 0;
-let i = 1;
+var fizz = 0;
+var buzz = 0;
+var fizzbuzz = 0;
+var i = 1;
 while (i <= 100) {
     if (i % 15 == 0) {
         fizzbuzz = fizzbuzz + 1;
@@ -2193,9 +2193,9 @@ fizz * 10000 + buzz * 100 + fizzbuzz;
 #[test]
 fn test_control_state_machine() {
     let source = r#"
-let state = 0;
-let output = 0;
-let i = 0;
+var state = 0;
+var output = 0;
+var i = 0;
 while (i < 10) {
     if (state == 0) {
         state = 1;
@@ -2222,7 +2222,7 @@ output;
 fn test_control_early_return() {
     let source = r#"
 fn find_first_over(threshold: number) -> number {
-    let i = 0;
+    var i = 0;
     while (i < 100) {
         if (i * i > threshold) {
             return i;
@@ -2242,8 +2242,8 @@ fn test_control_multiple_conditions() {
 fn in_range(x: number, lo: number, hi: number) -> bool {
     return x >= lo && x <= hi;
 }
-let count = 0;
-let i = 0;
+var count = 0;
+var i = 0;
 while (i < 20) {
     if (in_range(i, 5, 15)) {
         count = count + 1;
@@ -2264,7 +2264,7 @@ let c = true;
 let r1 = a && b || c;
 let r2 = !(a && b);
 let r3 = a || b && c;
-let count = 0;
+var count = 0;
 if (r1) { count = count + 1; }
 if (r2) { count = count + 1; }
 if (r3) { count = count + 1; }
@@ -2277,7 +2277,7 @@ count;
 fn test_control_deeply_nested_conditions() {
     let source = r#"
 let x = 42;
-let result = 0;
+var result = 0;
 if (x > 0) {
     if (x > 10) {
         if (x > 20) {
@@ -2309,8 +2309,8 @@ fn process(x: number) -> number {
     if (x % 2 == 0) { return x / 2; }
     return x * 3 + 1;
 }
-let n = 7;
-let steps = 0;
+var n = 7;
+var steps = 0;
 while (n != 1) {
     n = process(n);
     steps = steps + 1;
@@ -2323,7 +2323,7 @@ steps;
 #[test]
 fn test_control_short_circuit_and() {
     let source = r#"
-let evaluated = 0;
+var evaluated = 0;
 fn side_effect() -> bool {
     evaluated = evaluated + 1;
     return true;
@@ -2365,10 +2365,10 @@ fn test_parity_arithmetic(#[case] source: &str) {
 }
 
 #[rstest]
-#[case("let x = 10; x;")]
+#[case("var x = 10; x;")]
 #[case("let x = 5; let y = 3; x + y;")]
-#[case("let x = 10; x = 20; x;")]
-#[case("let x = 1; x = x + 1; x = x + 1; x;")]
+#[case("var x = 10; x = 20; x;")]
+#[case("var x = 1; x = x + 1; x = x + 1; x;")]
 fn test_parity_variables(#[case] source: &str) {
     assert_parity(source);
 }
@@ -2426,13 +2426,13 @@ fn test_parity_recursion() {
 
 #[test]
 fn test_parity_while_loop() {
-    assert_parity("let sum = 0; let i = 0; while (i < 10) { sum = sum + i; i = i + 1; } sum;");
+    assert_parity("var sum = 0; var i = 0; while (i < 10) { sum = sum + i; i = i + 1; } sum;");
 }
 
 #[test]
 fn test_parity_nested_if() {
     assert_parity(
-        "let x = 15; let r = 0; if (x > 10) { if (x > 20) { r = 2; } else { r = 1; } } r;",
+        "let x = 15; var r = 0; if (x > 10) { if (x > 20) { r = 2; } else { r = 1; } } r;",
     );
 }
 
@@ -2498,13 +2498,13 @@ fn test_edge_single_element_array() {
 
 #[test]
 fn test_edge_boolean_as_condition() {
-    let result = vm_number("let x = 0; if (true) { x = 1; } x;");
+    let result = vm_number("var x = 0; if (true) { x = 1; } x;");
     assert_eq!(result, 1.0);
 }
 
 #[test]
 fn test_edge_while_false() {
-    let result = vm_number("let x = 42; while (false) { x = 0; } x;");
+    let result = vm_number("var x = 42; while (false) { x = 0; } x;");
     assert_eq!(result, 42.0);
 }
 
@@ -2512,7 +2512,7 @@ fn test_edge_while_false() {
 fn test_edge_nested_function_scope() {
     let source = r#"
 fn outer() -> number {
-    let x = 10;
+    var x = 10;
     fn inner() -> number {
         return 20;
     }
@@ -2533,7 +2533,7 @@ fn test_edge_function_no_return() {
 
 #[test]
 fn test_edge_multiple_assignments() {
-    let result = vm_number("let x = 1; x = 2; x = 3; x = 4; x = 5; x;");
+    let result = vm_number("var x = 1; x = 2; x = 3; x = 4; x = 5; x;");
     assert_eq!(result, 5.0);
 }
 
@@ -2570,19 +2570,19 @@ fn test_edge_null_equality() {
 
 #[test]
 fn test_edge_compound_assignment_add() {
-    let result = vm_number("let x = 10; x += 5; x;");
+    let result = vm_number("var x = 10; x += 5; x;");
     assert_eq!(result, 15.0);
 }
 
 #[test]
 fn test_edge_compound_assignment_sub() {
-    let result = vm_number("let x = 10; x -= 3; x;");
+    let result = vm_number("var x = 10; x -= 3; x;");
     assert_eq!(result, 7.0);
 }
 
 #[test]
 fn test_edge_compound_assignment_mul() {
-    let result = vm_number("let x = 4; x *= 3; x;");
+    let result = vm_number("var x = 4; x *= 3; x;");
     assert_eq!(result, 12.0);
 }
 
@@ -2608,7 +2608,7 @@ fn test_v01_string_literal() {
 #[test]
 fn test_v01_if_else() {
     assert_eq!(
-        vm_number("let x = 10; let r = 0; if (x > 5) { r = 1; } else { r = 0; } r;"),
+        vm_number("var x = 10; var r = 0; if (x > 5) { r = 1; } else { r = 0; } r;"),
         1.0
     );
 }
@@ -2616,7 +2616,7 @@ fn test_v01_if_else() {
 #[test]
 fn test_v01_while_loop() {
     assert_eq!(
-        vm_number("let i = 0; while (i < 10) { i = i + 1; } i;"),
+        vm_number("var i = 0; while (i < 10) { i = i + 1; } i;"),
         10.0
     );
 }
@@ -2673,7 +2673,7 @@ outer(5);
 fn test_perf_large_loop() {
     let start = std::time::Instant::now();
     let result =
-        vm_number("let sum = 0; let i = 0; while (i < 100000) { sum = sum + i; i = i + 1; } sum;");
+        vm_number("var sum = 0; var i = 0; while (i < 100000) { sum = sum + i; i = i + 1; } sum;");
     let elapsed = start.elapsed();
     assert_eq!(result, 4999950000.0);
     assert!(elapsed.as_secs() < 10, "Large loop too slow: {:?}", elapsed);
@@ -2695,7 +2695,7 @@ fn test_perf_recursive_fib() {
 #[test]
 fn test_perf_nested_loops() {
     let start = std::time::Instant::now();
-    let result = vm_number("let c = 0; let i = 0; while (i < 100) { let j = 0; while (j < 100) { c = c + 1; j = j + 1; } i = i + 1; } c;");
+    let result = vm_number("var c = 0; var i = 0; while (i < 100) { var j = 0; while (j < 100) { c = c + 1; j = j + 1; } i = i + 1; } c;");
     let elapsed = start.elapsed();
     assert_eq!(result, 10000.0);
     assert!(
@@ -2708,7 +2708,7 @@ fn test_perf_nested_loops() {
 #[test]
 fn test_perf_function_calls() {
     let start = std::time::Instant::now();
-    let result = vm_number("fn inc(x: number) -> number { return x + 1; } let r = 0; let i = 0; while (i < 10000) { r = inc(r); i = i + 1; } r;");
+    let result = vm_number("fn inc(x: number) -> number { return x + 1; } var r = 0; var i = 0; while (i < 10000) { r = inc(r); i = i + 1; } r;");
     let elapsed = start.elapsed();
     assert_eq!(result, 10000.0);
     assert!(
@@ -2722,7 +2722,7 @@ fn test_perf_function_calls() {
 fn test_perf_string_concat() {
     let start = std::time::Instant::now();
     let result =
-        vm_string(r#"let s = ""; let i = 0; while (i < 100) { s = s + "x"; i = i + 1; } s;"#);
+        vm_string(r#"var s = ""; var i = 0; while (i < 100) { s = s + "x"; i = i + 1; } s;"#);
     let elapsed = start.elapsed();
     assert_eq!(result.len(), 100);
     assert!(
@@ -2737,7 +2737,7 @@ fn test_perf_array_operations() {
     let start = std::time::Instant::now();
     let source = r#"
 let arr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-let i = 0;
+var i = 0;
 while (i < 1000) {
     arr[i % 10] = arr[i % 10] + 1;
     i = i + 1;
@@ -2771,8 +2771,8 @@ fn power(b: number, e: number) -> number {
     if (e == 0) { return 1; }
     return b * power(b, e - 1);
 }
-let sum = 0;
-let i = 1;
+var sum = 0;
+var i = 1;
 while (i <= 10) {
     sum = sum + power(i, 3);
     i = i + 1;
@@ -2805,8 +2805,8 @@ a + b + c + d + e + f + g + h + i + j;
 fn test_perf_conditional_heavy() {
     let result = vm_number(
         r#"
-let count = 0;
-let i = 0;
+var count = 0;
+var i = 0;
 while (i < 1000) {
     if (i % 2 == 0) { count = count + 1; }
     if (i % 3 == 0) { count = count + 1; }
@@ -2838,7 +2838,7 @@ fn test_regression_unary_minus_in_expression() {
 
 #[test]
 fn test_regression_reassignment_in_loop() {
-    let result = vm_number("let x = 0; let i = 0; while (i < 5) { x = i; i = i + 1; } x;");
+    let result = vm_number("var x = 0; var i = 0; while (i < 5) { x = i; i = i + 1; } x;");
     assert_eq!(result, 4.0);
 }
 
@@ -2865,8 +2865,8 @@ fn test_regression_array_in_function() {
         r#"
 fn sum_arr() -> number {
     let arr = [1, 2, 3, 4, 5];
-    let sum = 0;
-    let i = 0;
+    var sum = 0;
+    var i = 0;
     while (i < 5) {
         sum = sum + arr[i];
         i = i + 1;
@@ -2908,7 +2908,7 @@ fn test_regression_mixed_types_in_scope() {
     let result = vm_number(
         r#"
 let n = 42;
-let s = "hello";
+var s = "hello";
 let b = true;
 let arr = [1, 2, 3];
 n + arr[0];
@@ -2933,14 +2933,14 @@ n + arr[0];
 #[test]
 fn test_arithmetic_add_loop_correctness() {
     let result =
-        vm_number("let sum = 0; let i = 1; while (i <= 100) { sum = sum + i; i = i + 1; } sum;");
+        vm_number("var sum = 0; var i = 1; while (i <= 100) { sum = sum + i; i = i + 1; } sum;");
     assert_eq!(result, 5050.0);
 }
 
 #[test]
 fn test_arithmetic_sub_correctness() {
     let result = vm_number(
-        "let result = 1000; let i = 0; while (i < 10) { result = result - i; i = i + 1; } result;",
+        "var result = 1000; var i = 0; while (i < 10) { result = result - i; i = i + 1; } result;",
     );
     assert_eq!(result, 955.0);
 }
@@ -2948,21 +2948,21 @@ fn test_arithmetic_sub_correctness() {
 #[test]
 fn test_arithmetic_mul_correctness() {
     let result = vm_number(
-        "let result = 1; let i = 1; while (i <= 10) { result = result * i; i = i + 1; } result;",
+        "var result = 1; var i = 1; while (i <= 10) { result = result * i; i = i + 1; } result;",
     );
     assert_eq!(result, 3628800.0);
 }
 
 #[test]
 fn test_arithmetic_div_correctness() {
-    let result = vm_number("let r = 1000000; r = r / 10; r = r / 10; r = r / 10; r;");
+    let result = vm_number("var r = 1000000; r = r / 10; r = r / 10; r = r / 10; r;");
     assert_eq!(result, 1000.0);
 }
 
 #[test]
 fn test_arithmetic_mod_correctness() {
     let result = vm_number(
-        "let count = 0; let i = 0; while (i < 100) { if (i % 3 == 0) { count = count + 1; } i = i + 1; } count;",
+        "var count = 0; var i = 0; while (i < 100) { if (i % 3 == 0) { count = count + 1; } i = i + 1; } count;",
     );
     assert_eq!(result, 34.0);
 }
@@ -3014,7 +3014,7 @@ fn test_function_nested_calls() {
 #[test]
 fn test_function_many_calls_loop() {
     let result = vm_number(
-        "fn increment(x: number) -> number { return x + 1; } let r = 0; let i = 0; while (i < 100) { r = increment(r); i = i + 1; } r;",
+        "fn increment(x: number) -> number { return x + 1; } var r = 0; var i = 0; while (i < 100) { r = increment(r); i = i + 1; } r;",
     );
     assert_eq!(result, 100.0);
 }
@@ -3056,21 +3056,21 @@ fn test_function_call_in_expression() {
 
 #[test]
 fn test_loop_simple_counting() {
-    let result = vm_number("let i = 0; while (i < 1000) { i = i + 1; } i;");
+    let result = vm_number("var i = 0; while (i < 1000) { i = i + 1; } i;");
     assert_eq!(result, 1000.0);
 }
 
 #[test]
 fn test_loop_accumulation() {
     let result =
-        vm_number("let sum = 0; let i = 1; while (i <= 1000) { sum = sum + i; i = i + 1; } sum;");
+        vm_number("var sum = 0; var i = 1; while (i <= 1000) { sum = sum + i; i = i + 1; } sum;");
     assert_eq!(result, 500500.0);
 }
 
 #[test]
 fn test_loop_nested() {
     let result = vm_number(
-        "let count = 0; let i = 0; while (i < 50) { let j = 0; while (j < 50) { count = count + 1; j = j + 1; } i = i + 1; } count;",
+        "var count = 0; var i = 0; while (i < 50) { var j = 0; while (j < 50) { count = count + 1; j = j + 1; } i = i + 1; } count;",
     );
     assert_eq!(result, 2500.0);
 }
@@ -3078,7 +3078,7 @@ fn test_loop_nested() {
 #[test]
 fn test_loop_with_conditionals() {
     let result = vm_number(
-        "let evens = 0; let i = 0; while (i < 100) { if (i % 2 == 0) { evens = evens + 1; } i = i + 1; } evens;",
+        "var evens = 0; var i = 0; while (i < 100) { if (i % 2 == 0) { evens = evens + 1; } i = i + 1; } evens;",
     );
     assert_eq!(result, 50.0);
 }
@@ -3086,7 +3086,7 @@ fn test_loop_with_conditionals() {
 #[test]
 fn test_loop_variable_update() {
     let result = vm_number(
-        "let a = 0; let b = 1; let i = 0; while (i < 20) { let temp = a + b; a = b; b = temp; i = i + 1; } b;",
+        "var a = 0; var b = 1; var i = 0; while (i < 20) { let temp = a + b; a = b; b = temp; i = i + 1; } b;",
     );
     assert_eq!(result, 10946.0);
 }
@@ -3094,14 +3094,14 @@ fn test_loop_variable_update() {
 #[test]
 fn test_loop_large_iteration() {
     let result =
-        vm_number("let sum = 0; let i = 0; while (i < 10000) { sum = sum + i; i = i + 1; } sum;");
+        vm_number("var sum = 0; var i = 0; while (i < 10000) { sum = sum + i; i = i + 1; } sum;");
     assert_eq!(result, 49995000.0);
 }
 
 #[test]
 fn test_loop_function_call_inside() {
     let result = vm_number(
-        "fn square(x: number) -> number { return x * x; } let sum = 0; let i = 1; while (i <= 10) { sum = sum + square(i); i = i + 1; } sum;",
+        "fn square(x: number) -> number { return x * x; } var sum = 0; var i = 1; while (i <= 10) { sum = sum + square(i); i = i + 1; } sum;",
     );
     assert_eq!(result, 385.0);
 }
@@ -3109,7 +3109,7 @@ fn test_loop_function_call_inside() {
 #[test]
 fn test_loop_deeply_nested() {
     let result = vm_number(
-        "let count = 0; let i = 0; while (i < 10) { let j = 0; while (j < 10) { let k = 0; while (k < 10) { count = count + 1; k = k + 1; } j = j + 1; } i = i + 1; } count;",
+        "var count = 0; var i = 0; while (i < 10) { var j = 0; while (j < 10) { var k = 0; while (k < 10) { count = count + 1; k = k + 1; } j = j + 1; } i = i + 1; } count;",
     );
     assert_eq!(result, 1000.0);
 }
@@ -3127,7 +3127,7 @@ fn test_array_creation_and_access() {
 #[test]
 fn test_array_index_in_loop() {
     let result = vm_number(
-        "let arr = [1, 2, 3, 4, 5]; let sum = 0; let i = 0; while (i < 5) { sum = sum + arr[i]; i = i + 1; } sum;",
+        "let arr = [1, 2, 3, 4, 5]; var sum = 0; var i = 0; while (i < 5) { sum = sum + arr[i]; i = i + 1; } sum;",
     );
     assert_eq!(result, 15.0);
 }
@@ -3143,7 +3143,7 @@ fn test_array_set_index() {
 #[test]
 fn test_array_element_sum() {
     let result = vm_number(
-        "let arr = [10, 20, 30, 40, 50]; let sum = 0; let i = 0; while (i < 5) { sum = sum + arr[i]; i = i + 1; } sum;",
+        "let arr = [10, 20, 30, 40, 50]; var sum = 0; var i = 0; while (i < 5) { sum = sum + arr[i]; i = i + 1; } sum;",
     );
     assert_eq!(result, 150.0);
 }
@@ -3151,7 +3151,7 @@ fn test_array_element_sum() {
 #[test]
 fn test_array_large_creation() {
     let result = vm_number(
-        "let arr = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]; let sum = 0; let i = 0; while (i < 20) { sum = sum + arr[i]; i = i + 1; } sum;",
+        "let arr = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]; var sum = 0; var i = 0; while (i < 20) { sum = sum + arr[i]; i = i + 1; } sum;",
     );
     assert_eq!(result, 210.0);
 }
@@ -3159,7 +3159,7 @@ fn test_array_large_creation() {
 #[test]
 fn test_array_modification_in_loop() {
     let result = vm_number(
-        "let arr = [1, 2, 3, 4, 5]; let i = 0; while (i < 5) { arr[i] = arr[i] * 2; i = i + 1; } arr[0] + arr[1] + arr[2] + arr[3] + arr[4];",
+        "let arr = [1, 2, 3, 4, 5]; var i = 0; while (i < 5) { arr[i] = arr[i] * 2; i = i + 1; } arr[0] + arr[1] + arr[2] + arr[3] + arr[4];",
     );
     assert_eq!(result, 30.0);
 }
@@ -3201,7 +3201,7 @@ fn test_stack_complex_expression_chain() {
 #[test]
 fn test_comparison_less_greater() {
     let result = vm_number(
-        "let count = 0; if (1 < 2) { count = count + 1; } if (2 > 1) { count = count + 1; } if (1 <= 1) { count = count + 1; } if (2 >= 2) { count = count + 1; } count;",
+        "var count = 0; if (1 < 2) { count = count + 1; } if (2 > 1) { count = count + 1; } if (1 <= 1) { count = count + 1; } if (2 >= 2) { count = count + 1; } count;",
     );
     assert_eq!(result, 4.0);
 }
@@ -3209,7 +3209,7 @@ fn test_comparison_less_greater() {
 #[test]
 fn test_equality_check() {
     let result = vm_number(
-        "let count = 0; if (1 == 1) { count = count + 1; } if (1 != 2) { count = count + 1; } count;",
+        "var count = 0; if (1 == 1) { count = count + 1; } if (1 != 2) { count = count + 1; } count;",
     );
     assert_eq!(result, 2.0);
 }
@@ -3223,7 +3223,7 @@ fn test_boolean_not() {
 #[test]
 fn test_comparison_in_loop() {
     let result = vm_number(
-        "let max_val = 0; let i = 0; while (i < 100) { if (i > max_val) { max_val = i; } i = i + 1; } max_val;",
+        "var max_val = 0; var i = 0; while (i < 100) { if (i > max_val) { max_val = i; } i = i + 1; } max_val;",
     );
     assert_eq!(result, 99.0);
 }
@@ -3241,7 +3241,7 @@ fn test_string_concat_correctness() {
 #[test]
 fn test_string_concat_loop() {
     let result =
-        vm_string(r#"let s = ""; let i = 0; while (i < 5) { s = s + "a"; i = i + 1; } s;"#);
+        vm_string(r#"var s = ""; var i = 0; while (i < 5) { s = s + "a"; i = i + 1; } s;"#);
     assert_eq!(result, "aaaaa");
 }
 
@@ -3277,7 +3277,7 @@ fn test_dispatch_number() {
 fn test_perf_large_loop_completes() {
     let start = Instant::now();
     let result =
-        vm_number("let sum = 0; let i = 0; while (i < 50000) { sum = sum + i; i = i + 1; } sum;");
+        vm_number("var sum = 0; var i = 0; while (i < 50000) { sum = sum + i; i = i + 1; } sum;");
     let elapsed = start.elapsed();
     assert_eq!(result, 1249975000.0);
     assert!(elapsed.as_secs() < 5, "Loop took too long: {:?}", elapsed);
@@ -3298,7 +3298,7 @@ fn test_perf_recursive_fib_completes() {
 fn test_perf_nested_loops_complete() {
     let start = Instant::now();
     let result = vm_number(
-        "let count = 0; let i = 0; while (i < 100) { let j = 0; while (j < 100) { count = count + 1; j = j + 1; } i = i + 1; } count;",
+        "var count = 0; var i = 0; while (i < 100) { var j = 0; while (j < 100) { count = count + 1; j = j + 1; } i = i + 1; } count;",
     );
     let elapsed = start.elapsed();
     assert_eq!(result, 10000.0);
@@ -3313,7 +3313,7 @@ fn test_perf_nested_loops_complete() {
 fn test_perf_function_calls_complete() {
     let start = Instant::now();
     let result = vm_number(
-        "fn add(a: number, b: number) -> number { return a + b; } let sum = 0; let i = 0; while (i < 10000) { sum = add(sum, 1); i = i + 1; } sum;",
+        "fn add(a: number, b: number) -> number { return a + b; } var sum = 0; var i = 0; while (i < 10000) { sum = add(sum, 1); i = i + 1; } sum;",
     );
     let elapsed = start.elapsed();
     assert_eq!(result, 10000.0);

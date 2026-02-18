@@ -35,10 +35,10 @@ pub(super) struct UserFunction {
 
 /// Interpreter state
 pub struct Interpreter {
-    /// Global variables
-    pub(super) globals: HashMap<String, Value>,
-    /// Local scopes (stack of environments)
-    pub(super) locals: Vec<HashMap<String, Value>>,
+    /// Global variables (value, is_mutable)
+    pub(super) globals: HashMap<String, (Value, bool)>,
+    /// Local scopes (stack of environments) - each entry is (value, is_mutable)
+    pub(super) locals: Vec<HashMap<String, (Value, bool)>>,
     /// User-defined function bodies (accessed via Value::Function references)
     pub(super) function_bodies: HashMap<String, UserFunction>,
     /// Current control flow state
@@ -112,19 +112,20 @@ impl Interpreter {
     }
 
     /// Register a builtin function in globals
+    /// Builtins are immutable - they cannot be reassigned
     fn register_builtin(&mut self, name: &str, _arity: usize) {
         self.globals
-            .insert(name.to_string(), Value::Builtin(Arc::from(name)));
+            .insert(name.to_string(), (Value::Builtin(Arc::from(name)), false));
     }
 
     /// Get a cloned variable by name (search locals then globals).
     pub fn get_binding(&self, name: &str) -> Option<Value> {
         for scope in self.locals.iter().rev() {
-            if let Some(value) = scope.get(name) {
+            if let Some((value, _mutable)) = scope.get(name) {
                 return Some(value.clone());
             }
         }
-        self.globals.get(name).cloned()
+        self.globals.get(name).map(|(v, _)| v.clone())
     }
 
     /// Snapshot of current bindings (locals + globals) sorted by name.
@@ -132,12 +133,12 @@ impl Interpreter {
         let mut entries: Vec<(String, Value)> = Vec::new();
 
         if let Some(scope) = self.locals.first() {
-            for (k, v) in scope {
+            for (k, (v, _mutable)) in scope {
                 entries.push((k.clone(), v.clone()));
             }
         }
 
-        for (k, v) in &self.globals {
+        for (k, (v, _mutable)) in &self.globals {
             entries.push((k.clone(), v.clone()));
         }
 
@@ -170,13 +171,15 @@ impl Interpreter {
                     );
 
                     // Also store as a value for reference
+                    // Functions are immutable bindings
                     let func_value = Value::Function(FunctionRef {
                         name: func.name.name.clone(),
                         arity: func.params.len(),
                         bytecode_offset: 0, // Not used in interpreter
                         local_count: 0,     // Not used in interpreter
                     });
-                    self.globals.insert(func.name.name.clone(), func_value);
+                    self.globals
+                        .insert(func.name.name.clone(), (func_value, false));
                 }
                 Item::Statement(stmt) => {
                     last_value = self.eval_statement(stmt)?;
@@ -205,19 +208,23 @@ impl Interpreter {
                                     body: func.body.clone(),
                                 },
                             );
+                            // Functions are immutable bindings
                             let func_value = Value::Function(FunctionRef {
                                 name: func.name.name.clone(),
                                 arity: func.params.len(),
                                 bytecode_offset: 0,
                                 local_count: 0,
                             });
-                            self.globals.insert(func.name.name.clone(), func_value);
+                            self.globals
+                                .insert(func.name.name.clone(), (func_value, false));
                         }
                         crate::ast::ExportItem::Variable(var) => {
                             // Evaluate the variable declaration
                             let value = self.eval_expr(&var.init)?;
                             // Store in globals (not locals) so exports can be extracted
-                            self.globals.insert(var.name.name.clone(), value);
+                            // Respect the variable's mutability
+                            self.globals
+                                .insert(var.name.name.clone(), (value, var.mutable));
                             last_value = Value::Null;
                         }
                         crate::ast::ExportItem::TypeAlias(_) => {
@@ -268,14 +275,15 @@ impl Interpreter {
                     self.extern_functions
                         .insert(extern_decl.name.clone(), extern_fn);
 
-                    // Register as a callable global
+                    // Register as a callable global (extern functions are immutable)
                     let func_value = Value::Function(FunctionRef {
                         name: extern_decl.name.clone(),
                         arity: extern_decl.params.len(),
                         bytecode_offset: 0, // Not used for extern functions
                         local_count: 0,     // Not used for extern functions
                     });
-                    self.globals.insert(extern_decl.name.clone(), func_value);
+                    self.globals
+                        .insert(extern_decl.name.clone(), (func_value, false));
                     last_value = Value::Null;
                 }
                 Item::TypeAlias(_) => {
@@ -312,13 +320,13 @@ impl Interpreter {
     ) -> Result<Value, RuntimeError> {
         // Check locals (innermost to outermost)
         for scope in self.locals.iter().rev() {
-            if let Some(value) = scope.get(name) {
+            if let Some((value, _mutable)) = scope.get(name) {
                 return Ok(value.clone());
             }
         }
 
         // Check globals
-        if let Some(value) = self.globals.get(name) {
+        if let Some((value, _mutable)) = self.globals.get(name) {
             return Ok(value.clone());
         }
 
@@ -349,6 +357,7 @@ impl Interpreter {
     }
 
     /// Set a variable value
+    /// Returns an error if the variable is immutable (declared with 'let')
     pub(super) fn set_variable(
         &mut self,
         name: &str,
@@ -357,15 +366,27 @@ impl Interpreter {
     ) -> Result<(), RuntimeError> {
         // Find in locals (innermost to outermost)
         for scope in self.locals.iter_mut().rev() {
-            if scope.contains_key(name) {
-                scope.insert(name.to_string(), value);
+            if let Some((_, mutable)) = scope.get(name) {
+                if !mutable {
+                    return Err(RuntimeError::TypeError {
+                        msg: format!("Cannot assign to immutable variable '{}'", name),
+                        span,
+                    });
+                }
+                scope.insert(name.to_string(), (value, true));
                 return Ok(());
             }
         }
 
         // Check globals
-        if self.globals.contains_key(name) {
-            self.globals.insert(name.to_string(), value);
+        if let Some((_, mutable)) = self.globals.get(name) {
+            if !mutable {
+                return Err(RuntimeError::TypeError {
+                    msg: format!("Cannot assign to immutable variable '{}'", name),
+                    span,
+                });
+            }
+            self.globals.insert(name.to_string(), (value, true));
             return Ok(());
         }
 
@@ -450,8 +471,9 @@ impl Interpreter {
     }
 
     /// Define a global variable (for testing/REPL)
+    /// Defaults to mutable for flexibility in interactive contexts
     pub fn define_global(&mut self, name: String, value: Value) {
-        self.globals.insert(name, value);
+        self.globals.insert(name, (value, true));
     }
 
     /// Create a C-callable callback for an Atlas function (phase-10c)
@@ -523,14 +545,14 @@ impl Interpreter {
             // Create new scope for function call
             temp_interp.push_scope();
 
-            // Bind parameters
+            // Bind parameters (parameters are mutable)
             for (i, param) in func.params.iter().enumerate() {
                 if let Some(arg) = args.get(i) {
                     temp_interp
                         .locals
                         .last_mut()
                         .unwrap()
-                        .insert(param.name.name.clone(), arg.clone());
+                        .insert(param.name.name.clone(), (arg.clone(), true));
                 }
             }
 

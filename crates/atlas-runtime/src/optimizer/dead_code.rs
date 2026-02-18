@@ -332,9 +332,10 @@ mod tests {
 
     #[test]
     fn test_preserves_while_loop() {
+        // Use 'var' because sum and i are reassigned
         let source = r#"
-            let sum = 0;
-            let i = 0;
+            var sum = 0;
+            var i = 0;
             while (i < 5) {
                 sum = sum + i;
                 i = i + 1;
@@ -349,7 +350,8 @@ mod tests {
 
     #[test]
     fn test_preserves_if_statement() {
-        let source = "let x = 5; if (x > 3) { x = x + 1; }";
+        // Use 'var' because x is reassigned
+        let source = "var x = 5; if (x > 3) { x = x + 1; }";
         let bc = compile_source(source);
         let result_orig = run_bytecode(bc.clone());
         let (optimized, _) = run_dce(bc);

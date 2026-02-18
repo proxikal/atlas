@@ -263,7 +263,7 @@ impl Runtime {
         let mut initial_symbol_table = crate::symbol::SymbolTable::new();
         {
             let interpreter = self.interpreter.borrow();
-            for (name, value) in &interpreter.globals {
+            for (name, (value, is_mutable)) in &interpreter.globals {
                 // Determine symbol kind based on value type
                 let kind = match value {
                     Value::NativeFunction(_) | Value::Function(_) => {
@@ -276,7 +276,7 @@ impl Runtime {
                 let symbol = crate::symbol::Symbol {
                     name: name.clone(),
                     ty: crate::types::Type::Unknown, // Dynamic values have unknown type at compile time
-                    mutable: false,
+                    mutable: *is_mutable,
                     kind: kind.clone(),
                     span: crate::span::Span::dummy(),
                     exported: false,
@@ -340,7 +340,7 @@ impl Runtime {
                 // Copy interpreter globals to VM (for natives and other complex types)
                 {
                     let interpreter = self.interpreter.borrow();
-                    for (name, value) in &interpreter.globals {
+                    for (name, (value, _mutable)) in &interpreter.globals {
                         vm.set_global(name.clone(), value.clone());
                     }
                 }
@@ -352,10 +352,13 @@ impl Runtime {
                 };
 
                 // Copy VM globals back to interpreter for persistence across eval() calls
+                // Note: VM doesn't track mutability, so we default to mutable for copied-back values
                 {
                     let mut interpreter = self.interpreter.borrow_mut();
                     for (name, value) in vm.get_globals() {
-                        interpreter.globals.insert(name.clone(), value.clone());
+                        interpreter
+                            .globals
+                            .insert(name.clone(), (value.clone(), true));
                     }
                 }
 
@@ -434,7 +437,8 @@ impl Runtime {
         match self.mode {
             ExecutionMode::Interpreter => {
                 let mut interpreter = self.interpreter.borrow_mut();
-                interpreter.globals.insert(name.to_string(), value);
+                // API-set globals default to mutable
+                interpreter.globals.insert(name.to_string(), (value, true));
             }
             ExecutionMode::VM => {
                 // For native functions and other complex types, store in interpreter globals
@@ -444,7 +448,7 @@ impl Runtime {
                     Value::NativeFunction(_) | Value::Array(_) | Value::Function(_)
                 ) {
                     let mut interpreter = self.interpreter.borrow_mut();
-                    interpreter.globals.insert(name.to_string(), value);
+                    interpreter.globals.insert(name.to_string(), (value, true));
                     return;
                 }
 
@@ -493,7 +497,7 @@ impl Runtime {
         match self.mode {
             ExecutionMode::Interpreter => {
                 let interpreter = self.interpreter.borrow();
-                interpreter.globals.get(name).cloned()
+                interpreter.globals.get(name).map(|(v, _)| v.clone())
             }
             ExecutionMode::VM => {
                 // VM mode doesn't support direct global access yet

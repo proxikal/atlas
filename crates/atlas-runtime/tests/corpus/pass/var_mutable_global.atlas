@@ -1,0 +1,4 @@
+// Tests that top-level var can be reassigned
+var x: number = 1;
+x = 2;
+print(x);

@@ -326,9 +326,10 @@ impl Interpreter {
         // 2. Build desugared function name via shared dispatch table
         // The typechecker must have annotated the MemberExpr with a TypeTag.
         // If this expect fails, it means the typechecker failed to visit this expression.
-        let type_tag = member.type_tag.get().expect(
-            "TypeTag not set by typechecker - this indicates a typechecker traversal bug"
-        );
+        let type_tag = member
+            .type_tag
+            .get()
+            .expect("TypeTag not set by typechecker - this indicates a typechecker traversal bug");
         let func_name = crate::method_dispatch::resolve_method(type_tag, &member.member.name)
             .ok_or_else(|| RuntimeError::TypeError {
                 msg: format!("No method '{}' on type {:?}", member.member.name, type_tag),
@@ -407,10 +408,10 @@ impl Interpreter {
         // Push new scope for function
         self.push_scope();
 
-        // Bind parameters
+        // Bind parameters (parameters are mutable)
         for (param, arg) in func.params.iter().zip(args.iter()) {
             let scope = self.locals.last_mut().unwrap();
-            scope.insert(param.name.name.clone(), arg.clone());
+            scope.insert(param.name.name.clone(), (arg.clone(), true));
         }
 
         // Execute function body
@@ -513,10 +514,10 @@ impl Interpreter {
                 // Pattern matched! Create new scope and bind variables
                 self.push_scope();
 
-                // Bind pattern variables
+                // Bind pattern variables (pattern bindings are immutable - they're destructured values)
                 for (name, value) in bindings {
                     let scope = self.locals.last_mut().unwrap();
-                    scope.insert(name, value);
+                    scope.insert(name, (value, false));
                 }
 
                 // Evaluate arm body with bindings in scope

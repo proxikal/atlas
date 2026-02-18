@@ -1,0 +1,3 @@
+// Tests that reassignment to a top-level let variable fails
+let x: number = 1;
+x = 2; // Should fail: cannot assign to immutable variable

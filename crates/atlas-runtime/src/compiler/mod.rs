@@ -20,10 +20,8 @@ use crate::span::Span;
 pub(super) struct Local {
     pub(super) name: String,
     /// Scope depth of this local (for shadowing resolution)
-    #[allow(dead_code)] // TODO: Use in scope resolution (future phase)
     pub(super) depth: usize,
     /// Whether this local is mutable (let vs var)
-    #[allow(dead_code)] // TODO: Use for const checking (future phase)
     pub(super) mutable: bool,
     /// Scoped name for nested functions (None for regular variables)
     /// Used to access nested functions globally from siblings
@@ -57,6 +55,8 @@ pub struct Compiler {
     /// Base index for current function's locals (for nested functions)
     /// Used to distinguish parent-scope locals from function-local variables
     pub(super) current_function_base: usize,
+    /// Global variable mutability tracking (true = mutable, false = immutable)
+    pub(super) global_mutability: std::collections::HashMap<String, bool>,
 }
 
 impl Compiler {
@@ -71,6 +71,7 @@ impl Compiler {
             monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
             next_func_id: 0,
             current_function_base: 0,
+            global_mutability: std::collections::HashMap::new(),
         }
     }
 
@@ -92,6 +93,7 @@ impl Compiler {
             monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
             next_func_id: 0,
             current_function_base: 0,
+            global_mutability: std::collections::HashMap::new(),
         }
     }
 
@@ -248,6 +250,22 @@ impl Compiler {
             }
         }
         None
+    }
+
+    /// Resolve a local variable by name, returning its index and mutability if found
+    pub(super) fn resolve_local_with_mutability(&self, name: &str) -> Option<(usize, bool)> {
+        // Search from most recent to oldest (for shadowing)
+        for (idx, local) in self.locals.iter().enumerate().rev() {
+            if local.name == name {
+                return Some((idx, local.mutable));
+            }
+        }
+        None
+    }
+
+    /// Check if a global variable is mutable
+    pub(super) fn is_global_mutable(&self, name: &str) -> Option<bool> {
+        self.global_mutability.get(name).copied()
     }
 }
 
@@ -463,7 +481,8 @@ mod tests {
 
     #[test]
     fn test_compile_for_loop() {
-        let bytecode = compile_source("for (let i = 0; i < 10; i = i + 1) { 42; }");
+        // Use 'var' because the loop variable is reassigned
+        let bytecode = compile_source("for (var i = 0; i < 10; i = i + 1) { 42; }");
         // Should have Loop and JumpIfFalse opcodes
         let loop_pos = bytecode
             .instructions
@@ -508,7 +527,8 @@ mod tests {
 
     #[test]
     fn test_compile_compound_assignment_add() {
-        let bytecode = compile_source("let x = 10; x += 5;");
+        // Use 'var' because x is reassigned
+        let bytecode = compile_source("var x = 10; x += 5;");
         // Should have GetGlobal, Constant(5), Add, SetGlobal
         let add_pos = bytecode
             .instructions
@@ -519,7 +539,8 @@ mod tests {
 
     #[test]
     fn test_compile_increment() {
-        let bytecode = compile_source("let x = 5; x++;");
+        // Use 'var' because x is incremented
+        let bytecode = compile_source("var x = 5; x++;");
         // Should have GetGlobal, Constant(1), Add, SetGlobal
         let add_pos = bytecode
             .instructions
@@ -530,7 +551,8 @@ mod tests {
 
     #[test]
     fn test_compile_decrement() {
-        let bytecode = compile_source("let x = 5; x--;");
+        // Use 'var' because x is decremented
+        let bytecode = compile_source("var x = 5; x--;");
         // Should have GetGlobal, Constant(1), Sub, SetGlobal
         let sub_pos = bytecode
             .instructions
