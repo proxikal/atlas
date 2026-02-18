@@ -7,7 +7,7 @@
 ```bash
 ls crates/atlas-lsp/src/hover.rs
 ls crates/atlas-lsp/src/symbols.rs
-cargo test lsp
+cargo nextest run -p atlas-lsp
 atlas lsp --help
 ```
 
@@ -156,5 +156,5 @@ Update STATUS.md marking LSP category as 3/5 complete with phases 01-03 checked 
 - STATUS.md updated LSP marked 3/3 complete
 - Total LSP test count 250+
 - No clippy warnings
-- cargo test passes
+- cargo nextest run -p atlas-lsp passes
 - LSP production-ready for v0.2

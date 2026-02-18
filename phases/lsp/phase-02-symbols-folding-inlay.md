@@ -7,8 +7,8 @@
 ```bash
 ls crates/atlas-lsp/src/hover.rs
 ls crates/atlas-lsp/src/actions.rs
-cargo test lsp_hover_tests
-cargo test lsp_actions_tests
+cargo nextest run -p atlas-lsp -E 'test(lsp_hover_tests)'
+cargo nextest run -p atlas-lsp -E 'test(lsp_actions_tests)'
 ```
 
 **What's needed:**
@@ -150,4 +150,4 @@ Generate parameter name hints for function calls. Identify function call express
 - Folding works in all editors
 - Hints subtle and helpful
 - No clippy warnings
-- cargo test passes
+- cargo nextest run -p atlas-lsp passes

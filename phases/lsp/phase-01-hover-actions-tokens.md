@@ -7,7 +7,7 @@
 ```bash
 ls crates/atlas-lsp/src/server.rs
 ls crates/atlas-lsp/src/handlers.rs
-cargo test lsp
+cargo nextest run -p atlas-lsp
 grep -n "textDocument" crates/atlas-lsp/src/server.rs
 ```
 
@@ -133,4 +133,4 @@ Apply modifiers to semantic tokens. Mark readonly variables and constants. Mark 
 - Performance acceptable for large files
 - LSP protocol compliance verified
 - No clippy warnings
-- cargo test passes
+- cargo nextest run -p atlas-lsp passes

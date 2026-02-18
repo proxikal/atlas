@@ -6,7 +6,7 @@
 **Verification:**
 ```bash
 ls crates/atlas-lsp/src/actions.rs
-cargo test -p atlas-lsp lsp_actions
+cargo nextest run -p atlas-lsp -E 'test(lsp_actions)'
 grep -rn "WorkspaceEdit" crates/atlas-lsp/src/
 ```
 
@@ -86,4 +86,4 @@ Validate refactorings preserve semantics. Check no name conflicts. Verify type s
 - Safety checks prevent errors
 - 60+ tests pass
 - Documentation complete
-- cargo test passes
+- cargo nextest run -p atlas-lsp passes

@@ -7,7 +7,7 @@
 ```bash
 ls crates/atlas-lsp/src/server.rs
 ls crates/atlas-runtime/src/module_loader.rs
-cargo test lsp
+cargo nextest run -p atlas-lsp
 ```
 
 **What's needed:**
@@ -79,4 +79,4 @@ Index incrementally on changes. Parallel indexing for speed. Efficient data stru
 - Performance acceptable
 - 50+ tests pass
 - Documentation complete
-- cargo test passes
+- cargo nextest run -p atlas-lsp passes
