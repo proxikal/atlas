@@ -8,9 +8,9 @@
 
 ## 🎯 Current Phase
 
-**Last Completed:** phases/infra/phase-03h-flatten-datetime-regex.md
-**Next Phase:** phases/infra/phase-03i-flatten-modules.md
-**Real Progress:** 91/118 phases complete (77%)
+**Last Completed:** phases/infra/phase-03i-flatten-modules.md
+**Next Phase:** phases/infra/phase-03j-flatten-debugger.md
+**Real Progress:** 92/118 phases complete (78%)
 
 > ⚠️ **INFRASTRUCTURE BLOCKER:** Test suite consolidation in progress (7 infra phases).
 > Must complete all 7 Infra phases before resuming feature work.
@@ -22,7 +22,7 @@
 
 | Category | Progress | Status |
 |----------|----------|--------|
-| **Infra** | 10/19 (53%) | 🚨 BLOCKING — do first |
+| **Infra** | 11/19 (58%) | 🚨 BLOCKING — do first |
 | **0. Foundation** | 33/33 (100%) | ✅ COMPLETE |
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 8/8 (100%) | ✅ COMPLETE |
@@ -52,7 +52,7 @@
 ✅ phase-03f-flatten-http.md                    — http.rs: replace file banners with section comments (862 lines)
 ✅ phase-03g-flatten-security.md                — security.rs: remove mod permissions/runtime/audit (1,527 lines)
 ✅ phase-03h-flatten-datetime-regex.md          — datetime_regex.rs: remove 4 mod wrappers (1,593 lines)
-⬜ phase-03i-flatten-modules.md                 — modules.rs: remove 4 mod wrappers, rename dup test (1,806 lines)
+✅ phase-03i-flatten-modules.md                 — modules.rs: remove 4 mod wrappers, rename dup test (1,806 lines)
 ⬜ phase-03j-flatten-debugger.md                — debugger.rs: remove mod execution/inspection/protocol (1,921 lines)
 ⬜ phase-03k-clean-async-runtime.md             — async_runtime.rs: replace file banners with section comments (2,336 lines)
 ⬜ phase-03l-flatten-api.md                     — api.rs: remove 7 mod wrappers (2,955 lines)
