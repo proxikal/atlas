@@ -9,8 +9,12 @@
 ## 🎯 Current Phase
 
 **Last Completed:** phases/typing/phase-07-advanced-inference.md
-**Next Phase:** phases/interpreter/phase-01-debugger-repl-improvements.md
-**Real Progress:** 81/99 phases complete (82%)
+**Next Phase:** phases/infra/phase-01-test-consolidation-frontend.md
+**Real Progress:** 81/102 phases complete (79%)
+
+> ⚠️ **INFRASTRUCTURE BLOCKER:** Test suite has 125 separate binaries (~2.3GB, 60-90s run time).
+> Must complete Infra phases 01-03 before resuming feature work.
+> After infra: ~17 binaries, sub-20s runs, then back to `interpreter/phase-01`.
 
 ---
 
@@ -18,19 +22,31 @@
 
 | Category | Progress | Status |
 |----------|----------|--------|
+| **Infra** | 0/3 (0%) | 🚨 BLOCKING — do first |
 | **0. Foundation** | 33/33 (100%) | ✅ COMPLETE |
 | **1. Stdlib** | 28/30 (93%) | 🔨 ACTIVE |
 | **2. Bytecode-VM** | 8/8 (100%) | ✅ COMPLETE |
 | **3. Frontend** | 5/5 (100%) | ✅ COMPLETE |
 | **4. Typing** | 7/7 (100%) | ✅ COMPLETE |
-| **5. Interpreter** | 0/2 (0%) | 🔨 ACTIVE |
+| **5. Interpreter** | 0/2 (0%) | ⬜ Blocked by Infra |
 | **6. CLI** | 0/6 (0%) | ⬜ Pending |
 | **7. LSP** | 0/5 (0%) | ⬜ Pending |
 | **8. Polish** | 0/5 (0%) | ⬜ Pending |
 
 ---
 
-## 📋 Complete Phase List (74/99)
+## 📋 Complete Phase List (81/102)
+
+### Infra — Test Infrastructure (0/3) 🚨 BLOCKING
+
+⬜ phase-01-test-consolidation-frontend.md
+⬜ phase-02-test-consolidation-core.md
+⬜ phase-03-test-consolidation-specialized.md
+
+> These phases consolidate 125 test binaries → ~17. Must complete before any feature work.
+> After completion: restore Next Phase to `phases/interpreter/phase-01-debugger-repl-improvements.md`
+
+---
 
 ### 0. Foundation (32/33) 🔨 ACTIVE
 
@@ -130,7 +146,7 @@
 ✅ phase-06-type-guards.md
 ✅ phase-07-advanced-inference.md
 
-### 5. Interpreter (0/2) ⬜
+### 5. Interpreter (0/2) ⬜ Blocked by Infra
 
 ⬜ phase-01-debugger-repl-improvements.md
 ⬜ phase-02-interpreter-performance-and-integration.md
@@ -290,4 +306,5 @@ v0.2 transforms Atlas into a production-ready language:
 
 ---
 
-**Next phase: `phases/interpreter/phase-01-debugger-repl-improvements.md`**
+**Next phase: `phases/infra/phase-01-test-consolidation-frontend.md`**
+**After infra complete: `phases/interpreter/phase-01-debugger-repl-improvements.md`**
