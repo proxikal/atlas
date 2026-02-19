@@ -322,8 +322,8 @@ jobs:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-git-msrv-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Pin MSRV-compatible time-core
-        run: cargo +stable update -p time-core --precise 0.1.7
+      - name: Pin MSRV-compatible time
+        run: cargo +stable update -p time --precise 0.3.45
 
       - name: Check MSRV compatibility
         run: cargo +1.70.0 check --all-features --locked
