@@ -194,7 +194,9 @@ jobs:
           key: msrv
 
       - name: Pin MSRV-compatible dependencies
-        run: cargo +stable update -p time --precise 0.3.45
+        run: |
+          cargo +stable update -p time --precise 0.3.45
+          cargo +stable update -p base64ct --precise 1.7.1
 
       - name: Check MSRV
         run: cargo +1.70.0 check -p atlas-runtime --all-features --locked
