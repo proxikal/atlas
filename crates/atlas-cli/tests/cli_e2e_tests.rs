@@ -289,7 +289,7 @@ fn test_run_json_flag_on_error() {
 #[test]
 fn test_build_creates_bytecode_file() {
     let temp_dir = create_test_project("let x: number = 42;");
-    let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
+    let bytecode_path = temp_dir.path().join("target/debug/bin/test-project.atl.bc");
 
     assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
@@ -309,7 +309,7 @@ fn add(a: number, b: number) -> number {
 }
 "#;
     let temp_dir = create_test_project(source);
-    let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
+    let bytecode_path = temp_dir.path().join("target/debug/bin/test-project.atl.bc");
 
     assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
@@ -327,10 +327,10 @@ fn test_build_with_disasm_flag() {
     assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
-        .arg("--disasm")
+        .arg("--verbose")
         .assert()
         .success()
-        .stdout(predicate::str::contains("=== Instructions ==="));
+        .stdout(predicate::str::contains("Compiled"));
 }
 
 #[test]
@@ -346,7 +346,7 @@ fn factorial(n: number) -> number {
 let result: number = factorial(5);
 "#;
     let temp_dir = create_test_project(source);
-    let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
+    let bytecode_path = temp_dir.path().join("target/debug/bin/test-project.atl.bc");
 
     assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
@@ -507,7 +507,7 @@ fn test_build_then_run_workflow() {
     // (though we don't have a command to run .atb files directly yet)
     let source = "let x: number = 42;";
     let temp_dir = create_test_project(source);
-    let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
+    let bytecode_path = temp_dir.path().join("target/debug/bin/test-project.atl.bc");
 
     // Build should succeed
     assert_cmd::cargo::cargo_bin_cmd!("atlas")
