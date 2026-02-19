@@ -122,21 +122,9 @@ jobs:
         run: cargo test --doc --all-features
 
   # ==========================================================================
-  # Security - Dependency audit
-  # ==========================================================================
-
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  # ==========================================================================
   # Main-only jobs - Run after merge to main
   # ==========================================================================
+  # Note: Security audits handled by dedicated security.yml workflow
 
   coverage:
     name: Coverage
@@ -241,15 +229,14 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [fmt, clippy, test, security]
+    needs: [fmt, clippy, test]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs passed
         run: |
           if [[ "${{ needs.fmt.result }}" != "success" ]] || \
              [[ "${{ needs.clippy.result }}" != "success" ]] || \
-             [[ "${{ needs.test.result }}" != "success" ]] || \
-             [[ "${{ needs.security.result }}" != "success" ]]; then
+             [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "One or more required jobs failed"
             exit 1
           fi
