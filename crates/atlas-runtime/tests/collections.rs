@@ -889,7 +889,13 @@ mod queue {
     #[test]
     fn test_new_queue_has_size_zero() {
         let queue = call_builtin("queueNew", &[], dummy_span(), &security()).unwrap();
-        let size = call_builtin("queueSize", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let size = call_builtin(
+            "queueSize",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size, Value::Number(0.0));
 
         let empty = call_builtin("queueIsEmpty", &[queue], dummy_span(), &security()).unwrap();
@@ -942,16 +948,31 @@ mod queue {
         )
         .unwrap();
 
-        let first =
-            call_builtin("queueDequeue", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let first = call_builtin(
+            "queueDequeue",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(first, Value::Option(Some(Box::new(Value::Number(1.0)))));
 
-        let second =
-            call_builtin("queueDequeue", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let second = call_builtin(
+            "queueDequeue",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(second, Value::Option(Some(Box::new(Value::Number(2.0)))));
 
-        let third =
-            call_builtin("queueDequeue", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let third = call_builtin(
+            "queueDequeue",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(third, Value::Option(Some(Box::new(Value::Number(3.0)))));
     }
 
@@ -974,7 +995,13 @@ mod queue {
             &security(),
         )
         .unwrap();
-        call_builtin("queueDequeue", &[queue.clone()], dummy_span(), &security()).unwrap();
+        call_builtin(
+            "queueDequeue",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         call_builtin(
             "queueEnqueue",
             &[queue.clone(), Value::Number(2.0)],
@@ -983,7 +1010,13 @@ mod queue {
         )
         .unwrap();
 
-        let size = call_builtin("queueSize", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let size = call_builtin(
+            "queueSize",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size, Value::Number(1.0));
 
         let result = call_builtin("queueDequeue", &[queue], dummy_span(), &security()).unwrap();
@@ -1043,8 +1076,13 @@ mod queue {
         )
         .unwrap();
 
-        let peeked =
-            call_builtin("queuePeek", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let peeked = call_builtin(
+            "queuePeek",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(peeked, Value::Option(Some(Box::new(Value::Number(42.0)))));
 
         let size = call_builtin("queueSize", &[queue], dummy_span(), &security()).unwrap();
@@ -1078,9 +1116,20 @@ mod queue {
         )
         .unwrap();
 
-        let size_before =
-            call_builtin("queueSize", &[queue.clone()], dummy_span(), &security()).unwrap();
-        call_builtin("queuePeek", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let size_before = call_builtin(
+            "queueSize",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
+        call_builtin(
+            "queuePeek",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         let size_after = call_builtin("queueSize", &[queue], dummy_span(), &security()).unwrap();
 
         assert_eq!(size_before, size_after);
@@ -1094,7 +1143,13 @@ mod queue {
     fn test_size_reflects_element_count() {
         let queue = call_builtin("queueNew", &[], dummy_span(), &security()).unwrap();
 
-        let size0 = call_builtin("queueSize", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let size0 = call_builtin(
+            "queueSize",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size0, Value::Number(0.0));
 
         call_builtin(
@@ -1104,7 +1159,13 @@ mod queue {
             &security(),
         )
         .unwrap();
-        let size1 = call_builtin("queueSize", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let size1 = call_builtin(
+            "queueSize",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size1, Value::Number(1.0));
 
         call_builtin(
@@ -1161,8 +1222,20 @@ mod queue {
         )
         .unwrap();
 
-        call_builtin("queueDequeue", &[queue.clone()], dummy_span(), &security()).unwrap();
-        call_builtin("queueDequeue", &[queue.clone()], dummy_span(), &security()).unwrap();
+        call_builtin(
+            "queueDequeue",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
+        call_builtin(
+            "queueDequeue",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
 
         let empty = call_builtin("queueIsEmpty", &[queue], dummy_span(), &security()).unwrap();
         assert_eq!(empty, Value::Bool(true));
@@ -1198,9 +1271,21 @@ mod queue {
         )
         .unwrap();
 
-        call_builtin("queueClear", &[queue.clone()], dummy_span(), &security()).unwrap();
+        call_builtin(
+            "queueClear",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
 
-        let size = call_builtin("queueSize", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let size = call_builtin(
+            "queueSize",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size, Value::Number(0.0));
 
         let empty = call_builtin("queueIsEmpty", &[queue], dummy_span(), &security()).unwrap();
@@ -1211,7 +1296,12 @@ mod queue {
     fn test_clear_on_empty_queue_is_safe() {
         let queue = call_builtin("queueNew", &[], dummy_span(), &security()).unwrap();
 
-        let result = call_builtin("queueClear", &[queue.clone()], dummy_span(), &security());
+        let result = call_builtin(
+            "queueClear",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        );
         assert!(result.is_ok());
 
         let empty = call_builtin("queueIsEmpty", &[queue], dummy_span(), &security()).unwrap();
@@ -1273,9 +1363,20 @@ mod queue {
         )
         .unwrap();
 
-        let size_before =
-            call_builtin("queueSize", &[queue.clone()], dummy_span(), &security()).unwrap();
-        call_builtin("queueToArray", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let size_before = call_builtin(
+            "queueSize",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
+        call_builtin(
+            "queueToArray",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         let size_after = call_builtin("queueSize", &[queue], dummy_span(), &security()).unwrap();
 
         assert_eq!(size_before, size_after);
@@ -1340,13 +1441,24 @@ mod queue {
             .unwrap();
         }
 
-        let size = call_builtin("queueSize", &[queue.clone()], dummy_span(), &security()).unwrap();
+        let size = call_builtin(
+            "queueSize",
+            std::slice::from_ref(&queue),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size, Value::Number(1000.0));
 
         // Dequeue all elements
         for i in 0..1000 {
-            let result =
-                call_builtin("queueDequeue", &[queue.clone()], dummy_span(), &security()).unwrap();
+            let result = call_builtin(
+                "queueDequeue",
+                std::slice::from_ref(&queue),
+                dummy_span(),
+                &security(),
+            )
+            .unwrap();
             assert_eq!(
                 result,
                 Value::Option(Some(Box::new(Value::Number(i as f64))))
