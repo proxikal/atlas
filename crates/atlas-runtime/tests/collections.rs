@@ -1401,7 +1401,13 @@ mod stack {
     #[test]
     fn test_new_stack_has_size_zero() {
         let stack = call_builtin("stackNew", &[], dummy_span(), &security()).unwrap();
-        let size = call_builtin("stackSize", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let size = call_builtin(
+            "stackSize",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size, Value::Number(0.0));
 
         let empty = call_builtin("stackIsEmpty", &[stack], dummy_span(), &security()).unwrap();
@@ -1454,13 +1460,31 @@ mod stack {
         )
         .unwrap();
 
-        let third = call_builtin("stackPop", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let third = call_builtin(
+            "stackPop",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(third, Value::Option(Some(Box::new(Value::Number(3.0)))));
 
-        let second = call_builtin("stackPop", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let second = call_builtin(
+            "stackPop",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(second, Value::Option(Some(Box::new(Value::Number(2.0)))));
 
-        let first = call_builtin("stackPop", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let first = call_builtin(
+            "stackPop",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(first, Value::Option(Some(Box::new(Value::Number(1.0)))));
     }
 
@@ -1483,7 +1507,13 @@ mod stack {
             &security(),
         )
         .unwrap();
-        call_builtin("stackPop", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        call_builtin(
+            "stackPop",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         call_builtin(
             "stackPush",
             &[stack.clone(), Value::Number(2.0)],
@@ -1492,7 +1522,13 @@ mod stack {
         )
         .unwrap();
 
-        let size = call_builtin("stackSize", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let size = call_builtin(
+            "stackSize",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size, Value::Number(1.0));
 
         let result = call_builtin("stackPop", &[stack], dummy_span(), &security()).unwrap();
@@ -1552,8 +1588,13 @@ mod stack {
         )
         .unwrap();
 
-        let peeked =
-            call_builtin("stackPeek", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let peeked = call_builtin(
+            "stackPeek",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(peeked, Value::Option(Some(Box::new(Value::Number(42.0)))));
 
         let size = call_builtin("stackSize", &[stack], dummy_span(), &security()).unwrap();
@@ -1587,9 +1628,20 @@ mod stack {
         )
         .unwrap();
 
-        let size_before =
-            call_builtin("stackSize", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
-        call_builtin("stackPeek", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let size_before = call_builtin(
+            "stackSize",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
+        call_builtin(
+            "stackPeek",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         let size_after = call_builtin("stackSize", &[stack], dummy_span(), &security()).unwrap();
 
         assert_eq!(size_before, size_after);
@@ -1603,7 +1655,13 @@ mod stack {
     fn test_size_reflects_element_count() {
         let stack = call_builtin("stackNew", &[], dummy_span(), &security()).unwrap();
 
-        let size0 = call_builtin("stackSize", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let size0 = call_builtin(
+            "stackSize",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size0, Value::Number(0.0));
 
         call_builtin(
@@ -1613,7 +1671,13 @@ mod stack {
             &security(),
         )
         .unwrap();
-        let size1 = call_builtin("stackSize", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let size1 = call_builtin(
+            "stackSize",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size1, Value::Number(1.0));
 
         call_builtin(
@@ -1670,8 +1734,20 @@ mod stack {
         )
         .unwrap();
 
-        call_builtin("stackPop", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
-        call_builtin("stackPop", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        call_builtin(
+            "stackPop",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
+        call_builtin(
+            "stackPop",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
 
         let empty = call_builtin("stackIsEmpty", &[stack], dummy_span(), &security()).unwrap();
         assert_eq!(empty, Value::Bool(true));
@@ -1707,9 +1783,21 @@ mod stack {
         )
         .unwrap();
 
-        call_builtin("stackClear", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        call_builtin(
+            "stackClear",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
 
-        let size = call_builtin("stackSize", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let size = call_builtin(
+            "stackSize",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size, Value::Number(0.0));
 
         let empty = call_builtin("stackIsEmpty", &[stack], dummy_span(), &security()).unwrap();
@@ -1720,7 +1808,12 @@ mod stack {
     fn test_clear_on_empty_stack_is_safe() {
         let stack = call_builtin("stackNew", &[], dummy_span(), &security()).unwrap();
 
-        let result = call_builtin("stackClear", std::slice::from_ref(&stack), dummy_span(), &security());
+        let result = call_builtin(
+            "stackClear",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        );
         assert!(result.is_ok());
 
         let empty = call_builtin("stackIsEmpty", &[stack], dummy_span(), &security()).unwrap();
@@ -1782,9 +1875,20 @@ mod stack {
         )
         .unwrap();
 
-        let size_before =
-            call_builtin("stackSize", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
-        call_builtin("stackToArray", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let size_before = call_builtin(
+            "stackSize",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
+        call_builtin(
+            "stackToArray",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         let size_after = call_builtin("stackSize", &[stack], dummy_span(), &security()).unwrap();
 
         assert_eq!(size_before, size_after);
@@ -1849,13 +1953,24 @@ mod stack {
             .unwrap();
         }
 
-        let size = call_builtin("stackSize", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+        let size = call_builtin(
+            "stackSize",
+            std::slice::from_ref(&stack),
+            dummy_span(),
+            &security(),
+        )
+        .unwrap();
         assert_eq!(size, Value::Number(1000.0));
 
         // Pop all elements (reverse order)
         for i in (0..1000).rev() {
-            let result =
-                call_builtin("stackPop", std::slice::from_ref(&stack), dummy_span(), &security()).unwrap();
+            let result = call_builtin(
+                "stackPop",
+                std::slice::from_ref(&stack),
+                dummy_span(),
+                &security(),
+            )
+            .unwrap();
             assert_eq!(
                 result,
                 Value::Option(Some(Box::new(Value::Number(i as f64))))
