@@ -24,9 +24,7 @@ impl AtlasQueue {
     /// # use atlas_runtime::value::Value;
     /// let queue = AtlasQueue::new();
     /// assert!(queue.is_empty());
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// ```
     pub fn new() -> Self {
         Self {
             inner: VecDeque::new(),
@@ -42,9 +40,7 @@ impl AtlasQueue {
     /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
     /// # use atlas_runtime::value::Value;
     /// let queue = AtlasQueue::with_capacity(100);
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// ```
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             inner: VecDeque::with_capacity(capacity),
@@ -57,12 +53,11 @@ impl AtlasQueue {
     /// ```rust
     /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
     /// # use atlas_runtime::value::Value;
+    /// # use std::sync::Arc;
     /// let mut queue = AtlasQueue::new();
     /// queue.enqueue(Value::Number(1.0));
-    /// queue.enqueue(Value::String("hello".into()));
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// queue.enqueue(Value::String(Arc::new("hello".to_string())));
+    /// ```
     pub fn enqueue(&mut self, value: Value) {
         self.inner.push_back(value);
     }
@@ -79,9 +74,7 @@ impl AtlasQueue {
     /// queue.enqueue(Value::Number(1.0));
     /// assert_eq!(queue.dequeue(), Some(Value::Number(1.0)));
     /// assert_eq!(queue.dequeue(), None);
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// ```
     pub fn dequeue(&mut self) -> Option<Value> {
         self.inner.pop_front()
     }
@@ -98,9 +91,7 @@ impl AtlasQueue {
     /// queue.enqueue(Value::Number(42.0));
     /// assert_eq!(queue.peek(), Some(&Value::Number(42.0)));
     /// assert_eq!(queue.len(), 1); // Still has 1 element
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// ```
     pub fn peek(&self) -> Option<&Value> {
         self.inner.front()
     }
@@ -115,9 +106,7 @@ impl AtlasQueue {
     /// assert_eq!(queue.len(), 0);
     /// queue.enqueue(Value::Number(1.0));
     /// assert_eq!(queue.len(), 1);
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// ```
     pub fn len(&self) -> usize {
         self.inner.len()
     }
@@ -130,9 +119,7 @@ impl AtlasQueue {
     /// # use atlas_runtime::value::Value;
     /// let queue = AtlasQueue::new();
     /// assert!(queue.is_empty());
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// ```
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -147,9 +134,7 @@ impl AtlasQueue {
     /// queue.enqueue(Value::Number(1.0));
     /// queue.clear();
     /// assert!(queue.is_empty());
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// ```
     pub fn clear(&mut self) {
         self.inner.clear();
     }
@@ -167,9 +152,7 @@ impl AtlasQueue {
     /// queue.enqueue(Value::Number(2.0));
     /// let arr = queue.to_vec();
     /// assert_eq!(arr, vec![Value::Number(1.0), Value::Number(2.0)]);
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
+    /// ```
     pub fn to_vec(&self) -> Vec<Value> {
         self.inner.iter().cloned().collect()
     }

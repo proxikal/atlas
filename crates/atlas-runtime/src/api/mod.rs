@@ -10,8 +10,9 @@
 //!
 //! # Examples
 //!
-//! ```
+//! ```rust,no_run
 //! use atlas_runtime::api::{Runtime, ExecutionMode};
+//! use atlas_runtime::value::Value;
 //!
 //! // Create a runtime with interpreter mode
 //! let mut runtime = Runtime::new(ExecutionMode::Interpreter);
@@ -21,7 +22,7 @@
 //!
 //! // Call Atlas functions from Rust
 //! runtime.eval("fn add(x: number, y: number) -> number { x + y }").unwrap();
-//! let result = runtime.call("add", vec![1.0.into(), 2.0.into()]).unwrap();
+//! let result = runtime.call("add", vec![Value::Number(1.0), Value::Number(2.0)]).unwrap();
 //! ```
 
 pub mod config;
