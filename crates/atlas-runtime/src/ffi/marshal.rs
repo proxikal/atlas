@@ -258,8 +258,8 @@ mod tests {
     #[test]
     fn test_marshal_number_to_cdouble() {
         let mut ctx = MarshalContext::new();
-        let result = ctx.atlas_to_c(&Value::Number(3.14), &ExternType::CDouble);
-        assert_eq!(result, Ok(CType::Double(3.14)));
+        let result = ctx.atlas_to_c(&Value::Number(3.125), &ExternType::CDouble);
+        assert_eq!(result, Ok(CType::Double(3.125)));
     }
 
     #[test]
@@ -339,8 +339,8 @@ mod tests {
     #[test]
     fn test_unmarshal_cdouble_to_number() {
         let ctx = MarshalContext::new();
-        let result = ctx.c_to_atlas(&CType::Double(3.14));
-        assert_eq!(result, Ok(Value::Number(3.14)));
+        let result = ctx.c_to_atlas(&CType::Double(3.125));
+        assert_eq!(result, Ok(Value::Number(3.125)));
     }
 
     #[test]

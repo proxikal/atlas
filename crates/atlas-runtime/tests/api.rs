@@ -3016,7 +3016,7 @@ fn test_eval_file_import_variable() {
 
     fs::write(
         temp_dir.path().join("constants.atl"),
-        "export let PI: number = 3.14159;",
+        &format!("export let PI: number = {};", std::f64::consts::PI),
     )
     .unwrap();
 
@@ -3034,7 +3034,7 @@ PI * 2;
     let result = runtime.eval_file(&main_path);
 
     match result {
-        Ok(Value::Number(n)) => assert!((n - 6.28318).abs() < 0.0001),
+        Ok(Value::Number(n)) => assert!((n - std::f64::consts::TAU).abs() < 0.0001),
         Ok(v) => panic!("Expected Number(~6.28318), got {:?}", v),
         Err(e) => panic!("eval_file failed: {:?}", e),
     }

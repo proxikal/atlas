@@ -185,7 +185,7 @@ mod tests {
     fn test_ctype_equality() {
         assert_eq!(CType::Int(42), CType::Int(42));
         assert_ne!(CType::Int(42), CType::Int(43));
-        assert_eq!(CType::Double(3.14), CType::Double(3.14));
+        assert_eq!(CType::Double(3.125), CType::Double(3.125));
         assert_eq!(CType::Bool(1), CType::Bool(1));
         assert_ne!(CType::Bool(0), CType::Bool(1));
         assert_eq!(CType::Void, CType::Void);
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_all_extern_types_exist() {
         // Verify all 6 extern types are defined
-        let types = vec![
+        let types = [
             ExternType::CInt,
             ExternType::CLong,
             ExternType::CDouble,

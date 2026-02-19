@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_suggest_similar_name() {
-        let names = vec!["print", "println", "len", "str"];
+        let names = ["print", "println", "len", "str"];
         let suggestion = suggest_similar_name("prnt", names.iter().copied());
         assert!(suggestion.is_some());
         assert!(suggestion.unwrap().contains("print"));
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_suggest_similar_name_no_match() {
-        let names = vec!["print", "len", "str"];
+        let names = ["print", "len", "str"];
         let suggestion = suggest_similar_name("xyzabc", names.iter().copied());
         assert!(suggestion.is_none());
     }

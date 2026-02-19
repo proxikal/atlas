@@ -360,7 +360,7 @@ mod tests {
     #[test]
     fn test_clone_fn() {
         let original = Value::Number(42.0);
-        let cloned = clone_fn(&[original.clone()], Span::dummy()).unwrap();
+        let cloned = clone_fn(std::slice::from_ref(&original), Span::dummy()).unwrap();
         assert_eq!(original, cloned);
     }
 

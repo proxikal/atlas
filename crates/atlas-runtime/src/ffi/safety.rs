@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn test_bounded_buffer_valid() {
-        let data = vec![1u8, 2, 3, 4, 5];
+        let data = [1u8, 2, 3, 4, 5];
         let buffer = BoundedBuffer::new(data.as_ptr(), data.len()).unwrap();
         assert_eq!(buffer.as_slice(), &[1, 2, 3, 4, 5]);
         assert_eq!(buffer.len(), 5);
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_bounded_buffer_empty() {
-        let data = vec![1u8];
+        let data = [1u8];
         let buffer = BoundedBuffer::new(data.as_ptr(), 0).unwrap();
         assert!(buffer.is_empty());
         assert_eq!(buffer.len(), 0);
