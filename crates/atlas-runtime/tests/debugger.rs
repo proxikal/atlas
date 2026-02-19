@@ -318,9 +318,8 @@ fn test_session_breakpoint_set_and_hit() {
         DebugResponse::BreakpointSet { breakpoint } => {
             if breakpoint.verified {
                 let resp = session.run_until_pause(&security());
-                match resp {
-                    DebugResponse::Paused { .. } => assert!(session.is_paused()),
-                    _ => {} // acceptable if source map doesn't bind
+                if let DebugResponse::Paused { .. } = resp {
+                    assert!(session.is_paused());
                 }
             }
         }
@@ -995,7 +994,10 @@ fn test_format_integer() {
 
 #[test]
 fn test_format_float() {
-    assert_eq!(format_value_with_depth(&Value::Number(3.14), 3), "3.14");
+    assert_eq!(
+        format_value_with_depth(&Value::Number(std::f64::consts::PI), 3),
+        std::f64::consts::PI.to_string()
+    );
 }
 
 #[test]

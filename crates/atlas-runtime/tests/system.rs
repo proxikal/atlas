@@ -542,10 +542,10 @@ fn test_path_construction_workflow() {
     let joined = call_fn("pathJoinArray", &[segments]).unwrap();
 
     // Get directory name
-    let dirname = call_fn("pathDirname", &[joined.clone()]).unwrap();
+    let dirname = call_fn("pathDirname", std::slice::from_ref(&joined)).unwrap();
 
     // Get filename
-    let basename = call_fn("pathBasename", &[joined.clone()]).unwrap();
+    let basename = call_fn("pathBasename", std::slice::from_ref(&joined)).unwrap();
 
     // Both should be valid strings
     match (dirname, basename) {
@@ -730,7 +730,7 @@ fn test_readdir_lists_directory_contents() {
     let entries = extract_array(&result);
 
     assert_eq!(entries.len(), 3);
-    let names: Vec<String> = entries.iter().map(|v| extract_string(v)).collect();
+    let names: Vec<String> = entries.iter().map(extract_string).collect();
     assert!(names.contains(&"file1.txt".to_string()));
     assert!(names.contains(&"file2.txt".to_string()));
     assert!(names.contains(&"subdir".to_string()));
@@ -770,7 +770,7 @@ fn test_filter_entries_with_wildcard() {
     let filtered = extract_array(&result);
 
     assert_eq!(filtered.len(), 2);
-    let names: Vec<String> = filtered.iter().map(|v| extract_string(v)).collect();
+    let names: Vec<String> = filtered.iter().map(extract_string).collect();
     assert!(names.contains(&"file1.txt".to_string()));
     assert!(names.contains(&"test.txt".to_string()));
 }
@@ -1308,11 +1308,7 @@ fn test_exec_simple_command() {
 
 #[test]
 fn test_shell_command() {
-    let code = if cfg!(target_os = "windows") {
-        r#"shell("echo hello")"#
-    } else {
-        r#"shell("echo hello")"#
-    };
+    let code = r#"shell("echo hello")"#;
 
     let result = eval_ok(code);
     // Should return Result<object, string>
@@ -3203,7 +3199,7 @@ fn test_zip_extract_path_traversal_prevention() {
     );
 
     // Must error or extract safely
-    if let Ok(_) = result {
+    if result.is_ok() {
         // If it didn't error, verify the file was not extracted outside the output dir
         let escaped = temp
             .path()

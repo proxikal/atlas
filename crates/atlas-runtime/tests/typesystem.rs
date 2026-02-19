@@ -1210,13 +1210,9 @@ fn test_constraint_inference_failure(#[case] source: &str) {
 #[case("fn f<T extends Serializable>(x: T) -> string { return str(x); } let y = f([1]);")]
 fn test_practical_constraint_patterns(#[case] source: &str) {
     let diagnostics = typecheck_source(source);
-    if source.contains("\"a\"") && source.contains("Numeric") {
-        assert!(
-            has_error(&diagnostics),
-            "Expected errors, got: {:?}",
-            diagnostics
-        );
-    } else if source.contains("Iterable") && source.contains("= f(1)") {
+    if (source.contains("\"a\"") && source.contains("Numeric"))
+        || (source.contains("Iterable") && source.contains("= f(1)"))
+    {
         assert!(
             has_error(&diagnostics),
             "Expected errors, got: {:?}",
@@ -3891,7 +3887,7 @@ fn test_suggest_num_conversion() {
     assert!(!diags.is_empty());
     // Should suggest num() conversion
     assert!(
-        diags[0].help.as_ref().map_or(false, |h| h.contains("num(")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("num(")),
         "Expected num() suggestion, got: {:?}",
         diags[0].help
     );
@@ -3902,7 +3898,7 @@ fn test_suggest_str_conversion() {
     let diags = errors("let x: string = 42;");
     assert!(!diags.is_empty());
     assert!(
-        diags[0].help.as_ref().map_or(false, |h| h.contains("str(")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("str(")),
         "Expected str() suggestion, got: {:?}",
         diags[0].help
     );
@@ -3955,7 +3951,7 @@ fn test_return_void_from_number_function() {
         diags[0]
             .help
             .as_ref()
-            .map_or(false, |h| h.contains("missing return")),
+            .is_some_and(|h| h.contains("missing return")),
         "Expected missing return suggestion, got: {:?}",
         diags[0].help
     );
@@ -3971,7 +3967,7 @@ fn test_add_string_number_suggests_str() {
     assert!(!diags.is_empty());
     assert_eq!(diags[0].code, "AT3002");
     assert!(
-        diags[0].help.as_ref().map_or(false, |h| h.contains("str(")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("str(")),
         "Expected str() suggestion for string + number, got: {:?}",
         diags[0].help
     );
@@ -3982,7 +3978,7 @@ fn test_add_number_string_suggests_str() {
     let diags = errors(r#"let _x = 42 + "hello";"#);
     assert!(!diags.is_empty());
     assert!(
-        diags[0].help.as_ref().map_or(false, |h| h.contains("str(")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("str(")),
         "Expected str() suggestion for number + string, got: {:?}",
         diags[0].help
     );
@@ -4101,7 +4097,7 @@ fn test_if_condition_number_suggests_comparison() {
     let diags = errors("if (42) { }");
     assert!(!diags.is_empty());
     assert!(
-        diags[0].help.as_ref().map_or(false, |h| h.contains("!=")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("!=")),
         "Expected comparison suggestion, got: {:?}",
         diags[0].help
     );
@@ -4112,7 +4108,7 @@ fn test_while_condition_string_suggests_comparison() {
     let diags = errors(r#"while ("hello") { }"#);
     assert!(!diags.is_empty());
     assert!(
-        diags[0].help.as_ref().map_or(false, |h| h.contains("len")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("len")),
         "Expected len suggestion, got: {:?}",
         diags[0].help
     );
@@ -4133,7 +4129,7 @@ fn test_immutable_variable_suggests_var() {
     assert!(!diags.is_empty());
     assert_eq!(diags[0].code, "AT3003");
     assert!(
-        diags[0].help.as_ref().map_or(false, |h| h.contains("var")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("var")),
         "Expected var suggestion, got: {:?}",
         diags[0].help
     );
@@ -4158,7 +4154,7 @@ fn test_wrong_arity_shows_signature() {
         diags[0]
             .help
             .as_ref()
-            .map_or(false, |h| h.contains("(number, number) -> number")),
+            .is_some_and(|h| h.contains("(number, number) -> number")),
         "Expected function signature in help, got: {:?}",
         diags[0].help
     );
@@ -4174,10 +4170,7 @@ fn test_too_many_args_says_remove() {
     );
     assert!(!diags.is_empty());
     assert!(
-        diags[0]
-            .help
-            .as_ref()
-            .map_or(false, |h| h.contains("remove")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("remove")),
         "Expected 'remove' suggestion, got: {:?}",
         diags[0].help
     );
@@ -4194,7 +4187,7 @@ fn test_wrong_arg_type_suggests_conversion() {
     assert!(!diags.is_empty());
     // Should suggest num() conversion
     assert!(
-        diags[0].help.as_ref().map_or(false, |h| h.contains("num(")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("num(")),
         "Expected num() suggestion, got: {:?}",
         diags[0].help
     );
@@ -4239,10 +4232,7 @@ fn test_for_in_number_suggests_range() {
     );
     assert!(!diags.is_empty());
     assert!(
-        diags[0]
-            .help
-            .as_ref()
-            .map_or(false, |h| h.contains("range")),
+        diags[0].help.as_ref().is_some_and(|h| h.contains("range")),
         "Expected range suggestion, got: {:?}",
         diags[0].help
     );

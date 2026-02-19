@@ -3108,7 +3108,7 @@ fn test_read_file_invalid_utf8() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let test_file = temp_dir.path().join("binary.bin");
     // Invalid UTF-8 sequence
-    fs::write(&test_file, &[0xFF, 0xFE, 0xFD]).unwrap();
+    fs::write(&test_file, [0xFF, 0xFE, 0xFD]).unwrap();
 
     let code = format!(r#"readFile("{}")"#, test_file.display());
     let result = runtime.eval(&code);
@@ -11875,7 +11875,7 @@ mod vm_stdlib {
     fn vm_test_read_file_invalid_utf8() {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("binary.bin");
-        fs::write(&test_file, &[0xFF, 0xFE, 0xFD]).unwrap();
+        fs::write(&test_file, [0xFF, 0xFE, 0xFD]).unwrap();
 
         let code = format!(r#"readFile("{}");"#, test_file.display());
         let result = execute_with_io(&code, &temp_dir);

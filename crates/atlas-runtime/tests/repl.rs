@@ -280,7 +280,7 @@ fn let_binding_records_type(input: &str, expected_type: &str) {
         "expected binding info for {input}"
     );
     let binding = result.bindings.first().unwrap();
-    assert_eq!(binding.name.starts_with("var"), false);
+    assert!(!binding.name.starts_with("var"));
     assert_eq!(binding.ty.display_name(), expected_type);
 }
 

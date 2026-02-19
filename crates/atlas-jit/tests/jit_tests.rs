@@ -475,7 +475,7 @@ fn test_config_testing() {
 #[case(1.0)]
 #[case(-1.0)]
 #[case(42.0)]
-#[case(3.14159)]
+#[case(std::f64::consts::PI)]
 #[case(f64::MIN_POSITIVE)]
 fn test_jit_constant_parity(#[case] value: f64) {
     let bc = num_bc(value);
@@ -520,7 +520,7 @@ fn test_jit_false_as_zero() {
 #[test]
 fn test_jit_performance_improvement() {
     // Compile a simple arithmetic expression and measure execution time
-    let bc = binop_bc(3.14, 2.71, Opcode::Mul);
+    let bc = binop_bc(std::f64::consts::PI, std::f64::consts::E, Opcode::Mul);
     let translator = IrTranslator::new(1);
     let func = translator.translate(&bc, 0, bc.instructions.len()).unwrap();
     let mut backend = NativeBackend::new(1).unwrap();
@@ -535,7 +535,7 @@ fn test_jit_performance_improvement() {
     let jit_elapsed = start.elapsed();
 
     // Verify result is correct
-    assert!((sum - 3.14 * 2.71 * 1_000_000.0).abs() < 1.0);
+    assert!((sum - std::f64::consts::PI * std::f64::consts::E * 1_000_000.0).abs() < 1.0);
 
     // JIT should be very fast for pure arithmetic
     assert!(
