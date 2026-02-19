@@ -2051,7 +2051,7 @@ sum;
 "#;
     let result = vm_number(source);
     // Should be close to pi/4 ≈ 0.7854
-    assert!((result - 0.7854).abs() < 0.01);
+    assert!((result - std::f64::consts::FRAC_PI_4).abs() < 0.01);
 }
 
 #[test]
@@ -2067,7 +2067,7 @@ while (i < 20) {
 x;
 "#;
     let result = vm_number(source);
-    assert!((result - 1.41421356).abs() < 0.0001);
+    assert!((result - std::f64::consts::SQRT_2).abs() < 0.0001);
 }
 
 #[test]
@@ -2085,7 +2085,7 @@ while (i < 10) {
 e;
 "#;
     let result = vm_number(source);
-    assert!((result - 2.71828).abs() < 0.001);
+    assert!((result - std::f64::consts::E).abs() < 0.001);
 }
 
 #[rstest]

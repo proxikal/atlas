@@ -2382,7 +2382,7 @@ fn test_errors_are_ordered_by_discovery() {
 #[test]
 fn test_valid_bytecode_has_no_errors() {
     let mut bc = Bytecode::new();
-    push_num(&mut bc, 3.14);
+    push_num(&mut bc, std::f64::consts::PI);
     push_num(&mut bc, 2.0);
     bc.emit(Opcode::Mul, span());
     bc.emit(Opcode::Pop, span());

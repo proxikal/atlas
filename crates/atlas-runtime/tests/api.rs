@@ -3016,7 +3016,7 @@ fn test_eval_file_import_variable() {
 
     fs::write(
         temp_dir.path().join("constants.atl"),
-        &format!("export let PI: number = {};", std::f64::consts::PI),
+        format!("export let PI: number = {};", std::f64::consts::PI),
     )
     .unwrap();
 
