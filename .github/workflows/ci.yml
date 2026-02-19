@@ -202,7 +202,7 @@ jobs:
         run: cargo bench -p atlas-runtime 2>&1 | tee bench-output.txt
 
       - name: Upload results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-results
           path: |
