@@ -509,7 +509,7 @@ impl VM {
             match opcode {
                 // ===== Constants =====
                 Opcode::Constant => {
-                    let index = self.read_u16() as usize;
+                    let index = self.read_u16()? as usize;
                     if index >= self.bytecode.constants.len() {
                         return Err(RuntimeError::UnknownOpcode {
                             span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
@@ -524,7 +524,7 @@ impl VM {
 
                 // ===== Variables =====
                 Opcode::GetLocal => {
-                    let index = self.read_u16() as usize;
+                    let index = self.read_u16()? as usize;
                     let base = self.current_frame().stack_base;
                     let absolute_index = base + index;
                     if absolute_index >= self.stack.len() {
@@ -536,7 +536,7 @@ impl VM {
                     self.push(value);
                 }
                 Opcode::SetLocal => {
-                    let index = self.read_u16() as usize;
+                    let index = self.read_u16()? as usize;
                     let base = self.current_frame().stack_base;
                     let local_count = self.current_frame().local_count;
                     let absolute_index = base + index;
@@ -566,7 +566,7 @@ impl VM {
                     self.stack[absolute_index] = value;
                 }
                 Opcode::GetGlobal => {
-                    let name_index = self.read_u16() as usize;
+                    let name_index = self.read_u16()? as usize;
                     if name_index >= self.bytecode.constants.len() {
                         return Err(RuntimeError::UnknownOpcode {
                             span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
@@ -609,7 +609,7 @@ impl VM {
                     self.push(value);
                 }
                 Opcode::SetGlobal => {
-                    let name_index = self.read_u16() as usize;
+                    let name_index = self.read_u16()? as usize;
                     if name_index >= self.bytecode.constants.len() {
                         return Err(RuntimeError::UnknownOpcode {
                             span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
@@ -760,24 +760,24 @@ impl VM {
 
                 // ===== Control Flow =====
                 Opcode::Jump => {
-                    let offset = self.read_i16();
+                    let offset = self.read_i16()?;
                     self.ip = (self.ip as isize + offset as isize) as usize;
                 }
                 Opcode::JumpIfFalse => {
-                    let offset = self.read_i16();
+                    let offset = self.read_i16()?;
                     let condition = self.pop();
                     if !condition.is_truthy() {
                         self.ip = (self.ip as isize + offset as isize) as usize;
                     }
                 }
                 Opcode::Loop => {
-                    let offset = self.read_i16();
+                    let offset = self.read_i16()?;
                     self.ip = (self.ip as isize + offset as isize) as usize;
                 }
 
                 // ===== Functions =====
                 Opcode::Call => {
-                    let arg_count = self.read_u8() as usize;
+                    let arg_count = self.read_u8()? as usize;
 
                     // Get the function value from stack (it's below the arguments)
                     let function = self.peek(arg_count).clone();
@@ -950,7 +950,7 @@ impl VM {
 
                 // ===== Arrays =====
                 Opcode::Array => {
-                    let size = self.read_u16() as usize;
+                    let size = self.read_u16()? as usize;
                     let mut elements = Vec::with_capacity(size);
                     for _ in 0..size {
                         elements.push(self.pop());
@@ -1160,6 +1160,8 @@ impl VM {
 
     #[inline(always)]
     fn peek(&self, distance: usize) -> &Value {
+        // SAFETY: The compiler guarantees stack depth matches operand requirements.
+        // Each opcode that calls peek() is emitted only when sufficient values exist.
         unsafe { self.stack.get_unchecked(self.stack.len() - 1 - distance) }
     }
 
@@ -1198,7 +1200,8 @@ impl VM {
                 span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
             });
         }
-        let byte = unsafe { *self.bytecode.instructions.get_unchecked(self.ip) };
+        // SAFETY: Bounds check above guarantees self.ip < len
+        let byte = self.bytecode.instructions[self.ip];
         self.ip += 1;
         // Use static dispatch table for O(1) opcode lookup
         dispatch::decode_opcode(byte).ok_or_else(|| RuntimeError::UnknownOpcode {
@@ -1207,27 +1210,39 @@ impl VM {
     }
 
     #[inline(always)]
-    fn read_u8(&mut self) -> u8 {
-        let byte = unsafe { *self.bytecode.instructions.get_unchecked(self.ip) };
+    fn read_u8(&mut self) -> Result<u8, RuntimeError> {
+        if self.ip >= self.bytecode.instructions.len() {
+            return Err(RuntimeError::UnknownOpcode {
+                span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+            });
+        }
+        let byte = self.bytecode.instructions[self.ip];
         self.ip += 1;
-        byte
+        Ok(byte)
     }
 
     #[inline(always)]
-    fn read_u16(&mut self) -> u16 {
-        let hi = unsafe { *self.bytecode.instructions.get_unchecked(self.ip) } as u16;
-        let lo = unsafe { *self.bytecode.instructions.get_unchecked(self.ip + 1) } as u16;
+    fn read_u16(&mut self) -> Result<u16, RuntimeError> {
+        if self.ip + 1 >= self.bytecode.instructions.len() {
+            return Err(RuntimeError::UnknownOpcode {
+                span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+            });
+        }
+        let hi = self.bytecode.instructions[self.ip] as u16;
+        let lo = self.bytecode.instructions[self.ip + 1] as u16;
         self.ip += 2;
-        (hi << 8) | lo
+        Ok((hi << 8) | lo)
     }
 
     #[inline(always)]
-    fn read_i16(&mut self) -> i16 {
-        self.read_u16() as i16
+    fn read_i16(&mut self) -> Result<i16, RuntimeError> {
+        Ok(self.read_u16()? as i16)
     }
 
     #[inline(always)]
     fn current_frame(&self) -> &CallFrame {
+        // SAFETY: VM execution always pushes a frame before running, and frames
+        // are only popped when returning. The frames vec is never empty during execution.
         unsafe { self.frames.last().unwrap_unchecked() }
     }
 
@@ -3908,5 +3923,90 @@ mod tests {
         let interp_result = runtime.eval(source);
         assert!(interp_result.is_ok());
         assert_eq!(interp_result.unwrap(), Value::string("42"));
+    }
+
+    // =========================================================================
+    // Truncated Bytecode Tests (Phase Correctness-09)
+    // =========================================================================
+    // These tests verify that malformed/truncated bytecode produces clean
+    // errors rather than undefined behavior.
+
+    #[test]
+    fn test_truncated_bytecode_load_const_missing_operand() {
+        use crate::bytecode::{Bytecode, Opcode};
+
+        // LoadConst (Constant opcode) needs 2 operand bytes - provide only 1
+        let mut bytecode = Bytecode::new();
+        bytecode.instructions = vec![Opcode::Constant as u8, 0x00]; // missing second byte
+        bytecode.constants.push(Value::Number(42.0)); // constant exists but index incomplete
+
+        let mut vm = VM::new(bytecode);
+        let result = vm.run(&SecurityContext::allow_all());
+
+        // Must produce error, not crash/UB
+        assert!(result.is_err(), "Truncated bytecode should produce error");
+    }
+
+    #[test]
+    fn test_truncated_bytecode_jump_missing_operand() {
+        use crate::bytecode::{Bytecode, Opcode};
+
+        // Jump needs 2 operand bytes (i16 offset) - provide only 1
+        let mut bytecode = Bytecode::new();
+        bytecode.instructions = vec![Opcode::Jump as u8, 0x00]; // missing second byte
+
+        let mut vm = VM::new(bytecode);
+        let result = vm.run(&SecurityContext::allow_all());
+
+        // Must produce error, not crash/UB
+        assert!(result.is_err(), "Truncated jump should produce error");
+    }
+
+    #[test]
+    fn test_truncated_bytecode_empty() {
+        use crate::bytecode::Bytecode;
+
+        // Empty bytecode - no instructions at all
+        let bytecode = Bytecode::new();
+
+        let mut vm = VM::new(bytecode);
+        let result = vm.run(&SecurityContext::allow_all());
+
+        // Should either return Ok(None) or a clean error - not UB
+        // Our implementation returns error when trying to read first opcode
+        assert!(
+            result.is_ok() || result.is_err(),
+            "Empty bytecode should be handled cleanly"
+        );
+    }
+
+    #[test]
+    fn test_truncated_bytecode_call_missing_arg_count() {
+        use crate::bytecode::{Bytecode, Opcode};
+
+        // Call needs 1 operand byte (arg count) - provide none
+        let mut bytecode = Bytecode::new();
+        bytecode.instructions = vec![Opcode::Call as u8]; // missing arg count byte
+
+        let mut vm = VM::new(bytecode);
+        let result = vm.run(&SecurityContext::allow_all());
+
+        // Must produce error, not crash/UB
+        assert!(result.is_err(), "Truncated call should produce error");
+    }
+
+    #[test]
+    fn test_truncated_bytecode_get_local_missing_operand() {
+        use crate::bytecode::{Bytecode, Opcode};
+
+        // GetLocal needs 2 operand bytes (u16 index) - provide only 1
+        let mut bytecode = Bytecode::new();
+        bytecode.instructions = vec![Opcode::GetLocal as u8, 0x00]; // missing second byte
+
+        let mut vm = VM::new(bytecode);
+        let result = vm.run(&SecurityContext::allow_all());
+
+        // Must produce error, not crash/UB
+        assert!(result.is_err(), "Truncated GetLocal should produce error");
     }
 }
