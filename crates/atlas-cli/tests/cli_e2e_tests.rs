@@ -291,8 +291,7 @@ fn test_build_creates_bytecode_file() {
     let temp_dir = create_test_project("let x: number = 42;");
     let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
 
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .assert()
@@ -312,8 +311,7 @@ fn add(a: number, b: number) -> number {
     let temp_dir = create_test_project(source);
     let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
 
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .assert()
@@ -326,8 +324,7 @@ fn add(a: number, b: number) -> number {
 fn test_build_with_disasm_flag() {
     let temp_dir = create_test_project("let x: number = 42;");
 
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .arg("--disasm")
@@ -351,8 +348,7 @@ let result: number = factorial(5);
     let temp_dir = create_test_project(source);
     let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
 
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .assert()
@@ -371,8 +367,7 @@ let result: number = factorial(5);
 
 #[test]
 fn test_build_missing_file() {
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(TempDir::new().unwrap().path())
         .arg("build")
         .assert()
@@ -383,8 +378,7 @@ fn test_build_missing_file() {
 fn test_build_parse_error() {
     let temp_dir = create_test_project("let x =");
 
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .assert()
@@ -395,8 +389,7 @@ fn test_build_parse_error() {
 fn test_build_type_error() {
     let temp_dir = create_test_project(r#"let x: number = "wrong";"#);
 
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .assert()
@@ -407,8 +400,7 @@ fn test_build_type_error() {
 fn test_build_json_flag_on_error() {
     let temp_dir = create_test_project(r#"let x: number = "wrong";"#);
 
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .arg("--json")
@@ -518,8 +510,7 @@ fn test_build_then_run_workflow() {
     let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
 
     // Build should succeed
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .assert()
@@ -548,8 +539,7 @@ fn test_all_commands_handle_same_error() {
         .assert()
         .failure();
 
-    assert_cmd::Command::cargo_bin("atlas")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .current_dir(temp_dir.path())
         .arg("build")
         .assert()
