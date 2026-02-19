@@ -27,6 +27,24 @@ fn create_test_file(filename: &str, content: &str) -> (TempDir, String) {
     (temp_dir, file_path.to_str().unwrap().to_string())
 }
 
+/// Create a temporary Atlas project with atlas.toml and src/main.atlas
+fn create_test_project(main_source: &str) -> TempDir {
+    let temp_dir = TempDir::new().unwrap();
+    let root = temp_dir.path();
+    fs::create_dir(root.join("src")).unwrap();
+    fs::write(
+        root.join("atlas.toml"),
+        r#"
+[package]
+name = "test-project"
+version = "0.1.0"
+"#,
+    )
+    .unwrap();
+    fs::write(root.join("src/main.atlas"), main_source).unwrap();
+    temp_dir
+}
+
 // ============================================================================
 // atlas run - Success Cases
 // ============================================================================
@@ -270,15 +288,13 @@ fn test_run_json_flag_on_error() {
 
 #[test]
 fn test_build_creates_bytecode_file() {
-    let temp_dir = TempDir::new().unwrap();
-    let source_path = temp_dir.path().join("test.atl");
-    let bytecode_path = temp_dir.path().join("test.atb");
+    let temp_dir = create_test_project("let x: number = 42;");
+    let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
 
-    fs::write(&source_path, "let x: number = 42;").unwrap();
-
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(source_path.to_str().unwrap())
         .assert()
         .success()
         .stdout(predicate::str::contains("Compiled"));
@@ -288,20 +304,18 @@ fn test_build_creates_bytecode_file() {
 
 #[test]
 fn test_build_with_function() {
-    let temp_dir = TempDir::new().unwrap();
-    let source_path = temp_dir.path().join("test.atl");
-    let bytecode_path = temp_dir.path().join("test.atb");
-
     let source = r#"
 fn add(a: number, b: number) -> number {
     return a + b;
 }
 "#;
-    fs::write(&source_path, source).unwrap();
+    let temp_dir = create_test_project(source);
+    let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
 
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(source_path.to_str().unwrap())
         .assert()
         .success();
 
@@ -310,11 +324,12 @@ fn add(a: number, b: number) -> number {
 
 #[test]
 fn test_build_with_disasm_flag() {
-    let (_dir, path) = create_test_file("test.atl", "let x: number = 42;");
+    let temp_dir = create_test_project("let x: number = 42;");
 
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(&path)
         .arg("--disasm")
         .assert()
         .success()
@@ -323,10 +338,6 @@ fn test_build_with_disasm_flag() {
 
 #[test]
 fn test_build_complex_program() {
-    let temp_dir = TempDir::new().unwrap();
-    let source_path = temp_dir.path().join("test.atl");
-    let bytecode_path = temp_dir.path().join("test.atb");
-
     let source = r#"
 fn factorial(n: number) -> number {
     if (n <= 1) {
@@ -337,11 +348,13 @@ fn factorial(n: number) -> number {
 
 let result: number = factorial(5);
 "#;
-    fs::write(&source_path, source).unwrap();
+    let temp_dir = create_test_project(source);
+    let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
 
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(source_path.to_str().unwrap())
         .assert()
         .success();
 
@@ -358,42 +371,46 @@ let result: number = factorial(5);
 
 #[test]
 fn test_build_missing_file() {
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(TempDir::new().unwrap().path())
         .arg("build")
-        .arg("nonexistent.atl")
         .assert()
         .failure();
 }
 
 #[test]
 fn test_build_parse_error() {
-    let (_dir, path) = create_test_file("test.atl", "let x =");
+    let temp_dir = create_test_project("let x =");
 
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(&path)
         .assert()
         .failure();
 }
 
 #[test]
 fn test_build_type_error() {
-    let (_dir, path) = create_test_file("test.atl", r#"let x: number = "wrong";"#);
+    let temp_dir = create_test_project(r#"let x: number = "wrong";"#);
 
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(&path)
         .assert()
         .failure();
 }
 
 #[test]
 fn test_build_json_flag_on_error() {
-    let (_dir, path) = create_test_file("test.atl", r#"let x: number = "wrong";"#);
+    let temp_dir = create_test_project(r#"let x: number = "wrong";"#);
 
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(&path)
         .arg("--json")
         .assert()
         .failure()
@@ -496,23 +513,22 @@ fn test_check_json_output_with_error() {
 fn test_build_then_run_workflow() {
     // This test verifies that a built .atb file can be used
     // (though we don't have a command to run .atb files directly yet)
-    let temp_dir = TempDir::new().unwrap();
-    let source_path = temp_dir.path().join("test.atl");
-    let bytecode_path = temp_dir.path().join("test.atb");
-
     let source = "let x: number = 42;";
-    fs::write(&source_path, source).unwrap();
+    let temp_dir = create_test_project(source);
+    let bytecode_path = temp_dir.path().join("target/debug/test-project.atb");
 
     // Build should succeed
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(source_path.to_str().unwrap())
         .assert()
         .success();
 
     assert!(bytecode_path.exists());
 
     // Run should also succeed
+    let source_path = temp_dir.path().join("src/main.atlas");
     assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .arg("run")
         .arg(source_path.to_str().unwrap())
@@ -522,24 +538,26 @@ fn test_build_then_run_workflow() {
 
 #[test]
 fn test_all_commands_handle_same_error() {
-    let (_dir, path) = create_test_file("test.atl", r#"let x: number = "wrong";"#);
+    let temp_dir = create_test_project(r#"let x: number = "wrong";"#);
+    let source_path = temp_dir.path().join("src/main.atlas");
 
     // All commands should fail on the same type error
     assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .arg("check")
-        .arg(&path)
+        .arg(source_path.to_str().unwrap())
         .assert()
         .failure();
 
-    assert_cmd::cargo::cargo_bin_cmd!("atlas")
+    assert_cmd::Command::cargo_bin("atlas")
+        .unwrap()
+        .current_dir(temp_dir.path())
         .arg("build")
-        .arg(&path)
         .assert()
         .failure();
 
     assert_cmd::cargo::cargo_bin_cmd!("atlas")
         .arg("run")
-        .arg(&path)
+        .arg(source_path.to_str().unwrap())
         .assert()
         .failure();
 }

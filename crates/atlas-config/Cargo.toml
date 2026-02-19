@@ -3,6 +3,7 @@ name = "atlas-config"
 version = "0.2.0"
 edition = "2021"
 rust-version = "1.70"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
