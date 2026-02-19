@@ -129,7 +129,14 @@ impl ExternFunction {
             }
             "()->CLong" => {
                 let f: extern "C" fn() -> c_long = std::mem::transmute(self.fn_ptr);
-                Ok(CType::Long(i64::from(f())))
+                #[cfg(windows)]
+                {
+                    Ok(CType::Long(i64::from(f())))
+                }
+                #[cfg(not(windows))]
+                {
+                    Ok(CType::Long(f()))
+                }
             }
             "()->CDouble" => {
                 let f: extern "C" fn() -> c_double = std::mem::transmute(self.fn_ptr);
