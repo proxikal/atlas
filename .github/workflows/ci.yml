@@ -307,6 +307,9 @@ jobs:
       - name: Install Rust toolchain (MSRV 1.70.0)
         uses: dtolnay/rust-toolchain@1.70.0
 
+      - name: Install Rust toolchain (stable for lockfile)
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -320,7 +323,7 @@ jobs:
           key: ${{ runner.os }}-cargo-git-msrv-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Pin MSRV-compatible time-core
-        run: cargo update -p time-core --precise 0.1.7
+        run: cargo +stable update -p time-core --precise 0.1.7
 
       - name: Check MSRV compatibility
-        run: cargo check --all-features
+        run: cargo +1.70.0 check --all-features --locked
