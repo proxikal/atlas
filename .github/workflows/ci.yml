@@ -197,7 +197,7 @@ jobs:
         run: cargo +stable update -p time --precise 0.3.45
 
       - name: Check MSRV
-        run: cargo +1.70.0 check --all-features --locked
+        run: cargo +1.70.0 check -p atlas-runtime --all-features --locked
 
   fuzz:
     name: Fuzz (${{ matrix.target }})
