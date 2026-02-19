@@ -79,8 +79,8 @@ fn test_typecheck_dump_mutable_variable() {
 fn test_typecheck_dump_function_with_loop() {
     let source = r#"
 fn sum(n: number) -> number {
-    let total: number = 0;
-    let i: number = 0;
+    var total: number = 0;
+    var i: number = 0;
     while (i < n) {
         total = total + i;
         i = i + 1;
