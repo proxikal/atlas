@@ -74,7 +74,7 @@ Atlas treats AI agents as **first-class consumers**, not an afterthought.
 
 Atlas syntax is designed for **reliable code generation**:
 
-```atlas
+```typescript
 // No ambiguity - every type is explicit
 fn divide(a: number, b: number) -> Result<number, string> {
     if (b == 0) {
@@ -163,7 +163,7 @@ atlas> print(doubled);
 
 ### Type System
 
-```atlas
+```typescript
 // Primitives
 let n: number = 42;              // 64-bit float (IEEE 754)
 let s: string = "hello";         // UTF-8 string
@@ -182,7 +182,7 @@ let set = hashset_new();
 
 ### Functions
 
-```atlas
+```typescript
 // First-class functions with explicit types
 fn add(a: number, b: number) -> number {
     return a + b;
@@ -201,7 +201,7 @@ fn apply(f: (number) -> number, x: number) -> number {
 
 ### Control Flow
 
-```atlas
+```typescript
 // Pattern matching (exhaustiveness checked)
 match result {
     Ok(value) => process(value),
@@ -220,7 +220,7 @@ for (var i = 0; i < 10; i++) { /* ... */ }
 
 ### Modules
 
-```atlas
+```typescript
 // math.atl
 export fn add(a: number, b: number) -> number {
     return a + b;
