@@ -1,8 +1,11 @@
+# Security - Dependency auditing and supply chain verification
+#
+# Runs on: Cargo.toml/lock changes, daily schedule, manual trigger
+
 name: Security
 
 on:
   schedule:
-    # Run daily at midnight UTC
     - cron: '0 0 * * *'
   push:
     paths:
@@ -12,7 +15,11 @@ on:
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -22,29 +29,21 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo-audit
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-audit
-          key: ${{ runner.os }}-cargo-audit
-          restore-keys: ${{ runner.os }}-cargo-audit
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit --force
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
 
-      - name: Run security audit
+      - name: Run audit
         run: cargo audit --deny warnings --json > audit-results.json || true
 
-      - name: Check audit results
+      - name: Check results
         run: cargo audit --deny warnings
 
-      - name: Upload audit results
+      - name: Upload results
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -52,61 +51,38 @@ jobs:
           path: audit-results.json
           retention-days: 90
 
-      - name: Create issue on security vulnerability
+      - name: Create issue on vulnerability
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let auditResults = {};
             try {
-              auditResults = JSON.parse(fs.readFileSync('audit-results.json', 'utf8'));
+              const results = JSON.parse(fs.readFileSync('audit-results.json', 'utf8'));
+              if (results.vulnerabilities?.found) {
+                github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: 'Security vulnerability detected in dependencies',
+                  body: `Security audit found ${results.vulnerabilities.found} vulnerabilities.\n\nRun \`cargo audit\` locally for details.`,
+                  labels: ['security', 'dependencies']
+                });
+              }
             } catch (e) {
               console.log('Could not parse audit results');
-              return;
-            }
-
-            if (auditResults.vulnerabilities && auditResults.vulnerabilities.found) {
-              const title = `Security vulnerability detected in dependencies`;
-              const body = `Security audit found ${auditResults.vulnerabilities.found} vulnerabilities.\n\nRun \`cargo audit\` locally for details.`;
-
-              github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: title,
-                body: body,
-                labels: ['security', 'dependencies']
-              });
             }
 
   supply-chain:
-    name: Supply Chain Security
+    name: Supply Chain
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo-deny
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-deny
-          key: ${{ runner.os }}-cargo-deny
-          restore-keys: ${{ runner.os }}-cargo-deny
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-deny
-        run: cargo install cargo-deny --force
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
 
-      - name: Check advisories
-        run: cargo deny check advisories
-
-      - name: Check licenses
-        run: cargo deny check licenses
-
-      - name: Check bans
-        run: cargo deny check bans
-
-      - name: Check sources
-        run: cargo deny check sources
+      - name: Check all
+        run: cargo deny check
