@@ -69,6 +69,30 @@ mod tests {
     use crate::diagnostic::Diagnostic;
     use crate::span::Span;
 
+    /// Get an absolute path that works on both Unix and Windows
+    #[cfg(unix)]
+    fn absolute_test_path(filename: &str) -> String {
+        format!("/absolute/path/to/{}", filename)
+    }
+
+    #[cfg(windows)]
+    fn absolute_test_path(filename: &str) -> String {
+        format!("C:\\absolute\\path\\to\\{}", filename)
+    }
+
+    /// Check if a path looks absolute (cross-platform check for test assertions)
+    fn looks_like_absolute_path(path: &str) -> bool {
+        #[cfg(unix)]
+        {
+            path.starts_with('/')
+        }
+        #[cfg(windows)]
+        {
+            // Windows absolute paths typically start with drive letter
+            path.len() >= 2 && path.chars().nth(1) == Some(':')
+        }
+    }
+
     #[test]
     fn test_normalize_special_paths() {
         assert_eq!(normalize_path("<input>"), "<input>");
@@ -84,14 +108,15 @@ mod tests {
 
     #[test]
     fn test_normalize_diagnostic() {
+        let abs_path = absolute_test_path("test.atlas");
         let diag = Diagnostic::error("test error", Span::new(0, 5))
-            .with_file("/absolute/path/to/test.atlas")
+            .with_file(&abs_path)
             .with_line(10);
 
         let normalized = normalize_diagnostic_for_testing(&diag);
 
-        // Path should be normalized (exact result depends on current dir)
-        assert_ne!(normalized.file, "/absolute/path/to/test.atlas");
+        // Path should be normalized (not the original absolute path)
+        assert_ne!(normalized.file, abs_path);
 
         // Other fields should be preserved
         assert_eq!(normalized.message, "test error");
@@ -113,9 +138,10 @@ mod tests {
 
     #[test]
     fn test_normalize_related_locations() {
+        let abs_path = absolute_test_path("other.atlas");
         let diag =
             Diagnostic::error("test", Span::new(0, 1)).with_related_location(RelatedLocation {
-                file: "/absolute/path/other.atlas".to_string(),
+                file: abs_path.clone(),
                 line: 5,
                 column: 10,
                 length: 3,
@@ -126,22 +152,28 @@ mod tests {
 
         assert_eq!(normalized.related.len(), 1);
         // Related path should also be normalized
-        assert_ne!(normalized.related[0].file, "/absolute/path/other.atlas");
+        assert_ne!(normalized.related[0].file, abs_path);
     }
 
     #[test]
     fn test_normalize_diagnostics_collection() {
+        let path_a = absolute_test_path("a.atlas");
+        let path_b = absolute_test_path("b.atlas");
         let diags = vec![
-            Diagnostic::error("error 1", Span::new(0, 1)).with_file("/path/a.atlas"),
-            Diagnostic::error("error 2", Span::new(0, 1)).with_file("/path/b.atlas"),
+            Diagnostic::error("error 1", Span::new(0, 1)).with_file(&path_a),
+            Diagnostic::error("error 2", Span::new(0, 1)).with_file(&path_b),
         ];
 
         let normalized = normalize_diagnostics_for_testing(&diags);
 
         assert_eq!(normalized.len(), 2);
-        // All paths should be normalized
-        for norm_diag in normalized {
-            assert!(!norm_diag.file.starts_with('/'));
+        // All paths should be normalized (no longer absolute)
+        for norm_diag in &normalized {
+            assert!(
+                !looks_like_absolute_path(&norm_diag.file),
+                "Path should be normalized but got: {}",
+                norm_diag.file
+            );
         }
     }
 }
