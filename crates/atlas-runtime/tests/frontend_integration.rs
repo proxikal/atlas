@@ -544,7 +544,7 @@ fn test_diagnostic_enrichment_from_source() {
 #[test]
 fn test_diagnostic_normalization() {
     let diag = Diagnostic::error("test", Span::new(0, 1))
-        .with_file(&absolute_test_path("test.atlas"))
+        .with_file(absolute_test_path("test.atlas"))
         .with_line(1);
 
     let normalized = normalize_diagnostic_for_testing(&diag);
