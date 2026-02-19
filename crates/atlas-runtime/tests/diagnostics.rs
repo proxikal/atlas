@@ -178,16 +178,16 @@ fn test_normalization_removes_absolute_paths() {
 
     let mut diags = get_all_diagnostics(source);
 
-    // Set absolute path
+    // Set absolute path (platform-appropriate)
     for diag in &mut diags {
-        diag.file = "/absolute/path/to/test.atlas".to_string();
+        diag.file = absolute_test_path("test.atlas");
     }
 
     let normalized = normalize_diagnostics_for_testing(&diags);
 
     for diag in &normalized {
         assert!(
-            !diag.file.starts_with('/'),
+            !is_absolute_path(&diag.file),
             "Normalized diagnostic should not have absolute path: {}",
             diag.file
         );

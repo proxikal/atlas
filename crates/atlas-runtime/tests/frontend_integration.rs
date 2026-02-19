@@ -20,6 +20,7 @@ use atlas_runtime::{
     sort_diagnostics, Diagnostic, DiagnosticLevel, Lexer, Parser, Span, DIAG_VERSION,
 };
 use rstest::rstest;
+use std::path::Path;
 
 // ============================================================================
 // Frontend Integration Tests (from frontend_integration_tests.rs)
@@ -28,6 +29,22 @@ use rstest::rstest;
 // ============================================================
 // Helper Functions
 // ============================================================
+
+/// Generate an absolute path that works on the current platform
+#[cfg(unix)]
+fn absolute_test_path(filename: &str) -> String {
+    format!("/absolute/path/{}", filename)
+}
+
+#[cfg(windows)]
+fn absolute_test_path(filename: &str) -> String {
+    format!("C:\\absolute\\path\\{}", filename)
+}
+
+/// Check if a path looks absolute (cross-platform)
+fn is_absolute_path(path: &str) -> bool {
+    Path::new(path).is_absolute()
+}
 
 /// Parse source and return (AST success, parse error diagnostics only)
 fn parse_source(source: &str) -> (bool, Vec<Diagnostic>) {
@@ -527,12 +544,16 @@ fn test_diagnostic_enrichment_from_source() {
 #[test]
 fn test_diagnostic_normalization() {
     let diag = Diagnostic::error("test", Span::new(0, 1))
-        .with_file("/absolute/path/test.atlas")
+        .with_file(absolute_test_path("test.atlas"))
         .with_line(1);
 
     let normalized = normalize_diagnostic_for_testing(&diag);
     // Should strip absolute path
-    assert!(!normalized.file.starts_with('/'));
+    assert!(
+        !is_absolute_path(&normalized.file),
+        "Path should be normalized: {}",
+        normalized.file
+    );
     // Preserve other fields
     assert_eq!(normalized.message, "test");
     assert_eq!(normalized.line, 1);
