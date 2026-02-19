@@ -359,4 +359,6 @@ jobs:
         run: cargo +stable update -p time --precise 0.3.45
 
       - name: Check MSRV compatibility
-        run: cargo +1.70.0 check --all-features --locked
+        run: |
+          RUSTC="$(rustup which rustc --toolchain 1.70.0)"
+          cargo +stable check --all-features --locked
