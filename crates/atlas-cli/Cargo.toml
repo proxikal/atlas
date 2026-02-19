@@ -14,7 +14,7 @@ atlas-config = { path = "../atlas-config" }
 atlas-build = { path = "../atlas-build" }
 atlas-formatter = { path = "../atlas-formatter" }
 clap = { version = "4.5", features = ["derive"] }
-rustyline = "14.0"  # Line editor for REPL
+rustyline = "17.0"  # Line editor for REPL
 ratatui = { version = "0.29", default-features = false, features = ["crossterm"] }  # TUI framework for rich REPL mode
 crossterm = "0.28"  # Terminal backend for ratatui
 dirs = "5.0"  # Platform-specific directories (for history file)
