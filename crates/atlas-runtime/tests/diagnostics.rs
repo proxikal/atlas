@@ -1094,6 +1094,43 @@ fn test_parse_error_has_code() {
 }
 
 #[test]
+fn test_invalid_number_literal_diagnostic() {
+    let (_, diags) = parse("let x = 1e309;");
+    assert!(
+        diags.iter().any(|diag| diag.code == "AT1001"),
+        "Expected invalid number literal diagnostic, got: {:?}",
+        diags
+    );
+}
+
+#[test]
+fn test_distinct_error_codes() {
+    let (_, diags) = parse("let x = 1");
+    assert!(
+        diags.iter().any(|diag| diag.code == "AT1002"),
+        "Expected missing semicolon code AT1002, got: {:?}",
+        diags
+    );
+
+    let (_, diags) = parse("fn 123() {}");
+    assert!(
+        diags.iter().any(|diag| diag.code == "AT1004"),
+        "Expected unexpected token code AT1004, got: {:?}",
+        diags
+    );
+}
+
+#[test]
+fn test_reserved_keyword_error_code() {
+    let (_, diags) = parse("fn let() {}");
+    assert!(
+        diags.iter().any(|diag| diag.code == "AT1005"),
+        "Expected reserved keyword code AT1005, got: {:?}",
+        diags
+    );
+}
+
+#[test]
 fn test_type_error_has_diagnostics() {
     let runtime = atlas_runtime::Atlas::new();
     let result = runtime.eval("let x: number = \"hello\";");

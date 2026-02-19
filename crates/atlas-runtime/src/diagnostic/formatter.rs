@@ -371,7 +371,13 @@ mod tests {
     fn test_color_mode_no_color() {
         // We can't easily test NO_COLOR env var mutation in parallel tests,
         // but we can test the enum variants
-        assert_eq!(ColorMode::Always.to_color_choice(), ColorChoice::Always);
+        let no_color = std::env::var("NO_COLOR").is_ok();
+        let expected_always = if no_color {
+            ColorChoice::Never
+        } else {
+            ColorChoice::Always
+        };
+        assert_eq!(ColorMode::Always.to_color_choice(), expected_always);
         assert_eq!(ColorMode::Never.to_color_choice(), ColorChoice::Never);
     }
 

@@ -1,14 +1,14 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-18
-**Version:** v0.2 | **Progress:** 109/131 phases (83%)
+**Last Updated:** 2026-02-19
+**Version:** v0.2 | **Progress:** 110/131 phases (84%)
 
 ---
 
 ## Current Phase
 
-**Last Completed:** phases/correctness/phase-10-stdlib-error-context.md
-**Next Phase:** phases/correctness/phase-11-parser-number-diagnostic.md
+**Last Completed:** phases/correctness/phase-11-parser-number-diagnostic.md
+**Next Phase:** phases/interpreter/phase-01-debugger-repl-improvements.md
 
 > **Execution order:** Correctness (12) → Interpreter (2) → CLI (6) → LSP (5) → Polish (5)
 > Correctness phases are BLOCKING — they fix structural compiler bugs that must be resolved before features.
@@ -20,7 +20,7 @@
 | Category | Done | Status |
 |----------|------|--------|
 | **Infra** | 20/20 | ✅ Complete |
-| **Correctness** | 11/12 | 🚧 In progress |
+| **Correctness** | 12/12 | ✅ Complete |
 | **Foundation** | 33/33 | ✅ Archived |
 | **Stdlib** | 28/30 | ✅ Near complete (phase-16+ TBD) |
 | **Bytecode-VM** | 8/8 | ✅ Archived |
@@ -40,7 +40,7 @@
 ✅ phase-06-fuzz-testing.md — cargo-fuzz on lexer/parser/typechecker/eval
 ✅ phase-07-benchmark-suite.md — Criterion benchmarks, baseline committed
 
-### Correctness (8/12) — Do after Infra
+### Correctness (12/12) — Complete
 
 **Structural safety:**
 ✅ phase-01-security-context-threading.md — Replace *const SecurityContext with Arc<SecurityContext>
@@ -62,7 +62,7 @@
 
 **Error quality:**
 ✅ phase-10-stdlib-error-context.md — Function name + type context in all stdlib errors
-⬜ phase-11-parser-number-diagnostic.md — Diagnostic for invalid numbers; distinct error codes
+✅ phase-11-parser-number-diagnostic.md — Diagnostic for invalid numbers; distinct error codes
 
 ### Interpreter (0/2) — Blocked by Correctness
 

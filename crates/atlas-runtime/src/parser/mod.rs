@@ -11,6 +11,14 @@ use crate::diagnostic::Diagnostic;
 use crate::span::Span;
 use crate::token::{Token, TokenKind};
 
+// Parser error codes
+const E_GENERIC: &str = "AT1000"; // Generic/uncategorized parse error
+const E_BAD_NUMBER: &str = "AT1001"; // Invalid number literal
+const E_MISSING_SEMI: &str = "AT1002"; // Missing semicolon
+const E_MISSING_BRACE: &str = "AT1003"; // Missing closing brace/bracket/paren
+const E_UNEXPECTED: &str = "AT1004"; // Unexpected token
+const E_RESERVED: &str = "AT1005"; // Reserved keyword used as identifier
+
 /// Parser state for building AST from tokens
 pub struct Parser {
     pub(super) tokens: Vec<Token>,
@@ -476,7 +484,14 @@ impl Parser {
         if self.check(kind) {
             Ok(self.advance())
         } else {
-            self.error(message);
+            let code = match kind {
+                TokenKind::Semicolon => E_MISSING_SEMI,
+                TokenKind::RightBrace | TokenKind::RightBracket | TokenKind::RightParen => {
+                    E_MISSING_BRACE
+                }
+                _ => E_UNEXPECTED,
+            };
+            self.error_with_code(code, message);
             Err(())
         }
     }
@@ -488,9 +503,19 @@ impl Parser {
 
     /// Record an error
     pub(super) fn error(&mut self, message: &str) {
+        self.error_with_code(E_GENERIC, message);
+    }
+
+    /// Record an error at the current token with an explicit code
+    pub(super) fn error_with_code(&mut self, code: &'static str, message: &str) {
         let span = self.peek().span;
+        self.error_at_with_code(code, message, span);
+    }
+
+    /// Record an error at a specific span with an explicit code
+    pub(super) fn error_at_with_code(&mut self, code: &'static str, message: &str, span: Span) {
         self.diagnostics.push(
-            Diagnostic::error_with_code("AT1000", message, span)
+            Diagnostic::error_with_code(code, message, span)
                 .with_label("syntax error")
                 .with_help("check your syntax for typos or missing tokens"),
         );
@@ -530,24 +555,30 @@ impl Parser {
 
             // Special message for import/match (reserved for future)
             if current.kind == TokenKind::Import || current.kind == TokenKind::Match {
-                self.error(&format!(
+                self.error_with_code(
+                    E_RESERVED,
+                    &format!(
                     "Cannot use reserved keyword '{}' as {}. This keyword is reserved for future use",
                     keyword_name, context
-                ));
+                ),
+                );
             } else {
-                self.error(&format!(
-                    "Cannot use reserved keyword '{}' as {}",
-                    keyword_name, context
-                ));
+                self.error_with_code(
+                    E_RESERVED,
+                    &format!(
+                        "Cannot use reserved keyword '{}' as {}",
+                        keyword_name, context
+                    ),
+                );
             }
             Err(())
         } else if current.kind == TokenKind::Identifier {
             Ok(self.advance())
         } else {
-            self.error(&format!(
-                "Expected {} but found {:?}",
-                context, current.kind
-            ));
+            self.error_with_code(
+                E_UNEXPECTED,
+                &format!("Expected {} but found {:?}", context, current.kind),
+            );
             Err(())
         }
     }

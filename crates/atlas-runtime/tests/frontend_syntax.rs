@@ -787,18 +787,25 @@ fn parse_errors(source: &str) -> Vec<atlas_runtime::diagnostic::Diagnostic> {
     diagnostics
 }
 
+fn is_parser_error_code(code: &str) -> bool {
+    matches!(
+        code,
+        "AT1000" | "AT1001" | "AT1002" | "AT1003" | "AT1004" | "AT1005"
+    )
+}
+
 fn assert_has_parser_error(
     diagnostics: &[atlas_runtime::diagnostic::Diagnostic],
     expected_substring: &str,
 ) {
     assert!(!diagnostics.is_empty(), "Expected at least one diagnostic");
     let expected_lower = expected_substring.to_lowercase();
-    let found = diagnostics
-        .iter()
-        .any(|d| d.message.to_lowercase().contains(&expected_lower) && d.code == "AT1000");
+    let found = diagnostics.iter().any(|d| {
+        d.message.to_lowercase().contains(&expected_lower) && is_parser_error_code(&d.code)
+    });
     assert!(
         found,
-        "Expected AT1000 error with '{}', got: {:?}",
+        "Expected parser error with '{}', got: {:?}",
         expected_substring,
         diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
     );
@@ -1012,10 +1019,10 @@ fn test_operator_precedence(#[case] name: &str, #[case] source: &str) {
 
 fn assert_parse_error_present(diagnostics: &[atlas_runtime::diagnostic::Diagnostic]) {
     assert!(!diagnostics.is_empty(), "Expected at least one diagnostic");
-    let found = diagnostics.iter().any(|d| d.code == "AT1000");
+    let found = diagnostics.iter().any(|d| is_parser_error_code(&d.code));
     assert!(
         found,
-        "Expected diagnostic with code 'AT1000', got: {:?}",
+        "Expected parser diagnostic, got: {:?}",
         diagnostics
             .iter()
             .map(|d| (&d.code, &d.message))
@@ -1127,7 +1134,7 @@ fn test_valid_keyword_usage(#[case] source: &str) {
     let (_program, diagnostics) = parse_source(source);
     // These should parse without errors (though return outside function might have semantic errors)
     // At parser level, these are valid
-    let has_parser_error = diagnostics.iter().any(|d| d.code == "AT1000");
+    let has_parser_error = diagnostics.iter().any(|d| is_parser_error_code(&d.code));
     assert!(
         !has_parser_error,
         "Should not have parser errors for valid keyword usage: {:?}",
@@ -1145,7 +1152,7 @@ fn test_keywords_in_strings_allowed() {
     let (_program, diagnostics) = parse_source(source);
 
     // Keywords in strings are fine
-    let has_parser_error = diagnostics.iter().any(|d| d.code == "AT1000");
+    let has_parser_error = diagnostics.iter().any(|d| is_parser_error_code(&d.code));
     assert!(!has_parser_error, "Keywords in strings should be allowed");
 }
 
@@ -1155,7 +1162,7 @@ fn test_keywords_in_comments_allowed() {
     let (_program, diagnostics) = parse_source(source);
 
     // Keywords in comments are fine
-    let has_parser_error = diagnostics.iter().any(|d| d.code == "AT1000");
+    let has_parser_error = diagnostics.iter().any(|d| is_parser_error_code(&d.code));
     assert!(!has_parser_error, "Keywords in comments should be allowed");
 }
 
@@ -1228,12 +1235,12 @@ fn test_multiple_keyword_errors() {
     // Should have at least 2 errors (one for each invalid use)
     assert!(diagnostics.len() >= 2, "Expected at least 2 errors");
 
-    // All should be AT1000 syntax errors
-    let at1000_count = diagnostics.iter().filter(|d| d.code == "AT1000").count();
+    // All should be reserved keyword errors
+    let reserved_count = diagnostics.iter().filter(|d| d.code == "AT1005").count();
     assert!(
-        at1000_count >= 2,
-        "Expected at least 2 AT1000 errors, got {}",
-        at1000_count
+        reserved_count >= 2,
+        "Expected at least 2 AT1005 errors, got {}",
+        reserved_count
     );
 }
 

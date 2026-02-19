@@ -1,5 +1,6 @@
 //! Expression parsing (Pratt parsing)
 
+use super::E_BAD_NUMBER;
 use crate::ast::*;
 use crate::parser::{Parser, Precedence};
 use crate::span::Span;
@@ -94,7 +95,18 @@ impl Parser {
     fn parse_number(&mut self) -> Result<Expr, ()> {
         let token = self.advance();
         let span = token.span;
-        let value: f64 = token.lexeme.parse().unwrap_or(0.0);
+        let lexeme = token.lexeme.clone();
+        let value: f64 = match lexeme.parse::<f64>() {
+            Ok(value) if value.is_finite() => value,
+            _ => {
+                self.error_at_with_code(
+                    E_BAD_NUMBER,
+                    &format!("Invalid number literal: '{}'", lexeme),
+                    span,
+                );
+                0.0
+            }
+        };
         Ok(Expr::Literal(Literal::Number(value), span))
     }
 
@@ -610,8 +622,20 @@ impl Parser {
             // Literal patterns: numbers, strings, bools, null
             TokenKind::Number => {
                 let token = self.advance();
-                let value: f64 = token.lexeme.parse().unwrap_or(0.0);
-                Ok(Pattern::Literal(Literal::Number(value), token.span))
+                let span = token.span;
+                let lexeme = token.lexeme.clone();
+                let value: f64 = match lexeme.parse::<f64>() {
+                    Ok(value) if value.is_finite() => value,
+                    _ => {
+                        self.error_at_with_code(
+                            E_BAD_NUMBER,
+                            &format!("Invalid number literal: '{}'", lexeme),
+                            span,
+                        );
+                        0.0
+                    }
+                };
+                Ok(Pattern::Literal(Literal::Number(value), span))
             }
             TokenKind::String => {
                 let token = self.advance();
