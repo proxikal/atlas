@@ -3,7 +3,7 @@ source: crates/atlas-cli/tests/ast_dump_tests.rs
 expression: json
 ---
 {
-  "ast_version": 1,
+  "ast_version": 2,
   "items": [
     {
       "Function": {

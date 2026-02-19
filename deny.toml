@@ -4,8 +4,8 @@
 [advisories]
 # Check for security vulnerabilities
 vulnerability = "deny"
-unmaintained = "warn"
-unsound = "warn"
+unmaintained = "workspace"
+unsound = "workspace"
 yanked = "warn"
 notice = "warn"
 

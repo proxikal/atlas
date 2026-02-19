@@ -2,10 +2,11 @@
 
 use anyhow::{Context, Result};
 use atlas_build::{BuildScript, Builder, OutputMode, Profile, ScriptPhase};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// Build command arguments
+#[derive(Default)]
 pub struct BuildArgs {
     /// Build profile (dev, release, test, or custom)
     pub profile: Option<String>,
@@ -29,23 +30,6 @@ pub struct BuildArgs {
     pub target_dir: Option<PathBuf>,
     /// Project directory (defaults to current directory)
     pub project_dir: Option<PathBuf>,
-}
-
-impl Default for BuildArgs {
-    fn default() -> Self {
-        Self {
-            profile: None,
-            release: false,
-            target: None,
-            clean: false,
-            verbose: false,
-            quiet: false,
-            json: false,
-            jobs: None,
-            target_dir: None,
-            project_dir: None,
-        }
-    }
 }
 
 /// Run the build command
@@ -158,7 +142,7 @@ fn determine_output_mode(args: &BuildArgs) -> OutputMode {
 }
 
 /// Load build scripts from package manifest
-fn load_build_scripts(_builder: &Builder, project_dir: &PathBuf) -> Result<Vec<BuildScript>> {
+fn load_build_scripts(_builder: &Builder, project_dir: &Path) -> Result<Vec<BuildScript>> {
     // Read manifest
     let manifest_path = project_dir.join("atlas.toml");
     if !manifest_path.exists() {

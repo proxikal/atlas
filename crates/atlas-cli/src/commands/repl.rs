@@ -224,7 +224,7 @@ fn print_vars(bindings: &[ReplBinding], page: usize, no_color: bool) {
     }
 
     let page_size = 20usize;
-    let total_pages = ((bindings.len() + page_size - 1) / page_size).max(1);
+    let total_pages = bindings.len().div_ceil(page_size).max(1);
     let current_page = page.min(total_pages);
     let start = (current_page - 1) * page_size;
     let end = (start + page_size).min(bindings.len());
@@ -237,7 +237,7 @@ fn print_vars(bindings: &[ReplBinding], page: usize, no_color: bool) {
         end,
         bindings.len()
     );
-    println!("{:<16} {:<18} {:<8} {}", "name", "type", "scope", "value");
+    println!("{:<16} {:<18} {:<8} value", "name", "type", "scope");
     println!("{}", "-".repeat(60));
 
     for binding in &bindings[start..end] {
