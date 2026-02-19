@@ -69,10 +69,7 @@ pub fn run(args: FmtArgs) -> Result<()> {
 
     if args.check {
         if unformatted_count > 0 {
-            eprintln!(
-                "{} file(s) would be reformatted",
-                unformatted_count
-            );
+            eprintln!("{} file(s) would be reformatted", unformatted_count);
             std::process::exit(1);
         } else {
             eprintln!("All {} file(s) are formatted correctly", files.len());
@@ -95,7 +92,10 @@ fn collect_files(paths: &[String]) -> Result<Vec<PathBuf>> {
         let path = Path::new(path_str);
         if path.is_dir() {
             collect_files_recursive(path, &mut files)?;
-        } else if path.extension().is_some_and(|ext| ext == "at" || ext == "atlas") {
+        } else if path
+            .extension()
+            .is_some_and(|ext| ext == "at" || ext == "atlas")
+        {
             files.push(path.to_path_buf());
         } else {
             // Accept any file explicitly passed
