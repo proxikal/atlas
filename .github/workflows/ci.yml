@@ -3,12 +3,30 @@ name: CI
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.txt"
+      - "docs/**"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.svg"
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.txt"
+      - "docs/**"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.svg"
   schedule:
     # Run nightly at 04:00 UTC for fuzz testing
     - cron: '0 4 * * *'
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -113,8 +131,15 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache cargo-audit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: ${{ runner.os }}-cargo-audit
+          restore-keys: ${{ runner.os }}-cargo-audit
+
       - name: Install cargo-audit
-        run: cargo install cargo-audit
+        run: cargo install cargo-audit --force
 
       - name: Run security audit
         run: cargo audit
@@ -122,6 +147,7 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,8 +167,15 @@ jobs:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Cache cargo-tarpaulin
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-tarpaulin
+          key: ${{ runner.os }}-cargo-tarpaulin
+          restore-keys: ${{ runner.os }}-cargo-tarpaulin
+
       - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin --force
 
       - name: Generate coverage
         run: cargo tarpaulin --verbose --all-features --workspace --timeout 300 --out xml
