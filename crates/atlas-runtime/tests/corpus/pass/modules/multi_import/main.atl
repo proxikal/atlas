@@ -1,0 +1,6 @@
+// Test: import multiple names from one module
+import { double, triple, SCALE } from "./utils";
+
+print(double(5));
+print(triple(5));
+print(SCALE);

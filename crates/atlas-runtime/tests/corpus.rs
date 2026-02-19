@@ -98,6 +98,36 @@ fn run_fail(source: &str) -> String {
     }
 }
 
+/// Run an Atlas file (with import support) through one execution engine.
+///
+/// Uses eval_file() which handles multi-file imports properly.
+fn run_pass_file(path: &std::path::Path, mode: ExecutionMode) -> Result<String, String> {
+    let (buf, writer) = capture_output();
+    let config = RuntimeConfig::new()
+        .with_output(writer)
+        .with_io_allowed(true)
+        .with_network_allowed(false);
+    let mut runtime = Runtime::with_config(mode, config);
+    match runtime.eval_file(path) {
+        Ok(_) => Ok(String::from_utf8(buf.lock().unwrap().clone()).unwrap()),
+        Err(e) => Err(format!("{}", e)),
+    }
+}
+
+/// Run an Atlas file and capture the error message (for fail/modules/ tests).
+fn run_fail_file(path: &std::path::Path) -> String {
+    let (_buf, writer) = capture_output();
+    let config = RuntimeConfig::new()
+        .with_output(writer)
+        .with_io_allowed(true)
+        .with_network_allowed(false);
+    let mut runtime = Runtime::with_config(ExecutionMode::Interpreter, config);
+    match runtime.eval_file(path) {
+        Ok(_) => "(no error — expected failure did not occur)".to_string(),
+        Err(e) => format!("{}", e),
+    }
+}
+
 /// Run an Atlas source through the full pipeline and collect only WARNING diagnostics.
 ///
 /// Uses the lower-level API (Lexer → Parser → Binder → TypeChecker) to separate
@@ -272,4 +302,46 @@ fn warn_corpus(#[files("tests/corpus/warn/**/*.atlas")] path: PathBuf) {
         );
         assert_snapshot(&snapshot, &warnings);
     }
+}
+
+// ============================================================================
+// Module tests — file-based with import support, parity between engines
+// ============================================================================
+
+/// Run a pass/modules/ corpus file in the Interpreter engine.
+///
+/// Module tests use eval_file() which properly handles imports.
+/// Only files named main.atl are entry points (other .atl files are dependencies).
+/// Note: Module corpus uses .atl extension (not .atlas) for import resolution.
+#[rstest]
+fn modules_pass_interpreter(#[files("tests/corpus/pass/modules/**/main.atl")] path: PathBuf) {
+    let output = run_pass_file(&path, ExecutionMode::Interpreter).unwrap_or_else(|e| {
+        panic!(
+            "Module test failed in interpreter: {}\nFile: {}",
+            e,
+            path.display()
+        )
+    });
+
+    let snapshot = path.with_extension("stdout");
+    assert_snapshot(&snapshot, &output);
+}
+
+/// Run a pass/modules/ corpus file in the VM engine.
+#[rstest]
+fn modules_pass_vm(#[files("tests/corpus/pass/modules/**/main.atl")] path: PathBuf) {
+    let output = run_pass_file(&path, ExecutionMode::VM)
+        .unwrap_or_else(|e| panic!("Module test failed in VM: {}\nFile: {}", e, path.display()));
+
+    let snapshot = path.with_extension("stdout");
+    assert_snapshot(&snapshot, &output);
+}
+
+/// Run a fail/modules/ corpus file and compare error against .stderr snapshot.
+#[rstest]
+fn modules_fail_corpus(#[files("tests/corpus/fail/modules/**/main.atl")] path: PathBuf) {
+    let error = run_fail_file(&path);
+
+    let snapshot = path.with_extension("stderr");
+    assert_snapshot(&snapshot, &error);
 }

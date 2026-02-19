@@ -1,0 +1,4 @@
+// Test: chained imports (main -> middle -> base)
+import { DOUBLED } from "./middle";
+
+print(DOUBLED);

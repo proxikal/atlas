@@ -1,0 +1,4 @@
+// a.atlas - imports from b (creates cycle)
+import { b_val } from "./b";
+
+export let a_val: number = b_val + 1;

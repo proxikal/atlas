@@ -1,0 +1,4 @@
+// middle.atlas - imports from base, exports derived value
+import { VALUE } from "./base";
+
+export let DOUBLED: number = VALUE * 2;

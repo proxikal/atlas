@@ -1,0 +1,4 @@
+// Test: circular dependency should fail
+import { a_val } from "./a";
+
+print(a_val);

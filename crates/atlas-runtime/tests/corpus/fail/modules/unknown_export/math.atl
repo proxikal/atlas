@@ -1,0 +1,4 @@
+// math.atlas - only exports 'add'
+export fn add(a: number, b: number) -> number {
+    return a + b;
+}

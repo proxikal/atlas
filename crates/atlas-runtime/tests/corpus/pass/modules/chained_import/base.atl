@@ -1,0 +1,2 @@
+// base.atlas - base value
+export let VALUE: number = 10;

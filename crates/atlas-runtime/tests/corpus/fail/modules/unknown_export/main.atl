@@ -1,0 +1,4 @@
+// Test: import a name that doesn't exist in the module
+import { subtract } from "./math";
+
+subtract(5, 3);

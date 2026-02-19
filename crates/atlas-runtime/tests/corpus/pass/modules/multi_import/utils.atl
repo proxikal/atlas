@@ -1,0 +1,10 @@
+// utils.atlas - multiple exports
+export fn double(x: number) -> number {
+    return x * 2;
+}
+
+export fn triple(x: number) -> number {
+    return x * 3;
+}
+
+export let SCALE: number = 100;
