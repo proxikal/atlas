@@ -18,6 +18,27 @@ use atlas_runtime::{
     Binder, Diagnostic, DiagnosticLevel, Lexer, Parser, Span, TypeChecker, DIAG_VERSION,
 };
 use rstest::rstest;
+use std::path::Path;
+
+// ============================================================================
+// Cross-platform test helpers
+// ============================================================================
+
+/// Generate an absolute path that works on the current platform
+#[cfg(unix)]
+fn absolute_test_path(filename: &str) -> String {
+    format!("/absolute/path/{}", filename)
+}
+
+#[cfg(windows)]
+fn absolute_test_path(filename: &str) -> String {
+    format!("C:\\absolute\\path\\{}", filename)
+}
+
+/// Check if a path looks absolute (cross-platform)
+fn is_absolute_path(path: &str) -> bool {
+    Path::new(path).is_absolute()
+}
 
 // ============================================================================
 // Diagnostic Ordering Tests (from diagnostic_ordering_tests.rs)
@@ -205,11 +226,11 @@ fn test_normalization_normalizes_related_locations() {
 
     let mut diags = get_all_diagnostics(source);
 
-    // Set absolute path in related locations
+    // Set absolute path in related locations (platform-appropriate)
     for diag in &mut diags {
-        diag.file = "/absolute/path/test.atlas".to_string();
+        diag.file = absolute_test_path("test.atlas");
         for related in &mut diag.related {
-            related.file = "/absolute/path/other.atlas".to_string();
+            related.file = absolute_test_path("other.atlas");
         }
     }
 
@@ -217,12 +238,13 @@ fn test_normalization_normalizes_related_locations() {
 
     for diag in &normalized {
         assert!(
-            !diag.file.starts_with('/'),
-            "File path should be normalized"
+            !is_absolute_path(&diag.file),
+            "File path should be normalized, got: {}",
+            diag.file
         );
         for related in &diag.related {
             assert!(
-                !related.file.starts_with('/'),
+                !is_absolute_path(&related.file),
                 "Related file path should be normalized: {}",
                 related.file
             );
@@ -238,12 +260,25 @@ fn test_same_error_normalizes_to_same_output() {
     let mut diags1 = get_all_diagnostics(source1);
     let mut diags2 = get_all_diagnostics(source2);
 
-    // Set different absolute paths
-    for diag in &mut diags1 {
-        diag.file = "/path1/test.atlas".to_string();
+    // Set different absolute paths (platform-appropriate)
+    // Both paths have same filename but different directories
+    #[cfg(unix)]
+    {
+        for diag in &mut diags1 {
+            diag.file = "/path1/test.atlas".to_string();
+        }
+        for diag in &mut diags2 {
+            diag.file = "/path2/test.atlas".to_string();
+        }
     }
-    for diag in &mut diags2 {
-        diag.file = "/path2/test.atlas".to_string();
+    #[cfg(windows)]
+    {
+        for diag in &mut diags1 {
+            diag.file = "C:\\path1\\test.atlas".to_string();
+        }
+        for diag in &mut diags2 {
+            diag.file = "C:\\path2\\test.atlas".to_string();
+        }
     }
 
     let norm1 = normalize_diagnostics_for_testing(&diags1);
