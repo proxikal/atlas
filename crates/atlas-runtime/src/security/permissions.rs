@@ -256,14 +256,39 @@ impl SecurityContext {
         let mut ctx = Self::new();
 
         // Grant wildcard permissions for everything
-        ctx.filesystem_read.grant(Permission::FilesystemRead {
-            path: PathBuf::from("/"),
-            recursive: true,
-        });
-        ctx.filesystem_write.grant(Permission::FilesystemWrite {
-            path: PathBuf::from("/"),
-            recursive: true,
-        });
+        #[cfg(not(windows))]
+        {
+            ctx.filesystem_read.grant(Permission::FilesystemRead {
+                path: PathBuf::from("/"),
+                recursive: true,
+            });
+            ctx.filesystem_write.grant(Permission::FilesystemWrite {
+                path: PathBuf::from("/"),
+                recursive: true,
+            });
+        }
+        #[cfg(windows)]
+        {
+            let system_drive = std::env::var("SYSTEMDRIVE").unwrap_or_else(|_| "C:".to_string());
+            let root = format!("{}\\", system_drive);
+            let verbatim_root = format!(r"\\?\{}\\", system_drive);
+            ctx.filesystem_read.grant(Permission::FilesystemRead {
+                path: PathBuf::from(&root),
+                recursive: true,
+            });
+            ctx.filesystem_read.grant(Permission::FilesystemRead {
+                path: PathBuf::from(&verbatim_root),
+                recursive: true,
+            });
+            ctx.filesystem_write.grant(Permission::FilesystemWrite {
+                path: PathBuf::from(&root),
+                recursive: true,
+            });
+            ctx.filesystem_write.grant(Permission::FilesystemWrite {
+                path: PathBuf::from(&verbatim_root),
+                recursive: true,
+            });
+        }
         ctx.network.grant(Permission::Network {
             host: "*".to_string(),
         });
@@ -601,8 +626,24 @@ mod tests {
     fn test_security_context_allow_all() {
         let ctx = SecurityContext::allow_all();
 
-        assert!(ctx.check_filesystem_read(Path::new("/any/path")).is_ok());
-        assert!(ctx.check_filesystem_write(Path::new("/any/path")).is_ok());
+        #[cfg(not(windows))]
+        {
+            assert!(ctx.check_filesystem_read(Path::new("/any/path")).is_ok());
+            assert!(ctx.check_filesystem_write(Path::new("/any/path")).is_ok());
+        }
+        #[cfg(windows)]
+        {
+            assert!(ctx.check_filesystem_read(Path::new(r"C:\any\path")).is_ok());
+            assert!(ctx
+                .check_filesystem_write(Path::new(r"C:\any\path"))
+                .is_ok());
+            assert!(ctx
+                .check_filesystem_read(Path::new(r"\\?\C:\any\path"))
+                .is_ok());
+            assert!(ctx
+                .check_filesystem_write(Path::new(r"\\?\C:\any\path"))
+                .is_ok());
+        }
         assert!(ctx.check_network("any.host.com").is_ok());
         assert!(ctx.check_process("any-command").is_ok());
         assert!(ctx.check_environment("ANY_VAR").is_ok());
