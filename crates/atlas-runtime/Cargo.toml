@@ -27,7 +27,7 @@ libffi = "5.1"
 
 # Path manipulation (phase-13a)
 pathdiff = "0.2"
-dirs = "5.0"
+dirs = "6.0"
 
 # Compression (phase-14a, 14b, 14c)
 flate2 = "1.0"
