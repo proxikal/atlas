@@ -1271,7 +1271,7 @@ fn test_stats_reduction_percent() {
     let opt = Optimizer::with_default_passes();
     let (_, stats) = opt.optimize_with_stats(bc);
     let percent = stats.size_reduction_percent();
-    assert!(percent >= 0.0 && percent <= 100.0);
+    assert!((0.0..=100.0).contains(&percent));
 }
 
 #[test]

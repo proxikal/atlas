@@ -1,5 +1,6 @@
 ---
 source: crates/atlas-cli/tests/ast_dump_tests.rs
+assertion_line: 45
 expression: json
 ---
 {
@@ -70,6 +71,7 @@ expression: json
             }
           ]
         },
+        "predicate": null,
         "body": {
           "statements": [
             {
