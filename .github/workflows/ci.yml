@@ -228,7 +228,7 @@ jobs:
           workspaces: crates/atlas-runtime/fuzz
 
       - name: Install cargo-fuzz
-        uses: taiki-e/install-action@cargo-fuzz
+        run: cargo install cargo-fuzz --locked
 
       - name: Run ${{ matrix.target }} (120s)
         run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=120
