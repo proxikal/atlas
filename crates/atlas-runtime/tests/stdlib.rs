@@ -13,7 +13,7 @@ use atlas_runtime::value::{RuntimeError, Value};
 use atlas_runtime::{Atlas, Binder, SecurityContext};
 use common::{
     assert_error_code, assert_eval_bool, assert_eval_null, assert_eval_number, assert_eval_string,
-    assert_has_error,
+    assert_has_error, path_for_atlas, temp_file_path,
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;
@@ -1611,289 +1611,351 @@ fn test_json_roundtrip_with_extraction() {
 
 #[test]
 fn test_write_json_read_parse() {
-    let code = r##"
+    let (_temp, path) = temp_file_path("test_json1.json");
+    let code = format!(
+        r##"
         let data: number[] = [1, 2, 3, 4, 5];
         let jsonStr: string = toJSON(data);
-        writeFile("/tmp/atlas_test_json1.json", jsonStr);
+        writeFile("{path}", jsonStr);
 
-        let content: string = readFile("/tmp/atlas_test_json1.json");
+        let content: string = readFile("{path}");
         let parsed: json = parseJSON(content);
         parsed[0].as_number() + parsed[4].as_number()
-    "##;
-    assert_eval_number_with_io(code, 6.0); // 1 + 5
+    "##
+    );
+    assert_eval_number_with_io(&code, 6.0); // 1 + 5
 }
 
 #[test]
 fn test_json_file_roundtrip() {
-    let code = r##"
-        let obj: json = parseJSON("{\"name\":\"Atlas\",\"version\":2}");
+    let (_temp, path) = temp_file_path("test_json2.json");
+    let code = format!(
+        r##"
+        let obj: json = parseJSON("{{\"name\":\"Atlas\",\"version\":2}}");
         let jsonStr: string = toJSON(obj);
-        writeFile("/tmp/atlas_test_json2.json", jsonStr);
+        writeFile("{path}", jsonStr);
 
-        let loaded: string = readFile("/tmp/atlas_test_json2.json");
+        let loaded: string = readFile("{path}");
         let reparsed: json = parseJSON(loaded);
         reparsed["version"].as_number()
-    "##;
-    assert_eval_number_with_io(code, 2.0);
+    "##
+    );
+    assert_eval_number_with_io(&code, 2.0);
 }
 
 #[test]
 fn test_prettify_write_minify_read() {
-    let code = r###"
-        let compact: string = "{\"a\":1,\"b\":2}";
+    let (_temp, path) = temp_file_path("test_json3.json");
+    let code = format!(
+        r###"
+        let compact: string = "{{\"a\":1,\"b\":2}}";
         let pretty: string = prettifyJSON(compact, 2);
-        writeFile("/tmp/atlas_test_json3.json", pretty);
+        writeFile("{path}", pretty);
 
-        let loaded: string = readFile("/tmp/atlas_test_json3.json");
+        let loaded: string = readFile("{path}");
         let mini: string = minifyJSON(loaded);
         mini == compact
-    "###;
-    assert_eval_bool_with_io(code, true);
+    "###
+    );
+    assert_eval_bool_with_io(&code, true);
 }
 
 #[test]
 fn test_file_exists_json_check() {
-    let code = r#"
-        writeFile("/tmp/atlas_test_json4.json", "[]");
-        let exists: bool = fileExists("/tmp/atlas_test_json4.json");
-        let content: string = readFile("/tmp/atlas_test_json4.json");
+    let (_temp, path) = temp_file_path("test_json4.json");
+    let code = format!(
+        r#"
+        writeFile("{path}", "[]");
+        let exists: bool = fileExists("{path}");
+        let content: string = readFile("{path}");
         let valid: bool = isValidJSON(content);
         exists && valid
-    "#;
-    assert_eval_bool_with_io(code, true);
+    "#
+    );
+    assert_eval_bool_with_io(&code, true);
 }
 
 #[test]
 fn test_append_json_array_elements() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json5.txt", "[1,2,3]");
-        appendFile("/tmp/atlas_test_json5.txt", "\n[4,5,6]");
+    let (_temp, path) = temp_file_path("test_json5.txt");
+    let code = format!(
+        r##"
+        writeFile("{path}", "[1,2,3]");
+        appendFile("{path}", "\n[4,5,6]");
 
-        let content: string = readFile("/tmp/atlas_test_json5.txt");
+        let content: string = readFile("{path}");
         let lines: string[] = split(content, "\n");
         let arr1: json = parseJSON(lines[0]);
         let arr2: json = parseJSON(lines[1]);
         arr1[0].as_number() + arr2[2].as_number()
-    "##;
-    assert_eval_number_with_io(code, 7.0); // 1 + 6
+    "##
+    );
+    assert_eval_number_with_io(&code, 7.0); // 1 + 6
 }
 
 #[test]
 fn test_json_array_to_file_lines() {
-    let code = r#"
-        fn toNum(s: string) -> number {
+    let (_temp, path) = temp_file_path("test_json6.txt");
+    let code = format!(
+        r#"
+        fn toNum(s: string) -> number {{
             return toNumber(s);
-        }
+        }}
 
         let numbers: number[] = [10, 20, 30];
         let jsonStr: string = toJSON(numbers);
-        writeFile("/tmp/atlas_test_json6.txt", jsonStr);
+        writeFile("{path}", jsonStr);
 
-        let content: string = readFile("/tmp/atlas_test_json6.txt");
+        let content: string = readFile("{path}");
         let parsed: json = parseJSON(content);
         parsed[1].as_number()
-    "#;
-    assert_eval_number_with_io(code, 20.0);
+    "#
+    );
+    assert_eval_number_with_io(&code, 20.0);
 }
 
 #[test]
 fn test_multiple_json_files_sum() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json7a.json", "[10]");
-        writeFile("/tmp/atlas_test_json7b.json", "[20]");
+    let (_temp1, path1) = temp_file_path("test_json7a.json");
+    let (_temp2, path2) = temp_file_path("test_json7b.json");
+    let code = format!(
+        r##"
+        writeFile("{path1}", "[10]");
+        writeFile("{path2}", "[20]");
 
-        let content1: string = readFile("/tmp/atlas_test_json7a.json");
-        let content2: string = readFile("/tmp/atlas_test_json7b.json");
+        let content1: string = readFile("{path1}");
+        let content2: string = readFile("{path2}");
         let arr1: json = parseJSON(content1);
         let arr2: json = parseJSON(content2);
         arr1[0].as_number() + arr2[0].as_number()
-    "##;
-    assert_eval_number_with_io(code, 30.0);
+    "##
+    );
+    assert_eval_number_with_io(&code, 30.0);
 }
 
 #[test]
 fn test_json_validation_before_write() {
-    let code = r#"
+    let (_temp, path) = temp_file_path("test_json8.json");
+    let code = format!(
+        r#"
         let invalid: string = "not json";
-        let valid: string = "{\"key\":\"value\"}";
+        let valid: string = "{{\"key\":\"value\"}}";
 
-        if (isValidJSON(valid)) {
-            writeFile("/tmp/atlas_test_json8.json", valid);
-        }
+        if (isValidJSON(valid)) {{
+            writeFile("{path}", valid);
+        }}
 
-        let content: string = readFile("/tmp/atlas_test_json8.json");
+        let content: string = readFile("{path}");
         includes(content, "key")
-    "#;
-    assert_eval_bool_with_io(code, true);
+    "#
+    );
+    assert_eval_bool_with_io(&code, true);
 }
 
 #[test]
 fn test_read_json_check_type() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json9.json", "{\"count\":42}");
+    let (_temp, path) = temp_file_path("test_json9.json");
+    let code = format!(
+        r##"
+        writeFile("{path}", "{{\"count\":42}}");
 
-        let content: string = readFile("/tmp/atlas_test_json9.json");
+        let content: string = readFile("{path}");
         let obj: json = parseJSON(content);
         let count: number = obj["count"].as_number();
         isNumber(count)
-    "##;
-    assert_eval_bool_with_io(code, true);
+    "##
+    );
+    assert_eval_bool_with_io(&code, true);
 }
 
 #[test]
 fn test_json_array_length_via_file() {
-    let code = r##"
+    let (_temp, path) = temp_file_path("test_json10.json");
+    let code = format!(
+        r##"
         let arr: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let jsonStr: string = toJSON(arr);
-        writeFile("/tmp/atlas_test_json10.json", jsonStr);
+        writeFile("{path}", jsonStr);
 
-        let content: string = readFile("/tmp/atlas_test_json10.json");
+        let content: string = readFile("{path}");
         let parsed: json = parseJSON(content);
         // Extract last element to check array size
         parsed[9].as_number()
-    "##;
-    assert_eval_number_with_io(code, 10.0);
+    "##
+    );
+    assert_eval_number_with_io(&code, 10.0);
 }
 
 #[test]
 fn test_conditional_file_write_json() {
-    let code = r##"
-        let data: json = parseJSON("{\"enabled\":true}");
+    let (_temp, path) = temp_file_path("test_json11.json");
+    let code = format!(
+        r##"
+        let data: json = parseJSON("{{\"enabled\":true}}");
         let enabled: bool = data["enabled"].as_bool();
 
-        if (enabled) {
-            writeFile("/tmp/atlas_test_json11.json", "{\"status\":\"active\"}");
-        }
+        if (enabled) {{
+            writeFile("{path}", "{{\"status\":\"active\"}}");
+        }}
 
-        let content: string = readFile("/tmp/atlas_test_json11.json");
+        let content: string = readFile("{path}");
         includes(content, "active")
-    "##;
-    assert_eval_bool_with_io(code, true);
+    "##
+    );
+    assert_eval_bool_with_io(&code, true);
 }
 
 #[test]
 fn test_json_file_string_concat() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json12a.txt", "Hello");
-        writeFile("/tmp/atlas_test_json12b.txt", "World");
+    let (_temp1, path1) = temp_file_path("test_json12a.txt");
+    let (_temp2, path2) = temp_file_path("test_json12b.txt");
+    let code = format!(
+        r##"
+        writeFile("{path1}", "Hello");
+        writeFile("{path2}", "World");
 
-        let part1: string = readFile("/tmp/atlas_test_json12a.txt");
-        let part2: string = readFile("/tmp/atlas_test_json12b.txt");
+        let part1: string = readFile("{path1}");
+        let part2: string = readFile("{path2}");
         let combined: string = part1 + " " + part2;
         combined
-    "##;
-    assert_eval_string_with_io(code, "Hello World");
+    "##
+    );
+    assert_eval_string_with_io(&code, "Hello World");
 }
 
 #[test]
 fn test_json_parse_file_nested_access() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json13.json", "{\"user\":{\"name\":\"Alice\",\"age\":30}}");
+    let (_temp, path) = temp_file_path("test_json13.json");
+    let code = format!(
+        r##"
+        writeFile("{path}", "{{\"user\":{{\"name\":\"Alice\",\"age\":30}}}}");
 
-        let content: string = readFile("/tmp/atlas_test_json13.json");
+        let content: string = readFile("{path}");
         let obj: json = parseJSON(content);
         let user: json = obj["user"];
         let name: string = user["name"].as_string();
         name
-    "##;
-    assert_eval_string_with_io(code, "Alice");
+    "##
+    );
+    assert_eval_string_with_io(&code, "Alice");
 }
 
 #[test]
 fn test_file_to_json_to_string_array() {
-    let code = r##"
+    let (_temp, path) = temp_file_path("test_json14.json");
+    let code = format!(
+        r##"
         let strings: string[] = ["apple", "banana", "cherry"];
         let jsonStr: string = toJSON(strings);
-        writeFile("/tmp/atlas_test_json14.json", jsonStr);
+        writeFile("{path}", jsonStr);
 
-        let content: string = readFile("/tmp/atlas_test_json14.json");
+        let content: string = readFile("{path}");
         let parsed: json = parseJSON(content);
         let first: string = parsed[0].as_string();
         let last: string = parsed[2].as_string();
         first + "," + last
-    "##;
-    assert_eval_string_with_io(code, "apple,cherry");
+    "##
+    );
+    assert_eval_string_with_io(&code, "apple,cherry");
 }
 
 #[test]
 fn test_json_number_extraction_math() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json15.json", "[5,10,15]");
+    let (_temp, path) = temp_file_path("test_json15.json");
+    let code = format!(
+        r##"
+        writeFile("{path}", "[5,10,15]");
 
-        let content: string = readFile("/tmp/atlas_test_json15.json");
+        let content: string = readFile("{path}");
         let arr: json = parseJSON(content);
         let sum: number = arr[0].as_number() + arr[1].as_number() + arr[2].as_number();
         sum / 3
-    "##;
-    assert_eval_number_with_io(code, 10.0); // Average
+    "##
+    );
+    assert_eval_number_with_io(&code, 10.0); // Average
 }
 
 #[test]
 fn test_write_read_bool_json() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json16.json", "{\"active\":true,\"enabled\":false}");
+    let (_temp, path) = temp_file_path("test_json16.json");
+    let code = format!(
+        r##"
+        writeFile("{path}", "{{\"active\":true,\"enabled\":false}}");
 
-        let content: string = readFile("/tmp/atlas_test_json16.json");
+        let content: string = readFile("{path}");
         let obj: json = parseJSON(content);
         let active: bool = obj["active"].as_bool();
         let enabled: bool = obj["enabled"].as_bool();
         active && !enabled
-    "##;
-    assert_eval_bool_with_io(code, true);
+    "##
+    );
+    assert_eval_bool_with_io(&code, true);
 }
 
 #[test]
 fn test_json_file_type_conversion() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json17.json", "{\"count\":\"42\"}");
+    let (_temp, path) = temp_file_path("test_json17.json");
+    let code = format!(
+        r##"
+        writeFile("{path}", "{{\"count\":\"42\"}}");
 
-        let content: string = readFile("/tmp/atlas_test_json17.json");
+        let content: string = readFile("{path}");
         let obj: json = parseJSON(content);
         let countStr: string = obj["count"].as_string();
         let countNum: number = toNumber(countStr);
         countNum * 2
-    "##;
-    assert_eval_number_with_io(code, 84.0);
+    "##
+    );
+    assert_eval_number_with_io(&code, 84.0);
 }
 
 #[test]
 fn test_file_contains_valid_json() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json18.json", "{\"valid\":true}");
+    let (_temp, path) = temp_file_path("test_json18.json");
+    let code = format!(
+        r##"
+        writeFile("{path}", "{{\"valid\":true}}");
 
-        let content: string = readFile("/tmp/atlas_test_json18.json");
+        let content: string = readFile("{path}");
         isValidJSON(content)
-    "##;
-    assert_eval_bool_with_io(code, true);
+    "##
+    );
+    assert_eval_bool_with_io(&code, true);
 }
 
 #[test]
 fn test_json_null_in_file() {
-    let code = r##"
-        writeFile("/tmp/atlas_test_json19.json", "{\"value\":null}");
+    let (_temp, path) = temp_file_path("test_json19.json");
+    let code = format!(
+        r##"
+        writeFile("{path}", "{{\"value\":null}}");
 
-        let content: string = readFile("/tmp/atlas_test_json19.json");
+        let content: string = readFile("{path}");
         let obj: json = parseJSON(content);
         let val: json = obj["value"];
         val.is_null()
-    "##;
-    assert_eval_bool_with_io(code, true);
+    "##
+    );
+    assert_eval_bool_with_io(&code, true);
 }
 
 #[test]
 fn test_large_json_array_file() {
-    let code = r##"
+    let (_temp, path) = temp_file_path("test_json20.json");
+    let code = format!(
+        r##"
         let arr: number[] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
         let jsonStr: string = toJSON(arr);
-        writeFile("/tmp/atlas_test_json20.json", jsonStr);
+        writeFile("{path}", jsonStr);
 
-        let content: string = readFile("/tmp/atlas_test_json20.json");
+        let content: string = readFile("{path}");
         let parsed: json = parseJSON(content);
         let first: number = parsed[0].as_number();
         let last: number = parsed[19].as_number();
         first + last
-    "##;
-    assert_eval_number_with_io(code, 21.0); // 1 + 20
+    "##
+    );
+    assert_eval_number_with_io(&code, 21.0); // 1 + 20
 }
 
 // ============================================================================
@@ -2745,7 +2807,7 @@ fn test_read_file_basic() {
     let test_file = temp_dir.path().join("test.txt");
     fs::write(&test_file, "Hello, World!").unwrap();
 
-    let code = format!(r#"readFile("{}")"#, test_file.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2759,7 +2821,7 @@ fn test_read_file_utf8() {
     let test_file = temp_dir.path().join("utf8.txt");
     fs::write(&test_file, "Hello 你好 🎉").unwrap();
 
-    let code = format!(r#"readFile("{}")"#, test_file.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2770,7 +2832,7 @@ fn test_read_file_not_found() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let nonexistent = temp_dir.path().join("does_not_exist.txt");
 
-    let code = format!(r#"readFile("{}")"#, nonexistent.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&nonexistent));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -2786,7 +2848,7 @@ fn test_read_file_permission_denied() {
 
     // Runtime with no permissions
     let runtime = Atlas::new();
-    let code = format!(r#"readFile("{}")"#, test_file.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -2804,7 +2866,10 @@ fn test_write_file_basic() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let test_file = temp_dir.path().join("output.txt");
 
-    let code = format!(r#"writeFile("{}", "test content")"#, test_file.display());
+    let code = format!(
+        r#"writeFile("{}", "test content")"#,
+        path_for_atlas(&test_file)
+    );
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2818,7 +2883,10 @@ fn test_write_file_overwrite() {
     let test_file = temp_dir.path().join("overwrite.txt");
     fs::write(&test_file, "original").unwrap();
 
-    let code = format!(r#"writeFile("{}", "new content")"#, test_file.display());
+    let code = format!(
+        r#"writeFile("{}", "new content")"#,
+        path_for_atlas(&test_file)
+    );
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2832,7 +2900,7 @@ fn test_write_file_permission_denied() {
     let test_file = temp_dir.path().join("output.txt");
 
     let runtime = Atlas::new();
-    let code = format!(r#"writeFile("{}", "content")"#, test_file.display());
+    let code = format!(r#"writeFile("{}", "content")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -2850,7 +2918,7 @@ fn test_append_file_basic() {
     let test_file = temp_dir.path().join("append.txt");
     fs::write(&test_file, "line1\n").unwrap();
 
-    let code = format!(r#"appendFile("{}", "line2\n")"#, test_file.display());
+    let code = format!(r#"appendFile("{}", "line2\n")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2863,7 +2931,7 @@ fn test_append_file_create_if_not_exists() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let test_file = temp_dir.path().join("new.txt");
 
-    let code = format!(r#"appendFile("{}", "content")"#, test_file.display());
+    let code = format!(r#"appendFile("{}", "content")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2881,7 +2949,7 @@ fn test_file_exists_true() {
     let test_file = temp_dir.path().join("exists.txt");
     fs::write(&test_file, "").unwrap();
 
-    let code = format!(r#"fileExists("{}")"#, test_file.display());
+    let code = format!(r#"fileExists("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2893,7 +2961,7 @@ fn test_file_exists_false() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let nonexistent = temp_dir.path().join("does_not_exist.txt");
 
-    let code = format!(r#"fileExists("{}")"#, nonexistent.display());
+    let code = format!(r#"fileExists("{}")"#, path_for_atlas(&nonexistent));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2910,7 +2978,7 @@ fn test_read_dir_basic() {
     fs::write(temp_dir.path().join("file1.txt"), "").unwrap();
     fs::write(temp_dir.path().join("file2.txt"), "").unwrap();
 
-    let code = format!(r#"readDir("{}")"#, temp_dir.path().display());
+    let code = format!(r#"readDir("{}")"#, path_for_atlas(temp_dir.path()));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2922,7 +2990,7 @@ fn test_read_dir_not_found() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let nonexistent = temp_dir.path().join("nonexistent_dir");
 
-    let code = format!(r#"readDir("{}")"#, nonexistent.display());
+    let code = format!(r#"readDir("{}")"#, path_for_atlas(&nonexistent));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -2937,7 +3005,7 @@ fn test_create_dir_basic() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let new_dir = temp_dir.path().join("newdir");
 
-    let code = format!(r#"createDir("{}")"#, new_dir.display());
+    let code = format!(r#"createDir("{}")"#, path_for_atlas(&new_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2950,7 +3018,7 @@ fn test_create_dir_nested() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let nested_dir = temp_dir.path().join("a/b/c");
 
-    let code = format!(r#"createDir("{}")"#, nested_dir.display());
+    let code = format!(r#"createDir("{}")"#, path_for_atlas(&nested_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2968,7 +3036,7 @@ fn test_remove_file_basic() {
     let test_file = temp_dir.path().join("remove.txt");
     fs::write(&test_file, "").unwrap();
 
-    let code = format!(r#"removeFile("{}")"#, test_file.display());
+    let code = format!(r#"removeFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -2980,7 +3048,7 @@ fn test_remove_file_not_found() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let nonexistent = temp_dir.path().join("does_not_exist.txt");
 
-    let code = format!(r#"removeFile("{}")"#, nonexistent.display());
+    let code = format!(r#"removeFile("{}")"#, path_for_atlas(&nonexistent));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -2996,7 +3064,7 @@ fn test_remove_dir_basic() {
     let test_dir = temp_dir.path().join("rmdir");
     fs::create_dir(&test_dir).unwrap();
 
-    let code = format!(r#"removeDir("{}")"#, test_dir.display());
+    let code = format!(r#"removeDir("{}")"#, path_for_atlas(&test_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3010,7 +3078,7 @@ fn test_remove_dir_not_empty() {
     fs::create_dir(&test_dir).unwrap();
     fs::write(test_dir.join("file.txt"), "").unwrap();
 
-    let code = format!(r#"removeDir("{}")"#, test_dir.display());
+    let code = format!(r#"removeDir("{}")"#, path_for_atlas(&test_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3030,7 +3098,7 @@ fn test_file_info_file() {
     let test_file = temp_dir.path().join("info.txt");
     fs::write(&test_file, "test content").unwrap();
 
-    let code = format!(r#"fileInfo("{}")"#, test_file.display());
+    let code = format!(r#"fileInfo("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3047,7 +3115,7 @@ fn test_file_info_directory() {
     let test_dir = temp_dir.path().join("infodir");
     fs::create_dir(&test_dir).unwrap();
 
-    let code = format!(r#"fileInfo("{}")"#, test_dir.display());
+    let code = format!(r#"fileInfo("{}")"#, path_for_atlas(&test_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3092,7 +3160,7 @@ fn test_read_file_empty() {
     let test_file = temp_dir.path().join("empty.txt");
     fs::write(&test_file, "").unwrap();
 
-    let code = format!(r#"readFile("{}")"#, test_file.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3110,7 +3178,7 @@ fn test_read_file_invalid_utf8() {
     // Invalid UTF-8 sequence
     fs::write(&test_file, [0xFF, 0xFE, 0xFD]).unwrap();
 
-    let code = format!(r#"readFile("{}")"#, test_file.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3125,7 +3193,7 @@ fn test_read_file_multiline() {
     let content = "line1\nline2\nline3\n";
     fs::write(&test_file, content).unwrap();
 
-    let code = format!(r#"readFile("{}")"#, test_file.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3143,7 +3211,7 @@ fn test_read_file_large() {
     let content = "x".repeat(10000);
     fs::write(&test_file, &content).unwrap();
 
-    let code = format!(r#"readFile("{}")"#, test_file.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3163,7 +3231,7 @@ fn test_read_file_with_bom() {
     content.extend_from_slice(b"Hello");
     fs::write(&test_file, content).unwrap();
 
-    let code = format!(r#"readFile("{}")"#, test_file.display());
+    let code = format!(r#"readFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3178,7 +3246,7 @@ fn test_write_file_empty() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let test_file = temp_dir.path().join("empty_write.txt");
 
-    let code = format!(r#"writeFile("{}", "")"#, test_file.display());
+    let code = format!(r#"writeFile("{}", "")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3192,7 +3260,11 @@ fn test_write_file_unicode() {
     let test_file = temp_dir.path().join("unicode.txt");
     let content = "Hello 世界 🌍";
 
-    let code = format!(r#"writeFile("{}", "{}")"#, test_file.display(), content);
+    let code = format!(
+        r#"writeFile("{}", "{}")"#,
+        path_for_atlas(&test_file),
+        content
+    );
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3205,7 +3277,10 @@ fn test_write_file_newlines() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let test_file = temp_dir.path().join("newlines.txt");
 
-    let code = format!(r#"writeFile("{}", "line1\nline2\n")"#, test_file.display());
+    let code = format!(
+        r#"writeFile("{}", "line1\nline2\n")"#,
+        path_for_atlas(&test_file)
+    );
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3219,7 +3294,7 @@ fn test_write_file_creates_file() {
     let test_file = temp_dir.path().join("new_file.txt");
     assert!(!test_file.exists());
 
-    let code = format!(r#"writeFile("{}", "content")"#, test_file.display());
+    let code = format!(r#"writeFile("{}", "content")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3236,8 +3311,8 @@ fn test_append_file_multiple() {
     let test_file = temp_dir.path().join("multi_append.txt");
     fs::write(&test_file, "start\n").unwrap();
 
-    let code1 = format!(r#"appendFile("{}", "line1\n")"#, test_file.display());
-    let code2 = format!(r#"appendFile("{}", "line2\n")"#, test_file.display());
+    let code1 = format!(r#"appendFile("{}", "line1\n")"#, path_for_atlas(&test_file));
+    let code2 = format!(r#"appendFile("{}", "line2\n")"#, path_for_atlas(&test_file));
 
     runtime.eval(&code1).unwrap();
     runtime.eval(&code2).unwrap();
@@ -3252,7 +3327,7 @@ fn test_append_file_empty_content() {
     let test_file = temp_dir.path().join("append_empty.txt");
     fs::write(&test_file, "base").unwrap();
 
-    let code = format!(r#"appendFile("{}", "")"#, test_file.display());
+    let code = format!(r#"appendFile("{}", "")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3266,7 +3341,7 @@ fn test_append_file_permission_denied() {
     let test_file = temp_dir.path().join("append_denied.txt");
 
     let runtime = Atlas::new();
-    let code = format!(r#"appendFile("{}", "content")"#, test_file.display());
+    let code = format!(r#"appendFile("{}", "content")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3284,7 +3359,7 @@ fn test_file_exists_directory() {
     let test_dir = temp_dir.path().join("exists_dir");
     fs::create_dir(&test_dir).unwrap();
 
-    let code = format!(r#"fileExists("{}")"#, test_dir.display());
+    let code = format!(r#"fileExists("{}")"#, path_for_atlas(&test_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3299,7 +3374,7 @@ fn test_file_exists_no_permission_check() {
     fs::write(&test_file, "").unwrap();
 
     let runtime = Atlas::new();
-    let code = format!(r#"fileExists("{}")"#, test_file.display());
+    let code = format!(r#"fileExists("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     // Should succeed without permissions since it only checks existence
@@ -3317,7 +3392,7 @@ fn test_read_dir_empty() {
     let empty_dir = temp_dir.path().join("empty");
     fs::create_dir(&empty_dir).unwrap();
 
-    let code = format!(r#"readDir("{}")"#, empty_dir.display());
+    let code = format!(r#"readDir("{}")"#, path_for_atlas(&empty_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3334,7 +3409,7 @@ fn test_read_dir_mixed_contents() {
     fs::write(temp_dir.path().join("file.txt"), "").unwrap();
     fs::create_dir(temp_dir.path().join("subdir")).unwrap();
 
-    let code = format!(r#"readDir("{}")"#, temp_dir.path().display());
+    let code = format!(r#"readDir("{}")"#, path_for_atlas(temp_dir.path()));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3352,7 +3427,7 @@ fn test_read_dir_permission_denied() {
     fs::create_dir(&test_dir).unwrap();
 
     let runtime = Atlas::new();
-    let code = format!(r#"readDir("{}")"#, test_dir.display());
+    let code = format!(r#"readDir("{}")"#, path_for_atlas(&test_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3370,7 +3445,7 @@ fn test_create_dir_already_exists() {
     let test_dir = temp_dir.path().join("already_exists");
     fs::create_dir(&test_dir).unwrap();
 
-    let code = format!(r#"createDir("{}")"#, test_dir.display());
+    let code = format!(r#"createDir("{}")"#, path_for_atlas(&test_dir));
     let result = runtime.eval(&code);
 
     // Should succeed (mkdir -p behavior)
@@ -3383,7 +3458,7 @@ fn test_create_dir_permission_denied() {
     let new_dir = temp_dir.path().join("denied");
 
     let runtime = Atlas::new();
-    let code = format!(r#"createDir("{}")"#, new_dir.display());
+    let code = format!(r#"createDir("{}")"#, path_for_atlas(&new_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3401,7 +3476,7 @@ fn test_remove_file_is_directory() {
     let test_dir = temp_dir.path().join("is_dir");
     fs::create_dir(&test_dir).unwrap();
 
-    let code = format!(r#"removeFile("{}")"#, test_dir.display());
+    let code = format!(r#"removeFile("{}")"#, path_for_atlas(&test_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3414,7 +3489,7 @@ fn test_remove_file_permission_denied() {
     fs::write(&test_file, "").unwrap();
 
     let runtime = Atlas::new();
-    let code = format!(r#"removeFile("{}")"#, test_file.display());
+    let code = format!(r#"removeFile("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3431,7 +3506,7 @@ fn test_remove_dir_not_found() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let nonexistent = temp_dir.path().join("not_found");
 
-    let code = format!(r#"removeDir("{}")"#, nonexistent.display());
+    let code = format!(r#"removeDir("{}")"#, path_for_atlas(&nonexistent));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3443,7 +3518,7 @@ fn test_remove_dir_is_file() {
     let test_file = temp_dir.path().join("is_file.txt");
     fs::write(&test_file, "").unwrap();
 
-    let code = format!(r#"removeDir("{}")"#, test_file.display());
+    let code = format!(r#"removeDir("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3456,7 +3531,7 @@ fn test_remove_dir_permission_denied() {
     fs::create_dir(&test_dir).unwrap();
 
     let runtime = Atlas::new();
-    let code = format!(r#"removeDir("{}")"#, test_dir.display());
+    let code = format!(r#"removeDir("{}")"#, path_for_atlas(&test_dir));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3474,7 +3549,7 @@ fn test_file_info_size_check() {
     let test_file = temp_dir.path().join("info_fields.txt");
     fs::write(&test_file, "12345").unwrap();
 
-    let code = format!(r#"fileInfo("{}")"#, test_file.display());
+    let code = format!(r#"fileInfo("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_ok());
@@ -3490,7 +3565,7 @@ fn test_file_info_not_found() {
     let (runtime, temp_dir) = test_runtime_with_io();
     let nonexistent = temp_dir.path().join("not_found.txt");
 
-    let code = format!(r#"fileInfo("{}")"#, nonexistent.display());
+    let code = format!(r#"fileInfo("{}")"#, path_for_atlas(&nonexistent));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -3503,7 +3578,7 @@ fn test_file_info_permission_denied() {
     fs::write(&test_file, "test").unwrap();
 
     let runtime = Atlas::new();
-    let code = format!(r#"fileInfo("{}")"#, test_file.display());
+    let code = format!(r#"fileInfo("{}")"#, path_for_atlas(&test_file));
     let result = runtime.eval(&code);
 
     assert!(result.is_err());
@@ -4239,7 +4314,7 @@ fn test_csv_read_and_parse_basic() {
         let header: string = lines[0];
         header
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "name,age,city");
 }
@@ -4263,7 +4338,7 @@ fn test_csv_parse_rows() {
         let name: string = fields[0];
         name
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "Alice");
 }
@@ -4282,7 +4357,7 @@ fn test_csv_count_rows() {
         let allRows: number = len(lines);
         allRows - 2.0
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 4.0);
 }
@@ -4313,7 +4388,7 @@ fn test_csv_filter_by_criteria() {
         let expensive: string[] = filter(dataLines, isExpensive);
         len(expensive)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 2.0); // Cherry (3.0) and Date (2.5)
 }
@@ -4342,7 +4417,7 @@ fn test_csv_extract_column() {
         let names: string[] = map(dataLines, getName);
         join(names, "|")
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "Alice|Bob");
 }
@@ -4367,7 +4442,7 @@ fn test_csv_sum_column() {
 
         reduce(dataLines, sumAmounts, 0.0)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 60.0);
 }
@@ -4383,7 +4458,7 @@ fn test_csv_empty_file() {
         let csv: string = readFile("{}");
         len(csv)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 0.0);
 }
@@ -4401,7 +4476,7 @@ fn test_csv_single_row() {
         let dataLines: string[] = slice(lines, 1, len(lines) - 1.0);
         len(dataLines)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 1.0);
 }
@@ -4421,7 +4496,7 @@ fn test_csv_handle_empty_fields() {
         let emptyField: string = fields[1];
         len(emptyField)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 0.0);
 }
@@ -4456,9 +4531,9 @@ fn test_csv_write_transformed() {
         let result: string = readFile("{}");
         result
     "#,
-        input_path.display(),
-        output_path.display(),
-        output_path.display()
+        path_for_atlas(&input_path),
+        path_for_atlas(&output_path),
+        path_for_atlas(&output_path)
     );
     assert_eval_string_with_io(&code, "name,value\nAlice,20\nBob,40\n");
 }
@@ -4485,7 +4560,7 @@ fn test_csv_calculate_average() {
         let count: number = len(dataLines);
         total / count
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 90.0); // (85 + 90 + 95) / 3 = 90
 }
@@ -4511,7 +4586,7 @@ fn test_csv_filter_and_count() {
         let adults: string[] = filter(dataLines, isAdult);
         len(adults)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 2.0); // Bob (35) and Carol (40)
 }
@@ -4536,7 +4611,7 @@ fn test_csv_max_value() {
 
         reduce(dataLines, findMax, 0.0)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 89.0);
 }
@@ -4555,7 +4630,7 @@ fn test_csv_header_extraction() {
         let columns: string[] = split(header, ",");
         join(columns, "|")
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "name|email|age");
 }
@@ -4574,7 +4649,7 @@ fn test_csv_quoted_fields() {
         let fields: string[] = split(row1, ",");
         fields[1]
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "Hello World");
 }
@@ -4605,7 +4680,7 @@ fn test_csv_multi_column_filter() {
         let filtered: string[] = filter(dataLines, isHighValueInStock);
         len(filtered)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 2.0); // Apple and Cherry
 }
@@ -4638,7 +4713,7 @@ fn test_csv_column_sum_with_condition() {
 
         reduce(dataLines, sumNorth, 0.0)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 2500.0); // 1000 + 1500
 }
@@ -4667,7 +4742,7 @@ fn test_csv_row_count_by_group() {
         let errors: string[] = filter(dataLines, isError);
         len(errors)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -4692,7 +4767,7 @@ fn test_csv_transform_and_join() {
         let names: string[] = map(dataLines, fullName);
         join(names, "; ")
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "Alice Smith; Bob Jones");
 }
@@ -4718,7 +4793,7 @@ fn test_csv_percentage_calculation() {
 
         calcPercentage(row1)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 80.0);
 }
@@ -4744,7 +4819,7 @@ fn test_csv_trim_whitespace() {
 
         cleanRow(row1)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "Alice,100");
 }
@@ -4774,7 +4849,7 @@ fn test_csv_case_insensitive_filter() {
         let fruits: string[] = filter(dataLines, isFruit);
         len(fruits)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -4802,7 +4877,7 @@ fn test_csv_contains_filter() {
         let errors: string[] = filter(dataLines, hasError);
         len(errors)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 1.0);
 }
@@ -4832,7 +4907,7 @@ fn test_csv_numeric_sort_data() {
         let fields: string[] = split(first, ",");
         fields[0]
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "1");
 }
@@ -4854,9 +4929,9 @@ fn test_csv_append_row() {
         let lines: string[] = split(result, "\n");
         len(lines) - 1.0
     "#,
-        csv_path.display(),
-        csv_path.display(),
-        csv_path.display()
+        path_for_atlas(&csv_path),
+        path_for_atlas(&csv_path),
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 3.0); // header + Alice + Bob
 }
@@ -4881,7 +4956,7 @@ fn test_csv_validate_column_count() {
         let valid: string[] = filter(dataLines, hasThreeColumns);
         len(valid) == len(dataLines)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_bool_with_io(&code, true);
 }
@@ -4915,7 +4990,7 @@ fn test_csv_extract_unique_values() {
 
         str(hasFruit) + "," + str(hasVeggie) + "," + str(hasMeat)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "true,true,true");
 }
@@ -4950,7 +5025,7 @@ fn test_csv_conditional_transformation() {
 
         addGrade(row1)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "Alice,85,B");
 }
@@ -4978,7 +5053,7 @@ fn test_csv_min_value() {
 
         reduce(dataLines, findMin, 0.0)
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_number_with_io(&code, 68.0);
 }
@@ -4997,7 +5072,7 @@ fn test_csv_concatenate_fields() {
         let fields: string[] = split(row1, ",");
         fields[0] + ", " + fields[1] + ", " + fields[2]
     "#,
-        csv_path.display()
+        path_for_atlas(&csv_path)
     );
     assert_eval_string_with_io(&code, "Main St, NYC, NY");
 }
@@ -5403,7 +5478,7 @@ fn test_log_parse_basic() {
         let first: string = lines[0];
         includes(first, "INFO")
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_bool_with_io(&code, true);
 }
@@ -5429,7 +5504,7 @@ fn test_log_filter_errors() {
         let errors: string[] = filter(lines, isError);
         len(errors)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -5451,7 +5526,7 @@ fn test_log_extract_timestamps() {
         let line1: string = lines[0];
         getTimestamp(line1)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "2024-01-01");
 }
@@ -5478,7 +5553,7 @@ fn test_log_count_by_level() {
         let infos: string[] = filter(dataLines, isInfo);
         len(infos)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 3.0);
 }
@@ -5501,7 +5576,7 @@ fn test_log_extract_error_messages() {
         }}
         msg
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "Connection failed");
 }
@@ -5529,7 +5604,7 @@ fn test_log_filter_by_date() {
         let recent: string[] = filter(dataLines, isAfterJan10);
         len(recent)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -5552,7 +5627,7 @@ fn test_log_severity_ordering() {
         let high: string[] = filter(dataLines, isHighSeverity);
         len(high)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -5575,7 +5650,7 @@ fn test_log_multi_line_error() {
         let second: string = lines[1];
         includes(first, "ERROR") && includes(second, "Stack")
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_bool_with_io(&code, true);
 }
@@ -5597,7 +5672,7 @@ fn test_log_empty_lines_filter() {
         let nonEmpty: string[] = filter(lines, isNotEmpty);
         len(nonEmpty)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 3.0);
 }
@@ -5624,7 +5699,7 @@ fn test_log_contains_pattern() {
         let aliceLogs: string[] = filter(dataLines, mentionsAlice);
         len(aliceLogs)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -5648,7 +5723,7 @@ fn test_log_case_insensitive_search() {
         let errors: string[] = filter(dataLines, hasError);
         len(errors)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 3.0);
 }
@@ -5677,7 +5752,7 @@ fn test_log_extract_user_actions() {
         let line1: string = lines[0];
         extractUser(line1)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "alice");
 }
@@ -5700,7 +5775,7 @@ fn test_log_count_occurrences() {
         let logins: string[] = filter(dataLines, isLogin);
         len(logins)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 3.0);
 }
@@ -5723,7 +5798,7 @@ fn test_log_trim_whitespace() {
         let cleaned: string = cleanLine(line1);
         cleaned
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "ERROR: Test");
 }
@@ -5746,7 +5821,7 @@ fn test_log_starts_with_timestamp() {
         let timestamped: string[] = filter(dataLines, hasTimestamp);
         len(timestamped)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -5769,7 +5844,7 @@ fn test_log_extract_ip_addresses() {
         let line1: string = lines[0];
         extractIP(line1)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "192.168.1.1");
 }
@@ -5796,7 +5871,7 @@ fn test_log_group_by_category() {
         let dbLogs: string[] = filter(dataLines, isDatabase);
         len(dbLogs)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 3.0);
 }
@@ -5820,7 +5895,7 @@ fn test_log_parse_structured() {
         let levelPart: string = parts[0];
         startsWith(levelPart, "level=error")
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_bool_with_io(&code, true);
 }
@@ -5845,7 +5920,7 @@ fn test_log_count_warnings() {
         let dataLines: string[] = slice(lines, 0.0, len(lines) - 1.0);
         reduce(dataLines, countWarnings, 0.0)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 3.0);
 }
@@ -5872,7 +5947,7 @@ fn test_log_find_first_error() {
         let firstError: string = find(dataLines, isError);
         firstError
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "ERROR: failure");
 }
@@ -5891,7 +5966,7 @@ fn test_log_reverse_chronological() {
         let reversed: string[] = reverse(dataLines);
         reversed[0]
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "Line3");
 }
@@ -5922,7 +5997,7 @@ fn test_log_summary_report() {
 
         "E:" + str(errors) + ",W:" + str(warns) + ",I:" + str(infos)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "E:3,W:1,I:1");
 }
@@ -5946,7 +6021,7 @@ fn test_log_filter_time_range() {
         let morning: string[] = filter(dataLines, isMorning);
         len(morning)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -5969,7 +6044,7 @@ fn test_log_extract_http_codes() {
         let notFound: string[] = filter(dataLines, is404);
         len(notFound)
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 1.0);
 }
@@ -5993,7 +6068,7 @@ fn test_log_parse_json_lines() {
         let level: string = json["level"].as_string();
         level
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_string_with_io(&code, "error");
 }
@@ -6019,7 +6094,7 @@ fn test_log_aggregate_metrics() {
         let avg: number = total / len(dataLines);
         avg
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_number_with_io(&code, 150.0);
 }
@@ -6042,7 +6117,7 @@ fn test_log_detect_anomalies() {
         let anomalies: string[] = filter(dataLines, isAnomaly);
         len(anomalies) > 0.0
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_bool_with_io(&code, true);
 }
@@ -6060,7 +6135,7 @@ fn test_log_combine_multiline() {
         let combined: string = lines[0] + " " + lines[1] + " " + lines[2];
         includes(combined, "Start") && includes(combined, "Continue") && includes(combined, "End")
     "#,
-        log_path.display()
+        path_for_atlas(&log_path)
     );
     assert_eval_bool_with_io(&code, true);
 }
@@ -6093,9 +6168,9 @@ fn test_log_write_filtered() {
         let resultLines: string[] = split(result, "\n");
         len(resultLines) - 1.0
     "#,
-        input_path.display(),
-        output_path.display(),
-        output_path.display()
+        path_for_atlas(&input_path),
+        path_for_atlas(&output_path),
+        path_for_atlas(&output_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -6785,7 +6860,7 @@ fn test_config_parse_json() {
         let host: string = config["host"].as_string();
         host
     "#,
-        config_path.display()
+        path_for_atlas(&config_path)
     );
     assert_eval_string_with_io(&code, "localhost");
 }
@@ -6803,7 +6878,7 @@ fn test_config_extract_port() {
         let port: number = config["port"].as_number();
         port
     "#,
-        config_path.display()
+        path_for_atlas(&config_path)
     );
     assert_eval_number_with_io(&code, 3000.0);
 }
@@ -6891,9 +6966,9 @@ fn test_config_write_updated() {
         let finalVersion: number = newConfig["version"].as_number();
         finalVersion
     "#,
-        config_path.display(),
-        config_path.display(),
-        config_path.display()
+        path_for_atlas(&config_path),
+        path_for_atlas(&config_path),
+        path_for_atlas(&config_path)
     );
     assert_eval_number_with_io(&code, 2.0);
 }
@@ -7301,8 +7376,8 @@ fn test_file_read_write_parity() {
         writeFile("{}", "test content");
         readFile("{}")
     "#,
-        file_path.display(),
-        file_path.display()
+        path_for_atlas(&file_path),
+        path_for_atlas(&file_path)
     );
 
     // Interpreter
@@ -7333,8 +7408,8 @@ fn test_file_exists_parity() {
     let non_existing = temp_dir.path().join("nonexistent.txt");
     std::fs::write(&existing, "content").unwrap();
 
-    let code_exists = format!(r#"fileExists("{}")"#, existing.display());
-    let code_not_exists = format!(r#"fileExists("{}")"#, non_existing.display());
+    let code_exists = format!(r#"fileExists("{}")"#, path_for_atlas(&existing));
+    let code_not_exists = format!(r#"fileExists("{}")"#, path_for_atlas(&non_existing));
 
     // Test existing file
     let mut security1 = SecurityContext::new();
@@ -7376,9 +7451,9 @@ fn test_file_delete_parity() {
         removeFile("{}");
         fileExists("{}")
     "#,
-        file_path.display(),
-        file_path.display(),
-        file_path.display()
+        path_for_atlas(&file_path),
+        path_for_atlas(&file_path),
+        path_for_atlas(&file_path)
     );
 
     // Interpreter
@@ -7410,9 +7485,9 @@ fn test_file_append_parity() {
         appendFile("{}", "second");
         readFile("{}")
     "#,
-        file_path.display(),
-        file_path.display(),
-        file_path.display()
+        path_for_atlas(&file_path),
+        path_for_atlas(&file_path),
+        path_for_atlas(&file_path)
     );
 
     // Interpreter
@@ -7442,7 +7517,7 @@ fn test_file_list_directory_parity() {
     std::fs::write(temp_dir.path().join("file1.txt"), "content1").unwrap();
     std::fs::write(temp_dir.path().join("file2.txt"), "content2").unwrap();
 
-    let code = format!(r#"len(readDir("{}"))"#, temp_dir.path().display());
+    let code = format!(r#"len(readDir("{}"))"#, path_for_atlas(temp_dir.path()));
 
     // Interpreter
     let mut security_interp = SecurityContext::new();
@@ -7473,10 +7548,10 @@ fn test_file_create_remove_directory_parity() {
         let exists2 = fileExists("{}");
         exists1 && !exists2
     "#,
-        dir_path.display(),
-        dir_path.display(),
-        dir_path.display(),
-        dir_path.display()
+        path_for_atlas(&dir_path),
+        path_for_atlas(&dir_path),
+        path_for_atlas(&dir_path),
+        path_for_atlas(&dir_path)
     );
 
     // Interpreter
@@ -10629,7 +10704,7 @@ fn test_parity_hashset_filter() {
 mod vm_stdlib {
     use super::{
         assert_eval_bool, assert_eval_null, assert_eval_number, assert_eval_string,
-        assert_has_error,
+        assert_has_error, path_for_atlas,
     };
     use atlas_runtime::SecurityContext;
     use pretty_assertions::assert_eq;
@@ -11511,7 +11586,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("test.txt");
         fs::write(&test_file, "Hello, VM!").unwrap();
 
-        let code = format!(r#"let x = readFile("{}"); x;"#, test_file.display());
+        let code = format!(r#"let x = readFile("{}"); x;"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11523,7 +11598,10 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("output.txt");
 
-        let code = format!(r#"writeFile("{}", "VM content");"#, test_file.display());
+        let code = format!(
+            r#"writeFile("{}", "VM content");"#,
+            path_for_atlas(&test_file)
+        );
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11537,7 +11615,10 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("append.txt");
         fs::write(&test_file, "line1\n").unwrap();
 
-        let code = format!(r#"appendFile("{}", "line2\n");"#, test_file.display());
+        let code = format!(
+            r#"appendFile("{}", "line2\n");"#,
+            path_for_atlas(&test_file)
+        );
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11553,7 +11634,7 @@ mod vm_stdlib {
 
         let code = format!(
             r#"let result = fileExists("{}"); result;"#,
-            test_file.display()
+            path_for_atlas(&test_file)
         );
         let result = execute_with_io(&code, &temp_dir);
 
@@ -11569,7 +11650,7 @@ mod vm_stdlib {
 
         let code = format!(
             r#"let result = fileExists("{}"); result;"#,
-            nonexistent.display()
+            path_for_atlas(&nonexistent)
         );
         let result = execute_with_io(&code, &temp_dir);
 
@@ -11585,7 +11666,7 @@ mod vm_stdlib {
 
         let code = format!(
             r#"let result = readDir("{}"); result;"#,
-            temp_dir.path().display()
+            path_for_atlas(temp_dir.path())
         );
         let result = execute_with_io(&code, &temp_dir);
 
@@ -11598,7 +11679,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let new_dir = temp_dir.path().join("newdir");
 
-        let code = format!(r#"createDir("{}");"#, new_dir.display());
+        let code = format!(r#"createDir("{}");"#, path_for_atlas(&new_dir));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11611,7 +11692,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let nested_dir = temp_dir.path().join("a/b/c");
 
-        let code = format!(r#"createDir("{}");"#, nested_dir.display());
+        let code = format!(r#"createDir("{}");"#, path_for_atlas(&nested_dir));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11624,7 +11705,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("remove.txt");
         fs::write(&test_file, "").unwrap();
 
-        let code = format!(r#"removeFile("{}");"#, test_file.display());
+        let code = format!(r#"removeFile("{}");"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11637,7 +11718,7 @@ mod vm_stdlib {
         let test_dir = temp_dir.path().join("rmdir");
         fs::create_dir(&test_dir).unwrap();
 
-        let code = format!(r#"removeDir("{}");"#, test_dir.display());
+        let code = format!(r#"removeDir("{}");"#, path_for_atlas(&test_dir));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11652,7 +11733,7 @@ mod vm_stdlib {
 
         let code = format!(
             r#"let result = fileInfo("{}"); result;"#,
-            test_file.display()
+            path_for_atlas(&test_file)
         );
         let result = execute_with_io(&code, &temp_dir);
 
@@ -11683,7 +11764,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("utf8.txt");
         fs::write(&test_file, "Hello 你好 🎉").unwrap();
 
-        let code = format!(r#"let x = readFile("{}"); x;"#, test_file.display());
+        let code = format!(r#"let x = readFile("{}"); x;"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11694,7 +11775,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let nonexistent = temp_dir.path().join("does_not_exist.txt");
 
-        let code = format!(r#"readFile("{}");"#, nonexistent.display());
+        let code = format!(r#"readFile("{}");"#, path_for_atlas(&nonexistent));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -11709,7 +11790,7 @@ mod vm_stdlib {
 
         // Execute without granting permissions
         let mut lexer =
-            atlas_runtime::Lexer::new(format!(r#"readFile("{}");"#, test_file.display()));
+            atlas_runtime::Lexer::new(format!(r#"readFile("{}");"#, path_for_atlas(&test_file)));
         let (tokens, _) = lexer.tokenize();
         let mut parser = atlas_runtime::Parser::new(tokens);
         let (ast, _) = parser.parse();
@@ -11733,7 +11814,10 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("overwrite.txt");
         fs::write(&test_file, "original").unwrap();
 
-        let code = format!(r#"writeFile("{}", "new content");"#, test_file.display());
+        let code = format!(
+            r#"writeFile("{}", "new content");"#,
+            path_for_atlas(&test_file)
+        );
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11749,7 +11833,7 @@ mod vm_stdlib {
         // Execute without granting permissions
         let mut lexer = atlas_runtime::Lexer::new(format!(
             r#"writeFile("{}", "content");"#,
-            test_file.display()
+            path_for_atlas(&test_file)
         ));
         let (tokens, _) = lexer.tokenize();
         let mut parser = atlas_runtime::Parser::new(tokens);
@@ -11773,7 +11857,10 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("new.txt");
 
-        let code = format!(r#"appendFile("{}", "content");"#, test_file.display());
+        let code = format!(
+            r#"appendFile("{}", "content");"#,
+            path_for_atlas(&test_file)
+        );
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11786,7 +11873,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let nonexistent = temp_dir.path().join("nonexistent_dir");
 
-        let code = format!(r#"readDir("{}");"#, nonexistent.display());
+        let code = format!(r#"readDir("{}");"#, path_for_atlas(&nonexistent));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -11797,7 +11884,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let nonexistent = temp_dir.path().join("does_not_exist.txt");
 
-        let code = format!(r#"removeFile("{}");"#, nonexistent.display());
+        let code = format!(r#"removeFile("{}");"#, path_for_atlas(&nonexistent));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -11810,7 +11897,7 @@ mod vm_stdlib {
         fs::create_dir(&test_dir).unwrap();
         fs::write(test_dir.join("file.txt"), "").unwrap();
 
-        let code = format!(r#"removeDir("{}");"#, test_dir.display());
+        let code = format!(r#"removeDir("{}");"#, path_for_atlas(&test_dir));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -11825,7 +11912,7 @@ mod vm_stdlib {
 
         let code = format!(
             r#"let result = fileInfo("{}"); result;"#,
-            test_dir.display()
+            path_for_atlas(&test_dir)
         );
         let result = execute_with_io(&code, &temp_dir);
 
@@ -11860,7 +11947,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("empty.txt");
         fs::write(&test_file, "").unwrap();
 
-        let code = format!(r#"let x = readFile("{}"); x;"#, test_file.display());
+        let code = format!(r#"let x = readFile("{}"); x;"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11877,7 +11964,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("binary.bin");
         fs::write(&test_file, [0xFF, 0xFE, 0xFD]).unwrap();
 
-        let code = format!(r#"readFile("{}");"#, test_file.display());
+        let code = format!(r#"readFile("{}");"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -11890,7 +11977,7 @@ mod vm_stdlib {
         let content = "line1\nline2\nline3\n";
         fs::write(&test_file, content).unwrap();
 
-        let code = format!(r#"let x = readFile("{}"); x;"#, test_file.display());
+        let code = format!(r#"let x = readFile("{}"); x;"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11908,7 +11995,7 @@ mod vm_stdlib {
         let content = "x".repeat(10000);
         fs::write(&test_file, &content).unwrap();
 
-        let code = format!(r#"let x = readFile("{}"); x;"#, test_file.display());
+        let code = format!(r#"let x = readFile("{}"); x;"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11927,7 +12014,7 @@ mod vm_stdlib {
         content.extend_from_slice(b"Hello");
         fs::write(&test_file, content).unwrap();
 
-        let code = format!(r#"let x = readFile("{}"); x;"#, test_file.display());
+        let code = format!(r#"let x = readFile("{}"); x;"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11942,7 +12029,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("empty_write.txt");
 
-        let code = format!(r#"writeFile("{}", "");"#, test_file.display());
+        let code = format!(r#"writeFile("{}", "");"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11956,7 +12043,11 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("unicode.txt");
         let content = "Hello 世界 🌍";
 
-        let code = format!(r#"writeFile("{}", "{}");"#, test_file.display(), content);
+        let code = format!(
+            r#"writeFile("{}", "{}");"#,
+            path_for_atlas(&test_file),
+            content
+        );
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11969,7 +12060,10 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("newlines.txt");
 
-        let code = format!(r#"writeFile("{}", "line1\nline2\n");"#, test_file.display());
+        let code = format!(
+            r#"writeFile("{}", "line1\nline2\n");"#,
+            path_for_atlas(&test_file)
+        );
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -11983,7 +12077,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("new_file.txt");
         assert!(!test_file.exists());
 
-        let code = format!(r#"writeFile("{}", "content");"#, test_file.display());
+        let code = format!(r#"writeFile("{}", "content");"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -12002,8 +12096,8 @@ mod vm_stdlib {
 
         let code = format!(
             r#"appendFile("{}", "line1\n"); appendFile("{}", "line2\n");"#,
-            test_file.display(),
-            test_file.display()
+            path_for_atlas(&test_file),
+            path_for_atlas(&test_file)
         );
         let result = execute_with_io(&code, &temp_dir);
 
@@ -12018,7 +12112,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("append_empty.txt");
         fs::write(&test_file, "base").unwrap();
 
-        let code = format!(r#"appendFile("{}", "");"#, test_file.display());
+        let code = format!(r#"appendFile("{}", "");"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -12033,7 +12127,10 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("append_denied.txt");
 
-        let code = format!(r#"appendFile("{}", "content");"#, test_file.display());
+        let code = format!(
+            r#"appendFile("{}", "content");"#,
+            path_for_atlas(&test_file)
+        );
 
         let mut lexer = Lexer::new(code);
         let (tokens, _) = lexer.tokenize();
@@ -12065,7 +12162,7 @@ mod vm_stdlib {
 
         let code = format!(
             r#"let result = fileExists("{}"); result;"#,
-            test_dir.display()
+            path_for_atlas(&test_dir)
         );
         let result = execute_with_io(&code, &temp_dir);
 
@@ -12081,7 +12178,10 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("exists_test.txt");
         fs::write(&test_file, "").unwrap();
 
-        let code = format!(r#"let x = fileExists("{}"); x;"#, test_file.display());
+        let code = format!(
+            r#"let x = fileExists("{}"); x;"#,
+            path_for_atlas(&test_file)
+        );
 
         let mut lexer = Lexer::new(code);
         let (tokens, _) = lexer.tokenize();
@@ -12115,7 +12215,7 @@ mod vm_stdlib {
         let empty_dir = temp_dir.path().join("empty");
         fs::create_dir(&empty_dir).unwrap();
 
-        let code = format!(r#"let x = readDir("{}"); x;"#, empty_dir.display());
+        let code = format!(r#"let x = readDir("{}"); x;"#, path_for_atlas(&empty_dir));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -12132,7 +12232,10 @@ mod vm_stdlib {
         fs::write(temp_dir.path().join("file.txt"), "").unwrap();
         fs::create_dir(temp_dir.path().join("subdir")).unwrap();
 
-        let code = format!(r#"let x = readDir("{}"); x;"#, temp_dir.path().display());
+        let code = format!(
+            r#"let x = readDir("{}"); x;"#,
+            path_for_atlas(temp_dir.path())
+        );
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -12151,7 +12254,7 @@ mod vm_stdlib {
         let test_dir = temp_dir.path().join("dir");
         fs::create_dir(&test_dir).unwrap();
 
-        let code = format!(r#"readDir("{}");"#, test_dir.display());
+        let code = format!(r#"readDir("{}");"#, path_for_atlas(&test_dir));
 
         let mut lexer = Lexer::new(code);
         let (tokens, _) = lexer.tokenize();
@@ -12181,7 +12284,7 @@ mod vm_stdlib {
         let test_dir = temp_dir.path().join("already_exists");
         fs::create_dir(&test_dir).unwrap();
 
-        let code = format!(r#"createDir("{}");"#, test_dir.display());
+        let code = format!(r#"createDir("{}");"#, path_for_atlas(&test_dir));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -12194,7 +12297,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let new_dir = temp_dir.path().join("denied");
 
-        let code = format!(r#"createDir("{}");"#, new_dir.display());
+        let code = format!(r#"createDir("{}");"#, path_for_atlas(&new_dir));
 
         let mut lexer = Lexer::new(code);
         let (tokens, _) = lexer.tokenize();
@@ -12224,7 +12327,7 @@ mod vm_stdlib {
         let test_dir = temp_dir.path().join("is_dir");
         fs::create_dir(&test_dir).unwrap();
 
-        let code = format!(r#"removeFile("{}");"#, test_dir.display());
+        let code = format!(r#"removeFile("{}");"#, path_for_atlas(&test_dir));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -12238,7 +12341,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("remove_denied.txt");
         fs::write(&test_file, "").unwrap();
 
-        let code = format!(r#"removeFile("{}");"#, test_file.display());
+        let code = format!(r#"removeFile("{}");"#, path_for_atlas(&test_file));
 
         let mut lexer = Lexer::new(code);
         let (tokens, _) = lexer.tokenize();
@@ -12267,7 +12370,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let nonexistent = temp_dir.path().join("not_found");
 
-        let code = format!(r#"removeDir("{}");"#, nonexistent.display());
+        let code = format!(r#"removeDir("{}");"#, path_for_atlas(&nonexistent));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -12279,7 +12382,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("is_file.txt");
         fs::write(&test_file, "").unwrap();
 
-        let code = format!(r#"removeDir("{}");"#, test_file.display());
+        let code = format!(r#"removeDir("{}");"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -12293,7 +12396,7 @@ mod vm_stdlib {
         let test_dir = temp_dir.path().join("remove_denied");
         fs::create_dir(&test_dir).unwrap();
 
-        let code = format!(r#"removeDir("{}");"#, test_dir.display());
+        let code = format!(r#"removeDir("{}");"#, path_for_atlas(&test_dir));
 
         let mut lexer = Lexer::new(code);
         let (tokens, _) = lexer.tokenize();
@@ -12323,7 +12426,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("info_fields.txt");
         fs::write(&test_file, "12345").unwrap();
 
-        let code = format!(r#"let x = fileInfo("{}"); x;"#, test_file.display());
+        let code = format!(r#"let x = fileInfo("{}"); x;"#, path_for_atlas(&test_file));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_ok());
@@ -12338,7 +12441,7 @@ mod vm_stdlib {
         let temp_dir = TempDir::new().unwrap();
         let nonexistent = temp_dir.path().join("not_found.txt");
 
-        let code = format!(r#"fileInfo("{}");"#, nonexistent.display());
+        let code = format!(r#"fileInfo("{}");"#, path_for_atlas(&nonexistent));
         let result = execute_with_io(&code, &temp_dir);
 
         assert!(result.is_err());
@@ -12352,7 +12455,7 @@ mod vm_stdlib {
         let test_file = temp_dir.path().join("info_denied.txt");
         fs::write(&test_file, "test").unwrap();
 
-        let code = format!(r#"fileInfo("{}");"#, test_file.display());
+        let code = format!(r#"fileInfo("{}");"#, path_for_atlas(&test_file));
 
         let mut lexer = Lexer::new(code);
         let (tokens, _) = lexer.tokenize();

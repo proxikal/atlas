@@ -237,6 +237,39 @@ pub fn create_test_dir(dir: &Path, name: &str) -> PathBuf {
     path
 }
 
+/// Normalize a path for embedding in Atlas source code.
+///
+/// Converts backslashes to forward slashes to avoid escape sequence issues
+/// on Windows. Atlas's file I/O functions accept forward slashes on all platforms.
+///
+/// # Example
+/// ```
+/// let path = PathBuf::from(r"C:\Users\test\file.txt");
+/// let atlas_path = path_for_atlas(&path);
+/// assert_eq!(atlas_path, "C:/Users/test/file.txt");
+/// ```
+pub fn path_for_atlas(path: &Path) -> String {
+    path.display().to_string().replace('\\', "/")
+}
+
+/// Create a temporary file path for use in tests.
+///
+/// Returns a tuple of (TempDir, path_string) where path_string is normalized
+/// for Atlas code (forward slashes). The TempDir must be kept alive for the
+/// duration of the test.
+///
+/// # Example
+/// ```
+/// let (temp, path) = temp_file_path("test.json");
+/// let code = format!(r#"writeFile("{}", "content")"#, path);
+/// ```
+pub fn temp_file_path(filename: &str) -> (tempfile::TempDir, String) {
+    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+    let path = temp_dir.path().join(filename);
+    let path_str = path_for_atlas(&path);
+    (temp_dir, path_str)
+}
+
 /// Helper to create a snapshot name from test function name
 ///
 /// Use with insta: `insta::assert_yaml_snapshot!(snapshot_name!(), value);`

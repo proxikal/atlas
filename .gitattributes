@@ -3,6 +3,7 @@
 
 # Atlas source files
 *.atlas text eol=lf
+*.atl text eol=lf
 
 # Test corpus files (must match exactly for span assertions)
 *.stderr text eol=lf

@@ -159,7 +159,8 @@ pub fn path_normalize(path_str: &str, _span: Span) -> Result<String, RuntimeErro
     if normalized.as_os_str().is_empty() {
         Ok(".".to_string())
     } else {
-        Ok(normalized.to_string_lossy().to_string())
+        // Always use forward slashes for cross-platform consistency
+        Ok(normalized.to_string_lossy().replace('\\', "/"))
     }
 }
 
@@ -495,29 +496,13 @@ mod tests {
 
     #[test]
     fn test_path_normalize() {
-        // path_normalize uses native path separators, so expected results differ by platform
-        #[cfg(target_os = "windows")]
-        {
-            assert_eq!(
-                path_normalize("foo/bar/../baz", test_span()).unwrap(),
-                "foo\\baz"
-            );
-            assert_eq!(
-                path_normalize("foo/./bar", test_span()).unwrap(),
-                "foo\\bar"
-            );
-            assert_eq!(path_normalize("foo//bar", test_span()).unwrap(), "foo\\bar");
-        }
-
-        #[cfg(not(target_os = "windows"))]
-        {
-            assert_eq!(
-                path_normalize("foo/bar/../baz", test_span()).unwrap(),
-                "foo/baz"
-            );
-            assert_eq!(path_normalize("foo/./bar", test_span()).unwrap(), "foo/bar");
-            assert_eq!(path_normalize("foo//bar", test_span()).unwrap(), "foo/bar");
-        }
+        // path_normalize always returns forward slashes for cross-platform consistency
+        assert_eq!(
+            path_normalize("foo/bar/../baz", test_span()).unwrap(),
+            "foo/baz"
+        );
+        assert_eq!(path_normalize("foo/./bar", test_span()).unwrap(), "foo/bar");
+        assert_eq!(path_normalize("foo//bar", test_span()).unwrap(), "foo/bar");
     }
 
     #[test]
