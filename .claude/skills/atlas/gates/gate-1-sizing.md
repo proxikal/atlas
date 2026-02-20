@@ -63,7 +63,7 @@ Buffered (×1.2): ~M lines
 
 1. **Existing code audit:** Read existing code FIRST. Check against spec. Fix violations BEFORE adding new code.
 2. **Dependencies not stubbed:** Grep for `unimplemented!()`, `todo!()` in dependencies.
-3. **Architectural decisions:** Check `memory/decisions.md` for applicable decisions.
+3. **Architectural decisions:** Check auto-memory `decisions/*.md` for applicable decisions.
 4. **Anti-patterns:** Planning stubs? Single-engine only? Skipping tests? → STOP.
 
 **If issues found:** Fix BEFORE implementation. Don't waste tokens on bad foundations.

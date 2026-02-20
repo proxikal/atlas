@@ -20,7 +20,7 @@
 
 ---
 
-**Note:** Full test suite runs at GATE 6 (handoff), not here. See `memory/testing-patterns.md` for the complete testing protocol.
+**Note:** Full test suite runs at GATE 6 (handoff), not here. See auto-memory `testing-patterns.md` for the complete testing protocol.
 
 ---
 

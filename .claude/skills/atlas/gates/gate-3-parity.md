@@ -23,7 +23,7 @@ fn test_feature_parity() {
 }
 ```
 
-This runs the code in both interpreter and VM and asserts identical output. See `memory/testing-patterns.md` for details.
+This runs the code in both interpreter and VM and asserts identical output. See auto-memory `testing-patterns.md` for details.
 
 ### Run parity tests
 

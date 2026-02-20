@@ -2,7 +2,7 @@
 
 **Condition:** Size estimated, plan ready
 
-**⚠️ TESTING REMINDER:** Run TARGETED tests only. Full suite is GATE 6. See `memory/testing-patterns.md`.
+**⚠️ TESTING REMINDER:** Run TARGETED tests only. Full suite is GATE 6. See auto-memory `testing-patterns.md`.
 
 **IMPORTANT:** This gate differs based on workflow type.
 
@@ -39,7 +39,7 @@
 
 ## 🚨 TESTING PROTOCOL
 
-**Source of truth:** `memory/testing-patterns.md`
+**Source of truth:** auto-memory `testing-patterns.md`
 
 **GATE 2 rule:** Run targeted tests ONLY. Full suite is GATE 6.
 

@@ -49,7 +49,7 @@ cargo clean && cargo check -p atlas-runtime
 
 **Key patterns to analyze:**
 - Examine [similar feature] implementation in [file path]
-- Follow [pattern name] from memory/patterns.md
+- Follow [pattern name] from auto-memory `patterns.md`
 - Reference [DR-XXX] decision for [context]
 
 **Critical requirements:**

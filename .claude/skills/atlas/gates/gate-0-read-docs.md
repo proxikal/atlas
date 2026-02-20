@@ -41,7 +41,7 @@ cargo clean
 ### Implementation Patterns (As Needed)
 
 - Codebase patterns: auto-memory `patterns.md`
-- Architectural decisions: auto-memory `decisions.md`
+- Architectural decisions: auto-memory `decisions/*.md`
 
 ---
 
@@ -72,7 +72,7 @@ cargo clean
 2. Does it match spec? (compare to `docs/specification/`)
 3. Is it complete? (check STATUS.md, run tests)
 
-**Before implementing anything:** Search for similar existing code. Follow established patterns. Check auto-memory `decisions.md` for constraints.
+**Before implementing anything:** Search for similar existing code. Follow established patterns. Check auto-memory `decisions/*.md` for constraints.
 
 **Status per dependency:**
 - ✅ Exists, complete, spec-compliant → Proceed

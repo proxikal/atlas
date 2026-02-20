@@ -6,7 +6,7 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 # Atlas - AI Workflow
 
 **Type:** Rust compiler | **Progress:** STATUS.md | **Spec:** docs/specification/
-**Memory:** Auto-loaded from `/memory/` (patterns, decisions, gates)
+**Memory:** Claude auto-memory (patterns, decisions) | **Gates:** skill `gates/` directory
 
 ---
 
@@ -28,7 +28,7 @@ git branch | grep -v main | xargs -r git branch -D   # Delete ALL local branches
 **Phase directive = START NOW** (no permission needed)
 
 **Never ask during execution:** "Ready?" "What's next?" "Should I proceed?" "Is this correct?"
-**Answer source:** STATUS.md, phases/, memory/, docs/specification/
+**Answer source:** STATUS.md, phases/, auto-memory/, docs/specification/
 
 **Triggers:** "Next: Phase-XX" | "Start Phase-XX" | User pastes handoff
 
@@ -56,7 +56,7 @@ ALL must be met. Phase says "50+ tests" → deliver 50+ (not 45).
 ### 4. Intelligent Decisions (When Spec Silent)
 1. Analyze codebase patterns
 2. Decide intelligently
-3. Log decision in `decisions/{domain}.md` (use DR-XXX format)
+3. Log decision in auto-memory `decisions/{domain}.md` (use DR-XXX format)
 
 **Never:** Ask user | Leave TODO | Guess without analysis
 
@@ -68,7 +68,7 @@ ALL must be met. Phase says "50+ tests" → deliver 50+ (not 45).
 Both engines MUST produce identical output. Parity break = BLOCKING.
 
 ### 7. Testing Protocol
-**Source of truth:** `memory/testing-patterns.md` — READ BEFORE WRITING ANY TESTS
+**Source of truth:** auto-memory `testing-patterns.md` — READ BEFORE WRITING ANY TESTS
 
 ---
 
@@ -151,7 +151,7 @@ After GATE -1, declare one:
 - Task/Explore agents (use Glob + Read + Grep)
 - Breaking parity
 - Stub implementations
-- **Writing code that touches AST/Type/Value without running domain-prereqs.md queries first**
+- **Writing code that touches AST/Type/Value without running auto-memory `domain-prereqs.md` queries first**
 - Assumptions without verification (grep → verify → write)
 - Testing protocol violations
 
@@ -166,7 +166,7 @@ After GATE -1, declare one:
 
 ## Build Commands
 
-**See:** `memory/testing-patterns.md` for all commands (test, clippy, fmt, bench, fuzz).
+**See:** auto-memory `testing-patterns.md` for all commands (test, clippy, fmt, bench, fuzz).
 
 ---
 
@@ -228,9 +228,9 @@ memory/
 5. **Decisions by domain** - New domain? Create new file
 
 ### When to Update (GATE 7)
-- Hit API surprise → `patterns.md`
-- Made architectural decision → `decisions/{domain}.md`
-- Found stale info → Fix or archive it
+- Hit API surprise → update `patterns.md`
+- Made architectural decision → update `decisions/{domain}.md`
+- Found stale info → fix or archive it
 
 **Rule:** Memories live in Claude auto-memory, NOT in repo.
 
@@ -247,7 +247,7 @@ memory/
 - `docs/specification/` - Language spec (grammar, syntax, types, runtime)
 
 **Key patterns:** See auto-memory `patterns.md`
-**Decisions:** See `decisions/*.md` (split by domain)
+**Decisions:** See auto-memory `decisions/*.md` (split by domain)
 **Gates:** See gates/ directory in this skill
 
 ---
