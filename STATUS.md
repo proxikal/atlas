@@ -1,14 +1,14 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-20
-**Version:** v0.2 | **Progress:** 114/131 phases (87%)
+**Version:** v0.2 | **Progress:** 115/131 phases (88%)
 
 ---
 
 ## Current Phase
 
-**Last Completed:** phases/cli/phase-02-test-runner.md
-**Next Phase:** phases/cli/phase-03-debugger-lsp-cli-integration.md
+**Last Completed:** phases/cli/phase-03-debugger-lsp-cli-integration.md
+**Next Phase:** phases/cli/phase-04-cli-usability-and-integration.md
 
 > **Execution order:** Correctness (12) → Interpreter (2) → CLI (6) → LSP (5) → Polish (5)
 > Correctness phases are BLOCKING — they fix structural compiler bugs that must be resolved before features.
@@ -27,7 +27,7 @@
 | **Frontend** | 5/5 | ✅ Archived |
 | **Typing** | 7/7 | ✅ Archived |
 | **Interpreter** | 2/2 | ✅ Complete |
-| **CLI** | 2/6 | 🔄 In Progress |
+| **CLI** | 3/6 | 🔄 In Progress |
 | **LSP** | 0/5 | ⬜ Pending |
 | **Polish** | 0/5 | ⬜ Pending |
 
@@ -69,11 +69,11 @@
 ✅ phase-01-debugger-repl-improvements.md
 ✅ phase-02-interpreter-performance-and-integration.md — Benchmarks, parity tests, cache infrastructure
 
-### CLI (2/6) — In Progress
+### CLI (3/6) — In Progress
 
 ✅ phase-01-formatter-and-watch-mode.md — fmt flags, watch mode, 67 tests
 ✅ phase-02-test-runner.md — atlas test command, discovery, parallel execution
-⬜ phase-03-debugger-lsp-cli-integration.md
+✅ phase-03-debugger-lsp-cli-integration.md — atlas debug and atlas lsp commands, 65+ tests
 ⬜ phase-04-cli-usability-and-integration.md
 ⬜ phase-05-package-manager-cli.md
 ⬜ phase-06-project-scaffolding.md

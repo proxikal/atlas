@@ -1,7 +1,9 @@
 pub mod ast;
 pub mod build;
 pub mod check;
+pub mod debug;
 pub mod fmt;
+pub mod lsp;
 pub mod profile;
 pub mod repl;
 pub mod repl_tui;
