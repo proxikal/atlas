@@ -28,11 +28,12 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 ### 1. Autonomous Execution
 1. Check STATUS.md (verify phase not complete)
 2. **Git Setup:** Create feature branch from main (see Git Workflow below)
-3. Run GATE -1 (sanity check)
+3. Run GATE -1 (sanity check + local security scan)
 4. Declare workflow type
 5. Execute gates 0→1→2→3→4→5→6→7 (uninterrupted)
 6. **Git Finalize:** Commit, push, create PR with auto-merge
-7. Deliver completion summary (PR will auto-merge when CI passes)
+7. **Sync immediately:** PR merges in ~30-60s (no CI), sync main and delete local branch
+8. Deliver completion summary
 
 ### 2. Spec Compliance (100%)
 Spec defines it → implement EXACTLY. No shortcuts, no "good enough", no partial implementations.
@@ -93,17 +94,20 @@ gh pr create --title "Phase X: Title" --body "..."       # Create PR
 gh pr merge --squash --auto                               # Enable auto-merge (run ONCE)
 ```
 
-**Walk away - automation handles:**
-- CI runs (~1-1.5 min) — fmt, clippy, check only
-- Auto-adds to merge queue when CI passes
-- Auto-merges and auto-deletes branch
-- **Do NOT run `gh pr merge` again**
+**Merge is nearly instant (~30-60s):**
+- CI disabled (jobs skipped) — no waiting
+- Merge queue processes PR immediately
+- Remote branch auto-deleted
+- **Do NOT watch PR** — just sync after a brief pause
 
-**Sync local (after merge):**
+**Sync local (do this immediately):**
 ```bash
+sleep 30                                                  # Brief pause for merge
 git checkout main && git pull                             # Sync local
 git branch -d <old-branch>                                # Clean local ref
 ```
+
+**This is the COMPLETE workflow per phase** — no batching, no CI watching.
 
 **Multi-part phases (A, B, C sub-phases):**
 ```bash
@@ -112,22 +116,13 @@ git branch -d <old-branch>                                # Clean local ref
 cargo nextest run -p atlas-runtime                        # Local validation
 git add -A && git commit -m "feat(phase-XX): Part A - description"
 
-<work on part B>
-cargo nextest run -p atlas-runtime                        # Local validation
-git add -A && git commit -m "feat(phase-XX): Part B - description"
+<work on part B, C, etc. - same pattern>
 
-<work on part C>
-cargo nextest run -p atlas-runtime                        # Local validation
-git add -A && git commit -m "feat(phase-XX): Part C - description"
-
-# ALL parts done, ALL tests pass → push ONCE
+# ALL parts done → push ONCE
 git push -u origin HEAD && gh pr create ... && gh pr merge --squash --auto
 ```
-- **One branch, multiple commits** = traceable history
-- **Local tests between parts** = catch failures early
-- **Push only when complete** = no wasted CI minutes
+- **One branch, multiple commits** = traceable history in PR
 - **Squash merge** = atomic feature on main
-- **If failure:** `git log --oneline` shows which part broke
 
 **User involvement:** NONE. Agent handles entire Git lifecycle autonomously.
 
@@ -135,18 +130,13 @@ git push -u origin HEAD && gh pr create ... && gh pr merge --squash --auto
 
 ## GATE -1: Sanity Check (ALWAYS FIRST)
 
-0. **Main CI health:** `gh run list --branch main --limit 1` — if failed, STOP and alert user
 1. **Verify:** Check phase dependencies in phase file
 2. **Git check:** Ensure on feature branch (not main), working directory clean
-3. **Batch detection:** `git log origin/main..HEAD --oneline`
-   - If commits exist → resuming batch, show list
-   - Count = batch size (phases completed but unpushed)
-4. **Sanity:** `cargo clean && cargo check -p atlas-runtime`
+3. **Sanity:** `cargo clean && cargo check -p atlas-runtime`
+4. **Security scan:** `cargo audit` (check for known vulnerabilities)
 5. **On failure:** Stop, inform user with error details
 
-**Batch push decision (after each phase):**
-- **PUSH if:** batch ≥ 4 | domain change | tests fail | user requests | session ending
-- **CONTINUE if:** same domain | batch < 4 | tests passing
+**No batch logic** — push after EVERY phase (CI disabled, merges are instant)
 
 ---
 
@@ -211,24 +201,23 @@ cargo +nightly fuzz run fuzz_parser -- -max_total_time=60            # Fuzz (lex
 
 ## Phase Handoff
 
-**CRITICAL:** Only hand off when ALL tests pass, CI is green, AND PR is merged.
+**CRITICAL:** Only hand off when ALL tests pass locally AND PR is merged.
 
 **Protocol:**
-1. All gates passed (tests, clippy, fmt)
+1. All gates passed (tests, clippy, fmt, security scan)
 2. STATUS.md updated
 3. Memory checked (GATE 7)
-4. Changes committed and pushed
-5. PR created with auto-merge enabled
-6. CI passes → auto-merge → branch auto-deleted
-7. Local main synced
+4. Commit → Push → Create PR → Auto-merge
+5. Wait ~30-60s for merge queue
+6. Sync local main, delete local branch
+7. Deliver summary
 
 **Required in summary:**
 - Status: "✅ PHASE COMPLETE - MERGED TO MAIN"
-- Commit: Short SHA of merge commit
+- PR URL and merge commit SHA
 - Final Stats (bullets)
-- Highlights (2-3 sentences + key bullets)
-- Progress (simple numbers)
-- Next phase ready
+- Progress (X/131 phases)
+- Next phase
 
 ---
 

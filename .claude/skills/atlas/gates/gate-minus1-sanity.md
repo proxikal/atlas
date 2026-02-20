@@ -6,19 +6,32 @@
 
 ## Action
 
-0. **Main branch health check (1 second):**
-   ```bash
-   gh run list --branch main --limit 1 --json conclusion,status,name
-   ```
-   - **Failed** → STOP. Alert user: "Main CI failed on last merge. Run ID: X. Investigate before proceeding."
-   - **In progress** → Proceed (optimistic)
-   - **Success** → Proceed
-
-1. **Communication check:** Am I making assumptions? → Verify using spec/docs FIRST, not user
-2. **Read phase blockers:** Check `🚨 BLOCKERS` section in phase file
-3. **Verify each dependency:** Check spec → check codebase → decide autonomously
+1. **Read phase blockers:** Check `🚨 BLOCKERS` section in phase file
+2. **Verify each dependency:** Check spec → check codebase → decide autonomously
+3. **Git check:** Ensure on feature branch (not main), working directory clean
 4. **Sanity check:** `cargo clean && cargo check -p atlas-runtime`
-5. **Evaluate:** Version scope? Dependencies met? Parity impact? Workload reasonable?
+5. **Security scan:** `cargo audit` (check for known vulnerabilities)
+   - If vulnerabilities found in direct deps → STOP, alert user
+   - If vulnerabilities in transitive deps only → note and continue
+6. **Evaluate:** Version scope? Dependencies met? Parity impact? Workload reasonable?
+
+---
+
+## Security Scanning (New)
+
+```bash
+# Install if needed (one-time)
+cargo install cargo-audit
+
+# Run in GATE -1
+cargo audit
+```
+
+**Note:** `cargo deny` is optional but recommended for stricter checks:
+```bash
+cargo install cargo-deny
+cargo deny check
+```
 
 ---
 
