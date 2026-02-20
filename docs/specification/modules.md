@@ -1,7 +1,7 @@
 # Atlas Module System Specification
 
-**Version:** v0.2
-**Status:** Implemented (foundation/phase-06)
+**Purpose:** Define module imports, exports, and resolution.
+**Status:** Living document — reflects current implementation.
 
 ---
 
@@ -59,12 +59,12 @@ export let PI = 3.14159;
 export var counter = 0;
 ```
 
-### Limitations (v0.2)
+### Current Limitations
 
 - No default exports (`export default`)
 - No export renaming (`export { x as y }`)
 - No re-exports (`export { x } from "./mod"`)
-- Cannot export types (no type-only exports)
+- No type-only exports
 
 ---
 
@@ -95,7 +95,7 @@ let sum = math.add(10, 20);
 print(str(math.PI));
 ```
 
-### Limitations (v0.2)
+### Current Limitations
 
 - No default imports (`import x from "./mod"`)
 - No import renaming (`import { x as y }`)
@@ -365,24 +365,14 @@ Default entry: `main.atl` or file specified with `atlas run <file>`
 
 ---
 
-## Limitations
-
-### v0.2 Constraints
+## Current Limitations
 
 - File paths only (no package imports like `"std/math"`)
-- No package manager integration
-- No version constraints
 - No conditional imports
 - No lazy loading
 - REPL doesn't support modules
 
-### Future (v0.3+)
-
-- Package imports: `import { x } from "std/collections"`
-- Package manager (`atlas.toml` manifest)
-- Version resolution
-- Monorepo support
-- Workspaces
+**Note:** Package manager infrastructure exists (`atlas-package/` crate) but CLI integration is pending. See `ROADMAP.md`.
 
 ---
 

@@ -1,35 +1,33 @@
 # Atlas Language Specification (Index)
 
-**Version:** v0.2 (Draft)
-**Last Updated:** 2026-02-15
+**Purpose:** Route AI agents to the correct specification file.
+**Status:** Living document — reflects current implementation.
 
 ---
 
-## ⚠️ CRITICAL: AI Agent Routing Guide
+## AI Agent Routing Guide
 
 **DO NOT read all specification files.** This index routes you to exactly what you need.
 
-### When to Read Which Spec
+### Quick Routing Table
 
 | Your Task | Read This File |
 |-----------|----------------|
-| **Implementing types, generics, patterns** | `docs/specification/types.md` |
-| **Parser, lexer, grammar work** | `docs/specification/syntax.md` |
-| **Type checking, evaluation rules** | `docs/specification/language-semantics.md` |
-| **Runtime, memory model, execution** | `docs/specification/runtime.md` |
-| **Module system, imports, exports** | `docs/specification/modules.md` |
-| **REPL behavior, interactive mode** | `docs/specification/repl.md` |
+| **Types, generics, patterns** | `docs/specification/types.md` |
+| **Parser, lexer, grammar** | `docs/specification/syntax.md` |
+| **Type checking, evaluation** | `docs/specification/language-semantics.md` |
+| **Runtime, memory, execution** | `docs/specification/runtime.md` |
+| **Modules, imports, exports** | `docs/specification/modules.md` |
+| **REPL, interactive mode** | `docs/specification/repl.md` |
 | **Bytecode, VM, compilation** | `docs/specification/bytecode.md` |
 | **Error codes, diagnostics** | `docs/specification/diagnostic-system.md` |
-| **Stdlib functions, API** | `docs/api/stdlib.md` |
+| **Stdlib functions** | `docs/specification/stdlib.md` |
 | **Build system** | `docs/build-system.md` |
-| **Package manager & dependency resolution** | `docs/dependency-resolution.md` |
-| **Security model & permissions** | `docs/security-model.md` |
+| **Package management** | `docs/dependency-resolution.md` |
+| **Security model** | `docs/security-model.md` |
 | **Reflection API** | `docs/reflection.md` |
 
-**Example:** "I'm implementing pattern matching" → Read `docs/specification/types.md` (Pattern Matching section)
-
-**Example:** "I'm fixing a parser bug" → Read `docs/specification/syntax.md` (Grammar section)
+**Example:** "I'm implementing pattern matching" → `docs/specification/types.md` (Pattern Matching section)
 
 ---
 
@@ -37,19 +35,20 @@
 
 - **Typed:** Strict type system, no implicit `any`
 - **REPL-first:** Interactive development with fast feedback
-- **Compiled:** Bytecode VM for performance
+- **Compiled:** Bytecode VM with optimization passes
 - **Cross-platform:** macOS, Windows, Linux
 - **AI-friendly:** Clear semantics, explicit behavior
-- **Embeddable:** Runtime as a library (future)
+- **Embeddable:** Runtime usable as library
 
 ---
 
 ## Quick Reference
 
 ### File Format
-- Extension: `.atl`
-- Encoding: UTF-8
+- Source: `.atl`
 - Bytecode: `.atb`
+- Manifest: `atlas.toml`
+- Encoding: UTF-8
 
 ### Types
 - **Primitives:** `number`, `string`, `bool`, `null`, `void`
@@ -57,221 +56,132 @@
 - **Special:** `json` (isolated dynamic type)
 - **Generics:** `Option<T>`, `Result<T, E>`, `Array<T>`
 
-**Details:** `docs/specification/types.md`
-
 ### Keywords
 ```
 let var fn if else while for return break continue
 true false null match import export from as
 ```
 
-**Details:** `docs/specification/syntax.md`
-
-### Built-in Functions (Prelude)
+### Prelude (Always Available)
 ```atlas
-print(value: string | number | bool | null) -> void
+print(value: any) -> void
 len(value: string | T[]) -> number
-str(value: number | bool | null) -> string
+str(value: any) -> string
 ```
-
-**Full API:** `docs/api/stdlib.md`
-
----
-
-## Language Features by Version
-
-### v0.1 (Released)
-✅ Core syntax, types, control flow
-✅ Functions, arrays, strings
-✅ REPL and bytecode VM
-✅ Basic stdlib (print, len, str)
-✅ Error diagnostics
-
-### v0.2 (In Progress)
-🚧 First-class functions
-🚧 Generic types (Option, Result)
-🚧 Pattern matching
-🚧 Module system
-🚧 JSON type
-🚧 Expanded stdlib (100+ functions)
-
-### v0.3+ (Future)
-📅 Closures and anonymous functions
-📅 User-defined structs
-📅 Union types
-📅 Async/await
-📅 JIT compilation
-
-**Roadmap:** `STATUS.md`
 
 ---
 
 ## Specification Files
 
-### Core Language Specs
+### Core Language
 
-**docs/specification/types.md** (~467 lines, ~12kb)
-- Type system comprehensive reference
-- Primitive, function, generic, JSON, pattern types
-- Type rules and assignability
-- Module type exports
+| File | Content |
+|------|---------|
+| `syntax.md` | Grammar, keywords, operators, EBNF |
+| `types.md` | Type system, generics, pattern matching |
+| `language-semantics.md` | Evaluation rules, edge cases |
+| `runtime.md` | Execution model, memory, scoping |
+| `bytecode.md` | VM architecture, instructions, optimization |
+| `modules.md` | Import/export, resolution, cycles |
+| `repl.md` | Interactive mode behavior |
+| `diagnostic-system.md` | Error codes, diagnostic format |
+| `stdlib.md` | Standard library reference |
 
-**docs/specification/syntax.md** (~492 lines, ~13kb)
-- Lexical structure, keywords, literals
-- Expression and statement syntax
-- Complete EBNF grammar
-- Operator precedence
+### Implementation Guides
 
-**docs/specification/language-semantics.md** (~345 lines, ~9kb)
-- Execution semantics
-- String/array/numeric edge cases
-- Operator type rules
-- Evaluation order
-
-**docs/specification/runtime.md** (~326 lines, ~9kb)
-- Value representation
-- Memory model (Rc, RefCell)
-- Execution model
-- Scoping and function calls
-
-### Module System
-
-**docs/specification/modules.md** (~376 lines, ~10kb)
-- Import/export syntax
-- Module resolution
-- Circular dependency handling
-- Build system integration
-
-### Interactive & Execution
-
-**docs/specification/repl.md** (~410 lines, ~11kb)
-- REPL vs file mode differences
-- Expression evaluation
-- State persistence
-- Error handling in REPL
-
-**docs/specification/bytecode.md** (~377 lines, ~10kb)
-- Bytecode instruction set
-- Stack-based VM architecture
-- Compilation strategy
-- Debug information
-
-### Diagnostics & API
-
-**docs/specification/diagnostic-system.md** (~300 lines, ~12kb)
-- Error code reference
-- Diagnostic formats (human + JSON)
-- Warning system
-- Stack traces
-
-**docs/api/stdlib.md** (~200 lines, ~8kb)
-- Standard library functions
-- Function signatures
-- Usage examples
-- Error behaviors
+| File | Content |
+|------|---------|
+| `build-system.md` | Build architecture |
+| `dependency-resolution.md` | Package resolution |
+| `security-model.md` | Permissions, sandbox |
+| `reflection.md` | Reflection API |
+| `vm-architecture.md` | VM design details |
 
 ---
 
-## Design Documents
+## Current Capabilities
 
-Additional design docs (read when implementing specific features):
+Atlas currently supports:
 
-- `docs/design/generics.md` - Generic type system design
-- `docs/design/pattern-matching.md` - Pattern matching design
-- `docs/design/modules.md` - Module system architecture
-- `docs/decision-logs/` - Architecture decisions (categorized by component)
+- **Core:** Variables, functions, control flow, arrays
+- **Types:** Strict typing, generics (Option, Result), pattern matching
+- **Modules:** Import/export, namespace imports, cycle detection
+- **Execution:** Interpreter and bytecode VM (with parity)
+- **Optimization:** Constant folding, dead code elimination, peephole
+- **Stdlib:** 100+ functions (collections, HTTP, filesystem, regex, datetime)
+- **Tooling:** Formatter, debugger, profiler, LSP
+
+### Current Limitations
+
+See `ROADMAP.md` for planned enhancements:
+
+- Closures (functions cannot capture outer scope)
+- Anonymous function syntax
+- `async/await` language syntax (runtime exists)
+- User-defined generic types
 
 ---
 
-## For AI Agents: Navigation Strategy
+## For AI Agents
 
-### ✅ DO
-- Read index (this file) first
-- Use routing table to find relevant spec
-- Read ONLY the spec files needed for your task
-- Check `STATUS.md` for current implementation state
+### Navigation Strategy
 
-### ❌ DON'T
-- Read all spec files at once
-- Guess which spec to read
-- Skip the routing table
-- Assume specs haven't changed
+1. **Check STATUS.md** — Current phase and progress
+2. **Read this index** — Find relevant spec file
+3. **Read ONE spec** — Only what you need
+4. **Check memory/** — Patterns and decisions
+
+### Token Efficiency
+
+| Approach | Tokens |
+|----------|--------|
+| Read all specs | ~150k |
+| Read index + 1 spec | ~20k |
+| **Savings** | **~87%** |
 
 ### Example Workflow
 
-**Task:** Implement array slice function
+**Task:** Fix array bounds checking
 
-1. Read Atlas-SPEC.md (this file) - routing
-2. See "stdlib API" → Read `docs/api/stdlib.md`
-3. See arrays → Read `docs/specification/types.md` (Array section)
-4. See evaluation → Read `docs/specification/language-semantics.md` (Array semantics)
-
-**Token cost:** ~30kb instead of 150kb (80% savings)
-
----
-
-## Version History
-
-- **v0.1.0** (2024) - Core language complete
-- **v0.2.0** (In Progress) - Production foundation
-  - First-class functions (complete)
-  - JSON type (BLOCKER 01 complete)
-  - Generic types (in progress)
-  - Module system (planned)
-  - Pattern matching (planned)
+1. Read `Atlas-SPEC.md` → route to `types.md`
+2. Read `docs/specification/types.md` (array section)
+3. Read `docs/specification/runtime.md` (error handling)
+4. Check `memory/patterns.md` for conventions
 
 ---
 
 ## Compliance
 
-**Grammar:** `docs/specification/grammar-conformance.md` - Parser conformance requirements
-
-**Parity:** Interpreter and VM must produce identical output for all programs
-
-**Testing:** See `docs/guides/testing-guide.md` for test requirements
+- **Parity:** Interpreter and VM produce identical output
+- **Grammar:** `docs/specification/grammar-conformance.md`
+- **Testing:** All features require tests
 
 ---
 
-## Advanced Features (Research Phase)
+## Versioning
 
-These features require careful design before implementation:
+- **Current state:** See `STATUS.md`
+- **Future plans:** See `ROADMAP.md`
+- **Decisions:** See `memory/decisions.md`
 
-- Advanced type features (unions, intersections)
-- Async/await execution model
-- JIT compilation / native codegen
-- Concurrency primitives
-
-**Status:** Design phase - no implementation timeline
+Specs describe current implementation. Version history tracked in STATUS.md.
 
 ---
 
 ## Contributing
 
-When adding new language features:
+When modifying language features:
 
-1. Update relevant spec file in `docs/specification/`
-2. Update this index if adding new spec file
-3. Update routing table
-4. Run `docs/specification/verify-specs.sh` (if exists)
-5. Update `STATUS.md`
-
----
-
-## File Size Targets
-
-Keep spec files focused and under 15kb:
-
-- ✅ All current specs under 13kb
-- ✅ Index under 5kb
-- ⚠️ If spec grows beyond 15kb, consider splitting
-
-**Rationale:** Token cost optimization for AI agents
+1. Update relevant spec in `docs/specification/`
+2. Update this index if adding new spec
+3. Update `STATUS.md` with completion
+4. Update `memory/` if adding patterns
 
 ---
 
 ## Notes
 
-- Spec is living document - evolves with language
-- Breaking changes marked with version numbers
+- Specs are living documents
 - Cross-references use relative paths
-- All examples are valid Atlas code (tested)
+- All code examples are tested
+- Keep spec files under 15kb (token efficiency)

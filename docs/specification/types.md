@@ -1,7 +1,7 @@
 # Atlas Type System Specification
 
-**Version:** v0.2 (Draft)
-**Status:** Living document - expands as language evolves
+**Purpose:** Define Atlas type system, generics, and pattern matching.
+**Status:** Living document — reflects current implementation.
 
 ---
 
@@ -12,9 +12,9 @@ Atlas has a strict type system with the following categories:
 - **Primitive:** `number`, `string`, `bool`, `void`, `null`
 - **Arrays:** `T[]` or `Array<T>`
 - **Function:** `(T1, T2) -> T3`
-- **JSON:** `json` (isolated dynamic type for JSON interop, v0.2+)
-- **Generic:** `Type<T1, T2, ...>` (v0.2+)
-- **Built-in generics:** `Option<T>`, `Result<T, E>` (v0.2+)
+- **JSON:** `json` (isolated dynamic type)
+- **Generic:** `Type<T1, T2, ...>`
+- **Built-in generics:** `Option<T>`, `Result<T, E>`
 
 ---
 
@@ -92,14 +92,16 @@ let g = getDouble();
 g(5);  // 10
 ```
 
-### Limitations (v0.2)
-- No anonymous function syntax: `fn(x) { ... }` (planned for v0.3+)
-- No closure capture: Functions can only reference globals (planned for v0.3+)
+### Current Limitations
+- No anonymous function syntax (`fn(x) { ... }`)
+- No closure capture (functions cannot reference outer scope)
 - All function values must be named functions
+
+See `ROADMAP.md` for planned enhancements.
 
 ---
 
-## JSON Type (v0.2+)
+## JSON Type
 
 The `json` type is an **isolated dynamic type** specifically for JSON interop. It is the **only exception** to Atlas's strict typing.
 
@@ -133,18 +135,16 @@ let value: json = data["users"][0]["email"];
 
 - `json` values can only be assigned to `json`-typed variables
 - Cannot use `json` in expressions: `data + 1` is a type error
-- Extraction methods required for type conversion (planned for Phase 4: JSON API)
+- Extraction methods convert to typed values
 
-### Limitations (v0.2)
+### Current Limitations
 
-- No JSON literal syntax yet (planned for Phase 4: JSON API)
-- No extraction methods yet (`.as_string()`, `.as_number()`, etc.)
-- JSON values can only be created from Rust code or parsed from strings
-- Type checking enforces isolation but extraction API not yet implemented
+- No JSON literal syntax in source code
+- JSON values created via `json_parse()` or from Rust API
 
 ---
 
-## Generic Types (v0.2+)
+## Generic Types
 
 Generic types enable parameterized types for reusable, type-safe code.
 
@@ -212,20 +212,20 @@ let arr2: Array<number> = [1, 2, 3];  // Explicit generic form
 - **Monomorphization:** Generates specialized code per type instantiation
 - **Type inference:** Arguments infer type parameters when possible
 - **Type parameters:** Lexically scoped to function declaration
-- **No constraints in v0.2:** All type parameters unbounded
+- **No constraints:** All type parameters unbounded
 
-### Limitations (v0.2)
+### Current Limitations
 
 - No user-defined generic types (only built-in: Option, Result, Array)
 - No type parameter constraints/bounds
 - No variance (all type parameters invariant)
 - No higher-kinded types
 
-**See:** `docs/design/generics.md` for complete design
+See `ROADMAP.md` for planned enhancements.
 
 ---
 
-## Pattern Matching Types (v0.2+)
+## Pattern Matching
 
 Pattern matching enables destructuring and conditional logic based on value structure. Essential for ergonomic `Result<T,E>` and `Option<T>` handling.
 
@@ -280,7 +280,7 @@ match result {
 - **Wildcard:** `_` (matches anything, binds nothing)
 - **Variable:** `value` (matches anything, binds to name)
 - **Constructor:** `Ok(value)`, `Err(error)`, `Some(x)`, `None`
-- **Array:** `[]`, `[x]`, `[x, y]` (fixed-length only in v0.2)
+- **Array:** `[]`, `[x]`, `[x, y]` (fixed-length)
 
 ### Semantics
 
@@ -312,18 +312,18 @@ match x {
 }
 ```
 
-### Limitations (v0.2)
+### Current Limitations
 
 - No guard clauses (`pattern if condition`)
 - No OR patterns (`0 | 1 | 2`)
 - No rest patterns in arrays (`[first, ...rest]`)
-- No struct patterns (no user-defined structs yet)
+- No struct patterns (no user-defined structs)
 
-**See:** `docs/design/pattern-matching.md` for complete design
+See `ROADMAP.md` for planned enhancements.
 
 ---
 
-## Module Types (v0.2+)
+## Module Types
 
 Module system enables multi-file programs with explicit imports and exports.
 
@@ -392,15 +392,14 @@ let sum = math.add(10, 20);
 print(str(math.PI));
 ```
 
-### Limitations (v0.2)
+### Current Limitations
 
 - No default exports (`export default`)
 - No re-exports (`export { x } from "./mod"`)
 - No dynamic imports (all imports top-level)
-- No package imports (file paths only)
 - No type-only imports
 
-**See:** `docs/design/modules.md` for complete design
+See `docs/specification/modules.md` for full module documentation.
 
 ---
 

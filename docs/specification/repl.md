@@ -1,7 +1,7 @@
 # Atlas REPL Specification
 
-**Version:** v0.2 (Draft)
-**Status:** Living document
+**Purpose:** Define REPL behavior and interactive mode.
+**Status:** Living document — reflects current implementation.
 
 ---
 
@@ -268,7 +268,7 @@ Functions can only be declared at top level:
 
 ```atlas
 >>> fn outer() -> void {
-...   fn inner() -> void {  // Error in v0.2
+...   fn inner() -> void {  // Nested functions allowed
 ...     print("nested");
 ...   }
 ... }
@@ -290,7 +290,7 @@ Hello, World
 
 ---
 
-## Import/Export (v0.2+)
+## Import/Export
 
 ### Not Supported in REPL
 
@@ -335,17 +335,15 @@ error[AT1012]: Cannot shadow prelude function 'print'
 
 ## Special Commands
 
-### Not Implemented in v0.1/v0.2
+### Special Commands
 
-Future REPL commands (planned):
+Currently supported:
+- `Ctrl+C` or `Ctrl+D` - Exit REPL
 
+Planned commands (see `ROADMAP.md`):
 - `.help` - Show help
-- `.clear` - Clear session
 - `.type <expr>` - Show type of expression
 - `.ast <expr>` - Show AST
-- `.exit` - Exit REPL
-
-**Current:** Use Ctrl+C to exit
 
 ---
 
@@ -422,31 +420,24 @@ Both modes must produce identical output (parity requirement).
 
 ## Limitations
 
-### v0.2 Constraints
+### Current Capabilities
 
-- No multi-file programs (file mode only)
-- No import/export
-- No persistent history across restarts
-- No command history navigation (basic terminal only)
+- Command history (up/down arrows) ✅
+- Persistent history file ✅
+- TUI mode with ratatui ✅
+
+### Current Limitations
+
+- No import/export (file mode only)
+- No tab completion
 - No syntax highlighting
 
 ### Performance
 
 - REPL prioritizes feedback speed over execution speed
 - Use file mode + VM for performance-critical code
-- Each input re-type-checks against global scope (not optimized)
 
----
-
-## Future Enhancements (v0.3+)
-
-- Command history (up/down arrows)
-- Tab completion
-- Syntax highlighting
-- Multi-line editing
-- `.type` and `.ast` inspection commands
-- Session save/load
-- Persistent history file
+See `ROADMAP.md` for planned enhancements.
 
 ---
 

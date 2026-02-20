@@ -20,13 +20,10 @@ on:
       - ".gitignore"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "*.md"
-      - "docs/**"
-      - "LICENSE*"
-      - ".gitignore"
+    # No paths-ignore: CI must run for merge queue to work
   merge_group:
     branches: [main]
+    # No paths-ignore: Required for queue processing
   schedule:
     # Nightly at 04:00 UTC for fuzz testing and MSRV
     - cron: "0 4 * * *"

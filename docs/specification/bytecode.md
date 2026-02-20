@@ -1,7 +1,7 @@
 # Atlas Bytecode Specification
 
-**Version:** v0.2 (Draft)
-**Status:** Living document
+**Purpose:** Define Atlas bytecode format and VM architecture.
+**Status:** Living document — reflects current implementation.
 
 ---
 
@@ -35,7 +35,7 @@ Atlas bytecode is a stack-based instruction set for the Atlas VM. Programs are c
 
 ## Instruction Set
 
-### Core Instructions (v0.1)
+### Core Instructions
 
 **Constants:**
 - `PUSH_CONST <index>` - Push constant from pool
@@ -87,7 +87,7 @@ Atlas bytecode is a stack-based instruction set for the Atlas VM. Programs are c
 - `DUP` - Duplicate top of stack
 - `PRINT` - Pop and print value
 
-### Extended Instructions (v0.2+)
+### Extended Instructions
 
 **Pattern Matching:**
 - `MATCH_CONSTRUCTOR <tag>` - Match constructor pattern
@@ -108,7 +108,7 @@ Store compile-time constants to avoid duplicating values.
 ### Contents
 
 - Numbers (f64)
-- Strings (Rc<String>)
+- Strings (Arc<String>)
 - Function metadata (name, arity, bytecode offset)
 
 ### Encoding
@@ -167,7 +167,7 @@ struct CallFrame {
 
 ### AST to Bytecode
 
-Direct compilation (no IR in v0.1/v0.2):
+Direct AST to bytecode compilation (no intermediate representation):
 
 1. **Expression compilation:**
    - Emit instructions to compute value
@@ -255,20 +255,34 @@ Bytecode Length (u32)
 
 ---
 
-## Optimization (Future)
+## Optimization
 
-### Not in v0.2
+Atlas includes a bytecode optimizer with three passes:
 
-Current compiler emits naive bytecode (no optimization).
+### Constant Folding
+Evaluates constant expressions at compile time.
+```atlas
+let x = 2 + 3;  // Compiled as: let x = 5;
+```
 
-### Planned (v0.3+)
+### Dead Code Elimination
+Removes unreachable instructions after returns/jumps.
 
-- Constant folding
-- Dead code elimination
-- Peephole optimization
-- Register allocation (if switch to register VM)
-- Inline caching
-- JIT compilation
+### Peephole Optimization
+Local pattern simplifications (dup-pop, not-not, etc.).
+
+### Optimization Levels
+
+| Level | Passes |
+|-------|--------|
+| 0 | Disabled |
+| 1 | Peephole only |
+| 2 | Constant folding + peephole |
+| 3+ | All passes (default) |
+
+### Future Optimization
+- Inline caching (for method dispatch)
+- JIT compilation (major effort)
 
 ---
 
@@ -330,47 +344,43 @@ Every program must produce identical output in:
 
 ## Performance Characteristics
 
-### Bytecode VM (v0.1/v0.2)
+### Bytecode VM
 
-- **Faster than interpreter:** ~3-10x speedup
-- **Slower than native:** No JIT yet
+- **Faster than interpreter:** ~3-10x speedup (with optimization)
 - **Constant time dispatch:** Jump table for opcodes
 - **Stack overhead:** Push/pop for every operation
+- **Optimization:** Constant folding, dead code elimination, peephole
 
-### Optimization Opportunities
+### Future Performance Work
 
-- Peephole optimization: ~10-20% improvement
 - Inline caching: ~2-5x for method calls
 - JIT compilation: ~10-100x (major effort)
 
 ---
 
-## Compiler IR (Future)
+## Compilation Pipeline
 
-### v0.1/v0.2
-
-Direct AST → Bytecode compilation (no IR).
-
-### v0.3+ (Planned)
-
-Introduce intermediate representation (IR) for optimization:
-
+Current pipeline:
 ```
-AST → High-level IR → Optimized IR → Bytecode
+AST → Bytecode → Optimization → Execution
 ```
 
-**Benefits:**
+Optimization passes operate directly on bytecode (no separate IR).
+
+### Future Consideration: Compiler IR
+
+A high-level IR could enable:
 - Platform-independent optimizations
-- Easier to add backends (LLVM, cranelift)
-- Better error messages (source mapping through IR)
+- Easier backend addition (LLVM, Cranelift)
+- Better source mapping
 
-**See:** `docs/design/compiler-ir.md` for IR design (when added)
+Not currently planned. See `ROADMAP.md` for priorities.
 
 ---
 
 ## Notes
 
-- Bytecode format is unstable in v0.1/v0.2 (subject to change)
+- Bytecode format may change between versions
 - `.atb` files not guaranteed compatible across versions
-- Recompile source for each Atlas version
+- Recompile source when upgrading Atlas
 - Cache invalidation automatic (version mismatch detected)

@@ -1,7 +1,7 @@
 # Atlas Syntax Specification
 
-**Version:** v0.2 (Draft)
-**Status:** Living document - expands as language evolves
+**Purpose:** Define Atlas grammar, keywords, and syntax rules.
+**Status:** Living document — reflects current implementation.
 
 ---
 
@@ -35,13 +35,8 @@
 
 ## Keywords
 
-### Core Keywords (v0.1)
-`let`, `var`, `fn`, `if`, `else`, `while`, `for`, `return`, `break`, `continue`, `true`, `false`, `null`
-
-### Added in v0.2+
-- `match` - Pattern matching
-- `import`, `export` - Module system
-- `from`, `as` - Import keywords
+### Keywords
+`let`, `var`, `fn`, `if`, `else`, `while`, `for`, `return`, `break`, `continue`, `true`, `false`, `null`, `match`, `import`, `export`, `from`, `as`
 
 **Note:** Keywords cannot be used as identifiers
 
@@ -214,8 +209,7 @@ var--   // Post-decrement (decrements, returns old value)
 fnName(arg1, arg2, arg3)
 fnName()  // No arguments
 
-// With type arguments (v0.2+)
-identity<number>(42)
+// With type arguments identity<number>(42)
 ```
 
 ### Array Indexing
@@ -231,8 +225,7 @@ arr[i + 1]  // Index can be any number expression
 - Negative indices are out-of-bounds (`AT0006`)
 - `1.0` is valid; fractional values (e.g., `1.5`) are not
 
-### JSON Indexing (v0.2+)
-
+### JSON Indexing 
 ```atlas
 data["user"]        // String key (object)
 data[0]             // Number index (array)
@@ -248,7 +241,7 @@ data["user"]["name"] // Chained indexing
 
 - Array element types are invariant and homogeneous
 - Arrays are mutable; element assignment supported
-- Array equality is reference identity (no deep equality in v0.1)
+- Array equality is reference identity (not deep equality)
 
 ---
 
@@ -305,8 +298,7 @@ fn add(a: number, b: number) -> number {
     return a + b;
 }
 
-// Generic function (v0.2+)
-fn identity<T>(x: T) -> T {
+// Generic function fn identity<T>(x: T) -> T {
     return x;
 }
 
@@ -315,8 +307,7 @@ fn greet(name: string) -> void {
     print("Hello " + name);
 }
 
-// Nested function (v0.2+)
-fn outer() -> number {
+// Nested function fn outer() -> number {
     fn helper(x: number) -> number {
         return x * 2;
     }
@@ -327,14 +318,15 @@ fn outer() -> number {
 **Rules:**
 - Parameter types must be explicit
 - Return type must be explicit
-- Can be declared at top-level or nested within functions/blocks (v0.2+)
-- Nested functions are hoisted within their scope (forward references allowed)
+- Can be declared at top-level or nested within functions/blocks - Nested functions are hoisted within their scope (forward references allowed)
 - Nested functions can shadow outer functions and globals
 - Nested functions can call sibling functions at the same scope level
 
-**Limitations (deferred to v0.3):**
+**Current Limitations:**
 - Nested functions cannot capture outer scope variables (no closure)
 - Anonymous/lambda functions not supported
+
+See `ROADMAP.md` for planned enhancements.
 
 ### If Statement
 
@@ -473,10 +465,9 @@ expr;       // Any expression (value discarded)
 
 ```ebnf
 program        = { module_item } ;
-module_item    = export_decl | import_decl | decl_or_stmt ;           (* v0.2+ *)
-decl_or_stmt   = fn_decl | stmt ;
+module_item    = export_decl | import_decl | decl_or_stmt ;           decl_or_stmt   = fn_decl | stmt ;
 
-(* Module system - v0.2+ *)
+(* Module system *)
 export_decl    = "export" ( fn_decl | var_decl ) ;
 import_decl    = "import" import_clause "from" string ";" ;
 import_clause  = named_imports | namespace_import ;
@@ -486,9 +477,7 @@ import_specifier  = ident ;
 namespace_import  = "*" "as" ident ;
 
 fn_decl        = "fn" ident [ type_params ] "(" [ params ] ")" "->" type block ;
-type_params    = "<" type_param_list ">" ;                           (* v0.2+ *)
-type_param_list = ident { "," ident } ;                              (* v0.2+ *)
-params         = param { "," param } ;
+type_params    = "<" type_param_list ">" ;                           type_param_list = ident { "," ident } ;                              params         = param { "," param } ;
 param          = ident ":" type ;
 
 stmt           = fn_decl | var_decl | assign_stmt | compound_assign_stmt | increment_stmt
@@ -527,15 +516,13 @@ comparison     = term { ("<" | "<=" | ">" | ">=") term } ;
 term           = factor { ("+" | "-") factor } ;
 factor         = unary { ("*" | "/" | "%") unary } ;
 unary          = ("!" | "-") unary | call ;
-call           = primary { [ type_args ] "(" [ args ] ")" | "[" expr "]" } ;  (* v0.2+: type_args *)
-type_args      = "<" type_arg_list ">" ;                             (* v0.2+ *)
-type_arg_list  = type { "," type } ;                                 (* v0.2+ *)
-args           = expr { "," expr } ;
+call           = primary { [ type_args ] "(" [ args ] ")" | "[" expr "]" } ;  (*  type_args *)
+type_args      = "<" type_arg_list ">" ;                             type_arg_list  = type { "," type } ;                                 args           = expr { "," expr } ;
 array_literal  = "[" [ args ] "]" ;
 primary        = number | string | "true" | "false" | "null" | ident
-               | array_literal | "(" expr ")" | match_expr ;           (* v0.2+: match_expr *)
+               | array_literal | "(" expr ")" | match_expr ;           (*  match_expr *)
 
-(* Pattern matching - v0.2+ *)
+(* Pattern matching *)
 match_expr     = "match" expr "{" match_arms "}" ;
 match_arms     = match_arm { "," match_arm } [ "," ] ;
 match_arm      = pattern "=>" expr ;
@@ -548,10 +535,8 @@ constructor_pattern = ident "(" [ pattern_list ] ")" ;
 array_pattern  = "[" [ pattern_list ] "]" ;
 pattern_list   = pattern { "," pattern } ;
 
-type           = primary_type [ "[]" ] | generic_type | function_type ;  (* v0.2+ *)
-primary_type   = "number" | "string" | "bool" | "void" | "null" | "json" ; (* v0.2+: json *)
-generic_type   = ident "<" type_arg_list ">" ;                       (* v0.2+ *)
-function_type  = "(" [ type_list ] ")" "->" type ;
+type           = primary_type [ "[]" ] | generic_type | function_type ;  primary_type   = "number" | "string" | "bool" | "void" | "null" | "json" ; (*  json *)
+generic_type   = ident "<" type_arg_list ">" ;                       function_type  = "(" [ type_list ] ")" "->" type ;
 type_list      = type { "," type } ;
 ident          = letter { letter | digit | "_" } ;
 number         = digit { digit } [ "." digit { digit } ] [ ("e" | "E") ["+" | "-"] digit { digit } ] ;
@@ -615,4 +600,4 @@ fn        // Keywords reserved
 - All syntax is case-sensitive
 - Semicolons required for statements in file mode
 - REPL mode allows semicolon omission for single expressions
-- Unicode identifiers not supported in v0.2 (ASCII only)
+- Unicode identifiers not supported (ASCII only)

@@ -1,7 +1,7 @@
 # Atlas Runtime Specification
 
-**Version:** v0.2 (Draft)
-**Status:** Living document
+**Purpose:** Define Atlas runtime behavior and memory model.
+**Status:** Living document — reflects current implementation.
 
 ---
 
@@ -43,7 +43,7 @@ Atlas runtime model defines how values are represented in memory, how execution 
 ## Memory Model
 
 ### Reference Counting
-- v0.2 uses atomic reference counting (Arc), no GC
+- Atomic reference counting (Arc), no GC
 - Shared ownership for strings, arrays, JSON values, collections
 - Interior mutability for mutable types via Mutex (Arc<Mutex<T>>)
 - Deterministic cleanup on scope exit
@@ -58,7 +58,7 @@ Atlas runtime model defines how values are represented in memory, how execution 
 - Homogeneous elements (all same type)
 - Mutable - element assignment supported
 - Reference-counted - arrays share backing storage
-- Equality is reference identity (no deep equality in v0.1)
+- Equality is reference identity (not deep equality)
 - Indexing: whole numbers only (fractional = runtime error)
 - Out-of-bounds: runtime error (`AT0006`)
 
@@ -242,17 +242,18 @@ print(item);  // Prints 100 (outer variable unchanged)
 
 ## Function Semantics
 
-### First-Class Functions (v0.2)
+### First-Class Functions
 - Functions are values
 - Can be stored in variables
 - Can be passed as arguments
 - Can be returned from functions
 
-### Limitations (v0.2)
-- No anonymous functions
-- No closures (cannot capture local variables)
+### Current Limitations
+- No anonymous function syntax (`fn(x) { ... }`)
+- No closures (functions cannot capture outer scope variables)
 - Can reference globals only
-- Top-level declarations only
+
+See `ROADMAP.md` for planned enhancements.
 
 ### Calling Convention
 - Callee-saves (function responsible for preserving state)
@@ -317,12 +318,21 @@ str(value: number | bool | null) -> string
 
 ---
 
-## Future Considerations (v0.3+)
+## Current Limitations
 
-- Garbage collection (replace Arc with tracing GC)
-- Closures (capture local variables)
-- Async/await
-- JIT compilation
-- Optimization passes
+The following are not yet supported:
 
-**See:** `STATUS.md` in project root for roadmap
+- **Closures:** Functions cannot capture outer scope variables
+- **Anonymous functions:** No lambda syntax
+- **async/await syntax:** Runtime infrastructure exists, language syntax pending
+
+See `ROADMAP.md` for planned enhancements.
+
+---
+
+## Related Documentation
+
+- **Types:** `docs/specification/types.md`
+- **Bytecode:** `docs/specification/bytecode.md`
+- **Progress:** `STATUS.md`
+- **Roadmap:** `ROADMAP.md`

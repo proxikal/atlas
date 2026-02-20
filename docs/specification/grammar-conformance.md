@@ -230,14 +230,14 @@ All keywords from Atlas-SPEC are recognized and handled:
 | `false` | Boolean literal | `parse_primary()` | ✅ |
 | `null` | Null literal | `parse_primary()` | ✅ |
 
-### Reserved Keywords (v0.1)
+### Previously Reserved Keywords
 
-These keywords are reserved for future use and should produce errors:
+These keywords were reserved and are now implemented:
 
-| Keyword | Status | Test Coverage |
-|---------|--------|---------------|
-| `import` | Reserved | ✅ (Error tested) |
-| `match` | Reserved | ❌ (Should add test) |
+| Keyword | Status | Notes |
+|---------|--------|-------|
+| `import` | ✅ Implemented | Module imports |
+| `match` | ✅ Implemented | Pattern matching |
 
 ---
 
@@ -308,17 +308,19 @@ Assignments can target:
 - ✅ Error recovery tests
 - ✅ Reserved keyword tests
 
-### Features Added in v0.2
+### Implemented Features
 
-1. **Nested function declarations:** Functions can be declared inside function bodies and blocks. ✅ Implemented (Phases 1-7)
-2. **Generic type parameters:** Functions support `<T>` syntax. ✅ Implemented
-3. **Pattern matching:** `match` expressions with type narrowing. ✅ Implemented
+1. **Nested function declarations:** Functions can be declared inside function bodies and blocks ✅
+2. **Generic type parameters:** Functions support `<T>` syntax ✅
+3. **Pattern matching:** `match` expressions with type narrowing ✅
+4. **Module system:** `import`/`export` statements ✅
 
-### Known Limitations (By Design)
+### Current Limitations
 
-1. **No closure capture:** Nested functions cannot capture outer scope variables (deferred to v0.3)
-2. **No anonymous functions:** All functions must be named (deferred to v0.3)
-3. **No `import` statements in non-module files:** Reserved for module system. ✅ Error on use
+1. **No closure capture:** Nested functions cannot capture outer scope variables
+2. **No anonymous functions:** All functions must be named
+
+See `ROADMAP.md` for planned enhancements.
 
 ---
 

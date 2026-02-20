@@ -61,7 +61,7 @@ Define mutation visibility and aliasing rules for arrays. Atlas arrays are refer
 ### Core Rules
 
 **Reference Semantics:**
-- Arrays are reference-counted (`Rc<RefCell<Vec<Value>>>`)
+- Arrays are reference-counted (`Arc<Mutex<Vec<Value>>>`)
 - Arrays are shared by reference, not deep-copied
 - Assignment copies the reference: `let b = a` creates an alias, not a copy
 - Function arguments pass references: arrays passed to functions share same underlying data
@@ -268,7 +268,7 @@ Lock rules for top-level execution order and function hoisting. Predictable exec
 
 **Hoisting Scope:**
 - Top-level functions are hoisted globally
-- Nested functions are hoisted within their enclosing scope (v0.2+)
+- Nested functions are hoisted within their enclosing scope
 - Variable declarations are NOT hoisted
 
 **Declaration Order:**
@@ -280,7 +280,7 @@ Lock rules for top-level execution order and function hoisting. Predictable exec
   let x = 5;
   ```
 
-**Nested Function Hoisting (v0.2+):**
+**Nested Function Hoisting:**
 Nested functions are hoisted within their scope using two-pass binding:
 ```atlas
 fn outer() -> number {

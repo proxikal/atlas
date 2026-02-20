@@ -97,9 +97,15 @@ gh pr create --title "Phase X: Title" --body "..."       # Create PR
 gh pr checks <pr-number> --watch                          # Watch until green
 ```
 
-**Merge when green (DO NOT wait for main CI):**
+**Merge via queue (when CI green):**
 ```bash
-gh pr merge --squash --delete-branch                      # Merge + cleanup
+gh pr merge --squash                                      # Adds to merge queue
+# Queue runs CI again (~3-4 min), then auto-merges and deletes branch
+# DO NOT use --delete-branch flag (incompatible with merge queue)
+```
+
+**After queue merges PR:**
+```bash
 git checkout main && git pull                             # Sync local
 # Main CI (benchmarks, coverage) runs 20-40 min — DO NOT WAIT
 # GATE -1 of next phase will catch any failures

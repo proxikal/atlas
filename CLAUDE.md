@@ -12,8 +12,8 @@
 - **User is architect, not infallible.** Explain why something is wrong. User makes final call.
 
 ## Git Process
-- **All code changes use PRs.** Phases, CI fixes, features—everything. PR = fast feedback (~3-4 min).
-- **Direct push to main:** Only for docs/config that CI ignores (*.md, docs/**, LICENSE*, .gitignore).
+- **All changes use PRs.** Code, docs, config—everything goes through merge queue.
+- **Docs-only PRs:** No CI checks, merge queue processes them quickly (~1 min).
 
 ## Cross-Platform Testing
 - Use `std::path::Path` APIs, not string manipulation for paths.
