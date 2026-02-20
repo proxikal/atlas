@@ -26,7 +26,7 @@ authors = ["Atlas Contributors"]
 [workspace.dependencies]
 # Testing infrastructure
 insta = { version = "1.39", features = ["yaml", "json"] }
-rstest = "0.22"
+rstest = "0.26"
 proptest = "1.5"
 pretty_assertions = "1.4"
 
