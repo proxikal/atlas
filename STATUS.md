@@ -1,14 +1,14 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-20
-**Version:** v0.2 | **Progress:** 122/131 phases (93%)
+**Version:** v0.2 | **Progress:** 122/133 phases (92%)
 
 ---
 
 ## Current Phase
 
 **Last Completed:** phases/lsp/phase-04-refactoring-actions.md
-**Next Phase:** phases/lsp/phase-05-find-references.md
+**Next Phase:** phases/lsp/phase-05a-symbol-indexing-references.md
 
 > **Execution order:** Correctness (12) → Interpreter (2) → CLI (6) → LSP (5) → Polish (5)
 > Correctness phases are BLOCKING — they fix structural compiler bugs that must be resolved before features.
@@ -28,7 +28,7 @@
 | **Typing** | 7/7 | ✅ Archived |
 | **Interpreter** | 2/2 | ✅ Complete |
 | **CLI** | 6/6 | ✅ Complete |
-| **LSP** | 4/5 | 🚧 In progress |
+| **LSP** | 4/7 | 🚧 In progress |
 | **Polish** | 0/5 | ⬜ Pending |
 
 ---
@@ -78,13 +78,15 @@
 ✅ phase-05-package-manager-cli.md
 ✅ phase-06-project-scaffolding.md
 
-### LSP (3/5)
+### LSP (4/7)
 
 ✅ phase-01-hover-actions-tokens.md
 ✅ phase-02-symbols-folding-inlay.md
 ✅ phase-03-lsp-integration-tests.md
 ✅ phase-04-refactoring-actions.md
-⬜ phase-05-find-references.md
+⬜ phase-05a-symbol-indexing-references.md — Symbol index + find all references
+⬜ phase-05b-call-hierarchy.md — Incoming/outgoing call navigation
+⬜ phase-05c-workspace-symbols-polish.md — Workspace search + performance optimization
 
 ### Polish (0/5)
 
