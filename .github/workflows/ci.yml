@@ -2,11 +2,14 @@
 #
 # Optimized for speed and minimal CI minutes:
 #
-# PR (code changes):        fmt → clippy → test (ubuntu only) ~2 min
+# PR (code changes):        fmt → clippy → test (ubuntu only) ~3 min
 # PR (docs only):           fmt only ~15s
-# Merge queue:              fmt → clippy → test-matrix (3 platforms) ~6 min
-# Main push:                coverage only ~5 min (tests already passed)
-# Nightly:                  fuzz + MSRV ~10 min
+# Merge queue:              fmt → clippy → test (ubuntu only) ~3 min
+# Main push:                coverage only ~5 min
+# Nightly:                  cross-platform + fuzz + MSRV ~15 min
+#
+# Cross-platform (macOS/Windows) runs nightly - platform bugs are rare,
+# caught within 24h. This saves ~13 min per merge.
 #
 # Benchmarks: Handled by dedicated bench.yml (has regression tracking)
 # Security:   Handled by dedicated security.yml
@@ -108,8 +111,8 @@ jobs:
     name: Test
     needs: [clippy, changes]
     runs-on: ubuntu-latest
-    # Only run on PRs with code changes - tests already passed before merge
-    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
+    # Run on PRs and merge_group with code changes (ubuntu only - fast)
+    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -151,8 +154,8 @@ jobs:
   test-matrix:
     name: Test (${{ matrix.os }}/${{ matrix.rust }})
     needs: [clippy, changes]
-    # Only merge_group and schedule with code changes - NOT main push
-    if: (github.event_name == 'merge_group' && needs.changes.outputs.code == 'true') || github.event_name == 'schedule'
+    # Nightly only - cross-platform bugs are rare, catch within 24h
+    if: github.event_name == 'schedule'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
