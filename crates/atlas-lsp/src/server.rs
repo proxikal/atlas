@@ -97,6 +97,7 @@ impl LanguageServer for AtlasLspServer {
                         work_done_progress_options: WorkDoneProgressOptions::default(),
                     },
                 ))),
+                call_hierarchy_provider: Some(CallHierarchyServerCapability::Simple(true)),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -457,5 +458,65 @@ impl LanguageServer for AtlasLspServer {
         }
 
         Ok(None)
+    }
+
+    async fn prepare_call_hierarchy(
+        &self,
+        params: CallHierarchyPrepareParams,
+    ) -> Result<Option<Vec<CallHierarchyItem>>> {
+        let uri = params.text_document_position_params.text_document.uri;
+        let position = params.text_document_position_params.position;
+
+        let documents = self.documents.lock().await;
+        if let Some(doc) = documents.get(&uri) {
+            return Ok(crate::call_hierarchy::prepare_call_hierarchy(
+                &uri,
+                &doc.text,
+                position,
+                doc.ast.as_ref(),
+            ));
+        }
+
+        Ok(None)
+    }
+
+    async fn incoming_calls(
+        &self,
+        params: CallHierarchyIncomingCallsParams,
+    ) -> Result<Option<Vec<CallHierarchyIncomingCall>>> {
+        // Collect all documents for cross-file resolution
+        let documents_lock = self.documents.lock().await;
+        let mut documents = HashMap::new();
+        for (uri, doc) in documents_lock.iter() {
+            documents.insert(uri.clone(), (doc.text.clone(), doc.ast.clone()));
+        }
+        drop(documents_lock);
+
+        let symbol_index = self.symbol_index.lock().await;
+        Ok(crate::call_hierarchy::find_incoming_calls(
+            params,
+            &symbol_index,
+            &documents,
+        ))
+    }
+
+    async fn outgoing_calls(
+        &self,
+        params: CallHierarchyOutgoingCallsParams,
+    ) -> Result<Option<Vec<CallHierarchyOutgoingCall>>> {
+        // Collect all documents for cross-file resolution
+        let documents_lock = self.documents.lock().await;
+        let mut documents = HashMap::new();
+        for (uri, doc) in documents_lock.iter() {
+            documents.insert(uri.clone(), (doc.text.clone(), doc.ast.clone()));
+        }
+        drop(documents_lock);
+
+        let symbol_index = self.symbol_index.lock().await;
+        Ok(crate::call_hierarchy::find_outgoing_calls(
+            params,
+            &symbol_index,
+            &documents,
+        ))
     }
 }
