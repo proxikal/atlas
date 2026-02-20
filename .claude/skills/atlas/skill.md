@@ -164,7 +164,8 @@ After GATE -1, declare one:
 - Task/Explore agents (use Glob + Read + Grep)
 - Breaking parity
 - Stub implementations
-- Assumptions without verification
+- **Writing code that touches AST/Type/Value without running domain-prereqs.md queries first**
+- Assumptions without verification (grep → verify → write)
 - Testing protocol violations
 
 **Required:**
