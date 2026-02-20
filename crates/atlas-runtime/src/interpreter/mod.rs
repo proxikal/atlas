@@ -7,6 +7,7 @@
 //! - Function calls and stack frames
 //! - Block scoping with shadowing
 
+pub mod cache;
 pub mod debugger;
 mod expr;
 mod stmt;
@@ -66,6 +67,9 @@ pub struct Interpreter {
     current_module_path: Option<PathBuf>,
     /// Cache of module exports (path -> exports map) for inline import processing
     module_exports_cache: HashMap<PathBuf, HashMap<String, Value>>,
+    /// Lookup cache for optimized variable resolution (infrastructure for future optimization)
+    #[allow(dead_code)]
+    lookup_cache: cache::InterpreterCache,
 }
 
 impl Interpreter {
@@ -85,6 +89,7 @@ impl Interpreter {
             callbacks: Vec::new(),
             current_module_path: None,
             module_exports_cache: HashMap::new(),
+            lookup_cache: cache::InterpreterCache::new(),
         };
 
         // Register builtin functions in globals
@@ -544,6 +549,7 @@ impl Interpreter {
                 callbacks: Vec::new(),
                 current_module_path: None,
                 module_exports_cache: HashMap::new(),
+                lookup_cache: cache::InterpreterCache::new(),
             };
 
             // Get function body
