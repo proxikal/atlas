@@ -55,7 +55,7 @@ Ask yourself:
    git commit -m "feat(category): Phase X - description"
    ```
 
-2. **Push and create PR:**
+2. **Push, create PR, enable auto-merge:**
    ```bash
    git push -u origin HEAD
    gh pr create --title "Phase X: Title" --body "## Summary
@@ -63,21 +63,16 @@ Ask yourself:
    - Key change 2
 
    🤖 Generated with Claude Code"
+   gh pr merge --squash --auto
    ```
 
-3. **Wait for CI:** Poll until green
-   ```bash
-   gh pr checks --watch
-   ```
+3. **Report completion:** PR created with auto-merge enabled
 
-4. **Merge and cleanup:**
-   ```bash
-   gh pr merge --squash --delete-branch
-   git checkout main && git pull
-   ```
+**Automation handles the rest:**
+- CI runs (~3-4 min)
+- Auto-merge when CI passes
+- Branch auto-deleted after merge
 
-5. **Report completion:** Phase merged to main, ready for next phase
+**User involvement:** NONE. AI handles Git lifecycle.
 
-**User involvement:** NONE. AI handles entire Git lifecycle.
-
-**Next:** Handoff complete. Main is updated.
+**Next:** Handoff complete. PR will auto-merge.
