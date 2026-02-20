@@ -25,6 +25,8 @@ on:
       - "docs/**"
       - "LICENSE*"
       - ".gitignore"
+  merge_group:
+    branches: [main]
   schedule:
     # Nightly at 04:00 UTC for fuzz testing and MSRV
     - cron: "0 4 * * *"
