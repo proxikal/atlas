@@ -2,6 +2,8 @@
 
 **Condition:** Implementation complete, ready for PR
 
+**Source of truth:** auto-memory `testing-patterns.md` for crate-specific testing protocols
+
 ---
 
 ## Action
