@@ -31,8 +31,8 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 3. Run GATE -1 (sanity check)
 4. Declare workflow type
 5. Execute gates 0→1→2→3→4→5→6→7 (uninterrupted)
-6. **Git Finalize:** Commit, push, create PR, wait for CI, merge, cleanup
-7. Deliver completion summary (main is updated, ready for next phase)
+6. **Git Finalize:** Commit, push, create PR with auto-merge
+7. Deliver completion summary (PR will auto-merge when CI passes)
 
 ### 2. Spec Compliance (100%)
 Spec defines it → implement EXACTLY. No shortcuts, no "good enough", no partial implementations.
@@ -90,31 +90,19 @@ git checkout -b phase/{category}-{number}        # Create feature branch
 git add -A && git commit -m "feat(phase): Description"   # Commit all
 git push -u origin HEAD                                   # Push branch
 gh pr create --title "Phase X: Title" --body "..."       # Create PR
+gh pr merge --squash --auto                               # Enable auto-merge
 ```
 
-**Wait for PR CI (~3-4 min):**
-```bash
-gh pr checks <pr-number> --watch                          # Watch until green
-```
+**After PR created:**
+- CI runs (~3-4 min)
+- Auto-merge triggers when CI passes
+- Branch auto-deleted after merge
+- No manual intervention needed
 
-**Merge via queue (when CI green):**
-```bash
-gh pr merge --squash                                      # Adds to merge queue
-# Queue runs CI again (~3-4 min), then auto-merges and deletes branch
-# DO NOT use --delete-branch flag (incompatible with merge queue)
-```
-
-**After queue merges PR:**
+**Sync local (after merge):**
 ```bash
 git checkout main && git pull                             # Sync local
-# Main CI (benchmarks, coverage) runs 20-40 min — DO NOT WAIT
-# GATE -1 of next phase will catch any failures
-```
-
-**Cleanup:** If stale branches exist from failed runs, delete them:
-```bash
-git branch -d <branch>                                    # Local
-gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>  # Remote
+git branch -d <old-branch>                                # Clean local ref
 ```
 
 **User involvement:** NONE. Agent handles entire Git lifecycle autonomously.
@@ -199,10 +187,9 @@ cargo +nightly fuzz run fuzz_parser -- -max_total_time=60            # Fuzz (lex
 2. STATUS.md updated
 3. Memory checked (GATE 7)
 4. Changes committed and pushed
-5. PR created with standard template
-6. CI passes (fmt → clippy → test → ci-success)
-7. PR merged (squash) and branch deleted
-8. Local main synced with remote
+5. PR created with auto-merge enabled
+6. CI passes → auto-merge → branch auto-deleted
+7. Local main synced
 
 **Required in summary:**
 - Status: "✅ PHASE COMPLETE - MERGED TO MAIN"
@@ -221,6 +208,7 @@ cargo +nightly fuzz run fuzz_parser -- -max_total_time=60            # Fuzz (lex
 - `patterns.md` - Codebase patterns (Arc<Mutex<>>, stdlib signatures, etc.)
 - `decisions.md` - Architectural decisions (search DR-XXX)
 - `testing-patterns.md` - Test domain files, corpus workflow, parity helpers
+- `github-config.md` - Repo settings, rulesets, automation
 
 **Usage:** Read patterns.md for codebase patterns, decisions.md for architectural context.
 

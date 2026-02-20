@@ -276,7 +276,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [fmt, clippy, test, changes]
+    needs: [fmt, clippy, test, test-matrix, changes]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs passed
@@ -292,10 +292,16 @@ jobs:
             echo "Clippy failed"
             exit 1
           fi
-          # test must pass or be skipped (docs-only PRs, main push)
+          # test must pass or be skipped (merge_group, docs-only PRs, main push)
           if [[ "${{ needs.test.result }}" != "success" ]] && \
              [[ "${{ needs.test.result }}" != "skipped" ]]; then
             echo "Tests failed"
+            exit 1
+          fi
+          # test-matrix must pass or be skipped (PRs, docs-only, main push)
+          if [[ "${{ needs.test-matrix.result }}" != "success" ]] && \
+             [[ "${{ needs.test-matrix.result }}" != "skipped" ]]; then
+            echo "Cross-platform tests failed"
             exit 1
           fi
           echo "All required jobs passed"

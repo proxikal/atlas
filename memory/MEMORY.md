@@ -46,16 +46,11 @@ See `language-classification.md` for full details.
 - Fuzz targets in `crates/atlas-runtime/fuzz/` — run when modifying lexer/parser/typechecker
 - Criterion benchmarks in `crates/atlas-runtime/benches/` — run when optimizing execution
 
-**decisions.md** - Architectural decision log
-- DR-001: Interpreter + VM dual execution
-- DR-002: Reference semantics for collections (superseded by DR-009)
-- DR-003: Hash function design
-- DR-004: HashMap key equality
-- DR-005: Collection API design
-- DR-006: Collection benchmarking (deferred)
-- DR-007: Phase file accuracy
-- DR-008: Scope sizing for phases
-- DR-009: Arc<Mutex<T>> migration (replaces DR-002, required for tokio)
+**decisions.md** - Architectural decision log (DR-001 to DR-014)
+
+**github-config.md** - Repository automation settings
+- Auto-merge, auto-delete branches, ruleset config
+- Required CI check: `CI Success`
 
 ---
 
@@ -153,12 +148,10 @@ atlas/
 1. User says "Next: Phase-XX" or STATUS.md shows next phase
 2. Create feature branch: `git checkout -b phase/{category}-{number}`
 3. Run GATE -1 (sanity check)
-4. Declare workflow type (GATE 0)
-5. Execute gates 0-7 without asking for permission
-6. Commit, push, create PR
-7. Wait for CI: `fmt → clippy → test → ci-success`
-8. Merge PR, delete branch, sync local main
-9. Report completion summary
+4. Execute gates 0-7 without asking
+5. Commit, push, create PR with auto-merge: `gh pr merge --squash --auto`
+6. PR auto-merges when CI passes, branch auto-deleted
+7. Report completion summary
 
 **Branch naming:** `phase/`, `fix/`, `feat/`, `ci/`
 
