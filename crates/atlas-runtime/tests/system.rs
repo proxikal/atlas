@@ -421,6 +421,9 @@ fn test_path_join_array_absolute_segment() {
             // Absolute segment resets the path on Unix systems
             #[cfg(not(target_os = "windows"))]
             assert!(s.as_str() == "/bar" || s.as_str() == "foo/bar");
+            // On Windows, forward slashes are treated as path separators too
+            #[cfg(target_os = "windows")]
+            assert!(s.as_str().contains("bar"));
         }
         _ => panic!("Expected string result"),
     }

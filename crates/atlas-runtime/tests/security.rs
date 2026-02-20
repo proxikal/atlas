@@ -14,6 +14,21 @@ use std::sync::Arc;
 use std::thread;
 use tempfile::TempDir;
 
+/// Returns a platform-appropriate absolute path for testing.
+/// On Unix: returns the path as-is (e.g., "/data/file.txt")
+/// On Windows: prepends drive letter (e.g., "C:\data\file.txt")
+#[cfg(windows)]
+fn test_path(path: &str) -> PathBuf {
+    let system_drive = std::env::var("SYSTEMDRIVE").unwrap_or_else(|_| "C:".to_string());
+    let windows_path = path.replace('/', "\\");
+    PathBuf::from(format!("{}{}", system_drive, windows_path))
+}
+
+#[cfg(not(windows))]
+fn test_path(path: &str) -> PathBuf {
+    PathBuf::from(path)
+}
+
 // --- Permission model ---
 
 // Comprehensive security and permission tests
@@ -328,10 +343,10 @@ fn test_security_context_default_denies_everything() {
     let ctx = SecurityContext::new();
 
     assert!(ctx
-        .check_filesystem_read(Path::new("/data/file.txt"))
+        .check_filesystem_read(&test_path("/data/file.txt"))
         .is_err());
     assert!(ctx
-        .check_filesystem_write(Path::new("/output/file.txt"))
+        .check_filesystem_write(&test_path("/output/file.txt"))
         .is_err());
     assert!(ctx.check_network("api.example.com").is_err());
     assert!(ctx.check_process("git").is_err());
@@ -341,32 +356,32 @@ fn test_security_context_default_denies_everything() {
 #[test]
 fn test_security_context_grant_filesystem_read() {
     let mut ctx = SecurityContext::new();
-    ctx.grant_filesystem_read(Path::new("/data"), true);
+    ctx.grant_filesystem_read(&test_path("/data"), true);
 
     assert!(ctx
-        .check_filesystem_read(Path::new("/data/file.txt"))
+        .check_filesystem_read(&test_path("/data/file.txt"))
         .is_ok());
     assert!(ctx
-        .check_filesystem_read(Path::new("/data/subdir/file.txt"))
+        .check_filesystem_read(&test_path("/data/subdir/file.txt"))
         .is_ok());
     assert!(ctx
-        .check_filesystem_read(Path::new("/other/file.txt"))
+        .check_filesystem_read(&test_path("/other/file.txt"))
         .is_err());
 }
 
 #[test]
 fn test_security_context_grant_filesystem_write() {
     let mut ctx = SecurityContext::new();
-    ctx.grant_filesystem_write(Path::new("/output"), true);
+    ctx.grant_filesystem_write(&test_path("/output"), true);
 
     assert!(ctx
-        .check_filesystem_write(Path::new("/output/file.txt"))
+        .check_filesystem_write(&test_path("/output/file.txt"))
         .is_ok());
     assert!(ctx
-        .check_filesystem_write(Path::new("/output/logs/app.log"))
+        .check_filesystem_write(&test_path("/output/logs/app.log"))
         .is_ok());
     assert!(ctx
-        .check_filesystem_write(Path::new("/other/file.txt"))
+        .check_filesystem_write(&test_path("/other/file.txt"))
         .is_err());
 }
 
@@ -411,8 +426,8 @@ fn test_security_context_grant_environment() {
 fn test_security_context_allow_all() {
     let ctx = SecurityContext::allow_all();
 
-    assert!(ctx.check_filesystem_read(Path::new("/any/path")).is_ok());
-    assert!(ctx.check_filesystem_write(Path::new("/any/path")).is_ok());
+    assert!(ctx.check_filesystem_read(&test_path("/any/path")).is_ok());
+    assert!(ctx.check_filesystem_write(&test_path("/any/path")).is_ok());
     assert!(ctx.check_network("any.host.com").is_ok());
     assert!(ctx.check_process("any-command").is_ok());
     assert!(ctx.check_environment("ANY_VAR").is_ok());
@@ -425,7 +440,7 @@ fn test_security_context_allow_all() {
 #[test]
 fn test_security_error_filesystem_read() {
     let ctx = SecurityContext::new();
-    let result = ctx.check_filesystem_read(Path::new("/data/file.txt"));
+    let result = ctx.check_filesystem_read(&test_path("/data/file.txt"));
 
     assert!(matches!(
         result,
@@ -436,7 +451,7 @@ fn test_security_error_filesystem_read() {
 #[test]
 fn test_security_error_filesystem_write() {
     let ctx = SecurityContext::new();
-    let result = ctx.check_filesystem_write(Path::new("/output/file.txt"));
+    let result = ctx.check_filesystem_write(&test_path("/output/file.txt"));
 
     assert!(matches!(
         result,
@@ -487,17 +502,17 @@ fn test_empty_path_handling() {
 #[test]
 fn test_multiple_grants_same_type() {
     let mut ctx = SecurityContext::new();
-    ctx.grant_filesystem_read(Path::new("/data"), true);
-    ctx.grant_filesystem_read(Path::new("/config"), true);
+    ctx.grant_filesystem_read(&test_path("/data"), true);
+    ctx.grant_filesystem_read(&test_path("/config"), true);
 
     assert!(ctx
-        .check_filesystem_read(Path::new("/data/file.txt"))
+        .check_filesystem_read(&test_path("/data/file.txt"))
         .is_ok());
     assert!(ctx
-        .check_filesystem_read(Path::new("/config/app.toml"))
+        .check_filesystem_read(&test_path("/config/app.toml"))
         .is_ok());
     assert!(ctx
-        .check_filesystem_read(Path::new("/other/file.txt"))
+        .check_filesystem_read(&test_path("/other/file.txt"))
         .is_err());
 }
 
@@ -1083,7 +1098,7 @@ fn test_audit_logger_logs_filesystem_read_denied() {
     let logger = Arc::new(MemoryAuditLogger::new());
     let ctx = SecurityContext::with_audit_logger(logger.clone() as Arc<dyn AuditLogger>);
 
-    let _ = ctx.check_filesystem_read(Path::new("/etc/passwd"));
+    let _ = ctx.check_filesystem_read(&test_path("/etc/passwd"));
 
     let entries = logger.entries();
     assert_eq!(entries.len(), 1);
@@ -1098,8 +1113,8 @@ fn test_audit_logger_logs_filesystem_read_granted() {
     let logger = Arc::new(MemoryAuditLogger::new());
     let mut ctx = SecurityContext::with_audit_logger(logger.clone() as Arc<dyn AuditLogger>);
 
-    ctx.grant_filesystem_read(Path::new("/data"), true);
-    let _ = ctx.check_filesystem_read(Path::new("/data/file.txt"));
+    ctx.grant_filesystem_read(&test_path("/data"), true);
+    let _ = ctx.check_filesystem_read(&test_path("/data/file.txt"));
 
     let entries = logger.entries();
     assert_eq!(entries.len(), 1);
@@ -1114,7 +1129,7 @@ fn test_audit_logger_logs_filesystem_write_denied() {
     let logger = Arc::new(MemoryAuditLogger::new());
     let ctx = SecurityContext::with_audit_logger(logger.clone() as Arc<dyn AuditLogger>);
 
-    let _ = ctx.check_filesystem_write(Path::new("/etc/passwd"));
+    let _ = ctx.check_filesystem_write(&test_path("/etc/passwd"));
 
     let entries = logger.entries();
     assert_eq!(entries.len(), 1);
@@ -1129,8 +1144,8 @@ fn test_audit_logger_logs_filesystem_write_granted() {
     let logger = Arc::new(MemoryAuditLogger::new());
     let mut ctx = SecurityContext::with_audit_logger(logger.clone() as Arc<dyn AuditLogger>);
 
-    ctx.grant_filesystem_write(Path::new("/output"), true);
-    let _ = ctx.check_filesystem_write(Path::new("/output/file.txt"));
+    ctx.grant_filesystem_write(&test_path("/output"), true);
+    let _ = ctx.check_filesystem_write(&test_path("/output/file.txt"));
 
     let entries = logger.entries();
     assert_eq!(entries.len(), 1);
@@ -1242,12 +1257,12 @@ fn test_audit_logger_logs_multiple_events() {
     let logger = Arc::new(MemoryAuditLogger::new());
     let mut ctx = SecurityContext::with_audit_logger(logger.clone() as Arc<dyn AuditLogger>);
 
-    ctx.grant_filesystem_read(Path::new("/data"), true);
+    ctx.grant_filesystem_read(&test_path("/data"), true);
 
     // Multiple permission checks
-    let _ = ctx.check_filesystem_read(Path::new("/data/file1.txt"));
-    let _ = ctx.check_filesystem_read(Path::new("/data/file2.txt"));
-    let _ = ctx.check_filesystem_read(Path::new("/etc/passwd"));
+    let _ = ctx.check_filesystem_read(&test_path("/data/file1.txt"));
+    let _ = ctx.check_filesystem_read(&test_path("/data/file2.txt"));
+    let _ = ctx.check_filesystem_read(&test_path("/etc/passwd"));
     let _ = ctx.check_network("api.example.com");
 
     let entries = logger.entries();
@@ -1259,13 +1274,13 @@ fn test_audit_logger_logs_granted_and_denied() {
     let logger = Arc::new(MemoryAuditLogger::new());
     let mut ctx = SecurityContext::with_audit_logger(logger.clone() as Arc<dyn AuditLogger>);
 
-    ctx.grant_filesystem_read(Path::new("/data"), true);
+    ctx.grant_filesystem_read(&test_path("/data"), true);
 
     // Granted
-    let _ = ctx.check_filesystem_read(Path::new("/data/file.txt"));
+    let _ = ctx.check_filesystem_read(&test_path("/data/file.txt"));
 
     // Denied
-    let _ = ctx.check_filesystem_read(Path::new("/etc/passwd"));
+    let _ = ctx.check_filesystem_read(&test_path("/etc/passwd"));
 
     let entries = logger.entries();
     assert_eq!(entries.len(), 2);
@@ -1304,14 +1319,15 @@ fn test_audit_entry_log_line_format() {
     let logger = Arc::new(MemoryAuditLogger::new());
     let ctx = SecurityContext::with_audit_logger(logger.clone() as Arc<dyn AuditLogger>);
 
-    let _ = ctx.check_filesystem_read(Path::new("/etc/passwd"));
+    let _ = ctx.check_filesystem_read(&test_path("/etc/passwd"));
 
     let entries = logger.entries();
     let log_line = entries[0].to_log_line();
 
     assert!(log_line.contains("Permission denied"));
     assert!(log_line.contains("file read"));
-    assert!(log_line.contains("/etc/passwd"));
+    // Path format varies by platform (Unix: /etc/passwd, Windows: C:\etc\passwd)
+    assert!(log_line.contains("passwd"));
     assert!(log_line.starts_with('[')); // Has timestamp
 }
 
@@ -1405,7 +1421,7 @@ fn test_default_context_has_null_logger() {
     let ctx = SecurityContext::new();
 
     // Should not panic or cause errors
-    let _ = ctx.check_filesystem_read(Path::new("/etc/passwd"));
+    let _ = ctx.check_filesystem_read(&test_path("/etc/passwd"));
     let _ = ctx.check_network("api.example.com");
 }
 
@@ -1414,7 +1430,7 @@ fn test_default_context_audit_logger_is_null() {
     let ctx = SecurityContext::new();
 
     // Perform some checks
-    let _ = ctx.check_filesystem_read(Path::new("/etc/passwd"));
+    let _ = ctx.check_filesystem_read(&test_path("/etc/passwd"));
     let _ = ctx.check_network("api.example.com");
 
     // Get audit logger and verify it returns no entries
@@ -1473,11 +1489,12 @@ fn test_filesystem_read_denied_event_includes_path() {
     let logger = Arc::new(MemoryAuditLogger::new());
     let ctx = SecurityContext::with_audit_logger(logger.clone() as Arc<dyn AuditLogger>);
 
-    let _ = ctx.check_filesystem_read(Path::new("/secret/data.txt"));
+    let _ = ctx.check_filesystem_read(&test_path("/secret/data.txt"));
 
     let entries = logger.entries();
     let log_line = entries[0].to_log_line();
-    assert!(log_line.contains("/secret/data.txt"));
+    // Path format varies by platform, but should contain filename
+    assert!(log_line.contains("data.txt"));
 }
 
 #[test]
