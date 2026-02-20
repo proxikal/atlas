@@ -5,7 +5,6 @@
 //! and local variable access.
 
 use atlas_runtime::bytecode::{Bytecode, Opcode};
-use cranelift_codegen::entity::EntityRef;
 use cranelift_codegen::ir::condcodes::FloatCC;
 use cranelift_codegen::ir::types;
 use cranelift_codegen::ir::{AbiParam, Function, InstBuilder, Signature, UserFuncName};
@@ -95,8 +94,7 @@ impl IrTranslator {
         // Declare local variables for parameters
         let mut locals = Vec::new();
         for i in 0..param_count {
-            let var = Variable::new(i);
-            builder.declare_var(var, types::F64);
+            let var = builder.declare_var(types::F64);
             let param_val = builder.block_params(entry_block)[i];
             builder.def_var(var, param_val);
             locals.push(var);
@@ -135,9 +133,9 @@ impl IrTranslator {
         let mut ip = start;
         let mut stack: Vec<cranelift_codegen::ir::Value> = Vec::new();
 
-        // Declare additional local variables beyond params if needed
+        // Track all declared variables (start with passed-in locals)
         let max_locals = 64; // reasonable upper bound
-        let mut declared_count = locals.len();
+        let mut declared_vars: Vec<Variable> = locals.to_vec();
 
         while ip < end && ip < instructions.len() {
             let byte = instructions[ip];
@@ -243,42 +241,34 @@ impl IrTranslator {
                 }
                 Opcode::GetLocal => {
                     let idx = read_u16(instructions, &mut ip) as usize;
-                    if idx < locals.len() {
-                        stack.push(builder.use_var(locals[idx]));
+                    // Declare on-the-fly if needed
+                    while declared_vars.len() <= idx && declared_vars.len() < max_locals {
+                        let var = builder.declare_var(types::F64);
+                        let zero = builder.ins().f64const(0.0);
+                        builder.def_var(var, zero);
+                        declared_vars.push(var);
+                    }
+                    if idx < declared_vars.len() {
+                        stack.push(builder.use_var(declared_vars[idx]));
                     } else {
-                        // Declare on-the-fly if needed
-                        while declared_count <= idx && declared_count < max_locals {
-                            let var = Variable::new(declared_count);
-                            builder.declare_var(var, types::F64);
-                            let zero = builder.ins().f64const(0.0);
-                            builder.def_var(var, zero);
-                            declared_count += 1;
-                        }
-                        if idx < declared_count {
-                            let var = Variable::new(idx);
-                            stack.push(builder.use_var(var));
-                        } else {
-                            return Err(JitError::InvalidBytecode(format!(
-                                "local index {} exceeds max {}",
-                                idx, max_locals
-                            )));
-                        }
+                        return Err(JitError::InvalidBytecode(format!(
+                            "local index {} exceeds max {}",
+                            idx, max_locals
+                        )));
                     }
                 }
                 Opcode::SetLocal => {
                     let idx = read_u16(instructions, &mut ip) as usize;
                     let val = pop1(&mut stack)?;
                     // Ensure variable is declared
-                    while declared_count <= idx && declared_count < max_locals {
-                        let var = Variable::new(declared_count);
-                        builder.declare_var(var, types::F64);
+                    while declared_vars.len() <= idx && declared_vars.len() < max_locals {
+                        let var = builder.declare_var(types::F64);
                         let zero = builder.ins().f64const(0.0);
                         builder.def_var(var, zero);
-                        declared_count += 1;
+                        declared_vars.push(var);
                     }
-                    if idx < declared_count || idx < locals.len() {
-                        let var = Variable::new(idx);
-                        builder.def_var(var, val);
+                    if idx < declared_vars.len() {
+                        builder.def_var(declared_vars[idx], val);
                     }
                 }
                 Opcode::Pop => {
