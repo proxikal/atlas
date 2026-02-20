@@ -6,5 +6,6 @@ pub mod profile;
 pub mod repl;
 pub mod repl_tui;
 pub mod run;
+pub mod test;
 pub mod typecheck;
 pub mod watch;

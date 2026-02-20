@@ -94,9 +94,8 @@ gh pr merge --squash --auto                               # Enable auto-merge (r
 ```
 
 **Walk away - automation handles:**
-- CI runs (~3-4 min)
+- CI runs (~1-1.5 min) — fmt, clippy, check only
 - Auto-adds to merge queue when CI passes
-- Queue runs cross-platform tests (~6 min)
 - Auto-merges and auto-deletes branch
 - **Do NOT run `gh pr merge` again**
 

@@ -22,6 +22,9 @@ anyhow = "1.0"
 serde_json = "1.0"
 toml = "0.8"
 notify = "7.0"  # File system watching for watch mode
+walkdir = "2.5"  # Directory traversal for test discovery
+rayon = "1.10"  # Parallel test execution
+colored = "2.1"  # Colorized test output
 
 [dev-dependencies]
 tempfile = "3.8"

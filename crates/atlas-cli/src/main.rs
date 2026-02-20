@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 mod config;
+mod testing;
 
 #[derive(Parser)]
 #[command(name = "atlas")]
@@ -124,6 +125,26 @@ enum Commands {
         #[arg(long)]
         summary: bool,
     },
+    /// Run tests in a directory
+    Test {
+        /// Filter tests by name pattern
+        pattern: Option<String>,
+        /// Run tests sequentially instead of parallel
+        #[arg(long)]
+        sequential: bool,
+        /// Verbose output (show all test names)
+        #[arg(long, short = 'v')]
+        verbose: bool,
+        /// Disable colored output
+        #[arg(long)]
+        no_color: bool,
+        /// Test directory (defaults to current directory)
+        #[arg(long, default_value = ".")]
+        dir: std::path::PathBuf,
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -239,6 +260,24 @@ fn main() -> Result<()> {
             args.output_file = output.map(std::path::PathBuf::from);
             args.detailed = !summary;
             commands::profile::run(args)?;
+        }
+        Commands::Test {
+            pattern,
+            sequential,
+            verbose,
+            no_color,
+            dir,
+            json,
+        } => {
+            let args = commands::test::TestArgs {
+                pattern,
+                sequential,
+                verbose,
+                no_color,
+                dir,
+                json,
+            };
+            commands::test::run(args)?;
         }
     }
 

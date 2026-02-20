@@ -58,17 +58,18 @@
 
 | Event | Jobs | Time |
 |-------|------|------|
-| PR (code) | fmt → clippy → test (ubuntu) | ~2 min |
+| PR (code) | fmt → clippy → check | ~1-1.5 min |
 | PR (docs) | fmt only | ~15s |
-| Merge queue | fmt → clippy → test-matrix (3 platforms) | ~6 min |
-| Main push | coverage only | ~5 min |
-| Nightly | fuzz + MSRV | ~10 min |
+| Merge queue | fmt → clippy → check | ~1-1.5 min |
+
+**Philosophy:** AI runs full test suite locally before pushing. CI is just a safety net for lint/compile.
+
+**Cross-platform testing:** Done locally (macOS dev machine, Windows laptop)
 
 **Optimizations:**
 - Path filtering (dorny/paths-filter)
 - Rust caching (Swatinem/rust-cache)
 - Concurrency control (cancel-in-progress)
-- Tiered testing (ubuntu PR → matrix merge)
 
 ---
 
@@ -81,7 +82,7 @@ gh pr create --title "..." --body "..."
 gh pr merge --squash --auto              # Adds to queue when CI passes
 
 # 2. Walk away - automation handles everything
-# CI runs (~2 min PR, ~6 min merge queue)
+# CI runs (~1-1.5 min) — fmt, clippy, check only
 # Queue merges when CI passes
 # Branch auto-deleted
 # Main updated

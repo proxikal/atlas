@@ -67,7 +67,7 @@ Ask yourself:
    ```
 
 3. **Walk away** - automation handles everything:
-   - CI runs (~3-4 min)
+   - CI runs (~1-1.5 min) — fmt, clippy, check only
    - Auto-adds to merge queue
    - Auto-merges and auto-deletes branch
    - **Do NOT run `gh pr merge` again**

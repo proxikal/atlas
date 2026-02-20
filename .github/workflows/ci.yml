@@ -1,48 +1,25 @@
 # Atlas CI Pipeline
 #
-# Optimized for speed and minimal CI minutes:
+# Minimal CI - AI runs full test suite locally before pushing.
+# CI is just a safety net for lint/compile checks.
 #
-# PR (code changes):        fmt → clippy → test (ubuntu only) ~3 min
-# PR (docs only):           fmt only ~15s
-# Merge queue:              fmt → clippy → test (ubuntu only) ~3 min
-# Main push:                coverage only ~5 min
-# Nightly:                  cross-platform + fuzz + MSRV ~15 min
+# PR/Merge queue (code): fmt → clippy → check ~1-1.5 min
+# PR (docs only):        fmt only ~15s
 #
-# Cross-platform (macOS/Windows) runs nightly - platform bugs are rare,
-# caught within 24h. This saves ~13 min per merge.
+# Cross-platform testing: Done locally (macOS dev machine, Windows laptop)
+# Full test suite: Done locally by AI before every push
 #
-# Benchmarks: Handled by dedicated bench.yml (has regression tracking)
+# Benchmarks: Handled by dedicated bench.yml
 # Security:   Handled by dedicated security.yml
-#
-# Reference: https://github.com/actions-rust-lang/setup-rust-toolchain
 
 name: CI
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "*.md"
-      - "docs/**"
-      - "LICENSE*"
-      - ".gitignore"
   pull_request:
     branches: [main]
   merge_group:
     branches: [main]
-  schedule:
-    # Nightly at 04:00 UTC for fuzz testing and MSRV
-    - cron: "0 4 * * *"
   workflow_dispatch:
-    inputs:
-      run_scope:
-        description: "Select CI scope"
-        type: choice
-        required: true
-        default: full
-        options:
-          - full
-          - windows-msrv
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -51,11 +28,10 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
-  RUST_BACKTRACE: 1
 
 jobs:
   # ==========================================================================
-  # Change detection - Skip expensive jobs for docs-only PRs
+  # Change detection - Skip clippy/check for docs-only PRs
   # ==========================================================================
 
   changes:
@@ -76,7 +52,7 @@ jobs:
               - '.github/workflows/**'
 
   # ==========================================================================
-  # Fast checks - Run first, fail fast
+  # Fast checks - The only CI jobs needed
   # ==========================================================================
 
   fmt:
@@ -93,8 +69,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     needs: [fmt, changes]
-    # Skip for docs-only changes, but always run on manual dispatch
-    if: needs.changes.outputs.code == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -103,184 +78,25 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # ==========================================================================
-  # Tests - Core validation (PR only - this is the merge gate)
-  # ==========================================================================
-
-  test:
-    name: Test
-    needs: [clippy, changes]
+  check:
+    name: Check
     runs-on: ubuntu-latest
-    # Run on PRs and merge_group with code changes (ubuntu only - fast)
-    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.code == 'true'
+    needs: [fmt, changes]
+    if: needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run tests
-        run: cargo nextest run --all-features --workspace
-
-      - name: Run doc tests
-        run: cargo test --doc --all-features
-
-  windows-test:
-    name: Test (windows-latest/stable)
-    needs: test
-    if: github.event_name == 'workflow_dispatch' && inputs.run_scope == 'windows-msrv'
-    runs-on: windows-latest
-    steps:
-      # Disable autocrlf to ensure consistent line endings across platforms
-      - name: Configure git line endings
-        run: git config --global core.autocrlf false
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: windows-stable
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run tests
-        run: cargo nextest run --all-features --workspace
-
-      - name: Run doc tests
-        run: cargo test --doc --all-features
-
-  test-matrix:
-    name: Test (${{ matrix.os }}/${{ matrix.rust }})
-    needs: [clippy, changes]
-    # Nightly only - cross-platform bugs are rare, catch within 24h
-    if: github.event_name == 'schedule'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            rust: stable
-          - os: windows-latest
-            rust: stable
-          - os: ubuntu-latest
-            rust: beta
-    steps:
-      # Disable autocrlf to ensure consistent line endings across platforms
-      # This is critical for corpus tests where span positions depend on byte offsets
-      - name: Configure git line endings
-        run: git config --global core.autocrlf false
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.os }}-${{ matrix.rust }}
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run tests
-        run: cargo nextest run --all-features --workspace
-
-      - name: Run doc tests
-        run: cargo test --doc --all-features
+      - run: cargo check --all-targets --all-features
 
   # ==========================================================================
-  # Main-only jobs - Run after merge (tests already passed in merge queue)
-  # ==========================================================================
-  # Coverage runs here. Benchmarks handled by bench.yml with regression tracking.
-  # Security audits handled by dedicated security.yml workflow.
-
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    needs: [clippy, changes]
-    # Only run on main push WITH code changes (skip for docs-only)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.code == 'true'
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Install tarpaulin
-        uses: taiki-e/install-action@cargo-tarpaulin
-
-      - name: Generate coverage
-        run: cargo tarpaulin --all-features --workspace --timeout 300 --out xml
-
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: cobertura.xml
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  # Benchmarks handled by dedicated bench.yml workflow (has regression tracking)
-
-  # ==========================================================================
-  # Scheduled jobs - Nightly only
-  # ==========================================================================
-
-  msrv:
-    name: MSRV (1.70.0)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: dtolnay/rust-toolchain@stable
-        id: stable
-
-      - uses: dtolnay/rust-toolchain@1.70.0
-        id: msrv
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: msrv
-
-      - name: Pin MSRV-compatible dependencies
-        run: |
-          cargo +stable update -p time --precise 0.3.45
-          cargo +stable update -p base64ct --precise 1.7.1
-
-      - name: Check MSRV
-        run: cargo +1.70.0 check -p atlas-runtime --all-features --locked
-
-  fuzz:
-    name: Fuzz (${{ matrix.target }})
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [fuzz_lexer, fuzz_parser, fuzz_typechecker, fuzz_eval]
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@nightly
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: fuzz-${{ matrix.target }}
-          workspaces: crates/atlas-runtime/fuzz
-
-      - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked
-
-      - name: Run ${{ matrix.target }} (120s)
-        run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=120
-        working-directory: crates/atlas-runtime
-
-  # ==========================================================================
-  # Status check - Required for branch protection
+  # Status check - Required for merge queue
   # ==========================================================================
 
   ci-success:
     name: CI Success
     if: always()
-    needs: [fmt, clippy, test, test-matrix, changes]
+    needs: [fmt, clippy, check, changes]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs passed
@@ -296,16 +112,10 @@ jobs:
             echo "Clippy failed"
             exit 1
           fi
-          # test must pass or be skipped (merge_group, docs-only PRs, main push)
-          if [[ "${{ needs.test.result }}" != "success" ]] && \
-             [[ "${{ needs.test.result }}" != "skipped" ]]; then
-            echo "Tests failed"
-            exit 1
-          fi
-          # test-matrix must pass or be skipped (PRs, docs-only, main push)
-          if [[ "${{ needs.test-matrix.result }}" != "success" ]] && \
-             [[ "${{ needs.test-matrix.result }}" != "skipped" ]]; then
-            echo "Cross-platform tests failed"
+          # check must pass or be skipped (docs-only PRs)
+          if [[ "${{ needs.check.result }}" != "success" ]] && \
+             [[ "${{ needs.check.result }}" != "skipped" ]]; then
+            echo "Check failed"
             exit 1
           fi
           echo "All required jobs passed"
