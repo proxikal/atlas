@@ -67,17 +67,15 @@ ALL must be met. Phase says "50+ tests" → deliver 50+ (not 45).
 ### 6. Interpreter/VM Parity (100% REQUIRED)
 Both engines MUST produce identical output. Parity break = BLOCKING.
 
-### 7. Testing Protocol (SURGICAL)
-**During:** `cargo nextest run -p atlas-runtime -E 'test(exact_name)'` (ONE test)
-**Per-file:** `cargo nextest run -p atlas-runtime --test <domain_file>` (validate domain file)
-**Full suite:** GATE 6 only — `cargo nextest run -p atlas-runtime`
-**Banned:** Creating new `tests/*.rs` files (adds binary bloat), bare `#[ignore]` without reason string
+### 7. Testing Protocol
+**Source of truth:** `memory/testing-patterns.md` — READ BEFORE WRITING TESTS
 
-**Test placement rules (non-negotiable):**
-- New tests → existing domain file (see `memory/testing-patterns.md` for the canonical file list)
-- New language behavior → also add `.atlas` corpus file in `tests/corpus/pass/` or `tests/corpus/fail/`
-- Unit tests (no external deps) → `#[cfg(test)]` in source file, NOT in `tests/`
-- Parity tests → use `assert_parity()` helper, NEVER write duplicate interpreter+VM functions
+**Quick reference:**
+- Single test: `cargo nextest run -p atlas-runtime -E 'test(name)'`
+- Domain file: `cargo nextest run -p atlas-runtime --test <domain_file>`
+- Full suite: GATE 6 only
+
+**Cardinal rule:** Never create new `tests/*.rs` files. See testing-patterns.md for domain file list.
 
 ---
 
@@ -180,31 +178,15 @@ After GATE -1, declare one:
 
 ## Build Commands
 
-**During development:**
+**Essential (memorize these):**
 ```bash
-cargo clean && cargo check -p atlas-runtime                          # Verify
-cargo clippy -p atlas-runtime -- -D warnings                        # Zero warnings
-cargo fmt -p atlas-runtime                                          # Format
-cargo nextest run -p atlas-runtime -E 'test(exact_name)'            # ONE test
-cargo nextest run -p atlas-runtime --test <domain_file>             # Domain file
+cargo check -p atlas-runtime                              # Verify compiles
+cargo clippy -p atlas-runtime -- -D warnings              # Zero warnings
+cargo nextest run -p atlas-runtime -E 'test(name)'        # Single test
+cargo nextest run -p atlas-runtime                        # Full suite (GATE 6)
 ```
 
-**Before handoff (GATE 6):**
-```bash
-cargo nextest run -p atlas-runtime --test <domain_file>  # Phase domain file
-cargo nextest run -p atlas-runtime                        # Full suite
-cargo clippy -p atlas-runtime -- -D warnings             # Zero warnings
-```
-
-**Specialized (when relevant):**
-```bash
-cargo nextest run -p atlas-runtime --run-ignored all                 # Include network/slow tests
-cargo nextest run -p atlas-runtime --test corpus                     # Corpus (.atlas files)
-cargo bench -p atlas-runtime --bench vm                              # VM benchmarks
-cargo +nightly fuzz run fuzz_parser -- -max_total_time=60            # Fuzz (lexer/parser changes)
-```
-
-**`#[ignore]` rules:** Always requires a reason string. `#[ignore = "requires network"]` ✅ — bare `#[ignore]` ❌
+**Full command reference:** `memory/testing-patterns.md` (corpus, bench, fuzz, etc.)
 
 ---
 
