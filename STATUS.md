@@ -1,14 +1,14 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-19
-**Version:** v0.2 | **Progress:** 110/131 phases (84%)
+**Last Updated:** 2026-02-20
+**Version:** v0.2 | **Progress:** 111/131 phases (85%)
 
 ---
 
 ## Current Phase
 
-**Last Completed:** phases/correctness/phase-11-parser-number-diagnostic.md
-**Next Phase:** phases/interpreter/phase-01-debugger-repl-improvements.md
+**Last Completed:** phases/interpreter/phase-01-debugger-repl-improvements.md
+**Next Phase:** phases/interpreter/phase-02-interpreter-performance-and-integration.md
 
 > **Execution order:** Correctness (12) → Interpreter (2) → CLI (6) → LSP (5) → Polish (5)
 > Correctness phases are BLOCKING — they fix structural compiler bugs that must be resolved before features.
@@ -26,7 +26,7 @@
 | **Bytecode-VM** | 8/8 | ✅ Archived |
 | **Frontend** | 5/5 | ✅ Archived |
 | **Typing** | 7/7 | ✅ Archived |
-| **Interpreter** | 0/2 | ⬜ Blocked by Correctness |
+| **Interpreter** | 1/2 | 🔄 In Progress |
 | **CLI** | 0/6 | ⬜ Pending |
 | **LSP** | 0/5 | ⬜ Pending |
 | **Polish** | 0/5 | ⬜ Pending |
@@ -64,9 +64,9 @@
 ✅ phase-10-stdlib-error-context.md — Function name + type context in all stdlib errors
 ✅ phase-11-parser-number-diagnostic.md — Diagnostic for invalid numbers; distinct error codes
 
-### Interpreter (0/2) — Blocked by Correctness
+### Interpreter (1/2) — In Progress
 
-⬜ phase-01-debugger-repl-improvements.md
+✅ phase-01-debugger-repl-improvements.md
 ⬜ phase-02-interpreter-performance-and-integration.md — Requires all Correctness phases
 
 ### CLI (0/6)

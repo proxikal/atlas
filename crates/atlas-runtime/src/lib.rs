@@ -62,7 +62,9 @@ pub use lexer::Lexer;
 pub use module_executor::ModuleExecutor;
 pub use module_loader::{LoadedModule, ModuleLoader};
 pub use parser::Parser;
-pub use repl::{ReplCore, ReplResult};
+pub use repl::{
+    is_input_complete, IncompleteReason, InputCompleteness, MultilineInput, ReplCore, ReplResult,
+};
 pub use resolver::ModuleResolver;
 pub use runtime::{Atlas, RuntimeResult};
 pub use security::{

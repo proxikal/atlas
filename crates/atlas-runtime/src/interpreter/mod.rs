@@ -7,6 +7,7 @@
 //! - Function calls and stack frames
 //! - Block scoping with shadowing
 
+pub mod debugger;
 mod expr;
 mod stmt;
 
@@ -30,10 +31,10 @@ pub(super) enum ControlFlow {
 
 /// User-defined function
 #[derive(Debug, Clone)]
-pub(super) struct UserFunction {
-    pub(super) name: String,
-    pub(super) params: Vec<Param>,
-    pub(super) body: Block,
+pub struct UserFunction {
+    pub name: String,
+    pub params: Vec<Param>,
+    pub body: Block,
 }
 
 /// Interpreter state

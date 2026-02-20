@@ -288,6 +288,250 @@ impl Default for ReplCore {
     }
 }
 
+// ============================================================================
+// Multiline Input Detection
+// ============================================================================
+
+/// Result of checking if input is complete.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InputCompleteness {
+    /// Input is complete and can be evaluated.
+    Complete,
+    /// Input is incomplete (more lines needed).
+    Incomplete {
+        /// Reason the input is incomplete.
+        reason: IncompleteReason,
+    },
+}
+
+/// Reason for incomplete input.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IncompleteReason {
+    /// Unclosed brace `{`.
+    UnclosedBrace,
+    /// Unclosed bracket `[`.
+    UnclosedBracket,
+    /// Unclosed parenthesis `(`.
+    UnclosedParen,
+    /// Unclosed string literal.
+    UnclosedString,
+    /// Unclosed multi-line comment.
+    UnclosedComment,
+}
+
+impl IncompleteReason {
+    /// Get a human-readable description.
+    pub fn description(&self) -> &'static str {
+        match self {
+            IncompleteReason::UnclosedBrace => "unclosed brace '{'",
+            IncompleteReason::UnclosedBracket => "unclosed bracket '['",
+            IncompleteReason::UnclosedParen => "unclosed parenthesis '('",
+            IncompleteReason::UnclosedString => "unclosed string literal",
+            IncompleteReason::UnclosedComment => "unclosed multi-line comment",
+        }
+    }
+}
+
+/// Multiline input state for REPL.
+pub struct MultilineInput {
+    /// Accumulated lines.
+    lines: Vec<String>,
+}
+
+impl MultilineInput {
+    /// Create a new multiline input handler.
+    pub fn new() -> Self {
+        Self { lines: Vec::new() }
+    }
+
+    /// Add a line to the input.
+    pub fn add_line(&mut self, line: &str) {
+        self.lines.push(line.to_string());
+    }
+
+    /// Check if the accumulated input is complete.
+    pub fn check_completeness(&self) -> InputCompleteness {
+        let combined = self.lines.join("\n");
+        is_input_complete(&combined)
+    }
+
+    /// Get the combined input.
+    pub fn combined(&self) -> String {
+        self.lines.join("\n")
+    }
+
+    /// Clear the accumulated input.
+    pub fn clear(&mut self) {
+        self.lines.clear();
+    }
+
+    /// Check if empty.
+    pub fn is_empty(&self) -> bool {
+        self.lines.is_empty()
+    }
+
+    /// Number of lines accumulated.
+    pub fn line_count(&self) -> usize {
+        self.lines.len()
+    }
+}
+
+impl Default for MultilineInput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Check if input is complete (all delimiters are balanced).
+pub fn is_input_complete(input: &str) -> InputCompleteness {
+    let mut brace_depth = 0i32;
+    let mut bracket_depth = 0i32;
+    let mut paren_depth = 0i32;
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut in_line_comment = false;
+    let mut in_block_comment = false;
+    let mut escape_next = false;
+
+    let chars: Vec<char> = input.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
+
+    while i < len {
+        let ch = chars[i];
+        let next = chars.get(i + 1).copied();
+
+        // Handle escape sequences in strings
+        if escape_next {
+            escape_next = false;
+            i += 1;
+            continue;
+        }
+
+        // Handle different states
+        if in_line_comment {
+            if ch == '\n' {
+                in_line_comment = false;
+            }
+            i += 1;
+            continue;
+        }
+
+        if in_block_comment {
+            if ch == '*' && next == Some('/') {
+                in_block_comment = false;
+                i += 2;
+                continue;
+            }
+            i += 1;
+            continue;
+        }
+
+        if in_string {
+            if ch == '\\' {
+                escape_next = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+
+        if in_char {
+            if ch == '\\' {
+                escape_next = true;
+            } else if ch == '\'' {
+                in_char = false;
+            }
+            i += 1;
+            continue;
+        }
+
+        // Not in any special state - check for delimiters
+        match ch {
+            '/' if next == Some('/') => {
+                in_line_comment = true;
+                i += 2;
+                continue;
+            }
+            '/' if next == Some('*') => {
+                in_block_comment = true;
+                i += 2;
+                continue;
+            }
+            '"' => in_string = true,
+            '\'' => in_char = true,
+            '{' => brace_depth += 1,
+            '}' => brace_depth -= 1,
+            '[' => bracket_depth += 1,
+            ']' => bracket_depth -= 1,
+            '(' => paren_depth += 1,
+            ')' => paren_depth -= 1,
+            _ => {}
+        }
+
+        i += 1;
+    }
+
+    // Check for incomplete states
+    if in_string {
+        return InputCompleteness::Incomplete {
+            reason: IncompleteReason::UnclosedString,
+        };
+    }
+
+    if in_block_comment {
+        return InputCompleteness::Incomplete {
+            reason: IncompleteReason::UnclosedComment,
+        };
+    }
+
+    if brace_depth > 0 {
+        return InputCompleteness::Incomplete {
+            reason: IncompleteReason::UnclosedBrace,
+        };
+    }
+
+    if bracket_depth > 0 {
+        return InputCompleteness::Incomplete {
+            reason: IncompleteReason::UnclosedBracket,
+        };
+    }
+
+    if paren_depth > 0 {
+        return InputCompleteness::Incomplete {
+            reason: IncompleteReason::UnclosedParen,
+        };
+    }
+
+    InputCompleteness::Complete
+}
+
+// ============================================================================
+// File Loading
+// ============================================================================
+
+impl ReplCore {
+    /// Load and execute an Atlas file in the REPL context.
+    ///
+    /// Variables and functions defined in the file persist in the REPL.
+    ///
+    /// # Arguments
+    /// * `path` - Path to the Atlas source file
+    ///
+    /// # Returns
+    /// * `Ok(ReplResult)` - Result of evaluating the file
+    /// * `Err(String)` - Error message if file cannot be loaded
+    pub fn load_file(&mut self, path: &std::path::Path) -> Result<ReplResult, String> {
+        // Read the file
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))?;
+
+        // Evaluate in REPL context
+        Ok(self.eval_line(&content))
+    }
+}
+
 /// Collect variable names declared in the parsed program (current REPL input).
 fn collect_declared_vars(program: &crate::ast::Program) -> Vec<String> {
     let mut names = Vec::new();
