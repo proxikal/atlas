@@ -3,6 +3,7 @@
 **Repo:** `atl-lang/atlas` | **Updated:** 2026-02-20
 
 **Architecture:** Rulesets only (legacy Branch Protection Rules deleted)
+**CI Status:** DISABLED (jobs skipped with `if: false`, `ci-success` always passes)
 
 ---
 
@@ -10,7 +11,7 @@
 
 | Setting | Status | Effect |
 |---------|--------|--------|
-| Auto-merge | ✅ | PRs merge automatically when CI passes |
+| Auto-merge | ✅ | PRs merge automatically |
 | Auto-delete branches | ✅ | Head branches deleted after merge |
 | Auto-close issues | ✅ | Linked issues close on PR merge |
 
@@ -29,7 +30,7 @@
 | Require linear history | No merge commits |
 | Require merge queue | All merges go through queue |
 | Require PR before merge | Direct pushes blocked |
-| Require status checks | `CI Success` must pass |
+| Require status checks | `CI Success` must pass (always does) |
 | Require up-to-date | Branch must be current with main |
 | Block force pushes | No `--force` to main |
 
@@ -38,64 +39,83 @@
 | Setting | Value | Rationale |
 |---------|-------|-----------|
 | Merge method | Squash | Linear history, clean commits |
-| Build concurrency | 5 | Parallel CI runs |
+| Build concurrency | 5 | Parallel processing |
 | Min group size | 1 | Don't wait for batching |
 | Max group size | 5 | Batch if multiple PRs |
 | Wait time | 1 min | Fast for solo AI dev |
 | All entries pass | ✅ | Each PR validated |
-| Timeout | 60 min | Allow long CI |
-
-### PR Settings
-
-- Required approvals: **0** (AI-driven solo dev)
-- Allowed merge: **Squash only**
+| Timeout | 60 min | Allow long operations |
 
 ---
 
-## CI Pipeline (`ci.yml`)
+## CI Pipeline (`ci.yml`) — DISABLED
 
-**Required check:** `CI Success`
+**Status:** All jobs have `if: false` — nothing runs
+**Required check:** `CI Success` (always passes, empty job)
 
-| Event | Jobs | Time |
-|-------|------|------|
-| PR (code) | fmt → clippy → check | ~1-1.5 min |
-| PR (docs) | fmt only | ~15s |
-| Merge queue | fmt → clippy → check | ~1-1.5 min |
+**Why disabled:** Preserve GitHub Actions credits. AI validates locally before pushing.
 
-**Philosophy:** AI runs full test suite locally before pushing. CI is just a safety net for lint/compile.
+**What still works:**
+- Merge queue processes PRs
+- Auto-merge enabled
+- Branch auto-deletion
+- Linear history enforcement
 
-**Cross-platform testing:** Done locally (macOS dev machine, Windows laptop)
-
-**Optimizations:**
-- Path filtering (dorny/paths-filter)
-- Rust caching (Swatinem/rust-cache)
-- Concurrency control (cancel-in-progress)
+**What doesn't run:**
+- fmt, clippy, check — AI runs these locally
+- Tests — AI runs full suite locally before pushing
+- Security scans — AI runs `cargo audit` locally
 
 ---
 
-## AI Workflow
+## AI Workflow (Optimized for No CI)
 
 ```bash
-# 1. Create PR and add to merge queue (run ONCE, immediately)
+# 1. Complete phase work locally
+cargo nextest run -p atlas-runtime          # Full test suite
+cargo clippy -p atlas-runtime -- -D warnings # Zero warnings
+cargo audit                                  # Security scan
+
+# 2. Push and create PR (one operation)
+git add -A && git commit -m "feat(phase): Description"
 git push -u origin HEAD
 gh pr create --title "..." --body "..."
-gh pr merge --squash --auto              # Adds to queue when CI passes
+gh pr merge --squash --auto                  # Add to queue
 
-# 2. Walk away - automation handles everything
-# CI runs (~1-1.5 min) — fmt, clippy, check only
-# Queue merges when CI passes
-# Branch auto-deleted
-# Main updated
+# 3. Wait briefly for merge (~30-60s)
+sleep 30
 
-# 3. Sync local
+# 4. Sync and cleanup
 git checkout main && git pull
-git branch -d <old-branch>
+git branch -d <old-branch>                   # Clean local ref
 ```
 
-**Merge queue notes:**
-- `--squash` flag ignored (queue controls merge method)
-- Message "merge strategy is set by merge queue" = normal
-- `gh pr view --json autoMergeRequest` shows `null` = normal (queue handles it)
-- "already queued to merge" = working correctly
+**Key changes from CI-enabled workflow:**
+- No waiting for CI (was ~1-1.5 min)
+- No PR watching (was checking merge status repeatedly)
+- No batch logic (was batching phases to save CI minutes)
+- Push after EVERY phase (no batching needed)
 
-**No manual merge, no manual cleanup, no waiting.**
+---
+
+## Security (Local Scanning)
+
+Since CI security scans are disabled, AI runs these locally:
+
+```bash
+# Required in GATE -1
+cargo audit
+
+# Optional (stricter)
+cargo deny check
+```
+
+---
+
+## Merge Queue Notes
+
+- `gh pr merge --squash --auto` adds PR to queue
+- Message "merge strategy is set by merge queue" = normal
+- Merges happen in ~30-60 seconds (no CI to run)
+- Remote branch auto-deleted after merge
+- Local branch must be manually deleted: `git branch -d <branch>`
