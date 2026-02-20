@@ -80,36 +80,32 @@ feat/{short-description}      # Features (e.g., feat/array-slice)
 ci/{short-description}        # CI/infra (e.g., ci/optimize-workflows)
 ```
 
-**Before starting work:**
+**START of phase (sync happens here):**
 ```bash
-git checkout main && git pull                    # Sync with remote
+git checkout main && git pull                    # Picks up any merged PRs
+git branch -d <old-branch> 2>/dev/null || true   # Lazy cleanup of old branches
 git checkout -b phase/{category}-{number}        # Create feature branch
 ```
 
-**After GATE 7 (memory check):**
+**END of phase (fire and forget):**
 ```bash
 git add -A && git commit -m "feat(phase): Description"   # Commit all
 git push -u origin HEAD                                   # Push branch
 gh pr create --title "Phase X: Title" --body "..."       # Create PR
-gh pr merge --squash --auto                               # Enable auto-merge (run ONCE)
+gh pr merge --squash --auto                               # Queue for merge
+# DONE - move on immediately, no waiting
 ```
 
-**Merge is nearly instant (~30-60s):**
-- CI disabled (jobs skipped) — no waiting
-- Merge queue processes PR immediately
-- Remote branch auto-deleted
+**Why no waiting:**
+- Merge queue processes PR in ~30-60s (no CI)
+- Remote branch auto-deleted after merge
+- Next phase START syncs main automatically
+- Branch cleanup is lazy (not blocking)
 
 **BANNED (wastes time):**
+- `sleep` after pushing — sync happens at next phase START
 - `gh pr view` or `gh pr checks` — never check PR status
-- `sleep && check` loops — never watch for merge
-- Any PR monitoring — it WILL merge, just wait
-
-**Sync local (do this immediately after push):**
-```bash
-sleep 45 && git checkout main && git pull && git branch -d <old-branch>
-```
-
-**This is the COMPLETE workflow per phase** — push, wait 45s, sync, done.
+- Any PR monitoring — it WILL merge, trust the queue
 
 **Multi-part phases (A, B, C sub-phases):**
 ```bash
@@ -203,20 +199,18 @@ cargo +nightly fuzz run fuzz_parser -- -max_total_time=60            # Fuzz (lex
 
 ## Phase Handoff
 
-**CRITICAL:** Only hand off when ALL tests pass locally AND PR is merged.
+**CRITICAL:** Only hand off when ALL tests pass locally AND PR is queued.
 
 **Protocol:**
 1. All gates passed (tests, clippy, fmt, security scan)
 2. STATUS.md updated
 3. Memory checked (GATE 7)
-4. Commit → Push → Create PR → Auto-merge
-5. Wait ~30-60s for merge queue
-6. Sync local main, delete local branch
-7. Deliver summary
+4. Commit → Push → Create PR → Auto-merge (queued)
+5. Deliver summary — DO NOT WAIT for merge
 
 **Required in summary:**
-- Status: "✅ PHASE COMPLETE - MERGED TO MAIN"
-- PR URL and merge commit SHA
+- Status: "✅ PHASE COMPLETE - PR QUEUED"
+- PR URL (merge happens async)
 - Final Stats (bullets)
 - Progress (X/131 phases)
 - Next phase

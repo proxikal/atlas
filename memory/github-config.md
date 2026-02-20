@@ -70,31 +70,30 @@
 
 ## AI Workflow (Optimized for No CI)
 
+**START of phase (sync here):**
 ```bash
-# 1. Complete phase work locally
-cargo nextest run -p atlas-runtime          # Full test suite
+git checkout main && git pull                # Picks up merged PRs
+git branch -d <old-branch> 2>/dev/null       # Lazy cleanup old branches
+git checkout -b phase/...                    # Fresh branch
+```
+
+**END of phase (fire and forget):**
+```bash
+cargo nextest run -p atlas-runtime           # Full test suite
 cargo clippy -p atlas-runtime -- -D warnings # Zero warnings
 cargo audit                                  # Security scan
-
-# 2. Push and create PR (one operation)
 git add -A && git commit -m "feat(phase): Description"
 git push -u origin HEAD
 gh pr create --title "..." --body "..."
-gh pr merge --squash --auto                  # Add to queue
-
-# 3. Wait briefly for merge (~30-60s)
-sleep 30
-
-# 4. Sync and cleanup
-git checkout main && git pull
-git branch -d <old-branch>                   # Clean local ref
+gh pr merge --squash --auto                  # Queue for merge
+# DONE - no waiting, move on immediately
 ```
 
-**Key changes from CI-enabled workflow:**
-- No waiting for CI (was ~1-1.5 min)
-- No PR watching (was checking merge status repeatedly)
-- No batch logic (was batching phases to save CI minutes)
-- Push after EVERY phase (no batching needed)
+**Key optimizations:**
+- No sleep/wait after pushing — sync happens at NEXT phase start
+- No PR watching — trust the merge queue
+- Lazy branch cleanup — done at next phase start
+- Zero blocking — push and move on
 
 ---
 
@@ -118,4 +117,5 @@ cargo deny check
 - Message "merge strategy is set by merge queue" = normal
 - Merges happen in ~30-60 seconds (no CI to run)
 - Remote branch auto-deleted after merge
-- Local branch must be manually deleted: `git branch -d <branch>`
+- Local branch cleanup: lazy, done at next phase start
+- **Never wait for merge** — sync happens automatically at next phase
