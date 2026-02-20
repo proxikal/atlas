@@ -49,7 +49,7 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           name: Atlas ${{ steps.get_version.outputs.version }}
@@ -143,7 +143,7 @@ jobs:
           fi
 
       - name: Upload release binary and checksum
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.create-release.outputs.version }}
           files: |
