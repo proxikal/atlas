@@ -132,11 +132,23 @@ jobs:
             chmod +x release/${{ matrix.asset_name }}
           fi
 
-      - name: Upload release binary
+      - name: Generate SHA256 checksum
+        shell: bash
+        run: |
+          cd release
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            certutil -hashfile ${{ matrix.asset_name }} SHA256 | grep -v ":" > ${{ matrix.asset_name }}.sha256
+          else
+            shasum -a 256 ${{ matrix.asset_name }} > ${{ matrix.asset_name }}.sha256
+          fi
+
+      - name: Upload release binary and checksum
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.create-release.outputs.version }}
-          files: release/${{ matrix.asset_name }}
+          files: |
+            release/${{ matrix.asset_name }}
+            release/${{ matrix.asset_name }}.sha256
           token: ${{ secrets.GITHUB_TOKEN }}
 
   publish-crates:
