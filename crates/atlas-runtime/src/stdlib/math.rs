@@ -15,7 +15,7 @@
 
 use crate::span::Span;
 use crate::value::{RuntimeError, Value};
-use rand::Rng;
+use rand::RngExt;
 
 // ============================================================================
 // Math Constants
@@ -468,7 +468,7 @@ pub fn sign(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 /// random() -> number
 ///
 /// Returns pseudo-random number in [0, 1) with uniform distribution.
-/// Uses thread_rng for randomness.
+/// Uses thread-local rng for randomness.
 pub fn random(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(RuntimeError::TypeError {
@@ -477,7 +477,7 @@ pub fn random(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         });
     }
 
-    let mut rng = rand::thread_rng();
-    let value: f64 = rng.gen(); // gen() for f64 returns [0.0, 1.0)
+    let mut rng = rand::rng();
+    let value: f64 = rng.random(); // random() for f64 returns [0.0, 1.0)
     Ok(Value::Number(value))
 }
