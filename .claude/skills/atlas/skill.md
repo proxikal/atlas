@@ -139,8 +139,15 @@ git push -u origin HEAD && gh pr create ... && gh pr merge --squash --auto
 0. **Main CI health:** `gh run list --branch main --limit 1` — if failed, STOP and alert user
 1. **Verify:** Check phase dependencies in phase file
 2. **Git check:** Ensure on feature branch (not main), working directory clean
-3. **Sanity:** `cargo clean && cargo check -p atlas-runtime`
-4. **On failure:** Stop, inform user with error details
+3. **Batch detection:** `git log origin/main..HEAD --oneline`
+   - If commits exist → resuming batch, show list
+   - Count = batch size (phases completed but unpushed)
+4. **Sanity:** `cargo clean && cargo check -p atlas-runtime`
+5. **On failure:** Stop, inform user with error details
+
+**Batch push decision (after each phase):**
+- **PUSH if:** batch ≥ 4 | domain change | tests fail | user requests | session ending
+- **CONTINUE if:** same domain | batch < 4 | tests passing
 
 ---
 
