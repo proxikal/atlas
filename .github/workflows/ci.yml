@@ -90,8 +90,8 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     needs: [fmt, changes]
-    # Skip for docs-only PRs
-    if: needs.changes.outputs.code == 'true' || github.event_name != 'pull_request'
+    # Skip for docs-only changes, but always run on manual dispatch
+    if: needs.changes.outputs.code == 'true' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -195,8 +195,9 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
-    needs: clippy  # Wait for fast checks, but not test (already passed in PR)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [clippy, changes]
+    # Only run on main push WITH code changes (skip for docs-only)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
