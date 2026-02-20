@@ -56,7 +56,7 @@ ALL must be met. Phase says "50+ tests" → deliver 50+ (not 45).
 ### 4. Intelligent Decisions (When Spec Silent)
 1. Analyze codebase patterns
 2. Decide intelligently
-3. Log decision in memory/decisions.md (use DR-XXX format)
+3. Log decision in `decisions/{domain}.md` (use DR-XXX format)
 
 **Never:** Ask user | Leave TODO | Guess without analysis
 
@@ -247,7 +247,7 @@ memory/
 - `docs/specification/` - Language spec (grammar, syntax, types, runtime)
 
 **Key patterns:** See auto-memory `patterns.md`
-**Decisions:** See auto-memory `decisions.md` (DR-003 to DR-006 for collections)
+**Decisions:** See `decisions/*.md` (split by domain)
 **Gates:** See gates/ directory in this skill
 
 ---
