@@ -237,10 +237,7 @@ async fn test_did_change_notification() {
     // did_change notification
     server
         .did_change(DidChangeTextDocumentParams {
-            text_document: VersionedTextDocumentIdentifier {
-                uri,
-                version: 2,
-            },
+            text_document: VersionedTextDocumentIdentifier { uri, version: 2 },
             content_changes: vec![TextDocumentContentChangeEvent {
                 range: None,
                 range_length: None,

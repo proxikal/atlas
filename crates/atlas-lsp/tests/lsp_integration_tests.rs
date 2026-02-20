@@ -412,8 +412,9 @@ async fn test_navigation_workflow() {
                 uri: uri.clone(),
                 language_id: "atlas".to_string(),
                 version: 1,
-                text: "fn helper() -> number { return 1; } fn main() -> number { return helper(); }"
-                    .to_string(),
+                text:
+                    "fn helper() -> number { return 1; } fn main() -> number { return helper(); }"
+                        .to_string(),
             },
         })
         .await;

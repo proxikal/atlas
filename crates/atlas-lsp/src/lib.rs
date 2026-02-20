@@ -12,6 +12,7 @@ pub mod handlers;
 pub mod hover;
 pub mod inlay_hints;
 pub mod navigation;
+pub mod refactor;
 pub mod semantic_tokens;
 pub mod server;
 pub mod symbols;
