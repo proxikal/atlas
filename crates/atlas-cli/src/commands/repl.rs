@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use atlas_runtime::repl::ReplBinding;
-use atlas_runtime::{is_input_complete, InputCompleteness, MultilineInput, ReplCore, Type};
+use atlas_runtime::{InputCompleteness, MultilineInput, ReplCore, Type};
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use std::path::Path;
@@ -33,9 +33,7 @@ pub fn run(use_tui: bool, no_history: bool, config: &crate::config::Config) -> R
     // Display welcome message
     println!("Atlas v{} REPL", atlas_runtime::VERSION);
     println!("Type expressions or statements, or :quit to exit");
-    println!(
-        "Commands: :quit, :reset, :clear, :help, :load <file>, :type <expr>, :vars [page]"
-    );
+    println!("Commands: :quit, :reset, :clear, :help, :load <file>, :type <expr>, :vars [page]");
     println!();
 
     // Multiline input state
@@ -191,7 +189,7 @@ pub fn run(use_tui: bool, no_history: bool, config: &crate::config::Config) -> R
                         if multiline.line_count() == 1 {
                             // Only show on first continuation
                             if !config.no_color {
-                                print!("\x1b[90m({})\x1b[0m\n", reason.description());
+                                println!("\x1b[90m({})\x1b[0m", reason.description());
                             }
                         }
                     }
@@ -347,6 +345,7 @@ fn print_vars(bindings: &[ReplBinding], page: usize, no_color: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use atlas_runtime::is_input_complete;
 
     #[test]
     fn test_format_diagnostic() {
@@ -360,10 +359,7 @@ mod tests {
 
     #[test]
     fn test_is_input_complete_simple() {
-        assert_eq!(
-            is_input_complete("let x = 1;"),
-            InputCompleteness::Complete
-        );
+        assert_eq!(is_input_complete("let x = 1;"), InputCompleteness::Complete);
     }
 
     #[test]

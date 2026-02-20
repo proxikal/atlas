@@ -7,3 +7,4 @@ pub mod repl;
 pub mod repl_tui;
 pub mod run;
 pub mod typecheck;
+pub mod watch;
