@@ -206,6 +206,7 @@ cargo nextest run -p atlas-runtime                        # Full suite (GATE 6)
 - Status: "✅ PHASE COMPLETE - PR QUEUED"
 - PR URL (merge happens async)
 - Final Stats (bullets)
+- **Memory:** Updated X / No updates needed (MANDATORY - see GATE 7)
 - Progress (X/131 phases)
 - Next phase
 

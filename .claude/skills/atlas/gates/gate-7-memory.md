@@ -11,13 +11,13 @@
 Ask yourself:
 
 1. **Did I hit an API surprise?** (wrong signature, unexpected return type, missing method)
-   → Update `memory/patterns.md`
+   → Update auto-memory `patterns.md`
 
 2. **Did I discover a new codebase pattern?** (new helper, new module, new convention)
-   → Update `memory/patterns.md`
+   → Update auto-memory `patterns.md`
 
 3. **Did I make an architectural decision?** (chose between approaches, spec was silent)
-   → Update `memory/decisions.md`
+   → Update auto-memory `decisions.md`
 
 4. **Is anything in memory wrong?** (found that memory said X but codebase does Y)
    → Fix the stale entry
@@ -44,6 +44,27 @@ Ask yourself:
 ---
 
 **Cost:** 0-30 seconds per phase. Prevents hours of confusion in future sessions.
+
+---
+
+## Required Output (MANDATORY)
+
+**In your completion summary, you MUST include a Memory line:**
+
+```
+### Memory
+- Updated: `patterns.md` (added X pattern)
+- Updated: `decisions.md` (DR-015: reason)
+```
+
+OR if no updates needed:
+
+```
+### Memory
+- No updates needed
+```
+
+**This is NOT optional.** Visible accountability prevents drift.
 
 ---
 
