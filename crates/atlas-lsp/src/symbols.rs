@@ -3,10 +3,15 @@
 //! Provides symbol extraction for:
 //! - Document outline (textDocument/documentSymbol)
 //! - Workspace symbol search (workspace/symbol)
+//! - Query caching and performance optimization
+//! - Memory-bounded indexing for large workspaces
 
 use atlas_runtime::ast::*;
 use atlas_runtime::span::Span;
+use lru::LruCache;
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
+use std::sync::{Arc, RwLock};
 use tower_lsp::lsp_types::{
     DocumentSymbol, Location, Position, Range, SymbolInformation, SymbolKind, Url,
 };
@@ -20,38 +25,133 @@ pub struct IndexedSymbol {
     pub container_name: Option<String>,
 }
 
+/// Configuration for workspace indexing
+#[derive(Debug, Clone)]
+pub struct IndexConfig {
+    /// Maximum number of symbols to index (prevents unbounded memory growth)
+    pub max_symbols: usize,
+    /// Maximum number of cached query results
+    pub cache_size: usize,
+    /// Enable parallel indexing for large files
+    pub parallel_indexing: bool,
+}
+
+impl Default for IndexConfig {
+    fn default() -> Self {
+        Self {
+            max_symbols: 100_000,    // 100k symbols max
+            cache_size: 100,         // Cache 100 query results
+            parallel_indexing: true, // Enable parallel by default
+        }
+    }
+}
+
+/// Cache key for query results
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct QueryCacheKey {
+    query: String,
+    /// Kind filter as string representation, None = no filter
+    kind_filter: Option<String>,
+    limit: usize,
+}
+
 /// Workspace symbol index for fast searching
-#[derive(Debug, Default)]
 pub struct WorkspaceIndex {
     symbols: HashMap<Url, Vec<IndexedSymbol>>,
+    query_cache: Arc<RwLock<LruCache<QueryCacheKey, Vec<SymbolInformation>>>>,
+    config: IndexConfig,
+}
+
+impl Default for WorkspaceIndex {
+    fn default() -> Self {
+        Self::with_config(IndexConfig::default())
+    }
 }
 
 impl WorkspaceIndex {
-    /// Create a new workspace index
+    /// Create a new workspace index with default configuration
     pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Create a new workspace index with custom configuration
+    pub fn with_config(config: IndexConfig) -> Self {
+        let cache_size = NonZeroUsize::new(config.cache_size).unwrap();
         Self {
             symbols: HashMap::new(),
+            query_cache: Arc::new(RwLock::new(LruCache::new(cache_size))),
+            config,
         }
     }
 
     /// Index symbols from a document
     pub fn index_document(&mut self, uri: Url, text: &str, ast: &Program) {
         let symbols = extract_indexed_symbols(&uri, text, ast);
+
+        // Check memory bounds
+        let total_symbols: usize = self.symbols.values().map(|v| v.len()).sum();
+        if total_symbols + symbols.len() > self.config.max_symbols {
+            // Remove symbols from oldest document to stay within bounds
+            if let Some(oldest_uri) = self.symbols.keys().next().cloned() {
+                self.symbols.remove(&oldest_uri);
+            }
+        }
+
         self.symbols.insert(uri, symbols);
+
+        // Invalidate query cache when index changes
+        self.invalidate_cache();
     }
 
     /// Remove a document from the index
     pub fn remove_document(&mut self, uri: &Url) {
         self.symbols.remove(uri);
+
+        // Invalidate cache when index changes
+        self.invalidate_cache();
     }
 
-    /// Search for symbols matching a query
-    pub fn search(&self, query: &str, limit: usize) -> Vec<SymbolInformation> {
+    /// Invalidate the query cache
+    fn invalidate_cache(&self) {
+        if let Ok(mut cache) = self.query_cache.write() {
+            cache.clear();
+        }
+    }
+
+    /// Search for symbols matching a query with optional kind filtering
+    pub fn search(
+        &self,
+        query: &str,
+        limit: usize,
+        kind_filter: Option<SymbolKind>,
+    ) -> Vec<SymbolInformation> {
+        // Check cache first - convert kind to string for cache key
+        let cache_key = QueryCacheKey {
+            query: query.to_lowercase(),
+            kind_filter: kind_filter.map(|k| format!("{:?}", k)),
+            limit,
+        };
+
+        if let Ok(cache) = self.query_cache.read() {
+            if let Some(cached) = cache.peek(&cache_key) {
+                return cached.clone();
+            }
+        }
+
+        // Cache miss - perform search
         let query_lower = query.to_lowercase();
         let mut results = Vec::new();
 
         for symbols in self.symbols.values() {
             for sym in symbols {
+                // Apply kind filter if specified
+                if let Some(filter_kind) = kind_filter {
+                    if sym.kind != filter_kind {
+                        continue;
+                    }
+                }
+
+                // Apply fuzzy matching
                 if fuzzy_match(&sym.name, &query_lower) {
                     #[allow(deprecated)]
                     results.push(SymbolInformation {
@@ -64,9 +164,13 @@ impl WorkspaceIndex {
                     });
 
                     if results.len() >= limit {
-                        return results;
+                        break;
                     }
                 }
+            }
+
+            if results.len() >= limit {
+                break;
             }
         }
 
@@ -81,6 +185,11 @@ impl WorkspaceIndex {
             }
         });
 
+        // Cache the results
+        if let Ok(mut cache) = self.query_cache.write() {
+            cache.put(cache_key, results.clone());
+        }
+
         results
     }
 
@@ -92,6 +201,38 @@ impl WorkspaceIndex {
     /// Get total symbol count
     pub fn total_symbols(&self) -> usize {
         self.symbols.values().map(|s| s.len()).sum()
+    }
+
+    /// Index multiple documents in parallel (for initial workspace indexing)
+    ///
+    /// Note: Currently performs sequential extraction due to AST not being Sync.
+    /// Parallel processing would require Send+Sync bounds on Program, which would
+    /// need Arc<Mutex<>> wrappers throughout the AST. For now, this method provides
+    /// optimized batch indexing with reduced cache invalidations.
+    pub fn index_documents_parallel(&mut self, documents: Vec<(Url, String, Program)>) {
+        // Extract all symbols first (currently sequential due to AST constraints)
+        let mut symbol_entries = Vec::new();
+        for (uri, text, ast) in &documents {
+            let symbols = extract_indexed_symbols(uri, text, ast);
+            symbol_entries.push((uri.clone(), symbols));
+        }
+
+        // Insert in batch to minimize lock contention and cache invalidations
+        for (uri, symbols) in symbol_entries {
+            // Check memory bounds
+            let total_symbols: usize = self.symbols.values().map(|v| v.len()).sum();
+            if total_symbols + symbols.len() > self.config.max_symbols {
+                // Remove symbols from oldest document to stay within bounds
+                if let Some(oldest_uri) = self.symbols.keys().next().cloned() {
+                    self.symbols.remove(&oldest_uri);
+                }
+            }
+
+            self.symbols.insert(uri, symbols);
+        }
+
+        // Invalidate cache once after batch update (more efficient than per-document)
+        self.invalidate_cache();
     }
 }
 

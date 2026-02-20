@@ -284,7 +284,7 @@ fn test_workspace_search_exact() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("myFunction", 100);
+    let results = index.search("myFunction", 100, None);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "myFunction");
@@ -298,7 +298,7 @@ fn test_workspace_search_prefix() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("my", 100);
+    let results = index.search("my", 100, None);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "myFunction");
@@ -312,7 +312,7 @@ fn test_workspace_search_substring() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("func", 100);
+    let results = index.search("func", 100, None);
 
     assert_eq!(results.len(), 1);
 }
@@ -325,7 +325,7 @@ fn test_workspace_search_camel_case() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("mfn", 100);
+    let results = index.search("mfn", 100, None);
 
     assert_eq!(results.len(), 1);
 }
@@ -338,7 +338,7 @@ fn test_workspace_search_case_insensitive() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("myfunction", 100);
+    let results = index.search("myfunction", 100, None);
 
     assert_eq!(results.len(), 1);
 }
@@ -351,7 +351,7 @@ fn test_workspace_search_empty_query() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("", 100);
+    let results = index.search("", 100, None);
 
     assert_eq!(results.len(), 2);
 }
@@ -364,7 +364,7 @@ fn test_workspace_search_no_match() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("xyz", 100);
+    let results = index.search("xyz", 100, None);
 
     assert!(results.is_empty());
 }
@@ -377,7 +377,7 @@ fn test_workspace_search_limit() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("a", 2);
+    let results = index.search("a", 2, None);
 
     assert_eq!(results.len(), 2);
 }
@@ -410,7 +410,7 @@ fn test_workspace_multiple_files() {
     let ast2 = parse_source(source2);
     index.index_document(uri2, source2, &ast2);
 
-    let results = index.search("", 100);
+    let results = index.search("", 100, None);
     assert_eq!(results.len(), 2);
 }
 
@@ -422,7 +422,7 @@ fn test_workspace_search_ranking() {
     let ast = parse_source(source);
 
     index.index_document(uri, source, &ast);
-    let results = index.search("foo", 100);
+    let results = index.search("foo", 100, None);
 
     // fooBar should come first (prefix match)
     assert_eq!(results[0].name, "fooBar");

@@ -243,7 +243,8 @@ impl LanguageServer for AtlasLspServer {
     ) -> Result<Option<Vec<SymbolInformation>>> {
         let query = params.query;
         let index = self.workspace_index.lock().await;
-        let symbols = index.search(&query, 100);
+        // No kind filtering by default - returns all symbol types
+        let symbols = index.search(&query, 100, None);
 
         if symbols.is_empty() {
             Ok(None)
