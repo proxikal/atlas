@@ -1,11 +1,21 @@
 //! LSP request and notification handlers
 //!
-//! This module will contain specialized handlers for different LSP features:
-//! - diagnostics.rs: Diagnostic publishing
-//! - symbols.rs: Symbol navigation (go-to-definition, find references)
-//! - completion.rs: Code completion
-//! - hover.rs: Hover information
-//! - formatting.rs: Code formatting
+//! This module organizes specialized handlers for LSP features:
 //!
-//! For now, basic handlers are implemented directly in server.rs.
-//! These will be moved here as the LSP implementation grows.
+//! ## Document Sync
+//! - `did_open`, `did_change`, `did_close` in server.rs
+//!
+//! ## Navigation
+//! - `document_symbol`, `goto_definition`, `references` in navigation.rs
+//!
+//! ## Code Intelligence
+//! - `hover` in hover.rs - Type info, documentation, builtin help
+//! - `completion` in completion.rs - Code completions
+//! - `code_action` in actions.rs - Quick fixes and refactorings
+//!
+//! ## Syntax
+//! - `semantic_tokens_full`, `semantic_tokens_range` in semantic_tokens.rs
+//! - `formatting`, `range_formatting` in formatting.rs
+//!
+//! ## Diagnostics
+//! - Diagnostic publishing in server.rs via convert.rs

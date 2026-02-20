@@ -8,6 +8,7 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 
 use crate::document::DocumentState;
+use crate::semantic_tokens;
 
 /// Atlas Language Server
 pub struct AtlasLspServer {
@@ -54,6 +55,31 @@ impl LanguageServer for AtlasLspServer {
                 }),
                 document_formatting_provider: Some(OneOf::Left(true)),
                 document_range_formatting_provider: Some(OneOf::Left(true)),
+                code_action_provider: Some(CodeActionProviderCapability::Options(
+                    CodeActionOptions {
+                        code_action_kinds: Some(vec![
+                            CodeActionKind::QUICKFIX,
+                            CodeActionKind::REFACTOR,
+                            CodeActionKind::REFACTOR_EXTRACT,
+                            CodeActionKind::REFACTOR_INLINE,
+                            CodeActionKind::REFACTOR_REWRITE,
+                            CodeActionKind::SOURCE,
+                            CodeActionKind::SOURCE_ORGANIZE_IMPORTS,
+                        ]),
+                        work_done_progress_options: WorkDoneProgressOptions::default(),
+                        resolve_provider: Some(false),
+                    },
+                )),
+                semantic_tokens_provider: Some(
+                    SemanticTokensServerCapabilities::SemanticTokensOptions(
+                        SemanticTokensOptions {
+                            legend: semantic_tokens::get_legend(),
+                            range: Some(true),
+                            full: Some(SemanticTokensFullOptions::Bool(true)),
+                            work_done_progress_options: WorkDoneProgressOptions::default(),
+                        },
+                    ),
+                ),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -184,20 +210,80 @@ impl LanguageServer for AtlasLspServer {
 
         let documents = self.documents.lock().await;
         if let Some(doc) = documents.get(&uri) {
-            if let (Some(ast), Some(symbols)) = (&doc.ast, &doc.symbols) {
-                if let Some(identifier) =
-                    crate::navigation::find_identifier_at_position(&doc.text, position)
-                {
-                    if let Some(info) =
-                        crate::navigation::generate_hover_info(ast, symbols, &identifier)
-                    {
-                        return Ok(Some(Hover {
-                            contents: HoverContents::Scalar(MarkedString::String(info)),
-                            range: None,
-                        }));
-                    }
-                }
+            // Use the enhanced hover provider
+            return Ok(crate::hover::generate_hover(
+                &doc.text,
+                position,
+                doc.ast.as_ref(),
+                doc.symbols.as_ref(),
+            ));
+        }
+
+        Ok(None)
+    }
+
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let uri = params.text_document.uri;
+        let range = params.range;
+        let context = params.context;
+
+        let documents = self.documents.lock().await;
+        if let Some(doc) = documents.get(&uri) {
+            let actions = crate::actions::generate_code_actions(
+                &uri,
+                range,
+                &context,
+                &doc.text,
+                doc.ast.as_ref(),
+                doc.symbols.as_ref(),
+                &doc.diagnostics,
+            );
+
+            if actions.is_empty() {
+                return Ok(None);
             }
+
+            return Ok(Some(actions));
+        }
+
+        Ok(None)
+    }
+
+    async fn semantic_tokens_full(
+        &self,
+        params: SemanticTokensParams,
+    ) -> Result<Option<SemanticTokensResult>> {
+        let uri = params.text_document.uri;
+
+        let documents = self.documents.lock().await;
+        if let Some(doc) = documents.get(&uri) {
+            let result = semantic_tokens::generate_semantic_tokens(
+                &doc.text,
+                doc.ast.as_ref(),
+                doc.symbols.as_ref(),
+            );
+            return Ok(Some(result));
+        }
+
+        Ok(None)
+    }
+
+    async fn semantic_tokens_range(
+        &self,
+        params: SemanticTokensRangeParams,
+    ) -> Result<Option<SemanticTokensRangeResult>> {
+        let uri = params.text_document.uri;
+        let range = params.range;
+
+        let documents = self.documents.lock().await;
+        if let Some(doc) = documents.get(&uri) {
+            let result = semantic_tokens::generate_semantic_tokens_range(
+                &doc.text,
+                range,
+                doc.ast.as_ref(),
+                doc.symbols.as_ref(),
+            );
+            return Ok(Some(result));
         }
 
         Ok(None)
