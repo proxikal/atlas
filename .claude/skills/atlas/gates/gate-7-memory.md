@@ -66,13 +66,15 @@ Ask yourself:
    gh pr merge --squash --auto
    ```
 
-3. **Report completion:** PR created with auto-merge enabled
+3. **Walk away** - automation handles everything:
+   - CI runs (~3-4 min)
+   - Auto-adds to merge queue
+   - Auto-merges and auto-deletes branch
+   - **Do NOT run `gh pr merge` again**
 
-**Automation handles the rest:**
-- CI runs (~3-4 min)
-- Auto-merge when CI passes
-- Branch auto-deleted after merge
+4. **Sync local** (after merge completes):
+   ```bash
+   git checkout main && git pull
+   ```
 
-**User involvement:** NONE. AI handles Git lifecycle.
-
-**Next:** Handoff complete. PR will auto-merge.
+**Next:** Report completion summary.

@@ -90,20 +90,45 @@ git checkout -b phase/{category}-{number}        # Create feature branch
 git add -A && git commit -m "feat(phase): Description"   # Commit all
 git push -u origin HEAD                                   # Push branch
 gh pr create --title "Phase X: Title" --body "..."       # Create PR
-gh pr merge --squash --auto                               # Enable auto-merge
+gh pr merge --squash --auto                               # Enable auto-merge (run ONCE)
 ```
 
-**After PR created:**
+**Walk away - automation handles:**
 - CI runs (~3-4 min)
-- Auto-merge triggers when CI passes
-- Branch auto-deleted after merge
-- No manual intervention needed
+- Auto-adds to merge queue when CI passes
+- Queue runs cross-platform tests (~6 min)
+- Auto-merges and auto-deletes branch
+- **Do NOT run `gh pr merge` again**
 
 **Sync local (after merge):**
 ```bash
 git checkout main && git pull                             # Sync local
 git branch -d <old-branch>                                # Clean local ref
 ```
+
+**Multi-part phases (A, B, C sub-phases):**
+```bash
+# Stay on SAME branch, commit locally between parts
+<work on part A>
+cargo nextest run -p atlas-runtime                        # Local validation
+git add -A && git commit -m "feat(phase-XX): Part A - description"
+
+<work on part B>
+cargo nextest run -p atlas-runtime                        # Local validation
+git add -A && git commit -m "feat(phase-XX): Part B - description"
+
+<work on part C>
+cargo nextest run -p atlas-runtime                        # Local validation
+git add -A && git commit -m "feat(phase-XX): Part C - description"
+
+# ALL parts done, ALL tests pass → push ONCE
+git push -u origin HEAD && gh pr create ... && gh pr merge --squash --auto
+```
+- **One branch, multiple commits** = traceable history
+- **Local tests between parts** = catch failures early
+- **Push only when complete** = no wasted CI minutes
+- **Squash merge** = atomic feature on main
+- **If failure:** `git log --oneline` shows which part broke
 
 **User involvement:** NONE. Agent handles entire Git lifecycle autonomously.
 
