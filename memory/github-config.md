@@ -75,12 +75,12 @@
 ## AI Workflow
 
 ```bash
-# 1. Create PR with auto-merge
+# 1. Create PR and enable auto-merge (run ONCE, immediately)
 git push -u origin HEAD
 gh pr create --title "..." --body "..."
-gh pr merge --squash --auto
+gh pr merge --squash --auto              # Enables auto-merge, never run again
 
-# 2. Done - automation handles rest
+# 2. Walk away - automation handles everything
 # CI runs (~2 min PR, ~6 min merge queue)
 # Auto-merge when CI passes
 # Branch auto-deleted

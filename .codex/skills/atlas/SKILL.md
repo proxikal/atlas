@@ -31,8 +31,8 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 3. Run GATE -1 (sanity check)
 4. Declare workflow type
 5. Execute gates 0→1→2→3→4→5→6→7 (uninterrupted)
-6. **Git Finalize:** Commit, push, create PR, wait for CI, merge, cleanup
-7. Deliver completion summary (main is updated, ready for next phase)
+6. **Git Finalize:** Commit, push, create PR with auto-merge
+7. Deliver completion summary (PR will auto-merge when CI passes)
 
 ### 2. Spec Compliance (100%)
 Spec defines it → implement EXACTLY. No shortcuts, no "good enough", no partial implementations.
@@ -90,21 +90,45 @@ git checkout -b phase/{category}-{number}        # Create feature branch
 git add -A && git commit -m "feat(phase): Description"   # Commit all
 git push -u origin HEAD                                   # Push branch
 gh pr create --title "Phase X: Title" --body "..."       # Create PR
+gh pr merge --squash --auto                               # Enable auto-merge (run ONCE)
 ```
 
-**Wait for CI:** `fmt → clippy → test → ci-success` (poll with `gh pr checks`)
+**Walk away - automation handles:**
+- CI runs (~3-4 min)
+- Auto-adds to merge queue when CI passes
+- Queue runs cross-platform tests (~6 min)
+- Auto-merges and auto-deletes branch
+- **Do NOT run `gh pr merge` again**
 
-**Merge when green:**
+**Sync local (after merge):**
 ```bash
-gh pr merge --squash --delete-branch                      # Merge + cleanup
 git checkout main && git pull                             # Sync local
+git branch -d <old-branch>                                # Clean local ref
 ```
 
-**Cleanup:** If stale branches exist from failed runs, delete them:
+**Multi-part phases (A, B, C sub-phases):**
 ```bash
-git branch -d <branch>                                    # Local
-gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>  # Remote
+# Stay on SAME branch, commit locally between parts
+<work on part A>
+cargo nextest run -p atlas-runtime                        # Local validation
+git add -A && git commit -m "feat(phase-XX): Part A - description"
+
+<work on part B>
+cargo nextest run -p atlas-runtime                        # Local validation
+git add -A && git commit -m "feat(phase-XX): Part B - description"
+
+<work on part C>
+cargo nextest run -p atlas-runtime                        # Local validation
+git add -A && git commit -m "feat(phase-XX): Part C - description"
+
+# ALL parts done, ALL tests pass → push ONCE
+git push -u origin HEAD && gh pr create ... && gh pr merge --squash --auto
 ```
+- **One branch, multiple commits** = traceable history
+- **Local tests between parts** = catch failures early
+- **Push only when complete** = no wasted CI minutes
+- **Squash merge** = atomic feature on main
+- **If failure:** `git log --oneline` shows which part broke
 
 **User involvement:** NONE. Agent handles entire Git lifecycle autonomously.
 
@@ -112,6 +136,7 @@ gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>  # Remote
 
 ## GATE -1: Sanity Check (ALWAYS FIRST)
 
+0. **Main CI health:** `gh run list --branch main --limit 1` — if failed, STOP and alert user
 1. **Verify:** Check phase dependencies in phase file
 2. **Git check:** Ensure on feature branch (not main), working directory clean
 3. **Sanity:** `cargo clean && cargo check -p atlas-runtime`
@@ -187,10 +212,9 @@ cargo +nightly fuzz run fuzz_parser -- -max_total_time=60            # Fuzz (lex
 2. STATUS.md updated
 3. Memory checked (GATE 7)
 4. Changes committed and pushed
-5. PR created with standard template
-6. CI passes (fmt → clippy → test → ci-success)
-7. PR merged (squash) and branch deleted
-8. Local main synced with remote
+5. PR created with auto-merge enabled
+6. CI passes → auto-merge → branch auto-deleted
+7. Local main synced
 
 **Required in summary:**
 - Status: "✅ PHASE COMPLETE - MERGED TO MAIN"
@@ -209,6 +233,7 @@ cargo +nightly fuzz run fuzz_parser -- -max_total_time=60            # Fuzz (lex
 - `patterns.md` - Codebase patterns (Arc<Mutex<>>, stdlib signatures, etc.)
 - `decisions.md` - Architectural decisions (search DR-XXX)
 - `testing-patterns.md` - Test domain files, corpus workflow, parity helpers
+- `github-config.md` - Repo settings, rulesets, automation
 
 **Usage:** Read patterns.md for codebase patterns, decisions.md for architectural context.
 
