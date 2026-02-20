@@ -13,11 +13,11 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 ## On Skill Activation (EVERY SESSION)
 
 ```bash
-git checkout main && git pull                # Sync main FIRST
-git branch -d <stale-branches> 2>/dev/null   # Cleanup old branches
+git checkout main && git pull && git fetch --prune   # Sync main, prune remotes
+git branch | grep -v main | xargs -r git branch -D   # Delete ALL local branches except main
 ```
 
-**Why:** PRs merge async. Session may start before merge completes. Always sync.
+**Why:** PRs merge async via squash (different SHA). Use `-D` not `-d`. Always sync.
 
 ---
 
