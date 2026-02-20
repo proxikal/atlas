@@ -10,7 +10,7 @@ toml = "0.8"
 semver = { version = "1.0", features = ["serde"] }
 thiserror = "2.0"
 chrono = "0.4"
-pubgrub = "0.2"
+pubgrub = "0.3"
 reqwest = { version = "0.13", features = ["blocking"] }
 tar = "0.4"
 flate2 = "1.0"
