@@ -10,6 +10,17 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 
 ---
 
+## On Skill Activation (EVERY SESSION)
+
+```bash
+git checkout main && git pull                # Sync main FIRST
+git branch -d <stale-branches> 2>/dev/null   # Cleanup old branches
+```
+
+**Why:** PRs merge async. Session may start before merge completes. Always sync.
+
+---
+
 ## Mode: EXECUTION (Default)
 
 **You:** Autonomous Lead Developer (full authority, execute immediately)
