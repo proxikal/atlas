@@ -13,6 +13,7 @@ atlas-runtime = { path = "../atlas-runtime" }
 atlas-config = { path = "../atlas-config" }
 atlas-build = { path = "../atlas-build" }
 atlas-formatter = { path = "../atlas-formatter" }
+atlas-lsp = { path = "../atlas-lsp" }
 clap = { version = "4.5", features = ["derive"] }
 rustyline = "14.0"  # Line editor for REPL
 ratatui = { version = "0.30", default-features = false, features = ["crossterm"] }  # TUI framework for rich REPL mode
@@ -25,6 +26,8 @@ notify = "7.0"  # File system watching for watch mode
 walkdir = "2.5"  # Directory traversal for test discovery
 rayon = "1.10"  # Parallel test execution
 colored = "2.1"  # Colorized test output
+tokio = { version = "1", features = ["full"] }  # Async runtime for LSP server
+tower-lsp = "0.20"  # LSP framework for TCP server
 
 [dev-dependencies]
 tempfile = "3.8"

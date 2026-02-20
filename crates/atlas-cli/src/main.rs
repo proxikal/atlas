@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 mod config;
+mod debugger;
 mod testing;
 
 #[derive(Parser)]
@@ -145,6 +146,29 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Debug an Atlas program interactively
+    Debug {
+        /// Path to the Atlas source file
+        file: String,
+        /// Set breakpoints at line numbers (can be repeated)
+        #[arg(long, short = 'b')]
+        breakpoint: Vec<u32>,
+    },
+    /// Start the Atlas Language Server
+    Lsp {
+        /// Use TCP mode instead of stdio
+        #[arg(long)]
+        tcp: bool,
+        /// Port for TCP mode (default: 9257)
+        #[arg(long, default_value = "9257")]
+        port: u16,
+        /// Bind address for TCP mode
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+        /// Enable verbose logging
+        #[arg(long, short = 'v')]
+        verbose: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -278,6 +302,28 @@ fn main() -> Result<()> {
                 json,
             };
             commands::test::run(args)?;
+        }
+        Commands::Debug { file, breakpoint } => {
+            let args = commands::debug::DebugArgs {
+                file,
+                breakpoints: breakpoint,
+                stop_at_entry: true,
+            };
+            commands::debug::run(args)?;
+        }
+        Commands::Lsp {
+            tcp,
+            port,
+            host,
+            verbose,
+        } => {
+            let args = commands::lsp::LspArgs {
+                tcp,
+                port,
+                host,
+                verbose,
+            };
+            commands::lsp::run(args)?;
         }
     }
 
