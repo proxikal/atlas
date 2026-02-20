@@ -98,16 +98,18 @@ gh pr merge --squash --auto                               # Enable auto-merge (r
 - CI disabled (jobs skipped) — no waiting
 - Merge queue processes PR immediately
 - Remote branch auto-deleted
-- **Do NOT watch PR** — just sync after a brief pause
 
-**Sync local (do this immediately):**
+**BANNED (wastes time):**
+- `gh pr view` or `gh pr checks` — never check PR status
+- `sleep && check` loops — never watch for merge
+- Any PR monitoring — it WILL merge, just wait
+
+**Sync local (do this immediately after push):**
 ```bash
-sleep 30                                                  # Brief pause for merge
-git checkout main && git pull                             # Sync local
-git branch -d <old-branch>                                # Clean local ref
+sleep 45 && git checkout main && git pull && git branch -d <old-branch>
 ```
 
-**This is the COMPLETE workflow per phase** — no batching, no CI watching.
+**This is the COMPLETE workflow per phase** — push, wait 45s, sync, done.
 
 **Multi-part phases (A, B, C sub-phases):**
 ```bash
