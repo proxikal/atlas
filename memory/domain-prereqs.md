@@ -1,171 +1,179 @@
-# Domain Prerequisites Registry
+# Domain Verification Queries
 
-**Purpose:** Maps implementation domains to required pattern verification.
-**Usage:** Before writing code in a domain, verify patterns using these queries.
-
----
-
-## How to Use
-
-1. **Identify domains** from phase file (AST, stdlib, type system, etc.)
-2. **For each domain**, run the verification queries below
-3. **Note 3-5 patterns** you'll use before writing any code
-4. **If uncertain**, read more — never guess structure
+**Purpose:** Surgical grep patterns to verify codebase structure BEFORE writing code.
+**Rule:** Run queries. Note patterns. Then write. Never assume.
 
 ---
 
-## Domain: AST / Parser
+## AST Domain
 
-**When:** Phase mentions AST nodes, parser, expressions, statements
+**When:** Phase touches parser, expressions, statements, AST nodes.
 
-**Verify:**
 ```bash
-# Expression variants
-Grep pattern="^\s+\w+.*//.*[Ee]xpr" path="crates/atlas-runtime/src/ast.rs" output_mode="content"
+# Item variants (top-level declarations)
+Grep pattern="^\s+[A-Z][a-z]+.*\{|^\s+[A-Z][a-z]+\(" path="crates/atlas-runtime/src/ast.rs" output_mode="content" -A=0
 
-# Statement variants
-Grep pattern="^\s+\w+.*//.*[Ss]tmt" path="crates/atlas-runtime/src/ast.rs" output_mode="content"
+# Statement structs (field names)
+Grep pattern="pub struct \w+Stmt" path="crates/atlas-runtime/src/ast.rs" output_mode="content" -A=5
 
-# Specific node (replace NodeName)
-Grep pattern="NodeName" path="crates/atlas-runtime/src/ast.rs" output_mode="content" -C=3
+# Expression enum (variant format: tuple vs struct)
+Grep pattern="pub enum Expr" path="crates/atlas-runtime/src/ast.rs" output_mode="content" -A=50
+
+# Literal types
+Grep pattern="pub enum Literal" path="crates/atlas-runtime/src/ast.rs" output_mode="content" -A=10
 ```
 
-**Key file:** `crates/atlas-runtime/src/ast.rs`
-**Memory:** `patterns.md` → "Atlas Grammar Quick Reference"
+**Key questions:**
+- Tuple variant `Expr::X(A, B)` or struct variant `Expr::X { a, b }`?
+- What are the exact field names on Stmt structs?
+- What's the Span position (first, last, separate field)?
 
 ---
 
-## Domain: Value Types
+## Type System Domain
 
-**When:** Phase mentions Value enum, type representation, runtime values
+**When:** Phase touches types, type checker, type annotations.
 
-**Verify:**
 ```bash
-# All Value variants
-Grep pattern="^pub enum Value" path="crates/atlas-runtime/src/value.rs" output_mode="content" -A=30
+# Type enum variants
+Grep pattern="pub enum Type" path="crates/atlas-runtime/src/types.rs" output_mode="content" -A=30
 
-# Specific type (replace TypeName)
-Grep pattern="TypeName" path="crates/atlas-runtime/src/value.rs" output_mode="content" -C=2
+# Type variant format (tuple vs struct)
+Grep pattern="^\s+[A-Z]\w+\s*\{|^\s+[A-Z]\w+\s*\(" path="crates/atlas-runtime/src/types.rs" output_mode="content"
 ```
 
-**Key file:** `crates/atlas-runtime/src/value.rs`
-**Memory:** `patterns.md` → "Collection Types"
+**Key questions:**
+- Struct variant `Type::X { field }` or tuple variant `Type::X(inner)`?
+- What variants exist? (Number, String, Array, Function, etc.)
 
 ---
 
-## Domain: Stdlib Functions
+## Value Domain
 
-**When:** Phase mentions stdlib, builtin functions, standard library
+**When:** Phase touches runtime values, Value enum.
 
-**Verify:**
 ```bash
-# Registry functions
-Grep pattern="pub fn (is_builtin|call_builtin)" path="crates/atlas-runtime/src/stdlib/mod.rs" output_mode="content" -A=5
+# Value enum variants
+Grep pattern="pub enum Value" path="crates/atlas-runtime/src/value.rs" output_mode="content" -A=30
 
-# Specific module exports
-Grep pattern="pub fn" path="crates/atlas-runtime/src/stdlib/{module}.rs" output_mode="content"
+# Collection wrapper types
+Grep pattern="Arc<Mutex<" path="crates/atlas-runtime/src/value.rs" output_mode="content"
 ```
 
-**Key file:** `crates/atlas-runtime/src/stdlib/mod.rs`
-**Memory:** `patterns.md` → "Intrinsic vs Stdlib Function"
+**Key questions:**
+- Which variants use `Arc<Mutex<>>`?
+- Which are immutable (`Arc<String>`)?
 
 ---
 
-## Domain: Interpreter
+## Stdlib Domain
 
-**When:** Phase mentions interpreter, eval, tree-walking execution
+**When:** Phase touches builtin functions.
 
-**Verify:**
 ```bash
-# Main eval dispatch
-Grep pattern="fn eval_expr|fn eval_stmt" path="crates/atlas-runtime/src/interpreter" output_mode="content" -A=3
+# Registry pattern (is_builtin)
+Grep pattern="fn is_builtin" path="crates/atlas-runtime/src/stdlib/mod.rs" output_mode="content" -A=20
 
-# Intrinsic methods
-Grep pattern="fn.*intrinsic" path="crates/atlas-runtime/src/interpreter" output_mode="content"
+# Call pattern (call_builtin signature)
+Grep pattern="fn call_builtin" path="crates/atlas-runtime/src/stdlib/mod.rs" output_mode="content" -A=5
+
+# Function implementation pattern (any stdlib file)
+Grep pattern="pub fn \w+\(" path="crates/atlas-runtime/src/stdlib/string.rs" output_mode="content" -A=3 head_limit=5
 ```
 
-**Key file:** `crates/atlas-runtime/src/interpreter/mod.rs`
-**Memory:** `patterns.md` → "Intrinsic vs Stdlib Function"
-
 ---
 
-## Domain: VM / Bytecode
+## Error Domain
 
-**When:** Phase mentions VM, bytecode, compiler, opcodes
+**When:** Phase touches error handling, diagnostics.
 
-**Verify:**
 ```bash
-# Opcode enum
-Grep pattern="^pub enum Op" path="crates/atlas-runtime/src/vm/opcodes.rs" output_mode="content" -A=20
-
-# VM execution
-Grep pattern="fn execute" path="crates/atlas-runtime/src/vm/mod.rs" output_mode="content" -A=3
-```
-
-**Key files:** `crates/atlas-runtime/src/vm/mod.rs`, `opcodes.rs`, `compiler.rs`
-**Memory:** `patterns.md` → "Intrinsic vs Stdlib Function" (for VM intrinsics)
-
----
-
-## Domain: Type System
-
-**When:** Phase mentions type checker, type inference, type annotations
-
-**Verify:**
-```bash
-# Type enum
-Grep pattern="^pub enum Type" path="crates/atlas-runtime/src/type_checker" output_mode="content" -A=15
-
-# Type check methods
-Grep pattern="fn check|fn infer" path="crates/atlas-runtime/src/type_checker" output_mode="content"
-```
-
-**Key file:** `crates/atlas-runtime/src/type_checker/mod.rs`
-**Spec:** `docs/specification/types.md`
-
----
-
-## Domain: LSP
-
-**When:** Phase mentions language server, LSP handlers, editor integration
-
-**Verify:**
-```bash
-# Handler registration
-Grep pattern="(on_request|on_notification)" path="crates/atlas-lsp/src/server.rs" output_mode="content"
-
-# Existing handlers
-Grep pattern="pub fn handle" path="crates/atlas-lsp/src/handlers" output_mode="content"
-```
-
-**Key files:** `crates/atlas-lsp/src/server.rs`, `handlers/mod.rs`
-
----
-
-## Domain: Errors
-
-**When:** Phase mentions error handling, RuntimeError, diagnostics
-
-**Verify:**
-```bash
-# Error variants
-Grep pattern="^pub enum RuntimeError" path="crates/atlas-runtime/src/errors.rs" output_mode="content" -A=20
+# RuntimeError variants
+Grep pattern="pub enum RuntimeError" path="crates/atlas-runtime/src/errors.rs" output_mode="content" -A=20
 
 # Error construction pattern
-Grep pattern="RuntimeError::" path="crates/atlas-runtime/src" output_mode="content" head_limit=10
+Grep pattern="RuntimeError::\w+\s*\{" path="crates/atlas-runtime/src/stdlib" output_mode="content" head_limit=5
 ```
 
-**Key file:** `crates/atlas-runtime/src/errors.rs`
-**Memory:** `patterns.md` → "Error Pattern"
+**Key pattern:** `RuntimeError::TypeError { msg, span }` (struct variant, NOT `::new()`)
 
 ---
 
-## Adding New Domains
+## LSP Domain
 
-When a new domain emerges:
-1. Add section with **When** trigger
-2. Add **Verify** queries (grep patterns, not line numbers)
-3. Add **Key file(s)** reference
-4. Add **Memory/Spec** reference if applicable
+**When:** Phase touches language server.
 
-Keep queries surgical — find definitions, not read entire files.
+```bash
+# Exported modules
+Grep pattern="pub mod" path="crates/atlas-lsp/src/lib.rs" output_mode="content"
+
+# Server capabilities
+Grep pattern="ServerCapabilities" path="crates/atlas-lsp/src/server.rs" output_mode="content" -A=30
+
+# Handler signatures
+Grep pattern="async fn \w+\(&self" path="crates/atlas-lsp/src/server.rs" output_mode="content" head_limit=10
+```
+
+---
+
+## Interpreter/VM Domain
+
+**When:** Phase touches execution engines.
+
+```bash
+# Interpreter eval methods
+Grep pattern="fn eval_" path="crates/atlas-runtime/src/interpreter" output_mode="content" head_limit=10
+
+# VM opcodes
+Grep pattern="pub enum OpCode" path="crates/atlas-runtime/src/vm" output_mode="content" -A=30
+
+# Compiler methods
+Grep pattern="fn compile_" path="crates/atlas-runtime/src/vm/compiler" output_mode="content" head_limit=10
+```
+
+---
+
+## Verification Protocol
+
+1. **Identify domains** - Read phase file, list all domains touched
+2. **Run queries** - Execute relevant grep patterns above
+3. **Extract patterns** - Note exact variant names, field names, signatures
+4. **Write code** - Use ONLY verified patterns
+5. **If uncertain** - Grep more. Read the actual struct/enum. Never guess.
+
+**Cost:** ~200 tokens per domain verification
+**Savings:** Prevents 10,000+ token rewrite cycles
+
+---
+
+## Anti-Patterns (BANNED)
+
+```rust
+// WRONG: Assumed structure
+Item::ExternFunction { ... }  // Did you verify this exists?
+stmt.condition                // Did you verify field name?
+Type::TypeParameter(name)     // Tuple or struct variant?
+
+// RIGHT: Verified via grep
+Item::Extern { ... }          // Grep showed this is the actual name
+stmt.cond                     // Grep showed field is "cond" not "condition"
+Type::TypeParameter { name }  // Grep showed struct variant syntax
+```
+
+---
+
+## Quick Reference Commands
+
+```bash
+# "What items exist in AST?"
+Grep pattern="^\s+[A-Z]\w+\(" path="crates/atlas-runtime/src/ast.rs" -A=0 head_limit=30
+
+# "What does IfStmt look like?"
+Grep pattern="pub struct IfStmt" path="crates/atlas-runtime/src/ast.rs" -A=10
+
+# "What Type variants exist?"
+Grep pattern="^\s+[A-Z]\w+" path="crates/atlas-runtime/src/types.rs" head_limit=30
+
+# "How are errors constructed?"
+Grep pattern="RuntimeError::" path="crates/atlas-runtime/src" head_limit=10
+```

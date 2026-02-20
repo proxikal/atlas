@@ -211,20 +211,27 @@ cargo nextest run -p atlas-runtime                        # Full suite (GATE 6)
 
 ---
 
-## Memory System (Auto-Loaded)
+## Memory System
 
-**Location:** `/memory/`
-- `MEMORY.md` - Index (always loaded, 200 line cap)
-- `patterns.md` - Codebase patterns (Arc<Mutex<>>, stdlib signatures, etc.)
-- `decisions.md` - Architectural decisions (search DR-XXX)
-- `testing-patterns.md` - Test domain files, corpus workflow, parity helpers
-- `domain-prereqs.md` - **Domain verification queries** (GATE 0, Step 4)
-- `github-config.md` - Repo settings, rulesets, automation
+**Source of truth:** `atlas/memory/` (repo, version controlled)
+**Auto-loaded:** `~/.claude/projects/.../memory/MEMORY.md` (minimal pointer only)
+
+**Always use REPO paths:**
+```
+memory/MEMORY.md          # Full index
+memory/patterns.md        # Codebase patterns
+memory/decisions.md       # Architectural decisions (DR-XXX)
+memory/testing-patterns.md # Test domain files, corpus workflow
+memory/domain-prereqs.md  # Domain verification queries (GATE 0, Step 4)
+memory/github-config.md   # Repo settings, rulesets
+```
+
+**Rule:** Read/write to repo memory, never to ~/.claude auto-memory.
 
 **Usage:**
-- `patterns.md` for codebase patterns
-- `decisions.md` for architectural context
-- `domain-prereqs.md` for pattern verification before implementation
+- `memory/domain-prereqs.md` - VERIFY before writing code (BLOCKING)
+- `memory/patterns.md` - implementation patterns
+- `memory/decisions.md` - architectural context
 
 ---
 

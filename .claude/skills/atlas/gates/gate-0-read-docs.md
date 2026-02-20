@@ -85,7 +85,7 @@ cargo clean
 
 **Purpose:** Prevent hallucinated syntax by verifying actual codebase patterns before writing code.
 
-**Registry:** `memory/domain-prereqs.md`
+**Registry:** `memory/domain-prereqs.md` (REPO path, not ~/.claude auto-memory)
 
 ### Process
 
