@@ -41,7 +41,7 @@ git branch | grep -v main | xargs -r git branch -D   # Delete ALL local branches
 2. **Git Setup:** Create feature branch from main (see Git Workflow below)
 3. Run GATE -1 (sanity check + local security scan)
 4. Declare workflow type
-5. Execute gates 0→1→2→3→4→5→6→7 (uninterrupted)
+5. **Execute applicable gates** 0→1→2→3→4→5→6→7 (see `gates/gate-applicability.md` for which to run)
 6. **Git Finalize:** Commit, push, create PR with auto-merge
 7. **Sync immediately:** PR merges in ~30-60s (no CI), sync main and delete local branch
 8. Deliver completion summary
@@ -69,6 +69,13 @@ Both engines MUST produce identical output. Parity break = BLOCKING.
 
 ### 7. Testing Protocol
 **Source of truth:** auto-memory `testing-patterns.md` — READ BEFORE WRITING ANY TESTS
+
+**CRITICAL:** Different crates have different patterns:
+- **atlas-runtime:** Consolidated domain files (NO new test files)
+- **atlas-lsp:** Inline server creation (NO helper functions - see testing-patterns.md)
+- **atlas-cli:** Integration tests with assert_cmd
+
+**Always check existing test files in the target crate before writing new tests.**
 
 ---
 

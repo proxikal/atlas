@@ -8,10 +8,44 @@
 
 ## Quick Self-Check (10 seconds)
 
-1. **Did I hit an API surprise?** → Update `patterns.md`
-2. **Did I make an architectural decision?** → Update `decisions/{domain}.md`
-3. **Is anything in memory wrong?** → Fix or archive it
-4. **Is any file approaching size limit?** → Split or archive
+Ask these questions:
+
+1. **Did I hit an API surprise?** (pattern not documented) → Update `patterns.md`
+2. **Did I make an architectural decision?** (new constraint or approach) → Update `decisions/{domain}.md`
+3. **Did I discover a crate-specific pattern?** (like LSP testing) → Update `testing-patterns.md` or `patterns.md`
+4. **Is anything in memory wrong or stale?** → Fix or archive it
+5. **Is any file approaching size limit?** → Split or archive
+
+## When to Update Memory
+
+### ✅ DO Update Memory
+
+**patterns.md:**
+- Hit an undocumented API quirk that cost time
+- Discovered a crate-specific testing pattern
+- Found a common error pattern with a fix
+- Learned a Rust pattern that's Atlas-specific
+
+**Example:** "LSP tests can't use helper functions due to lifetime issues"
+
+**decisions/{domain}.md:**
+- Made an architectural choice between alternatives
+- Established a new constraint or rule
+- Chose an approach that affects future work
+- Resolved an ambiguity in the spec
+
+**Example:** "DR-015: LSP testing uses inline pattern (no helpers due to tower-lsp lifetime constraints)"
+
+### ❌ DON'T Update Memory
+
+**Skip if:**
+- Just following existing patterns (already documented)
+- Phase-specific work (not reusable knowledge)
+- Obvious or trivial changes
+- Implementation details (not architectural)
+- Temporary workarounds
+
+**Example:** Don't document "Created 10 integration tests" (obvious, not reusable)
 
 ---
 

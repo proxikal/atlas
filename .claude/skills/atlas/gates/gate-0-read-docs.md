@@ -21,13 +21,13 @@ cargo clean
 ## Step 2: Read Docs (Selective Reading)
 
 1. **ALWAYS:** Read `STATUS.md` (current state, progress, doc map with routing)
-2. **IF structured development:** Read complete development plan
-3. **ROUTING:** Read `Atlas-SPEC.md` (INDEX only - use routing table)
-4. **SELECTIVE:** Read ONLY the spec files your task needs:
+2. **IF structured development:** Read complete development plan (phase file)
+3. **SELECTIVE:** Read ONLY the spec files your task needs (see routing below)
+4. **CHECK EXISTING CODE:** Before writing tests, read existing test files in the target crate
 
-### Use Routing Table (DO NOT read all specs)
+### Specification Routing (DO NOT read all specs)
 
-**From Atlas-SPEC.md routing table:**
+**Available specs in `docs/specification/`:**
 - Implementing types/generics? → Read `docs/specification/types.md`
 - Parser/grammar work? → Read `docs/specification/syntax.md`
 - Type checking? → Read `docs/specification/language-semantics.md`
