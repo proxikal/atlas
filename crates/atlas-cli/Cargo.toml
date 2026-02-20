@@ -14,6 +14,9 @@ atlas-config = { path = "../atlas-config" }
 atlas-build = { path = "../atlas-build" }
 atlas-formatter = { path = "../atlas-formatter" }
 atlas-lsp = { path = "../atlas-lsp" }
+atlas-package = { path = "../atlas-package" }
+semver = "1.0"
+chrono = "0.4"
 clap = { version = "4.5", features = ["derive", "env"] }
 clap_complete = "4.5"  # Shell completion generation
 indicatif = "0.17"  # Progress indicators

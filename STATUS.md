@@ -1,14 +1,14 @@
 # Atlas Implementation Status
 
 **Last Updated:** 2026-02-20
-**Version:** v0.2 | **Progress:** 116/131 phases (89%)
+**Version:** v0.2 | **Progress:** 117/131 phases (89%)
 
 ---
 
 ## Current Phase
 
-**Last Completed:** phases/cli/phase-04-cli-usability-and-integration.md
-**Next Phase:** phases/cli/phase-05-package-manager-cli.md
+**Last Completed:** phases/cli/phase-05-package-manager-cli.md
+**Next Phase:** phases/cli/phase-06-project-scaffolding.md
 
 > **Execution order:** Correctness (12) → Interpreter (2) → CLI (6) → LSP (5) → Polish (5)
 > Correctness phases are BLOCKING — they fix structural compiler bugs that must be resolved before features.
@@ -27,7 +27,7 @@
 | **Frontend** | 5/5 | ✅ Archived |
 | **Typing** | 7/7 | ✅ Archived |
 | **Interpreter** | 2/2 | ✅ Complete |
-| **CLI** | 4/6 | 🔄 In Progress |
+| **CLI** | 5/6 | 🔄 In Progress |
 | **LSP** | 0/5 | ⬜ Pending |
 | **Polish** | 0/5 | ⬜ Pending |
 
@@ -69,13 +69,13 @@
 ✅ phase-01-debugger-repl-improvements.md
 ✅ phase-02-interpreter-performance-and-integration.md
 
-### CLI (4/6)
+### CLI (5/6)
 
 ✅ phase-01-formatter-and-watch-mode.md
 ✅ phase-02-test-bench-doc-runners.md
 ✅ phase-03-debugger-lsp-cli-integration.md
 ✅ phase-04-cli-usability-and-integration.md
-⬜ phase-05-package-manager-cli.md
+✅ phase-05-package-manager-cli.md
 ⬜ phase-06-project-scaffolding.md
 
 ### LSP (0/5)

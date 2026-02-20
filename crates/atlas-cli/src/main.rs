@@ -332,6 +332,184 @@ enum Commands {
         #[arg(value_enum)]
         shell: Shell,
     },
+
+    /// Initialize a new Atlas project
+    ///
+    /// Creates a new Atlas project with the standard directory structure,
+    /// manifest file (atlas.toml), and optional git repository.
+    ///
+    /// EXAMPLES:
+    ///     atlas init                    Initialize in current directory
+    ///     atlas init my-project         Create new project directory
+    ///     atlas init --lib              Create a library project
+    ///     atlas init --no-git           Skip git initialization
+    #[command(visible_alias = "i")]
+    Init {
+        /// Project name (defaults to directory name)
+        name: Option<String>,
+        /// Create a library project instead of binary
+        #[arg(long)]
+        lib: bool,
+        /// Skip git repository initialization
+        #[arg(long)]
+        no_git: bool,
+        /// Verbose output
+        #[arg(long, short = 'v')]
+        verbose: bool,
+    },
+
+    /// Add a dependency to the project
+    ///
+    /// Adds a new dependency to atlas.toml. Supports version constraints,
+    /// git repositories, and local path dependencies.
+    ///
+    /// EXAMPLES:
+    ///     atlas add http                 Add latest version
+    ///     atlas add http@1.2             Add specific version
+    ///     atlas add http --dev           Add as dev dependency
+    ///     atlas add http --git=https://... Add from git
+    ///     atlas add http --path=../http  Add local dependency
+    Add {
+        /// Package name (optionally with @version)
+        package: String,
+        /// Version constraint (e.g., "1.0", "^1.2.3")
+        #[arg(long)]
+        ver: Option<String>,
+        /// Add as dev dependency
+        #[arg(long)]
+        dev: bool,
+        /// Git repository URL
+        #[arg(long)]
+        git: Option<String>,
+        /// Git branch
+        #[arg(long)]
+        branch: Option<String>,
+        /// Git tag
+        #[arg(long)]
+        tag: Option<String>,
+        /// Git revision
+        #[arg(long)]
+        rev: Option<String>,
+        /// Local path dependency
+        #[arg(long)]
+        path: Option<std::path::PathBuf>,
+        /// Enable specific features
+        #[arg(long, short = 'F')]
+        features: Vec<String>,
+        /// Disable default features
+        #[arg(long)]
+        no_default_features: bool,
+        /// Mark as optional dependency
+        #[arg(long)]
+        optional: bool,
+        /// Rename the dependency
+        #[arg(long)]
+        rename: Option<String>,
+        /// Dry run (don't modify files)
+        #[arg(long)]
+        dry_run: bool,
+    },
+
+    /// Remove a dependency from the project
+    ///
+    /// Removes one or more dependencies from atlas.toml.
+    ///
+    /// EXAMPLES:
+    ///     atlas remove http              Remove single dependency
+    ///     atlas remove http json         Remove multiple
+    ///     atlas remove test-utils --dev  Remove from dev-dependencies
+    #[command(visible_alias = "rm")]
+    Remove {
+        /// Package names to remove
+        packages: Vec<String>,
+        /// Remove from dev dependencies
+        #[arg(long)]
+        dev: bool,
+        /// Dry run (don't modify files)
+        #[arg(long)]
+        dry_run: bool,
+        /// Verbose output
+        #[arg(long, short = 'v')]
+        verbose: bool,
+    },
+
+    /// Install project dependencies
+    ///
+    /// Downloads and installs all dependencies specified in atlas.toml.
+    /// Uses atlas.lock for reproducible builds when available.
+    ///
+    /// EXAMPLES:
+    ///     atlas install                  Install all dependencies
+    ///     atlas install --production     Skip dev dependencies
+    ///     atlas install --force          Force reinstall
+    Install {
+        /// Only install production dependencies
+        #[arg(long)]
+        production: bool,
+        /// Force reinstall even if cached
+        #[arg(long)]
+        force: bool,
+        /// Dry run (don't actually install)
+        #[arg(long)]
+        dry_run: bool,
+        /// Verbose output
+        #[arg(long, short = 'v')]
+        verbose: bool,
+        /// Quiet output (errors only)
+        #[arg(long, short = 'q')]
+        quiet: bool,
+    },
+
+    /// Update project dependencies
+    ///
+    /// Updates dependencies to their latest compatible versions
+    /// according to the constraints in atlas.toml.
+    ///
+    /// EXAMPLES:
+    ///     atlas update                   Update all dependencies
+    ///     atlas update http              Update specific package
+    ///     atlas update --dry-run         Show what would be updated
+    #[command(visible_alias = "up")]
+    Update {
+        /// Specific packages to update (empty = all)
+        packages: Vec<String>,
+        /// Only update dev dependencies
+        #[arg(long)]
+        dev: bool,
+        /// Dry run (don't modify files)
+        #[arg(long)]
+        dry_run: bool,
+        /// Verbose output
+        #[arg(long, short = 'v')]
+        verbose: bool,
+    },
+
+    /// Publish package to registry
+    ///
+    /// Validates, packages, and publishes your package to the Atlas
+    /// package registry. Requires authentication.
+    ///
+    /// EXAMPLES:
+    ///     atlas publish                  Publish to default registry
+    ///     atlas publish --dry-run        Validate without publishing
+    ///     atlas publish --no-verify      Skip validation steps
+    Publish {
+        /// Registry to publish to
+        #[arg(long)]
+        registry: Option<String>,
+        /// Skip all validation checks
+        #[arg(long)]
+        no_verify: bool,
+        /// Validate without publishing
+        #[arg(long)]
+        dry_run: bool,
+        /// Allow publishing with dirty git state
+        #[arg(long)]
+        allow_dirty: bool,
+        /// Verbose output
+        #[arg(long, short = 'v')]
+        verbose: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -492,6 +670,135 @@ fn main() -> Result<()> {
             let mut cmd = Cli::command();
             let name = cmd.get_name().to_string();
             generate(shell, &mut cmd, name, &mut io::stdout());
+        }
+        Commands::Init {
+            name,
+            lib,
+            no_git,
+            verbose,
+        } => {
+            let project_type = if lib {
+                commands::init::ProjectType::Library
+            } else {
+                commands::init::ProjectType::Binary
+            };
+            let non_interactive = name.is_some();
+            let args = commands::init::InitArgs {
+                name,
+                project_type,
+                git: !no_git,
+                path: std::env::current_dir()?,
+                non_interactive,
+                verbose,
+            };
+            commands::init::run(args)?;
+        }
+        Commands::Add {
+            package,
+            ver,
+            dev,
+            git,
+            branch,
+            tag,
+            rev,
+            path,
+            features,
+            no_default_features,
+            optional,
+            rename,
+            dry_run,
+        } => {
+            // Parse package@version syntax
+            let (pkg_name, pkg_version) = if let Some(idx) = package.find('@') {
+                let (name, version) = package.split_at(idx);
+                (name.to_string(), Some(version[1..].to_string()))
+            } else {
+                (package.clone(), ver)
+            };
+
+            let args = commands::add::AddArgs {
+                package: pkg_name,
+                version: pkg_version,
+                dev,
+                git,
+                branch,
+                tag,
+                rev,
+                path,
+                features,
+                no_default_features,
+                optional,
+                rename,
+                project_dir: std::env::current_dir()?,
+                dry_run,
+                verbose: false,
+            };
+            commands::add::run(args)?;
+        }
+        Commands::Remove {
+            packages,
+            dev,
+            dry_run,
+            verbose,
+        } => {
+            let args = commands::remove::RemoveArgs {
+                packages,
+                dev,
+                project_dir: std::env::current_dir()?,
+                dry_run,
+                verbose,
+            };
+            commands::remove::run(args)?;
+        }
+        Commands::Install {
+            production,
+            force,
+            dry_run,
+            verbose,
+            quiet,
+        } => {
+            let args = commands::install::InstallArgs {
+                packages: Vec::new(),
+                production,
+                force,
+                project_dir: std::env::current_dir()?,
+                dry_run,
+                verbose,
+                quiet,
+            };
+            commands::install::run(args)?;
+        }
+        Commands::Update {
+            packages,
+            dev,
+            dry_run,
+            verbose,
+        } => {
+            let args = commands::update::UpdateArgs {
+                packages,
+                dev,
+                project_dir: std::env::current_dir()?,
+                dry_run,
+                verbose,
+            };
+            commands::update::run(args)?;
+        }
+        Commands::Publish {
+            registry,
+            no_verify,
+            dry_run,
+            allow_dirty,
+            verbose,
+        } => {
+            let args = commands::publish::PublishArgs {
+                project_dir: std::env::current_dir()?,
+                registry,
+                no_verify,
+                dry_run,
+                allow_dirty,
+                verbose,
+            };
+            commands::publish::run(args)?;
         }
     }
 
