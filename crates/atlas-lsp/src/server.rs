@@ -8,6 +8,7 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 
 use crate::document::DocumentState;
+use crate::index::SymbolIndex;
 use crate::inlay_hints::InlayHintConfig;
 use crate::semantic_tokens;
 use crate::symbols::WorkspaceIndex;
@@ -17,6 +18,7 @@ pub struct AtlasLspServer {
     client: Client,
     documents: Arc<Mutex<HashMap<Url, DocumentState>>>,
     workspace_index: Arc<Mutex<WorkspaceIndex>>,
+    symbol_index: Arc<Mutex<SymbolIndex>>,
     inlay_config: InlayHintConfig,
 }
 
@@ -27,6 +29,7 @@ impl AtlasLspServer {
             client,
             documents: Arc::new(Mutex::new(HashMap::new())),
             workspace_index: Arc::new(Mutex::new(WorkspaceIndex::new())),
+            symbol_index: Arc::new(Mutex::new(SymbolIndex::new())),
             inlay_config: InlayHintConfig::default(),
         }
     }
@@ -140,6 +143,10 @@ impl LanguageServer for AtlasLspServer {
         if let Some(ast) = ast_clone {
             let mut index = self.workspace_index.lock().await;
             index.index_document(uri.clone(), &text_clone, &ast);
+
+            // Also update symbol index for references
+            let mut symbol_index = self.symbol_index.lock().await;
+            symbol_index.index_document(&uri, &text_clone, Some(&ast));
         }
 
         // Publish diagnostics
@@ -178,6 +185,10 @@ impl LanguageServer for AtlasLspServer {
         if let Some(ast) = ast_clone {
             let mut index = self.workspace_index.lock().await;
             index.index_document(uri.clone(), &text_clone, &ast);
+
+            // Also update symbol index for references
+            let mut symbol_index = self.symbol_index.lock().await;
+            symbol_index.index_document(&uri, &text_clone, Some(&ast));
         }
 
         // Publish diagnostics after releasing locks
@@ -192,8 +203,16 @@ impl LanguageServer for AtlasLspServer {
         let uri = params.text_document.uri;
 
         // Remove document from state
-        let mut documents = self.documents.lock().await;
-        documents.remove(&uri);
+        {
+            let mut documents = self.documents.lock().await;
+            documents.remove(&uri);
+        }
+
+        // Remove from symbol index
+        {
+            let mut symbol_index = self.symbol_index.lock().await;
+            symbol_index.remove_document(&uri);
+        }
 
         // Clear diagnostics
         self.client.publish_diagnostics(uri, Vec::new(), None).await;
@@ -291,10 +310,26 @@ impl LanguageServer for AtlasLspServer {
     }
 
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
-        let _uri = params.text_document_position.text_document.uri;
-        let _position = params.text_document_position.position;
+        let uri = params.text_document_position.text_document.uri;
+        let position = params.text_document_position.position;
+        let include_declaration = params.context.include_declaration;
 
-        // TODO: Implement find references
+        let documents = self.documents.lock().await;
+        let symbol_index = self.symbol_index.lock().await;
+
+        if let Some(doc) = documents.get(&uri) {
+            let locations = crate::references::find_all_references(
+                &uri,
+                &doc.text,
+                position,
+                doc.ast.as_ref(),
+                doc.symbols.as_ref(),
+                &symbol_index,
+                include_declaration,
+            );
+            return Ok(locations);
+        }
+
         Ok(None)
     }
 
