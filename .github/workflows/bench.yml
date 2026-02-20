@@ -1,21 +1,19 @@
 # Benchmarks - Performance regression tracking
 #
-# Runs on: main push, manual trigger
-# Features:
-#   - Runs Criterion benchmarks
-#   - Compares against historical baseline
-#   - Alerts on >10% regression
-#   - Stores results for trend tracking
+# DISABLED - Run locally: cargo bench -p atlas-runtime
+#
+# To re-enable: uncomment the push trigger below
 
 name: Benchmarks
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'crates/atlas-runtime/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
+  # DISABLED - saves GitHub Actions credits
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'crates/atlas-runtime/**'
+  #     - 'Cargo.toml'
+  #     - 'Cargo.lock'
   workflow_dispatch:
 
 concurrency:
