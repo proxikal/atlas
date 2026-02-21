@@ -13,7 +13,7 @@ fn create_test_file(content: &str) -> NamedTempFile {
 }
 
 fn atlas_cmd() -> Command {
-    Command::cargo_bin("atlas").unwrap()
+    Command::from(assert_cmd::cargo::cargo_bin_cmd!("atlas"))
 }
 
 // ── Basic launch tests ────────────────────────────────────────────────────────

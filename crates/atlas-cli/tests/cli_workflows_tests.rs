@@ -17,7 +17,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn atlas_cmd() -> Command {
-    Command::cargo_bin("atlas").unwrap()
+    Command::new(assert_cmd::cargo::cargo_bin!("atlas"))
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
