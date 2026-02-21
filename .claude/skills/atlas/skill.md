@@ -14,11 +14,9 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 
 ```bash
 cat .worktree-id 2>/dev/null || echo "unknown"   # Detect worktree identity
-git fetch origin                                  # Sync from remote
-git rebase origin/main                            # Update this worktree
 ```
 
-**Why:** Worktrees are isolated. Always sync from origin/main before starting work.
+**Full state audit runs in GATE -1** — worktree state, uncommitted work, unmerged branches, other worktrees. See `gates/gate-minus1-sanity.md`.
 
 ---
 
@@ -38,9 +36,9 @@ git rebase origin/main                            # Update this worktree
 ## Core Rules (NON-NEGOTIABLE)
 
 ### 1. Autonomous Execution
-1. Check STATUS.md (verify phase not complete)
-2. **Git Setup:** Create feature branch from main (see Git Workflow below)
-3. Run GATE -1 (sanity check + local security scan)
+1. **Run GATE -1** — full state audit (worktree state, unfinished work, stale branches, build verification, security scan)
+2. Check STATUS.md (verify phase not complete)
+3. **Git Setup:** GATE -1 determines branch state — create new branch or resume existing
 4. Declare workflow type
 5. **Execute applicable gates** 0→1→2→3→4→5→6→7 (see `gates/gate-applicability.md` for which to run)
 6. **Git Finalize:** Commit locally → merge to main → clean up feature branch (see Git Workflow)
@@ -89,12 +87,11 @@ feat/{short-description}      # Features (e.g., feat/array-slice)
 ci/{short-description}        # CI/infra (e.g., ci/optimize-workflows)
 ```
 
-**START of phase (every session):**
+**START of phase (after GATE -1 state audit):**
 ```bash
-git fetch origin
-git rebase origin/main                           # Sync this worktree
+git rebase main                                  # Sync home branch to LOCAL main
 git checkout -b phase/{category}-{number}        # Create feature branch
-# (or continue existing feature branch if resuming)
+# (or continue existing feature branch if GATE -1 detected unfinished work)
 ```
 
 **DURING phase (multi-part):**
