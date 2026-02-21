@@ -1295,8 +1295,14 @@ fn test_guard_does_not_satisfy_exhaustiveness_alone() {
         run(1);"#,
     );
     assert!(!ok, "Expected type error for non-exhaustive guarded match");
-    let has_exhaustive_error = diags.iter().any(|d| d.contains("exhaustive") || d.contains("AT3027"));
-    assert!(has_exhaustive_error, "Expected exhaustiveness error, got: {:?}", diags);
+    let has_exhaustive_error = diags
+        .iter()
+        .any(|d| d.contains("exhaustive") || d.contains("AT3027"));
+    assert!(
+        has_exhaustive_error,
+        "Expected exhaustiveness error, got: {:?}",
+        diags
+    );
 }
 
 #[test]
@@ -1443,7 +1449,11 @@ fn test_or_bool_exhaustive() {
         }
         run(true);"#,
     );
-    assert!(ok, "Expected OR bool pattern to be exhaustive, got: {:?}", diags);
+    assert!(
+        ok,
+        "Expected OR bool pattern to be exhaustive, got: {:?}",
+        diags
+    );
 }
 
 #[test]
@@ -1470,7 +1480,11 @@ fn test_or_option_exhaustive() {
         }
         run(None);"#,
     );
-    assert!(ok, "Expected Some | None OR to be exhaustive, got: {:?}", diags);
+    assert!(
+        ok,
+        "Expected Some | None OR to be exhaustive, got: {:?}",
+        diags
+    );
 }
 
 #[test]
@@ -1484,7 +1498,11 @@ fn test_or_result_exhaustive() {
         }
         run(Ok(1));"#,
     );
-    assert!(ok, "Expected Ok | Err OR to be exhaustive, got: {:?}", diags);
+    assert!(
+        ok,
+        "Expected Ok | Err OR to be exhaustive, got: {:?}",
+        diags
+    );
 }
 
 #[test]

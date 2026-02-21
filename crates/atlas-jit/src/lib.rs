@@ -3,6 +3,25 @@
 //! Provides just-in-time compilation for Atlas bytecode using Cranelift
 //! as the native code generation backend. Hot functions identified by
 //! the VM profiler are compiled to native machine code for 5-10x speedup.
+//!
+//! # Status: Foundation Complete — Not Yet Wired to Production
+//!
+//! The JIT compiles **arithmetic-only** functions (numeric constants, local variables,
+//! arithmetic operators, comparisons). It does NOT support control flow (jump/call),
+//! global variables, or collection opcodes. See `JIT_STATUS.md` for the full capability
+//! matrix and v0.3 integration requirements.
+//!
+//! ## Supported Opcodes
+//!
+//! `Constant`, `True`, `False`, `Null`, `Add`, `Sub`, `Mul`, `Div`, `Mod`, `Negate`,
+//! `Equal`, `NotEqual`, `Less`, `LessEqual`, `Greater`, `GreaterEqual`, `Not`,
+//! `GetLocal`, `SetLocal`, `Pop`, `Dup`, `Return`, `Halt`
+//!
+//! ## Unsupported Opcodes (bail out to interpreter)
+//!
+//! `GetGlobal`, `SetGlobal`, `Jump`, `JumpIfFalse`, `Loop`, `Call`, `And`, `Or`,
+//! `Array`, `GetIndex`, `SetIndex`, `IsOptionSome`, `IsOptionNone`, `IsResultOk`,
+//! `IsResultErr`, `ExtractOptionValue`, `ExtractResultValue`, `IsArray`, `GetArrayLen`
 
 pub mod backend;
 pub mod cache;

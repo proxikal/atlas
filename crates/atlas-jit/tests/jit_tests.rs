@@ -780,3 +780,139 @@ fn test_engine_multiple_functions() {
     let stats = engine.stats();
     assert_eq!(stats.compilations, 2);
 }
+
+// =============================================================================
+// Complete UnsupportedOpcode coverage — one test per unsupported opcode
+//
+// Every opcode not handled by the JIT must return JitError::UnsupportedOpcode.
+// This ensures the JIT correctly falls back to the interpreter for all
+// unsupported operations rather than silently producing wrong results.
+// =============================================================================
+
+/// Helper: assert that a single-opcode bytecode triggers UnsupportedOpcode
+fn assert_unsupported(opcode: Opcode) {
+    let mut bc = Bytecode::new();
+    bc.emit(opcode, dummy());
+    // Some opcodes read operand bytes — emit two dummy bytes to avoid out-of-bounds
+    bc.emit_u16(0);
+    let translator = IrTranslator::new(0);
+    let result = translator.translate(&bc, 0, bc.instructions.len());
+    assert!(
+        result.is_err(),
+        "Expected UnsupportedOpcode for {:?}, but got Ok",
+        opcode
+    );
+    match result.unwrap_err() {
+        JitError::UnsupportedOpcode(op) => {
+            assert_eq!(op, opcode, "Wrong opcode in error");
+        }
+        other => panic!("Expected UnsupportedOpcode({:?}), got {:?}", opcode, other),
+    }
+}
+
+#[test]
+fn test_unsupported_set_global() {
+    assert_unsupported(Opcode::SetGlobal);
+}
+
+#[test]
+fn test_unsupported_jump() {
+    assert_unsupported(Opcode::Jump);
+}
+
+#[test]
+fn test_unsupported_jump_if_false() {
+    assert_unsupported(Opcode::JumpIfFalse);
+}
+
+#[test]
+fn test_unsupported_loop() {
+    assert_unsupported(Opcode::Loop);
+}
+
+#[test]
+fn test_unsupported_call() {
+    assert_unsupported(Opcode::Call);
+}
+
+#[test]
+fn test_unsupported_and() {
+    assert_unsupported(Opcode::And);
+}
+
+#[test]
+fn test_unsupported_or() {
+    assert_unsupported(Opcode::Or);
+}
+
+#[test]
+fn test_unsupported_array() {
+    assert_unsupported(Opcode::Array);
+}
+
+#[test]
+fn test_unsupported_get_index() {
+    assert_unsupported(Opcode::GetIndex);
+}
+
+#[test]
+fn test_unsupported_set_index() {
+    assert_unsupported(Opcode::SetIndex);
+}
+
+#[test]
+fn test_unsupported_is_option_some() {
+    assert_unsupported(Opcode::IsOptionSome);
+}
+
+#[test]
+fn test_unsupported_is_option_none() {
+    assert_unsupported(Opcode::IsOptionNone);
+}
+
+#[test]
+fn test_unsupported_is_result_ok() {
+    assert_unsupported(Opcode::IsResultOk);
+}
+
+#[test]
+fn test_unsupported_is_result_err() {
+    assert_unsupported(Opcode::IsResultErr);
+}
+
+#[test]
+fn test_unsupported_extract_option_value() {
+    assert_unsupported(Opcode::ExtractOptionValue);
+}
+
+#[test]
+fn test_unsupported_extract_result_value() {
+    assert_unsupported(Opcode::ExtractResultValue);
+}
+
+#[test]
+fn test_unsupported_is_array() {
+    assert_unsupported(Opcode::IsArray);
+}
+
+#[test]
+fn test_unsupported_get_array_len() {
+    assert_unsupported(Opcode::GetArrayLen);
+}
+
+// =============================================================================
+// Halt opcode — supported (treated as Return)
+// =============================================================================
+
+#[test]
+fn test_halt_treated_as_return() {
+    // Halt is supported — it breaks the translation loop and returns top of stack
+    let mut bc = Bytecode::new();
+    let idx = bc.add_constant(Value::Number(99.0));
+    bc.emit(Opcode::Constant, dummy());
+    bc.emit_u16(idx);
+    bc.emit(Opcode::Halt, dummy());
+
+    let result = jit_eval(&bc);
+    assert_eq!(result, 99.0);
+}
