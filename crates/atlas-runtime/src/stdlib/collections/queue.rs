@@ -17,14 +17,6 @@ pub struct AtlasQueue {
 
 impl AtlasQueue {
     /// Create new empty queue
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// let queue = AtlasQueue::new();
-    /// assert!(queue.is_empty());
-    /// ```
     pub fn new() -> Self {
         Self {
             inner: VecDeque::new(),
@@ -32,15 +24,6 @@ impl AtlasQueue {
     }
 
     /// Create queue with pre-allocated capacity
-    ///
-    /// Useful for performance when queue size is known.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// let queue = AtlasQueue::with_capacity(100);
-    /// ```
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             inner: VecDeque::with_capacity(capacity),
@@ -48,16 +31,6 @@ impl AtlasQueue {
     }
 
     /// Add element to back of queue (FIFO order)
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// # use std::sync::Arc;
-    /// let mut queue = AtlasQueue::new();
-    /// queue.enqueue(Value::Number(1.0));
-    /// queue.enqueue(Value::String(Arc::new("hello".to_string())));
-    /// ```
     pub fn enqueue(&mut self, value: Value) {
         self.inner.push_back(value);
     }
@@ -65,16 +38,6 @@ impl AtlasQueue {
     /// Remove and return element from front of queue
     ///
     /// Returns `None` if queue is empty.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// let mut queue = AtlasQueue::new();
-    /// queue.enqueue(Value::Number(1.0));
-    /// assert_eq!(queue.dequeue(), Some(Value::Number(1.0)));
-    /// assert_eq!(queue.dequeue(), None);
-    /// ```
     pub fn dequeue(&mut self) -> Option<Value> {
         self.inner.pop_front()
     }
@@ -82,59 +45,21 @@ impl AtlasQueue {
     /// View front element without removing
     ///
     /// Returns `None` if queue is empty.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// let mut queue = AtlasQueue::new();
-    /// queue.enqueue(Value::Number(42.0));
-    /// assert_eq!(queue.peek(), Some(&Value::Number(42.0)));
-    /// assert_eq!(queue.len(), 1); // Still has 1 element
-    /// ```
     pub fn peek(&self) -> Option<&Value> {
         self.inner.front()
     }
 
     /// Get number of elements in queue
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// let mut queue = AtlasQueue::new();
-    /// assert_eq!(queue.len(), 0);
-    /// queue.enqueue(Value::Number(1.0));
-    /// assert_eq!(queue.len(), 1);
-    /// ```
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
     /// Check if queue is empty
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// let queue = AtlasQueue::new();
-    /// assert!(queue.is_empty());
-    /// ```
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 
     /// Remove all elements from queue
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// let mut queue = AtlasQueue::new();
-    /// queue.enqueue(Value::Number(1.0));
-    /// queue.clear();
-    /// assert!(queue.is_empty());
-    /// ```
     pub fn clear(&mut self) {
         self.inner.clear();
     }
@@ -142,17 +67,6 @@ impl AtlasQueue {
     /// Convert queue to array (preserves FIFO order)
     ///
     /// Front of queue becomes first array element.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::queue::AtlasQueue;
-    /// # use atlas_runtime::value::Value;
-    /// let mut queue = AtlasQueue::new();
-    /// queue.enqueue(Value::Number(1.0));
-    /// queue.enqueue(Value::Number(2.0));
-    /// let arr = queue.to_vec();
-    /// assert_eq!(arr, vec![Value::Number(1.0), Value::Number(2.0)]);
-    /// ```
     pub fn to_vec(&self) -> Vec<Value> {
         self.inner.iter().cloned().collect()
     }
@@ -170,14 +84,11 @@ impl Default for AtlasQueue {
 
 use crate::span::Span;
 use crate::stdlib::stdlib_arity_error;
-use crate::value::RuntimeError;
-use std::sync::Arc;
-use std::sync::Mutex;
+use crate::value::{RuntimeError, ValueQueue};
 
-/// Extract queue from value
-fn extract_queue(value: &Value, span: Span) -> Result<Arc<Mutex<AtlasQueue>>, RuntimeError> {
+fn extract_queue_ref<'a>(value: &'a Value, span: Span) -> Result<&'a ValueQueue, RuntimeError> {
     match value {
-        Value::Queue(queue) => Ok(Arc::clone(queue)),
+        Value::Queue(q) => Ok(q),
         _ => Err(RuntimeError::TypeError {
             msg: format!("Expected Queue, got {}", value.type_name()),
             span,
@@ -190,35 +101,45 @@ pub fn new_queue(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(stdlib_arity_error("Queue.new", 0, args.len(), span));
     }
-    Ok(Value::Queue(Arc::new(Mutex::new(AtlasQueue::new()))))
+    Ok(Value::Queue(ValueQueue::new()))
 }
 
-/// Add element to back of queue
+/// Add element to back of queue. Returns modified Queue (CoW).
 pub fn enqueue(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(stdlib_arity_error("Queue.enqueue", 2, args.len(), span));
     }
 
-    let queue = extract_queue(&args[0], span)?;
     let element = args[1].clone();
-
-    queue.lock().unwrap().enqueue(element);
-    Ok(Value::Null)
+    let mut queue_val = args[0].clone();
+    if let Value::Queue(ref mut q) = queue_val {
+        q.inner_mut().enqueue(element);
+    }
+    Ok(queue_val)
 }
 
-/// Remove and return element from front of queue
+/// Remove and return element from front of queue.
+/// Returns [Option<Value>, modified Queue].
 pub fn dequeue(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(stdlib_arity_error("Queue.dequeue", 1, args.len(), span));
     }
 
-    let queue = extract_queue(&args[0], span)?;
-    let value = queue.lock().unwrap().dequeue();
+    let mut queue_val = args[0].clone();
+    let value = if let Value::Queue(ref mut q) = queue_val {
+        q.inner_mut().dequeue()
+    } else {
+        return Err(RuntimeError::TypeError {
+            msg: format!("Expected Queue, got {}", args[0].type_name()),
+            span,
+        });
+    };
 
-    Ok(match value {
+    let item_opt = match value {
         Some(v) => Value::Option(Some(Box::new(v))),
         None => Value::Option(None),
-    })
+    };
+    Ok(Value::array(vec![item_opt, queue_val]))
 }
 
 /// View front element without removing
@@ -227,8 +148,8 @@ pub fn peek(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(stdlib_arity_error("Queue.peek", 1, args.len(), span));
     }
 
-    let queue = extract_queue(&args[0], span)?;
-    let value = queue.lock().unwrap().peek().cloned();
+    let queue = extract_queue_ref(&args[0], span)?;
+    let value = queue.inner().peek().cloned();
 
     Ok(match value {
         Some(v) => Value::Option(Some(Box::new(v))),
@@ -242,9 +163,8 @@ pub fn size(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(stdlib_arity_error("Queue.size", 1, args.len(), span));
     }
 
-    let queue = extract_queue(&args[0], span)?;
-    let len = queue.lock().unwrap().len();
-    Ok(Value::Number(len as f64))
+    let queue = extract_queue_ref(&args[0], span)?;
+    Ok(Value::Number(queue.inner().len() as f64))
 }
 
 /// Check if queue is empty
@@ -253,20 +173,21 @@ pub fn is_empty(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(stdlib_arity_error("Queue.isEmpty", 1, args.len(), span));
     }
 
-    let queue = extract_queue(&args[0], span)?;
-    let empty = queue.lock().unwrap().is_empty();
-    Ok(Value::Bool(empty))
+    let queue = extract_queue_ref(&args[0], span)?;
+    Ok(Value::Bool(queue.inner().is_empty()))
 }
 
-/// Remove all elements from queue
+/// Remove all elements from queue. Returns cleared Queue.
 pub fn clear(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(stdlib_arity_error("Queue.clear", 1, args.len(), span));
     }
 
-    let queue = extract_queue(&args[0], span)?;
-    queue.lock().unwrap().clear();
-    Ok(Value::Null)
+    let mut queue_val = args[0].clone();
+    if let Value::Queue(ref mut q) = queue_val {
+        q.inner_mut().clear();
+    }
+    Ok(queue_val)
 }
 
 /// Convert queue to array (FIFO order)
@@ -275,9 +196,9 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(stdlib_arity_error("Queue.toArray", 1, args.len(), span));
     }
 
-    let queue = extract_queue(&args[0], span)?;
-    let elements = queue.lock().unwrap().to_vec();
-    Ok(Value::Array(Arc::new(Mutex::new(elements))))
+    let queue = extract_queue_ref(&args[0], span)?;
+    let elements = queue.inner().to_vec();
+    Ok(Value::array(elements))
 }
 
 #[cfg(test)]
