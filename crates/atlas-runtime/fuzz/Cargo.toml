@@ -37,3 +37,18 @@ doc = false
 name = "fuzz_eval"
 path = "fuzz_targets/fuzz_eval.rs"
 doc = false
+
+[[bin]]
+name = "parser_fuzz"
+path = "fuzz_targets/parser_fuzz.rs"
+doc = false
+
+[[bin]]
+name = "typechecker_fuzz"
+path = "fuzz_targets/typechecker_fuzz.rs"
+doc = false
+
+[[bin]]
+name = "vm_fuzz"
+path = "fuzz_targets/vm_fuzz.rs"
+doc = false
