@@ -2,9 +2,9 @@
 
 # Atlas
 
-### The AI-First Programming Language
+### The AI-First Systems Language
 
-**Designed for AI code generation. Built entirely by AI.**
+**Designed for AI code generation. Built entirely by AI. Built to go systems-level.**
 
 [![CI](https://github.com/proxikal/atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/proxikal/atlas/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue.svg)](LICENSE)
@@ -36,7 +36,17 @@ graph LR
     style Atlas fill:#e8f5e9
 ```
 
-**The result:** A language that AI agents can generate, analyze, and debug with unprecedented reliability.
+**The result:** A language that AI agents can generate, analyze, and debug with unprecedented reliability — and one that is being built to scale all the way to systems programming.
+
+### The Long Game
+
+Atlas starts where other languages wish they'd started: with AI as a first-class consumer of the language, and a memory model designed for systems-level work from day one.
+
+- **No garbage collector.** Deterministic allocation. Value semantics by default.
+- **No hidden ownership rules.** Ownership is explicit in syntax — AI can read it, write it, verify it.
+- **No retrofit.** The foundation is correct before the features are built. Unlike Go (chose GC early, never went systems), unlike Swift (retrofitting ownership into ARC), Atlas gets the memory model right in v0.3 while it's still young.
+
+The trajectory: scripting-capable language today → systems-capable language by v1.0.
 
 ---
 
@@ -129,7 +139,8 @@ graph TD
 **What Atlas avoids:**
 - No implicit coercion (JavaScript)
 - No null pointer exceptions (Java)
-- No complex lifetime annotations (Rust)
+- No garbage collector (Go) — deterministic allocation
+- No implicit lifetime rules (Rust) — ownership is explicit in syntax
 - No significant whitespace (Python)
 
 ---
@@ -317,7 +328,7 @@ flowchart TB
 | `atlas-config` | Project configuration | Complete |
 | `atlas-build` | Build system | Complete |
 | `atlas-package` | Package manager | Complete |
-| `atlas-jit` | JIT compilation | Foundation |
+| `atlas-jit` | JIT compilation (Cranelift) | Arithmetic complete, control flow in v0.3 |
 
 ---
 
@@ -372,7 +383,7 @@ atlas dump-types program.atl --format json
 
 | Metric | Value |
 |--------|-------|
-| **Tests** | 6,764 (0 failures) |
+| **Tests** | 7,165 (0 failures) |
 | **Stdlib Functions** | 300+ |
 | **Stdlib Modules** | 25 |
 | **LSP Features** | 16 |
@@ -400,7 +411,7 @@ atlas dump-types program.atl --format json
 | Fuzzing Infrastructure | ✅ Complete |
 | Documentation | ✅ Complete |
 
-*Detailed progress in [`STATUS.md`](STATUS.md) | v0.3 research in [`V03_EXPLORATION_PLAN.md`](V03_EXPLORATION_PLAN.md)*
+*Detailed progress in [`STATUS.md`](STATUS.md) | v0.3 plan in [`docs/internal/V03_PLAN.md`](docs/internal/V03_PLAN.md)*
 
 ---
 
