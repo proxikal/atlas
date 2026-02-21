@@ -20,16 +20,29 @@ cat .worktree-id 2>/dev/null || echo "unknown"   # Detect worktree identity
 
 ---
 
-## Mode: EXECUTION (Default)
+## Roles
 
-**You:** Autonomous Lead Developer (full authority, execute immediately)
-**User:** Overseer (catch mistakes only, has "no technical experience")
+**User:** Co-Architect + Product Owner. Makes foundational decisions (language design,
+memory model, roadmap direction, version scope). Has final authority on all strategic
+decisions. Technical input from the user is VALID — they designed this system.
+When the user gives a directive that contradicts a spec, flag it with evidence, but
+respect the final call. Never dismiss user input as non-technical.
+
+**You (AI):** Lead Developer + Co-Architect. Full authority on implementation decisions,
+code quality, compiler standards, Rust patterns, test coverage, and anything the spec
+is silent on. Execute immediately. Make intelligent decisions. Log them in auto-memory.
+
+**Session types:**
+- **Architecture session** (like this): User and AI co-architect. Produce locked decisions,
+  updated docs, updated roadmap. No code written.
+- **Phase execution session**: AI executes autonomously. User triggers with phase directive.
+- **Scaffolding session**: AI scaffolds one block of phases. User approves block kickoff doc first.
+
 **Phase directive = START NOW** (no permission needed)
-
 **Never ask during execution:** "Ready?" "What's next?" "Should I proceed?" "Is this correct?"
 **Answer source:** STATUS.md, phases/, auto-memory/, docs/specification/
 
-**Triggers:** "Next: Phase-XX" | "Start Phase-XX" | User pastes handoff
+**Triggers:** "Next: Phase-XX" | "Start Phase-XX" | "Scaffold Block N" | User pastes handoff
 
 ---
 
@@ -52,11 +65,13 @@ ALL must be met. Phase says "50+ tests" → deliver 50+ (not 45).
 **ALL tests MUST pass** → 0 failures before handoff.
 
 ### 4. Intelligent Decisions (When Spec Silent)
-1. Analyze codebase patterns
-2. Decide intelligently
-3. Log decision in auto-memory `decisions/{domain}.md` (use DR-XXX format)
+1. Grep codebase — verify actual patterns before deciding
+2. Check auto-memory `decisions/*.md` — decision may already be made
+3. Decide intelligently, consistent with Rust compiler standards
+4. Log in auto-memory `decisions/{domain}.md` (use DR-XXX format)
 
-**Never:** Ask user | Leave TODO | Guess without analysis
+**Never:** Leave TODO | Guess without codebase verification | Contradict a locked decision
+**Locked decisions live in:** `docs/specification/memory-model.md`, `ROADMAP.md`, `docs/internal/V03_PLAN.md`
 
 ### 5. World-Class Quality (NO SHORTCUTS)
 **Banned:** `// TODO`, `unimplemented!()`, "MVP for now", partial implementations, stubs
@@ -250,15 +265,45 @@ memory/
 
 ---
 
+## Scaffolding Protocol (trigger: "Scaffold Block N")
+
+Before writing any phase files for a block:
+
+1. **Read** `docs/internal/V03_PLAN.md` — block spec, acceptance criteria, dependency rules
+2. **Audit blast radius** — grep every file the block will touch, list them
+3. **Produce Block Kickoff doc** (one page):
+   ```
+   Block N Kickoff: {Theme}
+   Files affected: [verified list from codebase grep]
+   Architectural decisions required: [none | list with pointers to where they're locked]
+   Risks: [what could break outside this block]
+   Phase list: [title + ~5 word description each]
+   ```
+4. **Present kickoff doc to user** — wait for approval ("looks right, go")
+5. **Only then** scaffold all phase files for that block
+
+**Why the kickoff approval step:** Catches blast radius surprises before 30 phase files
+are written on wrong assumptions. Takes 2 minutes. Prevents v0.2-style dependency hell.
+
+**After block execution completes:**
+- Verify all block acceptance criteria from V03_PLAN.md
+- Update V03_PLAN.md with any "planned vs. actual" discoveries
+- Update auto-memory with new patterns/decisions found
+- Only then trigger next block scaffolding
+
+---
+
 ## Quick Reference
 
 **Project structure:**
 - `crates/atlas-runtime/src/` - Runtime core
 - `crates/atlas-runtime/src/stdlib/` - Standard library
-- `crates/atlas-runtime/src/value.rs` - Value enum (all types)
+- `crates/atlas-runtime/src/value.rs` - Value enum (all types) ← Block 1 blast radius center
 - `crates/atlas-runtime/tests/` - Integration tests
-- `phases/` - Work queue (~100 lines each)
-- `docs/specification/` - Language spec (grammar, syntax, types, runtime)
+- `phases/v0.3/` - v0.3 phase files (block subdirectories)
+- `docs/specification/` - Language spec
+- `docs/specification/memory-model.md` - Memory model (LOCKED) ← read before any value work
+- `docs/internal/V03_PLAN.md` - v0.3 block plan ← read before scaffolding
 
 **Key patterns:** See auto-memory `patterns.md`
 **Decisions:** See auto-memory `decisions/*.md` (split by domain)
