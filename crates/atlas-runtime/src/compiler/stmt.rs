@@ -2,86 +2,41 @@
 
 use crate::ast::*;
 use crate::bytecode::Opcode;
-use crate::compiler::{Compiler, Local, LoopContext};
+use crate::compiler::{Compiler, Local, LoopContext, UpvalueCapture, UpvalueContext};
 use crate::diagnostic::Diagnostic;
 use crate::span::Span;
 use crate::value::Value;
 
 impl Compiler {
-    /// Compile a nested function declaration (Phase 6)
+    /// Compile a nested function declaration.
     ///
-    /// Nested functions are compiled similarly to top-level functions, but:
-    /// - They're stored as local variables instead of globals
-    /// - They use scoped names to avoid collisions
+    /// Restructured layout to support upvalue capture:
+    ///   [Jump(after_body)]
+    ///   [function body — may emit GetUpvalue/SetUpvalue]
+    ///   [Null, Return]
+    ///   [after_body:]
+    ///   [GetLocal(outer_rel) for each captured upvalue]
+    ///   [MakeClosure(func_const_idx, n_upvalues)] OR [Constant(func_const_idx)]
+    ///   [SetGlobal(scoped_name)]
+    ///   [local slot: closure/function value]
     fn compile_nested_function(&mut self, func: &FunctionDecl) -> Result<(), Vec<Diagnostic>> {
-        // Create scoped name to avoid collisions between nested functions
         let scoped_name = format!("{}_{}", func.name.name, self.next_func_id);
         self.next_func_id += 1;
 
-        // Create placeholder FunctionRef
-        let placeholder_ref = crate::value::FunctionRef {
-            name: scoped_name.clone(),
-            arity: func.params.len(),
-            bytecode_offset: 0, // Will be updated after Jump
-            local_count: 0,     // Will be updated after compiling body
-        };
-        let placeholder_value = crate::value::Value::Function(placeholder_ref);
-
-        // Add placeholder to constant pool
-        let const_idx = self.bytecode.add_constant(placeholder_value);
-        self.bytecode.emit(Opcode::Constant, func.span);
-        self.bytecode.emit_u16(const_idx);
-
-        // Store function both globally (for sibling access) and locally (for outer scope)
-        if self.scope_depth == 0 {
-            // Top-level: store globally with original name
-            let name_idx = self
-                .bytecode
-                .add_constant(crate::value::Value::string(&func.name.name));
-            self.bytecode.emit(Opcode::SetGlobal, func.span);
-            self.bytecode.emit_u16(name_idx);
-            self.bytecode.emit(Opcode::Pop, func.span);
-        } else {
-            // Nested function: store globally with scoped name for sibling access
-            let scoped_name_idx = self
-                .bytecode
-                .add_constant(crate::value::Value::string(&scoped_name));
-            self.bytecode.emit(Opcode::SetGlobal, func.span);
-            self.bytecode.emit_u16(scoped_name_idx);
-
-            // Also add as local variable in outer function's scope
-            self.push_local(Local {
-                name: func.name.name.clone(),
-                depth: self.scope_depth,
-                mutable: false,
-                scoped_name: Some(scoped_name.clone()), // Store scoped name for sibling access
-            });
-            // The function value is still on stack - it will be the first local
-        }
-
-        // Jump over the function body (so it's not executed during declaration)
+        // --- Phase 1: Jump over the function body ---
         self.bytecode.emit(Opcode::Jump, func.span);
         let skip_jump = self.bytecode.current_offset();
         self.bytecode.emit_u16(0xFFFF); // Placeholder
 
-        // Record the function body offset
         let function_offset = self.bytecode.current_offset();
 
-        // STRATEGY FOR NESTED FUNCTIONS:
-        // - Keep parent scope locals visible (for sibling function calls)
-        // - Add this function's parameters starting from index 0
-        // - Use local_base to track where this function's locals start
-        // - When emitting GetLocal/SetLocal, adjust index based on whether
-        //   it's a parent-scope variable (keep absolute) or function-local (relative)
-
+        // --- Phase 2: Compile function body with upvalue tracking ---
         let old_scope = self.scope_depth;
         let local_base = self.locals.len(); // Where this function's locals start
         self.scope_depth += 1;
 
-        // Reset watermark for this nested function. Save previous value.
         let prev_watermark = std::mem::replace(&mut self.locals_watermark, local_base);
 
-        // Add parameters as locals
         for param in &func.params {
             self.push_local(Local {
                 name: param.name.name.clone(),
@@ -91,41 +46,101 @@ impl Compiler {
             });
         }
 
-        // Save the local_base before compiling body (for nested function resolution)
         let prev_local_base = std::mem::replace(&mut self.current_function_base, local_base);
 
-        // Compile function body
+        // Push upvalue tracking context for this nested function.
+        // `parent_base` = prev_local_base = the immediate parent function's local base.
+        // Any abs_local_idx >= parent_base is a direct parent local; anything below is
+        // from a grandparent scope and requires upvalue chaining.
+        self.upvalue_stack.push(UpvalueContext {
+            parent_base: prev_local_base,
+            captures: Vec::new(),
+        });
+
         self.compile_block(&func.body)?;
 
-        // Restore previous function base
+        // Pop upvalue context — now we know all captured outer-scope variables
+        let upvalue_ctx = self.upvalue_stack.pop().expect("upvalue context missing");
+        let upvalues = upvalue_ctx.captures;
+
         self.current_function_base = prev_local_base;
-
-        // Calculate total local count using watermark (not self.locals.len() which may
-        // have been truncated by match arm cleanup).
         let total_local_count = self.locals_watermark - local_base;
-
-        // Restore watermark for the enclosing function
         self.locals_watermark = prev_watermark;
 
-        // Implicit return null if no explicit return
         self.bytecode.emit(Opcode::Null, func.span);
         self.bytecode.emit(Opcode::Return, func.span);
 
-        // Restore scope and remove this function's locals
         self.scope_depth = old_scope;
         self.locals.truncate(local_base);
 
-        // Update the FunctionRef in constants with accurate offsets
-        let updated_ref = crate::value::FunctionRef {
-            name: scoped_name,
+        // --- Phase 3: Patch the skip jump ---
+        self.bytecode.patch_jump(skip_jump);
+
+        // --- Phase 4: Definition site (after jump target) ---
+        let n_upvalues = upvalues.len();
+
+        // Add the final FunctionRef to the constant pool
+        let func_ref = crate::value::FunctionRef {
+            name: scoped_name.clone(),
             arity: func.params.len(),
             bytecode_offset: function_offset,
             local_count: total_local_count,
         };
-        self.bytecode.constants[const_idx as usize] = crate::value::Value::Function(updated_ref);
+        let const_idx = self
+            .bytecode
+            .add_constant(crate::value::Value::Function(func_ref));
 
-        // Patch the skip jump to go past the function body
-        self.bytecode.patch_jump(skip_jump);
+        if n_upvalues == 0 {
+            // No upvalues: plain function value (existing behavior)
+            self.bytecode.emit(Opcode::Constant, func.span);
+            self.bytecode.emit_u16(const_idx);
+        } else {
+            // Push each captured value onto the stack before MakeClosure.
+            for (_, capture) in &upvalues {
+                match capture {
+                    UpvalueCapture::Local(abs_local_idx) => {
+                        // Direct local from the immediate parent function.
+                        let outer_rel_idx = *abs_local_idx - prev_local_base;
+                        self.bytecode.emit(Opcode::GetLocal, func.span);
+                        self.bytecode.emit_u16(outer_rel_idx as u16);
+                    }
+                    UpvalueCapture::Upvalue(parent_upvalue_idx) => {
+                        // Grandparent variable: load from the current frame's upvalue list.
+                        self.bytecode.emit(Opcode::GetUpvalue, func.span);
+                        self.bytecode.emit_u16(*parent_upvalue_idx as u16);
+                    }
+                }
+            }
+            // MakeClosure: pops n_upvalues, reads FunctionRef from constant pool, pushes Closure
+            self.bytecode.emit(Opcode::MakeClosure, func.span);
+            self.bytecode.emit_u16(const_idx);
+            self.bytecode.emit_u16(n_upvalues as u16);
+        }
+
+        // Store globally (for sibling access) and as a local in the outer function's scope
+        if self.scope_depth == 0 {
+            // Top-level fallback (compile_nested_function normally not called at scope 0)
+            let name_idx = self
+                .bytecode
+                .add_constant(crate::value::Value::string(&func.name.name));
+            self.bytecode.emit(Opcode::SetGlobal, func.span);
+            self.bytecode.emit_u16(name_idx);
+            self.bytecode.emit(Opcode::Pop, func.span);
+        } else {
+            let scoped_name_idx = self
+                .bytecode
+                .add_constant(crate::value::Value::string(&scoped_name));
+            self.bytecode.emit(Opcode::SetGlobal, func.span);
+            self.bytecode.emit_u16(scoped_name_idx);
+
+            // Add as local in outer function's scope (value stays on stack)
+            self.push_local(Local {
+                name: func.name.name.clone(),
+                depth: self.scope_depth,
+                mutable: false,
+                scoped_name: Some(scoped_name.clone()),
+            });
+        }
 
         Ok(())
     }
@@ -225,10 +240,27 @@ impl Compiler {
                         )]);
                     }
 
-                    // Compile value and emit SetLocal
+                    // Compile value and emit SetLocal (or SetUpvalue for outer-scope captures)
                     self.compile_expr(&assign.value)?;
-                    self.bytecode.emit(Opcode::SetLocal, assign.span);
-                    self.bytecode.emit_u16(local_idx as u16);
+                    let local = &self.locals[local_idx];
+                    if local.depth < self.scope_depth
+                        && local.scoped_name.is_none()
+                        && !self.upvalue_stack.is_empty()
+                    {
+                        // Outer-scope variable in nested function — write via upvalue
+                        let upvalue_idx = self.register_upvalue(&ident.name, local_idx);
+                        self.bytecode.emit(Opcode::SetUpvalue, assign.span);
+                        self.bytecode.emit_u16(upvalue_idx as u16);
+                    } else {
+                        let function_relative_idx = if local.depth < self.scope_depth {
+                            // Shouldn't normally reach here but safe fallback
+                            local_idx
+                        } else {
+                            local_idx - self.current_function_base
+                        };
+                        self.bytecode.emit(Opcode::SetLocal, assign.span);
+                        self.bytecode.emit_u16(function_relative_idx as u16);
+                    }
                 } else {
                     // Global variable - check mutability
                     if let Some(mutable) = self.is_global_mutable(&ident.name) {

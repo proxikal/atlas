@@ -45,14 +45,26 @@ impl Compiler {
 
                 // Check if this local is from current function's scope or parent scope
                 if local.depth < self.scope_depth {
-                    // Parent scope variable - use GetGlobal with scoped name
-                    // This handles sibling nested functions calling each other
-                    let name_to_use = local.scoped_name.as_ref().unwrap_or(&local.name);
-                    let name_idx = self
-                        .bytecode
-                        .add_constant(crate::value::Value::string(name_to_use));
-                    self.bytecode.emit(Opcode::GetGlobal, call.span);
-                    self.bytecode.emit_u16(name_idx);
+                    if let Some(name_to_use) = local.scoped_name.as_ref() {
+                        // Nested function in parent scope — accessible via global scoped name
+                        let name_idx = self
+                            .bytecode
+                            .add_constant(crate::value::Value::string(name_to_use));
+                        self.bytecode.emit(Opcode::GetGlobal, call.span);
+                        self.bytecode.emit_u16(name_idx);
+                    } else if !self.upvalue_stack.is_empty() {
+                        // Regular closure/variable from outer scope — load via upvalue
+                        let upvalue_idx = self.register_upvalue(func_name, local_idx);
+                        self.bytecode.emit(Opcode::GetUpvalue, call.span);
+                        self.bytecode.emit_u16(upvalue_idx as u16);
+                    } else {
+                        // Fallback: GetGlobal
+                        let name_idx = self
+                            .bytecode
+                            .add_constant(crate::value::Value::string(func_name));
+                        self.bytecode.emit(Opcode::GetGlobal, call.span);
+                        self.bytecode.emit_u16(name_idx);
+                    }
                 } else {
                     // Current function's scope - use GetLocal with function-relative index
                     let function_relative_idx = local_idx - self.current_function_base;
@@ -158,11 +170,22 @@ impl Compiler {
 
             // Check if this local is from current function's scope or parent scope
             if local.depth < self.scope_depth {
-                // Parent scope variable - use GetGlobal with scoped name (for nested functions)
-                let name_to_use = local.scoped_name.as_ref().unwrap_or(&local.name);
-                let name_idx = self.bytecode.add_constant(Value::string(name_to_use));
-                self.bytecode.emit(Opcode::GetGlobal, ident.span);
-                self.bytecode.emit_u16(name_idx);
+                if let Some(name_to_use) = local.scoped_name.as_ref() {
+                    // Nested function in parent scope — accessible via its global scoped name
+                    let name_idx = self.bytecode.add_constant(Value::string(name_to_use));
+                    self.bytecode.emit(Opcode::GetGlobal, ident.span);
+                    self.bytecode.emit_u16(name_idx);
+                } else if !self.upvalue_stack.is_empty() {
+                    // Regular variable from outer function scope — capture as upvalue
+                    let upvalue_idx = self.register_upvalue(&ident.name, local_idx);
+                    self.bytecode.emit(Opcode::GetUpvalue, ident.span);
+                    self.bytecode.emit_u16(upvalue_idx as u16);
+                } else {
+                    // Outer scope but not in a nested function — use GetGlobal fallback
+                    let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
+                    self.bytecode.emit(Opcode::GetGlobal, ident.span);
+                    self.bytecode.emit_u16(name_idx);
+                }
             } else {
                 // Current function's scope - use GetLocal with function-relative index
                 let function_relative_idx = local_idx - self.current_function_base;

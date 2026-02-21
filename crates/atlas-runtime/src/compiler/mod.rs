@@ -35,6 +35,30 @@ pub(super) struct LoopContext {
     pub(super) break_jumps: Vec<usize>,
 }
 
+/// How an upvalue is sourced when building a closure.
+///
+/// - `Local(abs_idx)`: captured directly from the immediate parent function's locals.
+///   At the closure definition site, emit `GetLocal(abs_idx - parent_base)`.
+/// - `Upvalue(parent_idx)`: the variable lives in a grandparent (or deeper) scope and
+///   was already registered in the parent function's own upvalue list at `parent_idx`.
+///   At the closure definition site, emit `GetUpvalue(parent_idx)`.
+#[derive(Debug, Clone)]
+pub(super) enum UpvalueCapture {
+    Local(usize),   // abs local index in self.locals
+    Upvalue(usize), // index into the immediate parent's upvalue list
+}
+
+/// Per-nesting-level upvalue context, pushed when entering a nested function compilation.
+#[derive(Debug, Clone)]
+pub(super) struct UpvalueContext {
+    /// `current_function_base` of the *parent* function at the time this context was pushed.
+    /// Any `abs_local_idx >= parent_base` belongs to the immediate parent; anything smaller
+    /// belongs to a grandparent and requires upvalue chaining.
+    pub(super) parent_base: usize,
+    /// Captured variables for this level, in insertion order.
+    pub(super) captures: Vec<(String, UpvalueCapture)>,
+}
+
 /// Compiler state
 pub struct Compiler {
     /// Output bytecode
@@ -61,6 +85,9 @@ pub struct Compiler {
     /// Updated whenever a local is pushed. Reset at function start.
     /// Used to compute accurate `local_count` even after match arm truncation.
     pub(super) locals_watermark: usize,
+    /// Stack of upvalue contexts, one entry per active nested function compilation.
+    /// Empty when not inside any nested function.
+    pub(super) upvalue_stack: Vec<UpvalueContext>,
 }
 
 impl Compiler {
@@ -77,6 +104,7 @@ impl Compiler {
             current_function_base: 0,
             global_mutability: std::collections::HashMap::new(),
             locals_watermark: 0,
+            upvalue_stack: Vec::new(),
         }
     }
 
@@ -100,6 +128,7 @@ impl Compiler {
             current_function_base: 0,
             global_mutability: std::collections::HashMap::new(),
             locals_watermark: 0,
+            upvalue_stack: Vec::new(),
         }
     }
 
@@ -292,6 +321,56 @@ impl Compiler {
     /// Check if a global variable is mutable
     pub(super) fn is_global_mutable(&self, name: &str) -> Option<bool> {
         self.global_mutability.get(name).copied()
+    }
+
+    /// Register an upvalue capture for the current (innermost) nested function.
+    ///
+    /// Handles multi-level chaining: if `abs_local_idx` belongs to a grandparent scope
+    /// (i.e. below the immediate parent's local base), the variable is first registered
+    /// in the parent's upvalue context and then referenced as `Upvalue(parent_idx)` here.
+    ///
+    /// Returns the upvalue index within the current function's capture list.
+    pub(super) fn register_upvalue(&mut self, name: &str, abs_local_idx: usize) -> usize {
+        self.register_upvalue_at_depth(name, abs_local_idx, 0)
+    }
+
+    /// Recursive helper for `register_upvalue`.
+    /// `depth` = 0 → innermost (current) function; 1 → parent; 2 → grandparent; …
+    fn register_upvalue_at_depth(
+        &mut self,
+        name: &str,
+        abs_local_idx: usize,
+        depth: usize,
+    ) -> usize {
+        let stack_len = self.upvalue_stack.len();
+        let stack_idx = stack_len - 1 - depth;
+
+        // Return existing capture index if already registered at this depth.
+        if let Some(pos) = self.upvalue_stack[stack_idx]
+            .captures
+            .iter()
+            .position(|(n, _)| n == name)
+        {
+            return pos;
+        }
+
+        let parent_base = self.upvalue_stack[stack_idx].parent_base;
+
+        let capture = if abs_local_idx >= parent_base {
+            // The variable is a direct local of the immediate parent function.
+            UpvalueCapture::Local(abs_local_idx)
+        } else {
+            // The variable lives in a grandparent scope: register it in the parent context
+            // (one level up) and chain through an Upvalue reference.
+            let parent_upvalue_idx = self.register_upvalue_at_depth(name, abs_local_idx, depth + 1);
+            UpvalueCapture::Upvalue(parent_upvalue_idx)
+        };
+
+        let idx = self.upvalue_stack[stack_idx].captures.len();
+        self.upvalue_stack[stack_idx]
+            .captures
+            .push((name.to_string(), capture));
+        idx
     }
 }
 
