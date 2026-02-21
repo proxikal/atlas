@@ -3,7 +3,7 @@
 //! Shared value representation for interpreter and VM.
 //! - Numbers, Bools, Null: Immediate values (stack-allocated)
 //! - Strings: Heap-allocated, reference-counted (Arc<String>), immutable
-//! - Arrays: Heap-allocated, reference-counted (Arc<Mutex<Vec<Value>>>), mutable
+//! - Arrays: Copy-on-write (ValueArray wrapping Arc<Vec<Value>>), value semantics
 //! - Functions: Reference to bytecode or builtin
 //! - NativeFunction: Rust closures callable from Atlas
 //! - JsonValue: Isolated dynamic type for JSON interop (Arc<JsonValue>)
@@ -213,8 +213,8 @@ pub enum Value {
     Bool(bool),
     /// Null value
     Null,
-    /// Array value (reference-counted, mutable through Mutex)
-    Array(Arc<Mutex<Vec<Value>>>),
+    /// Array value (copy-on-write, value semantics)
+    Array(ValueArray),
     /// Function reference (bytecode or builtin)
     Function(FunctionRef),
     /// Builtin stdlib function (dispatched through the registry by name)
@@ -288,7 +288,7 @@ impl Value {
 
     /// Create a new array value
     pub fn array(values: Vec<Value>) -> Self {
-        Value::Array(Arc::new(Mutex::new(values)))
+        Value::Array(ValueArray::from_vec(values))
     }
 
     /// Get the type name of this value
@@ -344,8 +344,8 @@ impl PartialEq for Value {
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::Null, Value::Null) => true,
-            // Arrays use reference identity, not deep equality
-            (Value::Array(a), Value::Array(b)) => Arc::ptr_eq(a, b),
+            // Arrays use value equality (content comparison)
+            (Value::Array(a), Value::Array(b)) => a == b,
             // Functions are equal if they have the same name
             (Value::Function(a), Value::Function(b)) => a.name == b.name,
             // Builtins are equal if they have the same name
@@ -408,8 +408,7 @@ impl fmt::Display for Value {
             Value::Bool(b) => write!(f, "{}", b),
             Value::Null => write!(f, "null"),
             Value::Array(arr) => {
-                let borrowed = arr.lock().unwrap();
-                let elements: Vec<String> = borrowed.iter().map(|v| v.to_string()).collect();
+                let elements: Vec<String> = arr.iter().map(|v| v.to_string()).collect();
                 write!(f, "[{}]", elements.join(", "))
             }
             Value::Function(func) => write!(f, "<fn {}>", func.name),
@@ -449,10 +448,7 @@ impl fmt::Debug for Value {
             Value::String(s) => write!(f, "String({:?})", s),
             Value::Bool(b) => write!(f, "Bool({})", b),
             Value::Null => write!(f, "Null"),
-            Value::Array(arr) => {
-                let borrowed = arr.lock().unwrap();
-                write!(f, "Array({:?})", &*borrowed)
-            }
+            Value::Array(arr) => write!(f, "Array({:?})", arr.as_slice()),
             Value::Function(func) => write!(f, "Function({:?})", func),
             Value::Builtin(name) => write!(f, "Builtin({:?})", name),
             Value::NativeFunction(_) => write!(f, "NativeFunction(<closure>)"),
@@ -716,29 +712,48 @@ mod tests {
     }
 
     #[test]
-    fn test_array_reference_identity() {
+    fn test_array_value_equality() {
         let arr1 = Value::array(vec![Value::Number(1.0)]);
-        let arr2 = arr1.clone(); // Same reference
-        let arr3 = Value::array(vec![Value::Number(1.0)]); // Different reference
+        let arr2 = arr1.clone(); // Shared Arc — same content
+        let arr3 = Value::array(vec![Value::Number(1.0)]); // Different allocation
 
-        assert_eq!(arr1, arr2); // Same reference
-        assert_ne!(arr1, arr3); // Different reference, even with same contents
+        assert_eq!(arr1, arr2); // same content
+        assert_eq!(arr1, arr3); // content equal — value semantics
     }
 
     #[test]
-    fn test_array_mutation_visible_through_references() {
+    fn test_array_cow_mutation_independent() {
         let arr1 = Value::array(vec![Value::Number(1.0), Value::Number(2.0)]);
-        let arr2 = arr1.clone(); // Same reference
+        let mut arr2 = arr1.clone(); // Shared Arc before mutation
 
-        // Mutate through arr1
-        if let Value::Array(a) = &arr1 {
-            a.lock().unwrap()[0] = Value::Number(42.0);
+        // Mutate arr2 — triggers CoW, arr1 is unaffected
+        if let Value::Array(ref mut a) = arr2 {
+            a.set(0, Value::Number(42.0));
         }
 
-        // Verify arr2 sees the change
-        if let Value::Array(a) = &arr2 {
-            assert_eq!(a.lock().unwrap()[0], Value::Number(42.0));
+        // arr1 still has original value
+        if let Value::Array(ref a) = arr1 {
+            assert_eq!(a[0], Value::Number(1.0));
         }
+    }
+
+    #[test]
+    fn value_array_clone_is_independent() {
+        let a = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        let mut b = a.clone();
+        if let Value::Array(ref mut arr) = b {
+            arr.push(Value::Number(2.0));
+        }
+        if let Value::Array(ref arr) = a {
+            assert_eq!(arr.len(), 1);
+        }
+    }
+
+    #[test]
+    fn value_array_equality_is_by_content() {
+        let a = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        let b = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        assert_eq!(a, b); // content equal, different allocation
     }
 
     #[test]
