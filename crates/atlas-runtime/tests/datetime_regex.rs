@@ -1565,3 +1565,232 @@ fn test_integration_text_processing_pipeline() {
     "#;
     assert_eq!(eval_ok(code), "6"); // "Error", "[404]:", "Page", "[500]", "not", "found"
 }
+
+// ============================================================================
+// DateTime Extended Hardening (Phase v02-completion-04)
+// ============================================================================
+
+fn eval_err(code: &str) -> bool {
+    let atlas = Atlas::new();
+    atlas.eval(code).is_err()
+}
+
+// --- Format/Parse round-trips ---
+
+#[test]
+fn test_date_time_to_rfc3339_roundtrip() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 6, 15, 12, 30, 0);
+        let s = dateTimeToRfc3339(dt);
+        let dt2 = dateTimeParseRfc3339(s);
+        dateTimeYear(dt2) * 10000 + dateTimeMonth(dt2) * 100 + dateTimeDay(dt2)
+    "#;
+    assert_eq!(eval_ok(code), "20240615");
+}
+
+#[test]
+fn test_date_time_to_rfc2822_roundtrip() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 3, 10, 9, 0, 0);
+        let s = dateTimeToRfc2822(dt);
+        let dt2 = dateTimeParseRfc2822(s);
+        dateTimeYear(dt2) * 10000 + dateTimeMonth(dt2) * 100 + dateTimeDay(dt2)
+    "#;
+    assert_eq!(eval_ok(code), "20240310");
+}
+
+#[test]
+fn test_date_time_from_components_midnight() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 1, 1, 0, 0, 0);
+        dateTimeHour(dt) * 3600 + dateTimeMinute(dt) * 60 + dateTimeSecond(dt)
+    "#;
+    assert_eq!(eval_ok(code), "0");
+}
+
+#[test]
+fn test_date_time_from_components_feb29_non_leap_year_errors() {
+    assert!(eval_err(r#"dateTimeFromComponents(2023, 2, 29, 0, 0, 0)"#));
+}
+
+#[test]
+fn test_date_time_from_components_feb29_leap_year_succeeds() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 2, 29, 0, 0, 0);
+        dateTimeDay(dt)
+    "#;
+    assert_eq!(eval_ok(code), "29");
+}
+
+#[test]
+fn test_date_time_parse_empty_string_errors() {
+    assert!(eval_expect_error(r#"dateTimeParseIso("")"#));
+}
+
+#[test]
+fn test_date_time_parse_invalid_format_errors() {
+    assert!(eval_expect_error(r#"dateTimeParseIso("not-a-date")"#));
+}
+
+#[test]
+fn test_date_time_add_minutes_carry_into_hours() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 1, 1, 10, 50, 0);
+        let dt2 = dateTimeAddMinutes(dt, 20);
+        dateTimeHour(dt2) * 100 + dateTimeMinute(dt2)
+    "#;
+    assert_eq!(eval_ok(code), "1110");
+}
+
+#[test]
+fn test_date_time_add_seconds_carry_into_minutes() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 1, 1, 10, 0, 50);
+        let dt2 = dateTimeAddSeconds(dt, 20);
+        dateTimeMinute(dt2) * 100 + dateTimeSecond(dt2)
+    "#;
+    assert_eq!(eval_ok(code), "110");
+}
+
+#[test]
+fn test_date_time_compare_equal_returns_zero() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 6, 1, 0, 0, 0);
+        let dt2 = dateTimeFromComponents(2024, 6, 1, 0, 0, 0);
+        dateTimeCompare(dt, dt2)
+    "#;
+    assert_eq!(eval_ok(code), "0");
+}
+
+#[test]
+fn test_date_time_compare_less_returns_negative() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 1, 1, 0, 0, 0);
+        let dt2 = dateTimeFromComponents(2024, 12, 31, 0, 0, 0);
+        dateTimeCompare(dt, dt2) < 0
+    "#;
+    assert_eq!(eval_ok(code), "true");
+}
+
+#[test]
+fn test_date_time_diff_same_datetime_is_zero() {
+    let code = r#"
+        let dt = dateTimeFromComponents(2024, 6, 1, 12, 0, 0);
+        let dt2 = dateTimeFromComponents(2024, 6, 1, 12, 0, 0);
+        dateTimeDiff(dt, dt2)
+    "#;
+    assert_eq!(eval_ok(code), "0");
+}
+
+#[test]
+fn test_date_time_now_returns_datetime_type() {
+    let code = r#"
+        let dt = dateTimeNow();
+        dateTimeYear(dt) > 2020
+    "#;
+    assert_eq!(eval_ok(code), "true");
+}
+
+// ============================================================================
+// Regex Extended Hardening (Phase v02-completion-04)
+// ============================================================================
+
+#[test]
+fn test_regex_invalid_pattern_returns_result_err() {
+    // regexNew returns Result(Err(...)) for invalid patterns — not a runtime error
+    let code = r#"
+        let r = regexNew("[invalid");
+        is_err(r)
+    "#;
+    assert_eq!(eval_ok(code), "true");
+}
+
+#[test]
+fn test_regex_is_match_empty_string_matching_pattern() {
+    let code = r#"
+        let r = unwrap(regexNew(".*"));
+        regexIsMatch(r, "")
+    "#;
+    assert_eq!(eval_ok(code), "true");
+}
+
+#[test]
+fn test_regex_find_all_no_matches_returns_empty_array() {
+    let code = r#"
+        let r = unwrap(regexNew("\\d+"));
+        let results = regexFindAll(r, "no digits here");
+        len(results)
+    "#;
+    assert_eq!(eval_ok(code), "0");
+}
+
+#[test]
+fn test_regex_replace_only_replaces_first() {
+    let code = r#"
+        let r = unwrap(regexNew("a"));
+        regexReplace(r, "banana", "X")
+    "#;
+    assert_eq!(eval_ok(code), "bXnana");
+}
+
+#[test]
+fn test_regex_replace_all_replaces_every_match() {
+    let code = r#"
+        let r = unwrap(regexNew("a"));
+        regexReplaceAll(r, "banana", "X")
+    "#;
+    assert_eq!(eval_ok(code), "bXnXnX");
+}
+
+#[test]
+fn test_regex_split_at_start_produces_empty_first() {
+    let code = r#"
+        let r = unwrap(regexNew(","));
+        let parts = regexSplit(r, ",hello");
+        parts[0]
+    "#;
+    assert_eq!(eval_ok(code), "");
+}
+
+#[test]
+fn test_regex_split_at_end_produces_empty_last() {
+    let code = r#"
+        let r = unwrap(regexNew(","));
+        let parts = regexSplit(r, "hello,");
+        parts[1]
+    "#;
+    assert_eq!(eval_ok(code), "");
+}
+
+#[test]
+fn test_regex_escape_special_chars() {
+    let code = r#"
+        let escaped = regexEscape("a.b*c+d?e");
+        let r = unwrap(regexNew(escaped));
+        regexIsMatch(r, "a.b*c+d?e")
+    "#;
+    assert_eq!(eval_ok(code), "true");
+}
+
+#[test]
+fn test_regex_named_captures() {
+    // regexCapturesNamed returns Option<HashMap> — unwrap the Option first
+    let code = r#"
+        let r = unwrap(regexNew("(?P<year>\\d{4})-(?P<month>\\d{2})"));
+        let opt = regexCapturesNamed(r, "2024-06");
+        let m = unwrap(opt);
+        unwrap(hashMapGet(m, "year"))
+    "#;
+    assert_eq!(eval_ok(code), "2024");
+}
+
+#[test]
+fn test_regex_split_n_limit_one_returns_two_parts() {
+    // splitn with limit=1 → splitn(text, 2) internally → at most 2 parts
+    let code = r#"
+        let r = unwrap(regexNew(","));
+        let parts = regexSplitN(r, "a,b,c", 1);
+        len(parts)
+    "#;
+    assert_eq!(eval_ok(code), "2");
+}

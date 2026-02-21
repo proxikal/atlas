@@ -2093,3 +2093,314 @@ mod stack {
         assert_eq!(empty, Value::Bool(true));
     }
 }
+
+// ============================================================================
+// Collections Extended Hardening (Phase v02-completion-04)
+// ============================================================================
+
+// --- HashMap edge cases ---
+
+#[test]
+fn test_hashmap_get_missing_key_returns_none() {
+    let code = r#"
+        let m = hashMapNew();
+        let result = hashMapGet(m, "missing");
+        is_none(result)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_hashmap_put_overwrites_existing_key() {
+    let code = r#"
+        let m = hashMapNew();
+        hashMapPut(m, "k", "first");
+        hashMapPut(m, "k", "second");
+        unwrap(hashMapGet(m, "k"))
+    "#;
+    assert_eval_string(code, "second");
+}
+
+#[test]
+fn test_hashmap_keys_on_empty_returns_empty_array() {
+    let code = r#"
+        let m = hashMapNew();
+        len(hashMapKeys(m))
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_hashmap_values_on_empty_returns_empty_array() {
+    let code = r#"
+        let m = hashMapNew();
+        len(hashMapValues(m))
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_hashmap_remove_nonexistent_key_returns_none() {
+    let code = r#"
+        let m = hashMapNew();
+        let result = hashMapRemove(m, "ghost");
+        is_none(result)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_hashmap_size_decrements_after_remove() {
+    let code = r#"
+        let m = hashMapNew();
+        hashMapPut(m, "a", 1);
+        hashMapPut(m, "b", 2);
+        hashMapRemove(m, "a");
+        hashMapSize(m)
+    "#;
+    assert_eval_number(code, 1.0);
+}
+
+#[test]
+fn test_hashmap_is_empty_on_new_map() {
+    let code = r#"
+        let m = hashMapNew();
+        hashMapIsEmpty(m)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_hashmap_is_empty_false_after_put() {
+    let code = r#"
+        let m = hashMapNew();
+        hashMapPut(m, "x", 1);
+        hashMapIsEmpty(m)
+    "#;
+    assert_eval_bool(code, false);
+}
+
+#[test]
+fn test_hashmap_clear_empties_map() {
+    let code = r#"
+        let m = hashMapNew();
+        hashMapPut(m, "a", 1);
+        hashMapPut(m, "b", 2);
+        hashMapClear(m);
+        hashMapSize(m)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_hashmap_from_entries_roundtrip() {
+    let code = r#"
+        let entries = [["k", "v"]];
+        let m = hashMapFromEntries(entries);
+        unwrap(hashMapGet(m, "k"))
+    "#;
+    assert_eval_string(code, "v");
+}
+
+// --- HashSet edge cases ---
+
+#[test]
+fn test_hashset_add_duplicate_does_not_increase_size() {
+    let code = r#"
+        let s = hashSetNew();
+        hashSetAdd(s, "x");
+        hashSetAdd(s, "x");
+        hashSetSize(s)
+    "#;
+    assert_eval_number(code, 1.0);
+}
+
+#[test]
+fn test_hashset_remove_nonexistent_no_error() {
+    let code = r#"
+        let s = hashSetNew();
+        hashSetRemove(s, "ghost");
+        hashSetSize(s)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_hashset_union_empty_with_empty() {
+    let code = r#"
+        let a = hashSetNew();
+        let b = hashSetNew();
+        let u = hashSetUnion(a, b);
+        hashSetSize(u)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_hashset_intersection_empty_with_nonempty() {
+    let code = r#"
+        let a = hashSetNew();
+        let b = hashSetNew();
+        hashSetAdd(b, 1);
+        hashSetAdd(b, 2);
+        let i = hashSetIntersection(a, b);
+        hashSetSize(i)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_hashset_difference_identical_sets_is_empty() {
+    // Use two separate sets with identical contents (avoids Arc<Mutex> self-deadlock)
+    let code = r#"
+        let a = hashSetNew();
+        hashSetAdd(a, 1);
+        hashSetAdd(a, 2);
+        let b = hashSetNew();
+        hashSetAdd(b, 1);
+        hashSetAdd(b, 2);
+        let d = hashSetDifference(a, b);
+        hashSetSize(d)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_hashset_to_array_from_empty() {
+    let code = r#"
+        let s = hashSetNew();
+        let arr = hashSetToArray(s);
+        len(arr)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_hashset_is_empty_on_new() {
+    let code = r#"
+        let s = hashSetNew();
+        hashSetIsEmpty(s)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+// --- Queue edge cases ---
+
+#[test]
+fn test_queue_mixed_type_values() {
+    let code = r#"
+        let q = queueNew();
+        queueEnqueue(q, 42);
+        queueEnqueue(q, "hello");
+        queueEnqueue(q, true);
+        let a = unwrap(queueDequeue(q));
+        let b = unwrap(queueDequeue(q));
+        let c = unwrap(queueDequeue(q));
+        queueIsEmpty(q)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_queue_clear_then_size_is_zero() {
+    let code = r#"
+        let q = queueNew();
+        queueEnqueue(q, 1);
+        queueEnqueue(q, 2);
+        queueClear(q);
+        queueSize(q)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_queue_to_array_empty_returns_empty() {
+    let code = r#"
+        let q = queueNew();
+        let arr = queueToArray(q);
+        len(arr)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_queue_fifo_order_preserved() {
+    let code = r#"
+        let q = queueNew();
+        queueEnqueue(q, 10);
+        queueEnqueue(q, 20);
+        queueEnqueue(q, 30);
+        let first = unwrap(queueDequeue(q));
+        first
+    "#;
+    assert_eval_number(code, 10.0);
+}
+
+#[test]
+fn test_queue_dequeue_on_empty_returns_none() {
+    let code = r#"
+        let q = queueNew();
+        let result = queueDequeue(q);
+        is_none(result)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+// --- Stack edge cases ---
+
+#[test]
+fn test_stack_pop_on_empty_returns_none() {
+    let code = r#"
+        let s = stackNew();
+        let result = stackPop(s);
+        is_none(result)
+    "#;
+    assert_eval_bool(code, true);
+}
+
+#[test]
+fn test_stack_peek_reflects_top_after_push() {
+    let code = r#"
+        let s = stackNew();
+        stackPush(s, 1);
+        stackPush(s, 2);
+        stackPush(s, 3);
+        unwrap(stackPeek(s))
+    "#;
+    assert_eval_number(code, 3.0);
+}
+
+#[test]
+fn test_stack_clear_idempotent_on_empty() {
+    let code = r#"
+        let s = stackNew();
+        stackClear(s);
+        stackSize(s)
+    "#;
+    assert_eval_number(code, 0.0);
+}
+
+#[test]
+fn test_stack_lifo_order() {
+    let code = r#"
+        let s = stackNew();
+        stackPush(s, 1);
+        stackPush(s, 2);
+        stackPush(s, 3);
+        unwrap(stackPop(s))
+    "#;
+    assert_eval_number(code, 3.0);
+}
+
+#[test]
+fn test_stack_to_array_bottom_to_top() {
+    let code = r#"
+        let s = stackNew();
+        stackPush(s, 10);
+        stackPush(s, 20);
+        stackPush(s, 30);
+        let arr = stackToArray(s);
+        arr[0]
+    "#;
+    assert_eval_number(code, 10.0);
+}

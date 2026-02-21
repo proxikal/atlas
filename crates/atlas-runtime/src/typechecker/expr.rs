@@ -1009,9 +1009,7 @@ impl<'a> TypeChecker<'a> {
         use crate::ast::Pattern;
         match pattern {
             Pattern::Wildcard(_) | Pattern::Variable(_) => true,
-            Pattern::Or(alternatives, _) => {
-                alternatives.iter().any(|alt| Self::pattern_is_catch_all(alt))
-            }
+            Pattern::Or(alternatives, _) => alternatives.iter().any(Self::pattern_is_catch_all),
             _ => false,
         }
     }
@@ -1045,13 +1043,13 @@ impl<'a> TypeChecker<'a> {
         match scrutinee_norm {
             Type::Generic { name, .. } if name == "Option" => {
                 // Option<T> requires Some and None to be covered
-                let has_some = arms
-                    .iter()
-                    .any(|arm| arm.guard.is_none() && Self::pattern_covers_constructor(&arm.pattern, "Some"));
+                let has_some = arms.iter().any(|arm| {
+                    arm.guard.is_none() && Self::pattern_covers_constructor(&arm.pattern, "Some")
+                });
 
-                let has_none = arms
-                    .iter()
-                    .any(|arm| arm.guard.is_none() && Self::pattern_covers_constructor(&arm.pattern, "None"));
+                let has_none = arms.iter().any(|arm| {
+                    arm.guard.is_none() && Self::pattern_covers_constructor(&arm.pattern, "None")
+                });
 
                 if !has_some || !has_none {
                     let missing = if !has_some && !has_none {
@@ -1076,13 +1074,13 @@ impl<'a> TypeChecker<'a> {
 
             Type::Generic { name, .. } if name == "Result" => {
                 // Result<T,E> requires Ok and Err to be covered
-                let has_ok = arms
-                    .iter()
-                    .any(|arm| arm.guard.is_none() && Self::pattern_covers_constructor(&arm.pattern, "Ok"));
+                let has_ok = arms.iter().any(|arm| {
+                    arm.guard.is_none() && Self::pattern_covers_constructor(&arm.pattern, "Ok")
+                });
 
-                let has_err = arms
-                    .iter()
-                    .any(|arm| arm.guard.is_none() && Self::pattern_covers_constructor(&arm.pattern, "Err"));
+                let has_err = arms.iter().any(|arm| {
+                    arm.guard.is_none() && Self::pattern_covers_constructor(&arm.pattern, "Err")
+                });
 
                 if !has_ok || !has_err {
                     let missing = if !has_ok && !has_err {
@@ -1256,8 +1254,7 @@ impl<'a> TypeChecker<'a> {
                 Pattern::Or(alternatives, _) => {
                     // Check each sub-pattern independently; bindings from first sub-pattern used
                     for alt in alternatives {
-                        let alt_bindings =
-                            self.check_pattern(alt, &Type::Union(members.clone()));
+                        let alt_bindings = self.check_pattern(alt, &Type::Union(members.clone()));
                         if bindings.is_empty() {
                             bindings = alt_bindings;
                         }
