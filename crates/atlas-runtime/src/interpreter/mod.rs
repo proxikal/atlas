@@ -432,9 +432,8 @@ impl Interpreter {
                     return Err(RuntimeError::InvalidIndex { span });
                 }
 
-                let borrowed = arr.lock().unwrap();
-                if index_val >= 0 && (index_val as usize) < borrowed.len() {
-                    Ok(borrowed[index_val as usize].clone())
+                if index_val >= 0 && (index_val as usize) < arr.len() {
+                    Ok(arr[index_val as usize].clone())
                 } else {
                     Err(RuntimeError::OutOfBounds { span })
                 }
@@ -457,16 +456,15 @@ impl Interpreter {
         value: Value,
         span: crate::span::Span,
     ) -> Result<(), RuntimeError> {
-        if let Value::Array(arr) = arr {
+        if let Value::Array(mut arr) = arr {
             if let Value::Number(n) = idx {
                 let index_val = n as i64;
                 if n.fract() != 0.0 || n < 0.0 {
                     return Err(RuntimeError::InvalidIndex { span });
                 }
 
-                let mut borrowed = arr.lock().unwrap();
-                if index_val >= 0 && (index_val as usize) < borrowed.len() {
-                    borrowed[index_val as usize] = value;
+                if index_val >= 0 && (index_val as usize) < arr.len() {
+                    arr.set(index_val as usize, value);
                     Ok(())
                 } else {
                     Err(RuntimeError::OutOfBounds { span })

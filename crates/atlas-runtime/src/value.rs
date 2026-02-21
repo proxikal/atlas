@@ -216,6 +216,11 @@ impl ValueHashMap {
     pub fn is_exclusively_owned(&self) -> bool {
         Arc::strong_count(&self.0) == 1
     }
+
+    /// Wrap an existing AtlasHashMap in a CoW wrapper.
+    pub fn from_atlas(m: crate::stdlib::collections::hashmap::AtlasHashMap) -> Self {
+        ValueHashMap(Arc::new(m))
+    }
 }
 
 impl PartialEq for ValueHashMap {

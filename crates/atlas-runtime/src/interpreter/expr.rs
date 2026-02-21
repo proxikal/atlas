@@ -446,9 +446,8 @@ impl Interpreter {
                         return Err(RuntimeError::InvalidIndex { span: index.span });
                     }
 
-                    let borrowed = arr.lock().unwrap();
-                    if index_val >= 0 && (index_val as usize) < borrowed.len() {
-                        Ok(borrowed[index_val as usize].clone())
+                    if index_val >= 0 && (index_val as usize) < arr.len() {
+                        Ok(arr[index_val as usize].clone())
                     } else {
                         Err(RuntimeError::OutOfBounds { span: index.span })
                     }
@@ -654,17 +653,15 @@ impl Interpreter {
         value: &Value,
     ) -> Option<Vec<(String, Value)>> {
         if let Value::Array(arr) = value {
-            let arr_borrow = arr.lock().unwrap();
-
             // Array patterns must have exact length match
-            if arr_borrow.len() != pattern_elements.len() {
+            if arr.len() != pattern_elements.len() {
                 return None;
             }
 
             let mut all_bindings = Vec::new();
 
             // Match each element
-            for (pattern, element) in pattern_elements.iter().zip(arr_borrow.iter()) {
+            for (pattern, element) in pattern_elements.iter().zip(arr.iter()) {
                 if let Some(bindings) = self.try_match_pattern(pattern, element) {
                     all_bindings.extend(bindings);
                 } else {
@@ -707,7 +704,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "map() first argument must be array".to_string(),
@@ -750,7 +747,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "filter() first argument must be array".to_string(),
@@ -801,7 +798,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "reduce() first argument must be array".to_string(),
@@ -842,7 +839,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "forEach() first argument must be array".to_string(),
@@ -882,7 +879,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "find() first argument must be array".to_string(),
@@ -932,7 +929,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "findIndex() first argument must be array".to_string(),
@@ -982,7 +979,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "flatMap() first argument must be array".to_string(),
@@ -1006,7 +1003,7 @@ impl Interpreter {
             let callback_result = self.call_value(callback, vec![elem], span)?;
             match callback_result {
                 Value::Array(nested) => {
-                    result.extend(nested.lock().unwrap().clone());
+                    result.extend(nested.iter().cloned());
                 }
                 other => result.push(other),
             }
@@ -1029,7 +1026,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "some() first argument must be array".to_string(),
@@ -1079,7 +1076,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "every() first argument must be array".to_string(),
@@ -1131,7 +1128,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sort() first argument must be array".to_string(),
@@ -1193,7 +1190,7 @@ impl Interpreter {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sortBy() first argument must be array".to_string(),
@@ -1405,7 +1402,7 @@ impl Interpreter {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.lock().unwrap().entries(),
+            Value::HashMap(m) => m.inner().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapForEach() first argument must be HashMap".to_string(),
@@ -1446,7 +1443,7 @@ impl Interpreter {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.lock().unwrap().entries(),
+            Value::HashMap(m) => m.inner().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapMap() first argument must be HashMap".to_string(),
@@ -1465,16 +1462,14 @@ impl Interpreter {
             }
         };
 
-        let mut result_map = crate::stdlib::collections::hashmap::AtlasHashMap::new();
+        let mut result_map = crate::value::ValueHashMap::new();
         for (key, value) in map {
             // Call callback with (value, key) arguments
             let new_value = self.call_value(callback, vec![value, key.clone().to_value()], span)?;
-            result_map.insert(key, new_value);
+            result_map.inner_mut().insert(key, new_value);
         }
 
-        Ok(Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(
-            result_map,
-        ))))
+        Ok(Value::HashMap(result_map))
     }
 
     /// hashMapFilter(map, predicate) - Filter entries, return new map
@@ -1491,7 +1486,7 @@ impl Interpreter {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.lock().unwrap().entries(),
+            Value::HashMap(m) => m.inner().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapFilter() first argument must be HashMap".to_string(),
@@ -1510,14 +1505,14 @@ impl Interpreter {
             }
         };
 
-        let mut result_map = crate::stdlib::collections::hashmap::AtlasHashMap::new();
+        let mut result_map = crate::value::ValueHashMap::new();
         for (key, value) in map {
             // Call predicate with (value, key) arguments
             let pred_result =
                 self.call_value(predicate, vec![value.clone(), key.clone().to_value()], span)?;
             match pred_result {
                 Value::Bool(true) => {
-                    result_map.insert(key, value);
+                    result_map.inner_mut().insert(key, value);
                 }
                 Value::Bool(false) => {}
                 _ => {
@@ -1529,9 +1524,7 @@ impl Interpreter {
             }
         }
 
-        Ok(Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(
-            result_map,
-        ))))
+        Ok(Value::HashMap(result_map))
     }
 
     /// hashSetForEach(set, callback) - Iterate over set elements with side effects
@@ -1548,7 +1541,7 @@ impl Interpreter {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.lock().unwrap().to_vec(),
+            Value::HashSet(s) => s.inner().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetForEach() first argument must be HashSet".to_string(),
@@ -1589,7 +1582,7 @@ impl Interpreter {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.lock().unwrap().to_vec(),
+            Value::HashSet(s) => s.inner().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetMap() first argument must be HashSet".to_string(),
@@ -1632,7 +1625,7 @@ impl Interpreter {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.lock().unwrap().to_vec(),
+            Value::HashSet(s) => s.inner().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetFilter() first argument must be HashSet".to_string(),
@@ -1651,13 +1644,13 @@ impl Interpreter {
             }
         };
 
-        let mut result_set = crate::stdlib::collections::hashset::AtlasHashSet::new();
+        let mut result_set = crate::value::ValueHashSet::new();
         for element in set {
             // Call predicate with element argument
             let pred_result = self.call_value(predicate, vec![element.clone().to_value()], span)?;
             match pred_result {
                 Value::Bool(true) => {
-                    result_set.insert(element);
+                    result_set.inner_mut().insert(element);
                 }
                 Value::Bool(false) => {}
                 _ => {
@@ -1669,9 +1662,7 @@ impl Interpreter {
             }
         }
 
-        Ok(Value::HashSet(std::sync::Arc::new(std::sync::Mutex::new(
-            result_set,
-        ))))
+        Ok(Value::HashSet(result_set))
     }
 
     /// Regex intrinsic: Replace first match using callback
@@ -1769,7 +1760,7 @@ impl Interpreter {
                 );
             }
 
-            let match_value = Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
+            let match_value = Value::HashMap(crate::value::ValueHashMap::from_atlas(match_map));
 
             // Call callback with match data
             let replacement_value = self.call_value(callback, vec![match_value], span)?;
@@ -1904,7 +1895,7 @@ impl Interpreter {
                 );
             }
 
-            let match_value = Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
+            let match_value = Value::HashMap(crate::value::ValueHashMap::from_atlas(match_map));
 
             // Call callback with match data
             let replacement_value = self.call_value(callback, vec![match_value], span)?;
