@@ -308,6 +308,50 @@ impl PartialEq for ValueStack {
     }
 }
 
+/// Explicit reference semantics wrapper.
+///
+/// `Shared<T>` opts into reference semantics: all clones point to the same underlying
+/// value. Mutation through any clone is visible to all other clones. This is the
+/// intentional escape hatch from CoW — used when the program explicitly requests
+/// shared mutable state (e.g., `shared<Buffer>`).
+///
+/// Contrast with `ValueArray` which uses `Arc<Vec<Value>>` + CoW: mutations on a
+/// `ValueArray` clone never affect the original. Mutations on a `Shared<T>` always do.
+#[derive(Clone, Debug)]
+pub struct Shared<T>(Arc<Mutex<T>>);
+
+impl<T> Shared<T> {
+    pub fn new(value: T) -> Self {
+        Shared(Arc::new(Mutex::new(value)))
+    }
+
+    /// Acquire the lock and apply a read function.
+    pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
+        let guard = self.0.lock().expect("Shared<T> lock poisoned");
+        f(&*guard)
+    }
+
+    /// Acquire the lock and apply a mutation function.
+    pub fn with_mut<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
+        let mut guard = self.0.lock().expect("Shared<T> lock poisoned");
+        f(&mut *guard)
+    }
+
+    /// Returns true if this is the only reference to the inner value.
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl<T: PartialEq> PartialEq for Shared<T> {
+    fn eq(&self, other: &Self) -> bool {
+        // Pointer equality — two Shared<T> are equal only if they are the same allocation.
+        // This matches reference semantics: two different `shared<T>` variables with the
+        // same contents are NOT equal unless they are the same reference.
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+
 /// Native function type - Rust closure callable from Atlas
 ///
 /// Native functions receive an array of Atlas values and return either a value or a runtime error.
@@ -367,6 +411,9 @@ pub enum Value {
     AsyncMutex(Arc<tokio::sync::Mutex<Value>>),
     /// Closure (function + captured upvalue environment)
     Closure(ClosureRef),
+    /// Explicitly shared reference — reference semantics (see Shared<T>).
+    /// Mutations are visible to all aliases. Used for `shared<T>` annotated values.
+    SharedValue(Shared<Box<Value>>),
 }
 
 /// Function reference
@@ -431,6 +478,7 @@ impl Value {
             Value::ChannelReceiver(_) => "ChannelReceiver",
             Value::AsyncMutex(_) => "AsyncMutex",
             Value::Closure(_) => "function",
+            Value::SharedValue(_) => "shared",
         }
     }
 
@@ -495,6 +543,7 @@ impl PartialEq for Value {
             (Value::AsyncMutex(a), Value::AsyncMutex(b)) => Arc::ptr_eq(a, b),
             // Closures are equal if they have the same function name
             (Value::Closure(a), Value::Closure(b)) => a.func.name == b.func.name,
+            (Value::SharedValue(a), Value::SharedValue(b)) => a == b,
             _ => false,
         }
     }
@@ -546,6 +595,7 @@ impl fmt::Display for Value {
             Value::ChannelReceiver(_) => write!(f, "<ChannelReceiver>"),
             Value::AsyncMutex(_) => write!(f, "<AsyncMutex>"),
             Value::Closure(c) => write!(f, "<fn {}>", c.func.name),
+            Value::SharedValue(s) => s.with(|v| write!(f, "shared({})", v)),
         }
     }
 }
@@ -578,6 +628,7 @@ impl fmt::Debug for Value {
             Value::ChannelReceiver(_) => write!(f, "ChannelReceiver"),
             Value::AsyncMutex(_) => write!(f, "AsyncMutex"),
             Value::Closure(c) => write!(f, "Closure({:?})", c.func),
+            Value::SharedValue(s) => s.with(|v| write!(f, "SharedValue({:?})", v)),
         }
     }
 }
@@ -1456,5 +1507,39 @@ mod cow_type_tests {
         let mut b = ValueMap::new();
         b.insert("k".to_string(), Value::Number(42.0));
         assert_eq!(a, b);
+    }
+}
+
+#[cfg(test)]
+mod shared_tests {
+    use super::*;
+
+    #[test]
+    fn shared_mutation_visible_through_all_aliases() {
+        let s = Shared::new(42i64);
+        let s2 = s.clone();
+        s.with_mut(|v| *v = 100);
+        assert_eq!(s2.with(|v| *v), 100);
+    }
+
+    #[test]
+    fn shared_equality_is_reference_not_content() {
+        let a: Shared<i64> = Shared::new(42);
+        let b: Shared<i64> = Shared::new(42); // same content, different allocation
+        let c = a.clone(); // same allocation as a
+        assert_ne!(a, b); // different references — not equal
+        assert_eq!(a, c); // same reference — equal
+    }
+
+    #[test]
+    fn value_shared_clone_shares_mutation() {
+        let original = Value::SharedValue(Shared::new(Box::new(Value::Number(1.0))));
+        let alias = original.clone();
+        if let Value::SharedValue(ref s) = original {
+            s.with_mut(|v| **v = Value::Number(99.0));
+        }
+        if let Value::SharedValue(ref s) = alias {
+            s.with(|v| assert_eq!(**v, Value::Number(99.0)));
+        }
     }
 }
