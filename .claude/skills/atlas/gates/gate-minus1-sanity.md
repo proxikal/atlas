@@ -9,15 +9,16 @@
 1. **Read phase blockers:** Check `🚨 BLOCKERS` section in phase file
 2. **Verify each dependency:** Check spec → check codebase → decide autonomously
 3. **Git check:** Ensure on feature branch (not main), working directory clean
-4. **Sanity check:** `cargo clean && cargo check -p atlas-runtime`
-5. **Security scan:** `cargo audit` (check for known vulnerabilities)
+4. **Full build:** `cargo build --workspace` — MUST succeed before any work begins
+5. **Sanity check:** `cargo check -p atlas-runtime`
+6. **Security scan:** `cargo audit` (check for known vulnerabilities)
    - If vulnerabilities found in direct deps → STOP, alert user
    - If vulnerabilities in transitive deps only → note and continue
-6. **Evaluate:** Version scope? Dependencies met? Parity impact? Workload reasonable?
+7. **Evaluate:** Version scope? Dependencies met? Parity impact? Workload reasonable?
 
 ---
 
-## Security Scanning (New)
+## Security Scanning
 
 ```bash
 # Install if needed (one-time)

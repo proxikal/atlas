@@ -133,8 +133,8 @@ OR if no updates:
 ## Git Finalization (After Memory Check)
 
 1. `git add -A && git commit -m "feat(category): description"`
-2. `git push -u origin HEAD && gh pr create && gh pr merge --squash --auto`
-3. Walk away - automation handles merge
-4. Next session syncs main automatically
+2. `git checkout main && git merge --no-ff <feature-branch>`
+3. `git branch -d <feature-branch>`
+4. `git checkout worktree/dev`
 
 **Next:** Report completion summary with Memory section.

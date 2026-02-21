@@ -13,11 +13,12 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 ## On Skill Activation (EVERY SESSION)
 
 ```bash
-git checkout main && git pull && git fetch --prune   # Sync main, prune remotes
-git branch | grep -v main | xargs -r git branch -D   # Delete ALL local branches except main
+cat .worktree-id 2>/dev/null || echo "unknown"   # Detect worktree identity
+git fetch origin                                  # Sync from remote
+git rebase origin/main                            # Update this worktree
 ```
 
-**Why:** PRs merge async via squash (different SHA). Use `-D` not `-d`. Always sync.
+**Why:** Worktrees are isolated. Always sync from origin/main before starting work.
 
 ---
 
@@ -42,9 +43,8 @@ git branch | grep -v main | xargs -r git branch -D   # Delete ALL local branches
 3. Run GATE -1 (sanity check + local security scan)
 4. Declare workflow type
 5. **Execute applicable gates** 0→1→2→3→4→5→6→7 (see `gates/gate-applicability.md` for which to run)
-6. **Git Finalize:** Commit, push, create PR with auto-merge
-7. **Sync immediately:** PR merges in ~30-60s (no CI), sync main and delete local branch
-8. Deliver completion summary
+6. **Git Finalize:** Commit locally → merge to main → clean up feature branch (see Git Workflow)
+7. Deliver completion summary
 
 ### 2. Spec Compliance (100%)
 Spec defines it → implement EXACTLY. No shortcuts, no "good enough", no partial implementations.
@@ -89,47 +89,56 @@ feat/{short-description}      # Features (e.g., feat/array-slice)
 ci/{short-description}        # CI/infra (e.g., ci/optimize-workflows)
 ```
 
-**START of phase (sync happens here):**
+**START of phase (every session):**
 ```bash
-git checkout main && git pull                    # Picks up any merged PRs
-git branch -d <old-branch> 2>/dev/null || true   # Lazy cleanup of old branches
+git fetch origin
+git rebase origin/main                           # Sync this worktree
 git checkout -b phase/{category}-{number}        # Create feature branch
+# (or continue existing feature branch if resuming)
 ```
 
-**END of phase (fire and forget):**
+**DURING phase (multi-part):**
 ```bash
-git add -A && git commit -m "feat(phase): Description"   # Commit all
-git push -u origin HEAD                                   # Push branch
-gh pr create --title "Phase X: Title" --body "..."       # Create PR
-gh pr merge --squash --auto                               # Queue for merge
-# DONE - move on immediately, no waiting
-```
-
-**Why no waiting:**
-- Merge queue processes PR in ~30-60s (no CI)
-- Remote branch auto-deleted after merge
-- Next phase START syncs main automatically
-- Branch cleanup is lazy (not blocking)
-
-**BANNED (wastes time):**
-- `sleep` after pushing — sync happens at next phase START
-- `gh pr view` or `gh pr checks` — never check PR status
-- Any PR monitoring — it WILL merge, trust the queue
-
-**Multi-part phases (A, B, C sub-phases):**
-```bash
-# Stay on SAME branch, commit locally between parts
-<work on part A>
-cargo nextest run -p atlas-runtime                        # Local validation
+# Commit locally between parts — never leave uncommitted work at session end
+cargo build --workspace                          # Must pass before committing
+cargo nextest run -p atlas-runtime               # Must be 100%
 git add -A && git commit -m "feat(phase-XX): Part A - description"
-
-<work on part B, C, etc. - same pattern>
-
-# ALL parts done → push ONCE
-git push -u origin HEAD && gh pr create ... && gh pr merge --squash --auto
+# Continue Part B, C, etc.
 ```
-- **One branch, multiple commits** = traceable history in PR
-- **Squash merge** = atomic feature on main
+
+**END of phase (local merge):**
+```bash
+# 1. Final verification — all must pass
+cargo build --workspace
+cargo nextest run -p atlas-runtime
+cargo clippy -p atlas-runtime -- -D warnings
+cargo fmt --check -p atlas-runtime
+
+# 2. Commit
+git add -A && git commit -m "feat(phase-XX): Description
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+
+# 3. Merge to local main
+git checkout main
+git merge --no-ff phase/{category}-{number} -m "feat(phase-XX): Description"
+git branch -d phase/{category}-{number}
+
+# 4. Return worktree to home branch
+git checkout worktree/dev
+```
+
+**Weekly push (user says "push to GitHub"):**
+```bash
+# From atlas/ (main worktree) only
+git push origin main
+```
+
+**BANNED:**
+- Creating PRs for normal phase/doc work
+- Pushing on every phase
+- Working directly on `main` branch
+- Leaving uncommitted changes at session end
 
 **User involvement:** NONE. Agent handles entire Git lifecycle autonomously.
 
@@ -179,18 +188,17 @@ After GATE -1, declare one:
 
 ## Phase Handoff
 
-**CRITICAL:** Only hand off when ALL tests pass locally AND PR is queued.
+**CRITICAL:** Only hand off when ALL tests pass AND work is committed to local main.
 
 **Protocol:**
-1. All gates passed (tests, clippy, fmt, security scan)
+1. All gates passed (build, tests, clippy, fmt, security scan)
 2. STATUS.md updated
 3. Memory checked (GATE 7)
-4. Commit → Push → Create PR → Auto-merge (queued)
-5. Deliver summary — DO NOT WAIT for merge
+4. Commit → Merge to local main → Clean up feature branch
+5. Deliver summary
 
 **Required in summary:**
-- Status: "✅ PHASE COMPLETE - PR QUEUED"
-- PR URL (merge happens async)
+- Status: "✅ PHASE COMPLETE - COMMITTED TO LOCAL MAIN"
 - Final Stats (bullets)
 - **Memory:** Updated X / No updates needed (MANDATORY - see GATE 7)
 - Progress (X/131 phases)
