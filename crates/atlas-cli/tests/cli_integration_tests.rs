@@ -13,7 +13,7 @@ use predicates::prelude::*;
 use std::process::Command;
 
 fn atlas_cmd() -> Command {
-    Command::cargo_bin("atlas").unwrap()
+    Command::new(assert_cmd::cargo::cargo_bin!("atlas"))
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

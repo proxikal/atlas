@@ -6,7 +6,7 @@ use std::process::Command;
 use std::time::Duration;
 
 fn atlas_cmd() -> Command {
-    Command::cargo_bin("atlas").unwrap()
+    Command::new(assert_cmd::cargo::cargo_bin!("atlas"))
 }
 
 // ── Help and argument tests ───────────────────────────────────────────────────
@@ -78,8 +78,7 @@ fn test_lsp_tcp_startup_message() {
     let port = listener.local_addr().unwrap().port();
     drop(listener); // Release the port
 
-    let mut child = Command::cargo_bin("atlas")
-        .unwrap()
+    let mut child = Command::new(assert_cmd::cargo::cargo_bin!("atlas"))
         .args(["lsp", "--tcp", "--port", &port.to_string()])
         .stderr(Stdio::piped())
         .spawn()
@@ -123,8 +122,7 @@ fn test_lsp_tcp_accepts_connection() {
     let port = listener.local_addr().unwrap().port();
     drop(listener);
 
-    let mut child = Command::cargo_bin("atlas")
-        .unwrap()
+    let mut child = Command::new(assert_cmd::cargo::cargo_bin!("atlas"))
         .args(["lsp", "--tcp", "--port", &port.to_string(), "--verbose"])
         .stderr(Stdio::piped())
         .spawn()
@@ -172,8 +170,7 @@ fn test_lsp_tcp_port_in_use() {
     let port = listener.local_addr().unwrap().port();
 
     // Try to start LSP server on the same port
-    let child = Command::cargo_bin("atlas")
-        .unwrap()
+    let child = Command::new(assert_cmd::cargo::cargo_bin!("atlas"))
         .args(["lsp", "--tcp", "--port", &port.to_string()])
         .output()
         .expect("Failed to run command");
@@ -191,8 +188,7 @@ fn test_lsp_stdio_startup_verbose() {
     use std::process::Stdio;
 
     // Start LSP server in stdio mode with verbose flag
-    let mut child = Command::cargo_bin("atlas")
-        .unwrap()
+    let mut child = Command::new(assert_cmd::cargo::cargo_bin!("atlas"))
         .args(["lsp", "--verbose"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

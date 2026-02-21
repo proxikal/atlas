@@ -12,7 +12,7 @@ use tempfile::TempDir;
 // ============================================================================
 
 fn atlas_cmd() -> Command {
-    Command::cargo_bin("atlas").expect("atlas binary not found")
+    Command::from(assert_cmd::cargo::cargo_bin_cmd!("atlas"))
 }
 
 fn read_file(path: &std::path::Path) -> String {

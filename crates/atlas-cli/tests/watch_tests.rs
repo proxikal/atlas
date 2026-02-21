@@ -22,7 +22,7 @@ fn temp_atlas_file(content: &str) -> NamedTempFile {
 
 /// Helper to get atlas command
 fn atlas() -> Command {
-    Command::cargo_bin("atlas").unwrap()
+    Command::from(assert_cmd::cargo::cargo_bin_cmd!("atlas"))
 }
 
 // Note: Most watch mode tests are unit tests in the watch module itself,
