@@ -30,7 +30,7 @@ fn extract_host(url: &str) -> Option<String> {
 }
 
 /// HTTP Request configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HttpRequest {
     method: String,
     url: String,
@@ -152,7 +152,7 @@ impl HttpRequest {
 }
 
 /// HTTP Response data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HttpResponse {
     status: u16,
     headers: HashMap<String, String>,

@@ -498,52 +498,54 @@ impl Value {
 }
 
 impl PartialEq for Value {
+    /// Equality contract:
+    ///
+    /// **Value types** (content equality — two equal values may be different allocations):
+    /// - Number, String, Bool, Null: primitive equality
+    /// - Array, HashMap, HashSet, Queue, Stack: CoW wrappers compare by content
+    /// - Regex: compare by pattern string
+    /// - DateTime: compare timestamps
+    /// - HttpRequest, HttpResponse: compare by field content
+    /// - Option, Result, JsonValue: deep structural equality
+    /// - Function, Builtin: compare by name
+    /// - Closure: compare by function name
+    ///
+    /// **Reference types** (identity equality — only the same allocation is equal):
+    /// - NativeFunction: closures have no meaningful content equality
+    /// - SharedValue: Shared<T> uses Arc::ptr_eq (reference semantics by design)
+    /// - Future, TaskHandle, ChannelSender, ChannelReceiver, AsyncMutex:
+    ///   live runtime objects — identity is the only meaningful equality
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            // --- Value types: content equality ---
             (Value::Number(a), Value::Number(b)) => a == b,
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::Null, Value::Null) => true,
-            // Arrays use value equality (content comparison)
             (Value::Array(a), Value::Array(b)) => a == b,
-            // Functions are equal if they have the same name
-            (Value::Function(a), Value::Function(b)) => a.name == b.name,
-            // Builtins are equal if they have the same name
-            (Value::Builtin(a), Value::Builtin(b)) => a == b,
-            // Native functions use pointer equality
-            (Value::NativeFunction(a), Value::NativeFunction(b)) => Arc::ptr_eq(a, b),
-            // JsonValue uses structural equality
-            (Value::JsonValue(a), Value::JsonValue(b)) => a == b,
-            // Option uses deep equality
-            (Value::Option(a), Value::Option(b)) => a == b,
-            // Result uses deep equality
-            (Value::Result(a), Value::Result(b)) => a == b,
-            // Collections use value equality (content comparison)
             (Value::HashMap(a), Value::HashMap(b)) => a == b,
             (Value::HashSet(a), Value::HashSet(b)) => a == b,
             (Value::Queue(a), Value::Queue(b)) => a == b,
             (Value::Stack(a), Value::Stack(b)) => a == b,
-            // Regex uses reference identity (like arrays)
-            (Value::Regex(a), Value::Regex(b)) => Arc::ptr_eq(a, b),
-            // DateTime uses value equality (compare timestamps)
+            (Value::Regex(a), Value::Regex(b)) => a.as_str() == b.as_str(),
             (Value::DateTime(a), Value::DateTime(b)) => a == b,
-            // HttpRequest uses reference identity
-            (Value::HttpRequest(a), Value::HttpRequest(b)) => Arc::ptr_eq(a, b),
-            // HttpResponse uses reference identity
-            (Value::HttpResponse(a), Value::HttpResponse(b)) => Arc::ptr_eq(a, b),
-            // Future uses reference identity
-            (Value::Future(a), Value::Future(b)) => Arc::ptr_eq(a, b),
-            // TaskHandle uses reference identity
-            (Value::TaskHandle(a), Value::TaskHandle(b)) => Arc::ptr_eq(a, b),
-            // ChannelSender uses reference identity
-            (Value::ChannelSender(a), Value::ChannelSender(b)) => Arc::ptr_eq(a, b),
-            // ChannelReceiver uses reference identity
-            (Value::ChannelReceiver(a), Value::ChannelReceiver(b)) => Arc::ptr_eq(a, b),
-            // AsyncMutex uses reference identity
-            (Value::AsyncMutex(a), Value::AsyncMutex(b)) => Arc::ptr_eq(a, b),
-            // Closures are equal if they have the same function name
+            (Value::HttpRequest(a), Value::HttpRequest(b)) => a.as_ref() == b.as_ref(),
+            (Value::HttpResponse(a), Value::HttpResponse(b)) => a.as_ref() == b.as_ref(),
+            (Value::JsonValue(a), Value::JsonValue(b)) => a == b,
+            (Value::Option(a), Value::Option(b)) => a == b,
+            (Value::Result(a), Value::Result(b)) => a == b,
+            (Value::Function(a), Value::Function(b)) => a.name == b.name,
+            (Value::Builtin(a), Value::Builtin(b)) => a == b,
             (Value::Closure(a), Value::Closure(b)) => a.func.name == b.func.name,
+            // --- Reference types: identity equality ---
+            (Value::NativeFunction(a), Value::NativeFunction(b)) => Arc::ptr_eq(a, b),
             (Value::SharedValue(a), Value::SharedValue(b)) => a == b,
+            (Value::Future(a), Value::Future(b)) => Arc::ptr_eq(a, b),
+            (Value::TaskHandle(a), Value::TaskHandle(b)) => Arc::ptr_eq(a, b),
+            (Value::ChannelSender(a), Value::ChannelSender(b)) => Arc::ptr_eq(a, b),
+            (Value::ChannelReceiver(a), Value::ChannelReceiver(b)) => Arc::ptr_eq(a, b),
+            (Value::AsyncMutex(a), Value::AsyncMutex(b)) => Arc::ptr_eq(a, b),
+            // Different variants are never equal
             _ => false,
         }
     }
@@ -1507,6 +1509,45 @@ mod cow_type_tests {
         let mut b = ValueMap::new();
         b.insert("k".to_string(), Value::Number(42.0));
         assert_eq!(a, b);
+    }
+}
+
+#[cfg(test)]
+mod equality_tests {
+    use super::*;
+
+    #[test]
+    fn array_equality_by_content_not_identity() {
+        let a = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        let b = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        assert_eq!(a, b); // different allocations, same content
+    }
+
+    #[test]
+    fn array_inequality_after_mutation() {
+        let a = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        let mut b = a.clone();
+        if let Value::Array(ref mut arr) = b {
+            arr.push(Value::Number(2.0));
+        }
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn regex_equality_by_pattern() {
+        use regex::Regex;
+        let a = Value::Regex(Arc::new(Regex::new(r"\d+").unwrap()));
+        let b = Value::Regex(Arc::new(Regex::new(r"\d+").unwrap()));
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn native_function_inequality_different_closures() {
+        let f1: NativeFn = Arc::new(|_| Ok(Value::Null));
+        let f2: NativeFn = Arc::new(|_| Ok(Value::Null));
+        let a = Value::NativeFunction(f1);
+        let b = Value::NativeFunction(f2);
+        assert_ne!(a, b); // different closures — identity inequality
     }
 }
 
