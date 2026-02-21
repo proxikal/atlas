@@ -1,6 +1,6 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-21 (Phase 05 complete)
+**Last Updated:** 2026-02-21 (Phase 06 complete)
 **Version:** v0.3 — The Foundation Version
 **Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 in progress
 
@@ -9,8 +9,8 @@
 ## Current State
 
 **Status:** Block 1 in progress — executing phases
-**Last Completed:** Phase 05 — Finalize Value equality semantics (Regex, Http content eq)
-**Next Phase:** `phases/v0.3/block-01-memory-model/phase-06-interpreter-array-reads.md`
+**Last Completed:** Phase 06 — Fix interpreter array/collection read paths for CoW API
+**Next Phase:** `phases/v0.3/block-01-memory-model/phase-07-interpreter-array-mutations.md`
 
 > **Active block:** Block 1 — Memory Model (25 phases, execute sequentially)
 > Phase 16 (return value propagation) is the highest-risk phase — read it before starting Phase 07.
