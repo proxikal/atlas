@@ -91,9 +91,8 @@ impl Interpreter {
                 index,
                 span,
             } => {
-                let arr_val = self.eval_expr(target)?;
                 let idx_val = self.eval_expr(index)?;
-                self.set_array_element(arr_val, idx_val, value, *span)?;
+                self.assign_at_index(target, idx_val, value, *span)?;
             }
         }
 
@@ -170,9 +169,8 @@ impl Interpreter {
                 index,
                 span,
             } => {
-                let arr_val = self.eval_expr(target.as_ref())?;
                 let idx_val = self.eval_expr(index.as_ref())?;
-                self.set_array_element(arr_val, idx_val, result, *span)?;
+                self.assign_at_index(target, idx_val, result, *span)?;
             }
         }
 
@@ -222,9 +220,8 @@ impl Interpreter {
                 index,
                 span,
             } => {
-                let arr_val = self.eval_expr(target.as_ref())?;
                 let idx_val = self.eval_expr(index.as_ref())?;
-                self.set_array_element(arr_val, idx_val, result, *span)?;
+                self.assign_at_index(target, idx_val, result, *span)?;
             }
         }
 
@@ -274,9 +271,8 @@ impl Interpreter {
                 index,
                 span,
             } => {
-                let arr_val = self.eval_expr(target.as_ref())?;
                 let idx_val = self.eval_expr(index.as_ref())?;
-                self.set_array_element(arr_val, idx_val, result, *span)?;
+                self.assign_at_index(target, idx_val, result, *span)?;
             }
         }
 

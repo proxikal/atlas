@@ -4103,3 +4103,90 @@ fn test_edge_while_loop_early_break() {
     "#;
     assert_eval_number(code, 6.0);
 }
+
+// ============================================================================
+// Phase 07: Array Mutation CoW Semantics (Interpreter)
+// ============================================================================
+
+/// Index assignment writes back to the variable in the environment.
+///
+/// Previously, `set_array_element` mutated a local copy and discarded it.
+/// Now `assign_at_index` clones the container, mutates via CoW, and writes back.
+#[test]
+fn test_array_index_assignment_write_back() {
+    assert_eval_number("var arr: array = [10, 20, 30]; arr[1] = 99; arr[1];", 99.0);
+}
+
+#[test]
+fn test_array_index_assignment_first_element() {
+    assert_eval_number("var arr: array = [1, 2, 3]; arr[0] = 42; arr[0];", 42.0);
+}
+
+#[test]
+fn test_array_index_assignment_last_element() {
+    assert_eval_number("var arr: array = [1, 2, 3]; arr[2] = 77; arr[2];", 77.0);
+}
+
+/// CoW: mutating a cloned array does not affect the original.
+///
+/// `var a = [1, 2, 3]; var b = a; b[0] = 99;`
+/// After mutation, `a[0]` must still be 1 — CoW cloned the underlying data.
+#[test]
+fn test_cow_index_mutation_does_not_affect_original() {
+    assert_eval_number(
+        "var a: array = [1, 2, 3]; var b: array = a; b[0] = 99; a[0];",
+        1.0,
+    );
+}
+
+#[test]
+fn test_cow_cloned_array_gets_mutation() {
+    assert_eval_number(
+        "var a: array = [1, 2, 3]; var b: array = a; b[0] = 99; b[0];",
+        99.0,
+    );
+}
+
+/// Compound assignment (`+=`) on array index writes back correctly.
+#[test]
+fn test_array_compound_assign_add() {
+    assert_eval_number("var arr: array = [10, 20, 30]; arr[1] += 5; arr[1];", 25.0);
+}
+
+/// Increment (`++`) on array index writes back correctly.
+#[test]
+fn test_array_increment_writes_back() {
+    assert_eval_number("var arr: array = [5, 6, 7]; arr[0]++; arr[0];", 6.0);
+}
+
+/// Decrement (`--`) on array index writes back correctly.
+#[test]
+fn test_array_decrement_writes_back() {
+    assert_eval_number("var arr: array = [5, 6, 7]; arr[2]--; arr[2];", 6.0);
+}
+
+/// Multiple mutations accumulate on the same variable.
+#[test]
+fn test_array_multiple_mutations_accumulate() {
+    assert_eval_number(
+        "var arr: array = [0, 0, 0]; arr[0] = 10; arr[1] = 20; arr[2] = 30; arr[0] + arr[1] + arr[2];",
+        60.0,
+    );
+}
+
+/// Loop-based array mutation: each iteration writes back correctly.
+#[test]
+fn test_array_mutation_in_loop() {
+    assert_eval_number(
+        r#"
+            var arr: array = [1, 2, 3, 4, 5];
+            var i = 0;
+            while (i < 5) {
+                arr[i] = arr[i] * 2;
+                i = i + 1;
+            }
+            arr[0] + arr[1] + arr[2] + arr[3] + arr[4];
+        "#,
+        30.0,
+    );
+}

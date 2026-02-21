@@ -448,35 +448,74 @@ impl Interpreter {
         }
     }
 
-    /// Set an array element by index
-    pub(super) fn set_array_element(
-        &self,
-        arr: Value,
+    /// Assign `value` to the index position `idx` of the container named by `target_expr`,
+    /// using Copy-on-Write semantics with full write-back.
+    ///
+    /// Pattern: clone container from env → mutate (CoW triggers if shared) → write back.
+    /// Handles both simple variable targets (`arr[i] = val`) and nested index targets
+    /// (`matrix[i][j] = val`) via recursive descent.
+    pub(super) fn assign_at_index(
+        &mut self,
+        target_expr: &crate::ast::Expr,
         idx: Value,
         value: Value,
         span: crate::span::Span,
     ) -> Result<(), RuntimeError> {
-        if let Value::Array(mut arr) = arr {
-            if let Value::Number(n) = idx {
-                let index_val = n as i64;
-                if n.fract() != 0.0 || n < 0.0 {
+        match target_expr {
+            crate::ast::Expr::Identifier(id) => {
+                // Base case: simple variable — clone → mutate → write back
+                let mut container = self.get_variable(&id.name, span)?;
+                Self::apply_index_mutation(&mut container, idx, value, span)?;
+                self.set_variable(&id.name, container, span)
+            }
+            crate::ast::Expr::Index(inner) => {
+                // Nested: outer[inner_idx][idx] = value
+                // 1. Evaluate inner index expression
+                let inner_idx = self.eval_expr(&inner.index)?;
+                // 2. Clone the intermediate element (eval_expr reads outer[inner_idx])
+                let mut elem = self.eval_expr(target_expr)?;
+                // 3. Mutate the element at idx (CoW triggers if shared)
+                Self::apply_index_mutation(&mut elem, idx, value, span)?;
+                // 4. Recursively write elem back to outer[inner_idx]
+                self.assign_at_index(&inner.target, inner_idx, elem, span)
+            }
+            _ => Err(RuntimeError::TypeError {
+                msg: "Invalid assignment target".to_string(),
+                span,
+            }),
+        }
+    }
+
+    /// Apply a single index mutation to a container value (CoW semantics).
+    ///
+    /// `container` is mutated in-place via the CoW API — if the container's
+    /// inner data is shared, `Arc::make_mut` clones it first. If exclusively
+    /// owned, mutation is in-place with no allocation.
+    fn apply_index_mutation(
+        container: &mut Value,
+        idx: Value,
+        value: Value,
+        span: crate::span::Span,
+    ) -> Result<(), RuntimeError> {
+        match (container, &idx) {
+            (Value::Array(arr), Value::Number(n)) => {
+                if n.fract() != 0.0 || *n < 0.0 {
                     return Err(RuntimeError::InvalidIndex { span });
                 }
-
-                if index_val >= 0 && (index_val as usize) < arr.len() {
-                    arr.set(index_val as usize, value);
-                    Ok(())
-                } else {
-                    Err(RuntimeError::OutOfBounds { span })
+                let i = *n as usize;
+                if i >= arr.len() {
+                    return Err(RuntimeError::OutOfBounds { span });
                 }
-            } else {
-                Err(RuntimeError::InvalidIndex { span })
+                arr.set(i, value);
+                Ok(())
             }
-        } else {
-            Err(RuntimeError::TypeError {
-                msg: "Cannot index non-array".to_string(),
+            (container, _) => Err(RuntimeError::TypeError {
+                msg: format!(
+                    "Cannot index-assign to type '{}'",
+                    container.type_name()
+                ),
                 span,
-            })
+            }),
         }
     }
 
