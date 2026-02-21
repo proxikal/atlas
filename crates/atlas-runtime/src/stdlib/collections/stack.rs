@@ -9,7 +9,7 @@ use crate::value::Value;
 ///
 /// Backed by Vec for optimal performance.
 /// Supports all standard stack operations: push, pop, peek.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AtlasStack {
     inner: Vec<Value>,
 }

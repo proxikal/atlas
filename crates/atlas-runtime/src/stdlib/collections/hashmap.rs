@@ -12,7 +12,7 @@ use std::sync::Mutex;
 ///
 /// Uses Rust's standard HashMap internally with deterministic hashing.
 /// Only hashable types (number, string, bool, null) can be used as keys.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AtlasHashMap {
     inner: HashMap<HashKey, Value>,
 }

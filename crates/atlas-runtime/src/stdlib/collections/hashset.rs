@@ -16,7 +16,7 @@ use std::collections::HashSet as RustHashSet;
 
 /// Atlas HashSet - unique value collection with O(1) operations
 /// Backed by Rust's HashSet for proven performance
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AtlasHashSet {
     inner: RustHashSet<HashKey>,
 }
@@ -311,12 +311,6 @@ pub fn is_subset(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     let set_a = extract_hashset("HashSet.isSubset", &args[0], span)?;
     let set_b = extract_hashset("HashSet.isSubset", &args[1], span)?;
 
-    // Identity check: same Arc means same set — a set is always a subset of itself.
-    // Without this, locking set_a then set_b deadlocks when they share the same Mutex.
-    if Arc::ptr_eq(&set_a, &set_b) {
-        return Ok(Value::Bool(true));
-    }
-
     let is_sub = set_a.lock().unwrap().is_subset(&set_b.lock().unwrap());
     Ok(Value::Bool(is_sub))
 }
@@ -334,12 +328,6 @@ pub fn is_superset(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     let set_a = extract_hashset("HashSet.isSuperset", &args[0], span)?;
     let set_b = extract_hashset("HashSet.isSuperset", &args[1], span)?;
-
-    // Identity check: same Arc means same set — a set is always a superset of itself.
-    // Without this, locking set_a then set_b deadlocks when they share the same Mutex.
-    if Arc::ptr_eq(&set_a, &set_b) {
-        return Ok(Value::Bool(true));
-    }
 
     let is_super = set_a.lock().unwrap().is_superset(&set_b.lock().unwrap());
     Ok(Value::Bool(is_super))
