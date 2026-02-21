@@ -215,7 +215,7 @@ After GATE -1, declare one:
 - Status: "✅ PHASE COMPLETE - COMMITTED TO LOCAL MAIN"
 - Final Stats (bullets)
 - **Memory:** Updated X / No updates needed (MANDATORY - see GATE 7)
-- Progress (X/131 phases)
+- Progress (X/~140 phases estimate — see STATUS.md block table)
 - Next phase
 
 ---
