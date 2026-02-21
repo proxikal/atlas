@@ -196,6 +196,118 @@ impl From<HashMap<String, Value>> for ValueMap {
     }
 }
 
+/// Copy-on-write wrapper for AtlasHashMap
+#[derive(Clone, Debug, Default)]
+pub struct ValueHashMap(Arc<crate::stdlib::collections::hashmap::AtlasHashMap>);
+
+impl ValueHashMap {
+    pub fn new() -> Self {
+        ValueHashMap(Arc::new(crate::stdlib::collections::hashmap::AtlasHashMap::new()))
+    }
+
+    pub fn inner(&self) -> &crate::stdlib::collections::hashmap::AtlasHashMap {
+        &self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut crate::stdlib::collections::hashmap::AtlasHashMap {
+        Arc::make_mut(&mut self.0)
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl PartialEq for ValueHashMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+/// Copy-on-write wrapper for AtlasHashSet
+#[derive(Clone, Debug, Default)]
+pub struct ValueHashSet(Arc<crate::stdlib::collections::hashset::AtlasHashSet>);
+
+impl ValueHashSet {
+    pub fn new() -> Self {
+        ValueHashSet(Arc::new(crate::stdlib::collections::hashset::AtlasHashSet::new()))
+    }
+
+    pub fn inner(&self) -> &crate::stdlib::collections::hashset::AtlasHashSet {
+        &self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut crate::stdlib::collections::hashset::AtlasHashSet {
+        Arc::make_mut(&mut self.0)
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl PartialEq for ValueHashSet {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+/// Copy-on-write wrapper for AtlasQueue
+#[derive(Clone, Debug, Default)]
+pub struct ValueQueue(Arc<crate::stdlib::collections::queue::AtlasQueue>);
+
+impl ValueQueue {
+    pub fn new() -> Self {
+        ValueQueue(Arc::new(crate::stdlib::collections::queue::AtlasQueue::new()))
+    }
+
+    pub fn inner(&self) -> &crate::stdlib::collections::queue::AtlasQueue {
+        &self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut crate::stdlib::collections::queue::AtlasQueue {
+        Arc::make_mut(&mut self.0)
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl PartialEq for ValueQueue {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+/// Copy-on-write wrapper for AtlasStack
+#[derive(Clone, Debug, Default)]
+pub struct ValueStack(Arc<crate::stdlib::collections::stack::AtlasStack>);
+
+impl ValueStack {
+    pub fn new() -> Self {
+        ValueStack(Arc::new(crate::stdlib::collections::stack::AtlasStack::new()))
+    }
+
+    pub fn inner(&self) -> &crate::stdlib::collections::stack::AtlasStack {
+        &self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut crate::stdlib::collections::stack::AtlasStack {
+        Arc::make_mut(&mut self.0)
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl PartialEq for ValueStack {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
 /// Native function type - Rust closure callable from Atlas
 ///
 /// Native functions receive an array of Atlas values and return either a value or a runtime error.
@@ -228,13 +340,13 @@ pub enum Value {
     /// Result value (Ok(value) or Err(error))
     Result(Result<Box<Value>, Box<Value>>),
     /// HashMap collection (key-value pairs)
-    HashMap(Arc<Mutex<crate::stdlib::collections::hashmap::AtlasHashMap>>),
+    HashMap(ValueHashMap),
     /// HashSet collection (unique values)
-    HashSet(Arc<Mutex<crate::stdlib::collections::hashset::AtlasHashSet>>),
+    HashSet(ValueHashSet),
     /// Queue collection (FIFO)
-    Queue(Arc<Mutex<crate::stdlib::collections::queue::AtlasQueue>>),
+    Queue(ValueQueue),
     /// Stack collection (LIFO)
-    Stack(Arc<Mutex<crate::stdlib::collections::stack::AtlasStack>>),
+    Stack(ValueStack),
     /// Regular expression pattern
     Regex(Arc<regex::Regex>),
     /// DateTime value (UTC timezone)
@@ -358,14 +470,11 @@ impl PartialEq for Value {
             (Value::Option(a), Value::Option(b)) => a == b,
             // Result uses deep equality
             (Value::Result(a), Value::Result(b)) => a == b,
-            // HashMap uses reference identity (like arrays)
-            (Value::HashMap(a), Value::HashMap(b)) => Arc::ptr_eq(a, b),
-            // HashSet uses reference identity (like arrays)
-            (Value::HashSet(a), Value::HashSet(b)) => Arc::ptr_eq(a, b),
-            // Queue uses reference identity (like arrays)
-            (Value::Queue(a), Value::Queue(b)) => Arc::ptr_eq(a, b),
-            // Stack uses reference identity (like arrays)
-            (Value::Stack(a), Value::Stack(b)) => Arc::ptr_eq(a, b),
+            // Collections use value equality (content comparison)
+            (Value::HashMap(a), Value::HashMap(b)) => a == b,
+            (Value::HashSet(a), Value::HashSet(b)) => a == b,
+            (Value::Queue(a), Value::Queue(b)) => a == b,
+            (Value::Stack(a), Value::Stack(b)) => a == b,
             // Regex uses reference identity (like arrays)
             (Value::Regex(a), Value::Regex(b)) => Arc::ptr_eq(a, b),
             // DateTime uses value equality (compare timestamps)
@@ -423,10 +532,10 @@ impl fmt::Display for Value {
                 Ok(val) => write!(f, "Ok({})", val),
                 Err(err) => write!(f, "Err({})", err),
             },
-            Value::HashMap(map) => write!(f, "<HashMap size={}>", map.lock().unwrap().len()),
-            Value::HashSet(set) => write!(f, "<HashSet size={}>", set.lock().unwrap().len()),
-            Value::Queue(queue) => write!(f, "<Queue size={}>", queue.lock().unwrap().len()),
-            Value::Stack(stack) => write!(f, "<Stack size={}>", stack.lock().unwrap().len()),
+            Value::HashMap(map) => write!(f, "<HashMap size={}>", map.inner().len()),
+            Value::HashSet(set) => write!(f, "<HashSet size={}>", set.inner().len()),
+            Value::Queue(queue) => write!(f, "<Queue size={}>", queue.inner().len()),
+            Value::Stack(stack) => write!(f, "<Stack size={}>", stack.inner().len()),
             Value::Regex(r) => write!(f, "<Regex /{}/>", r.as_str()),
             Value::DateTime(dt) => write!(f, "{}", dt.to_rfc3339()),
             Value::HttpRequest(req) => write!(f, "<HttpRequest {} {}>", req.method(), req.url()),
@@ -455,10 +564,10 @@ impl fmt::Debug for Value {
             Value::JsonValue(json) => write!(f, "JsonValue({:?})", json),
             Value::Option(opt) => write!(f, "Option({:?})", opt),
             Value::Result(res) => write!(f, "Result({:?})", res),
-            Value::HashMap(map) => write!(f, "HashMap(size={})", map.lock().unwrap().len()),
-            Value::HashSet(set) => write!(f, "HashSet(size={})", set.lock().unwrap().len()),
-            Value::Queue(queue) => write!(f, "Queue(size={})", queue.lock().unwrap().len()),
-            Value::Stack(stack) => write!(f, "Stack(size={})", stack.lock().unwrap().len()),
+            Value::HashMap(map) => write!(f, "HashMap(size={})", map.inner().len()),
+            Value::HashSet(set) => write!(f, "HashSet(size={})", set.inner().len()),
+            Value::Queue(queue) => write!(f, "Queue(size={})", queue.inner().len()),
+            Value::Stack(stack) => write!(f, "Stack(size={})", stack.inner().len()),
             Value::Regex(r) => write!(f, "Regex(/{}/)", r.as_str()),
             Value::DateTime(dt) => write!(f, "DateTime({})", dt.to_rfc3339()),
             Value::HttpRequest(req) => write!(f, "HttpRequest({} {})", req.method(), req.url()),
@@ -1320,6 +1429,24 @@ mod cow_type_tests {
         a.insert("y".to_string(), Value::Number(2.0));
         assert_eq!(a.len(), 2);
         assert_eq!(b.len(), 1); // b is unaffected
+    }
+
+    #[test]
+    fn value_hashmap_cow_insert_does_not_affect_clone() {
+        let mut a = ValueHashMap::new();
+        a.inner_mut().insert("x".to_string(), Value::Number(1.0));
+        let b = a.clone();
+        a.inner_mut().insert("y".to_string(), Value::Number(2.0));
+        assert_eq!(b.inner().len(), 1);
+    }
+
+    #[test]
+    fn value_collection_equality_by_content() {
+        let mut a = ValueHashMap::new();
+        a.inner_mut().insert("k".to_string(), Value::Number(1.0));
+        let mut b = ValueHashMap::new();
+        b.inner_mut().insert("k".to_string(), Value::Number(1.0));
+        assert_eq!(a, b);
     }
 
     #[test]

@@ -10,7 +10,7 @@ use std::collections::VecDeque;
 ///
 /// Backed by VecDeque (circular buffer) for optimal performance.
 /// Supports all standard queue operations: enqueue, dequeue, peek.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AtlasQueue {
     inner: VecDeque<Value>,
 }
