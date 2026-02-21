@@ -70,6 +70,8 @@ pub enum Value {
     ChannelReceiver(Arc<Mutex<crate::async_runtime::channel::ChannelReceiver>>),
     /// Async mutex (for async synchronization)
     AsyncMutex(Arc<tokio::sync::Mutex<Value>>),
+    /// Closure (function + captured upvalue environment)
+    Closure(ClosureRef),
 }
 
 /// Function reference
@@ -84,6 +86,15 @@ pub struct FunctionRef {
     /// Total number of local variables (parameters + locals)
     /// Used by VM to properly allocate stack space
     pub local_count: usize,
+}
+
+/// Closure reference — a function with a captured upvalue environment
+#[derive(Debug, Clone)]
+pub struct ClosureRef {
+    /// The underlying compiled function
+    pub func: FunctionRef,
+    /// Captured outer-scope values (by value, at closure creation time)
+    pub upvalues: Arc<Vec<Value>>,
 }
 
 impl Value {
@@ -124,6 +135,7 @@ impl Value {
             Value::ChannelSender(_) => "ChannelSender",
             Value::ChannelReceiver(_) => "ChannelReceiver",
             Value::AsyncMutex(_) => "AsyncMutex",
+            Value::Closure(_) => "function",
         }
     }
 
@@ -189,6 +201,8 @@ impl PartialEq for Value {
             (Value::ChannelReceiver(a), Value::ChannelReceiver(b)) => Arc::ptr_eq(a, b),
             // AsyncMutex uses reference identity
             (Value::AsyncMutex(a), Value::AsyncMutex(b)) => Arc::ptr_eq(a, b),
+            // Closures are equal if they have the same function name
+            (Value::Closure(a), Value::Closure(b)) => a.func.name == b.func.name,
             _ => false,
         }
     }
@@ -240,6 +254,7 @@ impl fmt::Display for Value {
             Value::ChannelSender(_) => write!(f, "<ChannelSender>"),
             Value::ChannelReceiver(_) => write!(f, "<ChannelReceiver>"),
             Value::AsyncMutex(_) => write!(f, "<AsyncMutex>"),
+            Value::Closure(c) => write!(f, "<fn {}>", c.func.name),
         }
     }
 }
@@ -274,6 +289,7 @@ impl fmt::Debug for Value {
             Value::ChannelSender(_) => write!(f, "ChannelSender"),
             Value::ChannelReceiver(_) => write!(f, "ChannelReceiver"),
             Value::AsyncMutex(_) => write!(f, "AsyncMutex"),
+            Value::Closure(c) => write!(f, "Closure({:?})", c.func),
         }
     }
 }

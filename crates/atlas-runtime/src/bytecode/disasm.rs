@@ -100,15 +100,27 @@ fn disassemble_instruction(bytecode: &Bytecode, offset: &mut usize) -> String {
             format!("{:04}  {:?}", start_offset, opcode)
         }
 
-        // u16 operands (constants, locals, globals)
+        // u16 operands (constants, locals, globals, upvalues)
         Opcode::Constant
         | Opcode::GetLocal
         | Opcode::SetLocal
         | Opcode::GetGlobal
         | Opcode::SetGlobal
+        | Opcode::GetUpvalue
+        | Opcode::SetUpvalue
         | Opcode::Array => {
             let operand = read_u16(bytecode, offset);
             format!("{:04}  {:?} {}", start_offset, opcode, operand)
+        }
+
+        // MakeClosure: two u16 operands (func_const_idx, n_upvalues)
+        Opcode::MakeClosure => {
+            let func_idx = read_u16(bytecode, offset);
+            let n_upvalues = read_u16(bytecode, offset);
+            format!(
+                "{:04}  MakeClosure func={} upvalues={}",
+                start_offset, func_idx, n_upvalues
+            )
         }
 
         // u8 operand (call arg count)
@@ -190,6 +202,7 @@ fn format_value(value: &crate::value::Value) -> String {
         Value::ChannelSender(_) => "<ChannelSender>".to_string(),
         Value::ChannelReceiver(_) => "<ChannelReceiver>".to_string(),
         Value::AsyncMutex(_) => "<AsyncMutex>".to_string(),
+        Value::Closure(c) => format!("<fn {}>", c.func.name),
     }
 }
 

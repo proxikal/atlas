@@ -16,11 +16,14 @@ static OPCODE_TABLE: [Option<Opcode>; 256] = {
     table[0x03] = Some(Opcode::True);
     table[0x04] = Some(Opcode::False);
 
-    // Variables (0x10-0x13)
+    // Variables (0x10-0x16)
     table[0x10] = Some(Opcode::GetLocal);
     table[0x11] = Some(Opcode::SetLocal);
     table[0x12] = Some(Opcode::GetGlobal);
     table[0x13] = Some(Opcode::SetGlobal);
+    table[0x14] = Some(Opcode::MakeClosure);
+    table[0x15] = Some(Opcode::GetUpvalue);
+    table[0x16] = Some(Opcode::SetUpvalue);
 
     // Arithmetic (0x20-0x25)
     table[0x20] = Some(Opcode::Add);
@@ -95,7 +98,11 @@ pub fn operand_size(opcode: Opcode) -> usize {
         | Opcode::SetLocal
         | Opcode::GetGlobal
         | Opcode::SetGlobal
+        | Opcode::GetUpvalue
+        | Opcode::SetUpvalue
         | Opcode::Array => 2,
+        // MakeClosure: two u16 operands (func_const_idx, n_upvalues) = 4 bytes
+        Opcode::MakeClosure => 4,
         // i16 operand
         Opcode::Jump | Opcode::JumpIfFalse | Opcode::Loop => 2,
         // u8 operand

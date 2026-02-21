@@ -118,6 +118,11 @@ pub(super) fn serialize_value(value: &Value, bytes: &mut Vec<u8>) {
         Value::AsyncMutex(_) => {
             panic!("Cannot serialize AsyncMutex values in bytecode constants");
         }
+        Value::Closure(_) => {
+            // Closure values cannot be serialized in constant pool
+            // They are runtime-only values
+            panic!("Cannot serialize Closure values in bytecode constants");
+        }
     }
 }
 

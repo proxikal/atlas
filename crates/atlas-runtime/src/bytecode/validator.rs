@@ -213,6 +213,8 @@ fn read_operand(opcode: Opcode, code: &[u8], ip: usize) -> Result<(usize, i64), 
         | Opcode::SetLocal
         | Opcode::GetGlobal
         | Opcode::SetGlobal
+        | Opcode::GetUpvalue
+        | Opcode::SetUpvalue
         | Opcode::Array => {
             if ip + 1 >= code.len() {
                 return Err(opcode_name(opcode));
@@ -220,6 +222,15 @@ fn read_operand(opcode: Opcode, code: &[u8], ip: usize) -> Result<(usize, i64), 
             let hi = code[ip] as u16;
             let lo = code[ip + 1] as u16;
             Ok((2, ((hi << 8) | lo) as i64))
+        }
+        // MakeClosure: 4 bytes (two u16: func_const_idx, n_upvalues)
+        Opcode::MakeClosure => {
+            if ip + 3 >= code.len() {
+                return Err(opcode_name(opcode));
+            }
+            let hi = code[ip] as u16;
+            let lo = code[ip + 1] as u16;
+            Ok((4, ((hi << 8) | lo) as i64))
         }
         // 2-byte signed operand (i16)
         Opcode::Jump | Opcode::JumpIfFalse | Opcode::Loop => {
@@ -288,6 +299,9 @@ fn opcode_name(opcode: Opcode) -> &'static str {
         Opcode::IsArray => "IsArray",
         Opcode::GetArrayLen => "GetArrayLen",
         Opcode::Halt => "Halt",
+        Opcode::MakeClosure => "MakeClosure",
+        Opcode::GetUpvalue => "GetUpvalue",
+        Opcode::SetUpvalue => "SetUpvalue",
     }
 }
 
@@ -386,11 +400,13 @@ fn stack_delta(instr: &DecodedInstruction) -> Option<i32> {
         | Opcode::False
         | Opcode::GetLocal
         | Opcode::GetGlobal
+        | Opcode::GetUpvalue
         | Opcode::Dup => Some(1),
 
         // Neutral (peek-based or pop-1/push-1)
         Opcode::SetLocal
         | Opcode::SetGlobal
+        | Opcode::SetUpvalue
         | Opcode::Negate
         | Opcode::Not
         | Opcode::Jump
@@ -427,8 +443,8 @@ fn stack_delta(instr: &DecodedInstruction) -> Option<i32> {
         // Pop 3, push 1 (value assigned back)
         Opcode::SetIndex => Some(-2),
 
-        // Variable-arity — skip
-        Opcode::Call | Opcode::Array => None,
+        // Variable-arity — skip (MakeClosure pops n_upvalues, push 1; net depends on operand)
+        Opcode::Call | Opcode::Array | Opcode::MakeClosure => None,
 
         // Return drains the frame — stop tracking
         Opcode::Return => None,

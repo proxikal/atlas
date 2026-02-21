@@ -380,10 +380,12 @@ fn value_to_json(
             // Serialize JsonValue directly
             json_value_to_string(json, span)
         }
-        Value::Function(_) | Value::Builtin(_) => Err(RuntimeError::TypeError {
-            msg: "Cannot serialize function to JSON".to_string(),
-            span,
-        }),
+        Value::Function(_) | Value::Builtin(_) | Value::Closure(_) => {
+            Err(RuntimeError::TypeError {
+                msg: "Cannot serialize function to JSON".to_string(),
+                span,
+            })
+        }
         Value::NativeFunction(_) => Err(RuntimeError::TypeError {
             msg: "Cannot serialize native function to JSON".to_string(),
             span,

@@ -2,12 +2,11 @@
 //!
 //! Documents the ACTUAL behavior of function scoping in Atlas v0.2.
 //!
-//! # Key Finding
+//! # Closure Implementation
 //!
-//! Atlas does NOT use lexical closure capture. Instead:
+//! Both engines support upvalue capture (as of the closure parity fix):
 //! - The **interpreter** uses dynamic scoping (walks the live scope stack at call time)
-//! - The **VM** compiles outer-scope local accesses via GetGlobal, which works for top-level
-//!   variables but NOT for outer FUNCTION locals (they're stack-allocated, not in globals)
+//! - The **VM** uses upvalue capture at closure creation time (by value)
 //!
 //! ## What Works (both engines, parity):
 //! - Top-level `let` and `var` are accessible from any named function
@@ -15,12 +14,14 @@
 //! - Functions passed as arguments (not closures, just fn references)
 //! - Functions stored in variables and called later
 //! - Higher-order functions (take fn args, call them)
+//! - Inner functions reading outer function locals (upvalue capture)
+//! - Inner functions reading outer function parameters (upvalue capture)
 //!
-//! ## What Does NOT Work (interpreter-only; VM fails):
-//! - Inner functions accessing the outer FUNCTION's local variables
-//! - v0.3 plan: proper lexical closures with environment capture
-//!
-//! All tests that are parity breaks are marked `#[ignore]` with explanation.
+//! ## Semantic Note (capture-by-value in VM):
+//! The VM captures outer locals BY VALUE at closure creation time.
+//! The interpreter uses live dynamic scoping (captures by reference).
+//! For `let` variables (immutable), both are identical.
+//! For `var` mutations after closure creation, behavior may diverge.
 
 mod common;
 
@@ -434,14 +435,11 @@ hypotenuse_sq();
 }
 
 // ============================================================================
-// Category E: Nested fn inside fn — inner called WITHIN outer (dynamic scoping)
+// Category E: Nested fn inside fn — upvalue capture (both engines)
 //
-// These tests work in the interpreter because the outer function's scope is
-// still on the stack when inner is called. In the VM, the compiler emits
-// GetGlobal for outer-function locals (not stack locals), which may or may
-// not find the value depending on how the VM's global table is populated.
-//
-// Tests that are VM parity breaks are marked #[ignore] with v0.3 context.
+// The VM uses upvalue capture at closure creation time (by value).
+// The interpreter uses live dynamic scoping.
+// For let-bound variables, results are identical in both engines.
 // ============================================================================
 
 #[test]
@@ -463,10 +461,9 @@ outer(21);
 
 #[test]
 fn test_nested_fn_called_within_outer_uses_outer_var() {
-    // Interpreter: dynamic scope lookup finds outer's locals on the stack ✅
-    // VM: compiles 'x' as GetGlobal (outer's local is not in globals) → may fail
-    // Mark #[ignore] for VM parity; document the limitation.
-    let source = r#"
+    // Both engines: inner function reads outer function's local via upvalue capture
+    assert_parity_number(
+        r#"
 fn outer() -> number {
     let x = 42;
     fn inner() -> number {
@@ -475,27 +472,16 @@ fn outer() -> number {
     return inner();
 }
 outer();
-"#;
-
-    // Interpreter works — dynamic scoping sees outer's local 'x' on the scope stack
-    let interp = interp_eval(source);
-    assert_eq!(
-        interp,
-        Value::Number(42.0),
-        "Interpreter should see outer's local via dynamic scoping"
+"#,
+        42.0,
     );
-
-    // NOTE: The VM may fail here because it emits GetGlobal for 'x' (a stack-local in outer).
-    // This is a known v0.2 limitation — see docs/specification/types.md for details.
-    // The VM test is intentionally not asserted here; behavior is implementation-defined.
 }
 
 #[test]
-fn test_nested_fn_with_outer_param_interpreter_only() {
-    // Inner fn reading outer fn's PARAMETER via dynamic scoping (interpreter only)
-    // VM: outer's parameter is a local (GetLocal), so inner sees it via GetGlobal lookup
-    // which may fail. We test interpreter behavior here.
-    let source = r#"
+fn test_nested_fn_with_outer_param() {
+    // Both engines: inner function reads outer function's parameter via upvalue capture
+    assert_parity_number(
+        r#"
 fn outer(n: number) -> number {
     fn double_n() -> number {
         return n * 2;
@@ -503,13 +489,8 @@ fn outer(n: number) -> number {
     return double_n();
 }
 outer(21);
-"#;
-
-    let interp = interp_eval(source);
-    assert_eq!(
-        interp,
-        Value::Number(42.0),
-        "Interpreter should see outer's parameter via dynamic scoping"
+"#,
+        42.0,
     );
 }
 
@@ -659,5 +640,196 @@ let b = make_local();
 a + b;
 "#,
         30.0,
+    );
+}
+
+// ============================================================================
+// Category H: Upvalue capture parity — both engines produce identical results
+//
+// These tests specifically exercise the VM's upvalue capture mechanism
+// and verify it matches the interpreter's dynamic scoping behavior.
+// ============================================================================
+
+#[test]
+fn test_upvalue_multiple_outer_lets() {
+    // Inner function captures multiple outer let variables
+    assert_parity_number(
+        r#"
+fn outer() -> number {
+    let a = 10;
+    let b = 32;
+    fn sum() -> number {
+        return a + b;
+    }
+    return sum();
+}
+outer();
+"#,
+        42.0,
+    );
+}
+
+#[test]
+fn test_upvalue_arithmetic_with_outer_vars() {
+    // Inner function uses outer vars in arithmetic
+    assert_parity_number(
+        r#"
+fn make_adder(base: number) -> number {
+    fn add(x: number) -> number {
+        return base + x;
+    }
+    return add(10);
+}
+make_adder(32);
+"#,
+        42.0,
+    );
+}
+
+#[test]
+fn test_upvalue_multiple_inner_fns_same_outer() {
+    // Two inner functions both capturing the same outer variable
+    assert_parity_number(
+        r#"
+fn outer() -> number {
+    let factor = 3;
+    fn triple(n: number) -> number {
+        return n * factor;
+    }
+    fn check() -> number {
+        return factor * 2;
+    }
+    return triple(10) + check();
+}
+outer();
+"#,
+        36.0,
+    );
+}
+
+#[test]
+fn test_upvalue_conditional_in_outer() {
+    // Outer function has branching; inner captures the result
+    assert_parity_number(
+        r#"
+fn outer(x: number) -> number {
+    let result = x * 2;
+    fn get_result() -> number {
+        return result;
+    }
+    return get_result();
+}
+outer(21);
+"#,
+        42.0,
+    );
+}
+
+#[test]
+fn test_upvalue_inner_fn_called_multiple_times() {
+    // Inner function can be called multiple times and sees correct captured value
+    assert_parity_number(
+        r#"
+fn outer(n: number) -> number {
+    fn double() -> number {
+        return n * 2;
+    }
+    return double() + double();
+}
+outer(10);
+"#,
+        40.0,
+    );
+}
+
+#[test]
+fn test_upvalue_three_level_capture() {
+    // Innermost function captures from outermost via upvalue chain
+    assert_parity_number(
+        r#"
+fn level1(x: number) -> number {
+    fn level2() -> number {
+        fn level3() -> number {
+            return x + 1;
+        }
+        return level3();
+    }
+    return level2();
+}
+level1(41);
+"#,
+        42.0,
+    );
+}
+
+#[test]
+fn test_upvalue_string_capture() {
+    // Upvalue capture works for string type too
+    assert_parity_string(
+        r#"
+fn outer(name: string) -> string {
+    fn greet() -> string {
+        return name;
+    }
+    return greet();
+}
+outer("atlas");
+"#,
+        "atlas",
+    );
+}
+
+#[test]
+fn test_upvalue_bool_capture() {
+    // Upvalue capture works for bool type
+    assert_parity_bool(
+        r#"
+fn outer(flag: bool) -> bool {
+    fn check() -> bool {
+        return flag;
+    }
+    return check();
+}
+outer(true);
+"#,
+        true,
+    );
+}
+
+#[test]
+fn test_upvalue_sibling_and_capture() {
+    // Sibling calls (via scoped globals) AND upvalue capture work together
+    assert_parity_number(
+        r#"
+fn outer(n: number) -> number {
+    fn add_one(x: number) -> number {
+        return x + 1;
+    }
+    fn add_n(x: number) -> number {
+        return x + n;
+    }
+    return add_one(add_n(10));
+}
+outer(5);
+"#,
+        16.0,
+    );
+}
+
+#[test]
+fn test_upvalue_outer_computation() {
+    // Outer function computes a value, inner captures and uses it
+    assert_parity_number(
+        r#"
+fn outer(a: number, b: number) -> number {
+    let product = a * b;
+    fn get_product() -> number {
+        return product;
+    }
+    return get_product();
+}
+outer(6, 7);
+"#,
+        42.0,
     );
 }

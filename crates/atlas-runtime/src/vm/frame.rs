@@ -6,6 +6,7 @@
 /// - Where to return to (return_ip)
 /// - Where the function's local variables start on the stack (stack_base)
 /// - How many locals the function has (local_count)
+/// - Upvalues captured at closure creation time (empty for plain functions)
 ///
 /// The main/top-level code also has a frame ("<main>") with stack_base = 0.
 ///
@@ -34,4 +35,6 @@ pub struct CallFrame {
     pub stack_base: usize,
     /// Number of local variables in this frame
     pub local_count: usize,
+    /// Upvalues captured at closure creation time (empty for plain functions)
+    pub upvalues: std::sync::Arc<Vec<crate::value::Value>>,
 }

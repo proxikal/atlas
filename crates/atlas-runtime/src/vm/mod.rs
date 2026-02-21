@@ -77,6 +77,7 @@ impl VM {
             return_ip: 0,
             stack_base: 0,
             local_count: 0,
+            upvalues: std::sync::Arc::new(Vec::new()),
         };
 
         Self {
@@ -631,6 +632,72 @@ impl VM {
                     self.globals.insert(name, value);
                 }
 
+                Opcode::MakeClosure => {
+                    let func_const_idx = self.read_u16()? as usize;
+                    let n_upvalues = self.read_u16()? as usize;
+
+                    // Get the FunctionRef from constant pool
+                    let func = match self.bytecode.constants.get(func_const_idx) {
+                        Some(Value::Function(f)) => f.clone(),
+                        _ => {
+                            return Err(RuntimeError::TypeError {
+                                msg: "MakeClosure: constant is not a function".to_string(),
+                                span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                            })
+                        }
+                    };
+
+                    // Pop upvalues from stack (in reverse order since stack is LIFO)
+                    let mut upvalues = Vec::with_capacity(n_upvalues);
+                    for _ in 0..n_upvalues {
+                        upvalues.push(self.pop());
+                    }
+                    upvalues.reverse(); // Restore capture order
+
+                    let closure = crate::value::ClosureRef {
+                        func,
+                        upvalues: std::sync::Arc::new(upvalues),
+                    };
+                    self.push(Value::Closure(closure));
+                }
+
+                Opcode::GetUpvalue => {
+                    let idx = self.read_u16()? as usize;
+                    let value = match self.current_frame().upvalues.get(idx) {
+                        Some(v) => v.clone(),
+                        None => {
+                            return Err(RuntimeError::TypeError {
+                                msg: format!(
+                                    "Upvalue index {} out of bounds (closure has {} upvalues)",
+                                    idx,
+                                    self.current_frame().upvalues.len()
+                                ),
+                                span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                            })
+                        }
+                    };
+                    self.push(value);
+                }
+
+                Opcode::SetUpvalue => {
+                    let idx = self.read_u16()? as usize;
+                    let value = self.peek(0).clone();
+                    let frame = self.frames.last_mut().expect("no call frame");
+                    let upvalues = std::sync::Arc::make_mut(&mut frame.upvalues);
+                    if idx < upvalues.len() {
+                        upvalues[idx] = value;
+                    } else {
+                        return Err(RuntimeError::TypeError {
+                            msg: format!(
+                                "SetUpvalue: index {} out of bounds (closure has {} upvalues)",
+                                idx,
+                                upvalues.len()
+                            ),
+                            span: self.current_span().unwrap_or_else(crate::span::Span::dummy),
+                        });
+                    }
+                }
+
                 // ===== Arithmetic =====
                 Opcode::Add => {
                     let b = self.pop();
@@ -869,6 +936,7 @@ impl VM {
                                     return_ip: self.ip,
                                     stack_base: self.stack.len() - arg_count, // Points to first argument
                                     local_count: func.local_count, // Use total locals, not just arity
+                                    upvalues: std::sync::Arc::new(Vec::new()),
                                 };
 
                                 // Verify argument count matches
@@ -896,6 +964,51 @@ impl VM {
                                 // Jump to function bytecode
                                 self.ip = func.bytecode_offset;
                             }
+                        }
+                        Value::Closure(closure) => {
+                            // Closure call: same as Function but passes upvalues to the frame
+                            let func = closure.func.clone();
+                            let upvalues = closure.upvalues.clone();
+
+                            if func.bytecode_offset == 0 {
+                                return Err(RuntimeError::TypeError {
+                                    msg: format!(
+                                        "Cannot call closure '{}' from VM: no compiled bytecode.",
+                                        func.name
+                                    ),
+                                    span: self
+                                        .current_span()
+                                        .unwrap_or_else(crate::span::Span::dummy),
+                                });
+                            }
+
+                            if arg_count != func.arity {
+                                return Err(RuntimeError::TypeError {
+                                    msg: format!(
+                                        "Function {} expects {} arguments, got {}",
+                                        func.name, func.arity, arg_count
+                                    ),
+                                    span: self
+                                        .current_span()
+                                        .unwrap_or_else(crate::span::Span::dummy),
+                                });
+                            }
+
+                            let frame = CallFrame {
+                                function_name: func.name.clone(),
+                                return_ip: self.ip,
+                                stack_base: self.stack.len() - arg_count,
+                                local_count: func.local_count,
+                                upvalues,
+                            };
+
+                            self.frames.push(frame);
+                            if let Some(ref mut profiler) = self.profiler {
+                                if profiler.is_enabled() {
+                                    profiler.record_function_call(&func.name);
+                                }
+                            }
+                            self.ip = func.bytecode_offset;
                         }
                         Value::NativeFunction(native_fn) => {
                             // Call the native Rust closure
@@ -2592,6 +2705,7 @@ impl VM {
                     return_ip: saved_ip,
                     stack_base,
                     local_count: func_ref.local_count,
+                    upvalues: std::sync::Arc::new(Vec::new()),
                 };
                 self.frames.push(frame);
 

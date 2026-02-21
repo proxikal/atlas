@@ -228,6 +228,7 @@ pub fn type_of(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::ChannelSender(_) => "ChannelSender",
         Value::ChannelReceiver(_) => "ChannelReceiver",
         Value::AsyncMutex(_) => "AsyncMutex",
+        Value::Closure(_) => "closure",
     };
 
     Ok(Value::string(type_name))
@@ -471,6 +472,7 @@ pub fn to_string(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::Function(_) => "[Function]".to_string(),
         Value::Builtin(name) => format!("[Builtin {}]", name),
         Value::NativeFunction(_) => "[Native Function]".to_string(),
+        Value::Closure(c) => format!("[Closure {}]", c.func.name),
         Value::JsonValue(_) => "[JSON]".to_string(),
         Value::Option(Some(v)) => format!("Some({})", value_to_display_string(v)),
         Value::Option(None) => "None".to_string(),
@@ -570,7 +572,8 @@ pub fn to_bool(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         | Value::TaskHandle(_)
         | Value::ChannelSender(_)
         | Value::ChannelReceiver(_)
-        | Value::AsyncMutex(_) => true,
+        | Value::AsyncMutex(_)
+        | Value::Closure(_) => true,
     };
 
     Ok(Value::Bool(bool_value))
@@ -715,6 +718,7 @@ fn type_name(value: &Value) -> &str {
         Value::ChannelSender(_) => "ChannelSender",
         Value::ChannelReceiver(_) => "ChannelReceiver",
         Value::AsyncMutex(_) => "AsyncMutex",
+        Value::Closure(_) => "closure",
     }
 }
 
@@ -735,6 +739,7 @@ fn value_to_display_string(value: &Value) -> String {
         Value::Function(_) => "[Function]".to_string(),
         Value::Builtin(name) => format!("[Builtin {}]", name),
         Value::NativeFunction(_) => "[Native Function]".to_string(),
+        Value::Closure(c) => format!("[Closure {}]", c.func.name),
         Value::JsonValue(_) => "[JSON]".to_string(),
         Value::Option(_) => "[Option]".to_string(),
         Value::Result(_) => "[Result]".to_string(),

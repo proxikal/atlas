@@ -29,6 +29,13 @@ pub enum Opcode {
     GetGlobal = 0x12,
     /// Store to global variable [u16 name_index]
     SetGlobal = 0x13,
+    /// Create a closure from a function constant + captured upvalues [u16 func_const_idx, u16 n_upvalues]
+    /// Pops n_upvalues from stack, creates a Closure value, pushes it
+    MakeClosure = 0x14,
+    /// Load upvalue from closure environment [u16 upvalue_idx]
+    GetUpvalue = 0x15,
+    /// Store to upvalue in closure environment [u16 upvalue_idx]
+    SetUpvalue = 0x16,
 
     // ===== Arithmetic (0x20-0x2F) =====
     /// Pop b, pop a, push a + b
@@ -130,6 +137,9 @@ impl TryFrom<u8> for Opcode {
             0x11 => Ok(Opcode::SetLocal),
             0x12 => Ok(Opcode::GetGlobal),
             0x13 => Ok(Opcode::SetGlobal),
+            0x14 => Ok(Opcode::MakeClosure),
+            0x15 => Ok(Opcode::GetUpvalue),
+            0x16 => Ok(Opcode::SetUpvalue),
             0x20 => Ok(Opcode::Add),
             0x21 => Ok(Opcode::Sub),
             0x22 => Ok(Opcode::Mul),
