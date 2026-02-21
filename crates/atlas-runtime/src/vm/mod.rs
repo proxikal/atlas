@@ -581,7 +581,10 @@ impl VM {
                             })
                         }
                     };
-                    let value = if let Some(v) = self.globals.get(&name) {
+                    let value = if name == "None" {
+                        // Constructor literal: None always evaluates to Option::None
+                        Value::Option(None)
+                    } else if let Some(v) = self.globals.get(&name) {
                         v.clone()
                     } else if crate::stdlib::is_builtin(&name)
                         || crate::stdlib::is_array_intrinsic(&name)

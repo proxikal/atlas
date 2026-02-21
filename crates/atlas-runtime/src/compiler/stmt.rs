@@ -50,7 +50,7 @@ impl Compiler {
             self.bytecode.emit_u16(scoped_name_idx);
 
             // Also add as local variable in outer function's scope
-            self.locals.push(Local {
+            self.push_local(Local {
                 name: func.name.name.clone(),
                 depth: self.scope_depth,
                 mutable: false,
@@ -78,9 +78,12 @@ impl Compiler {
         let local_base = self.locals.len(); // Where this function's locals start
         self.scope_depth += 1;
 
+        // Reset watermark for this nested function. Save previous value.
+        let prev_watermark = std::mem::replace(&mut self.locals_watermark, local_base);
+
         // Add parameters as locals
         for param in &func.params {
-            self.locals.push(Local {
+            self.push_local(Local {
                 name: param.name.name.clone(),
                 depth: self.scope_depth,
                 mutable: true,
@@ -97,8 +100,12 @@ impl Compiler {
         // Restore previous function base
         self.current_function_base = prev_local_base;
 
-        // Calculate total local count (only this function's locals)
-        let total_local_count = self.locals.len() - local_base;
+        // Calculate total local count using watermark (not self.locals.len() which may
+        // have been truncated by match arm cleanup).
+        let total_local_count = self.locals_watermark - local_base;
+
+        // Restore watermark for the enclosing function
+        self.locals_watermark = prev_watermark;
 
         // Implicit return null if no explicit return
         self.bytecode.emit(Opcode::Null, func.span);
@@ -185,7 +192,7 @@ impl Compiler {
         } else {
             // Local variable - add to locals list
             // Value stays on stack (locals are stack-allocated)
-            self.locals.push(Local {
+            self.push_local(Local {
                 name: decl.name.name.clone(),
                 depth: self.scope_depth,
                 mutable: decl.mutable,

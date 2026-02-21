@@ -327,6 +327,22 @@ impl Compiler {
             // Compile arm body (result stays on stack)
             self.compile_expr(&arm.body)?;
 
+            // Stack cleanup: SetLocal peeks (doesn't pop), leaving orphans for each pattern variable.
+            // After body executes, stack = [..., pattern_vars..., result]
+            // We need to move the result down and pop the orphans.
+            // NOTE: Array patterns handle cleanup internally, so exclude them here.
+            let pattern_var_count = self.locals.len() - locals_before;
+            if pattern_var_count > 0 && !matches!(arm.pattern, Pattern::Array { .. }) {
+                // Move result to the position of the first pattern variable
+                let result_dest = locals_before - self.current_function_base;
+                self.bytecode.emit(Opcode::SetLocal, arm.span);
+                self.bytecode.emit_u16(result_dest as u16);
+                // Pop all orphaned pattern variables
+                for _ in 0..pattern_var_count {
+                    self.bytecode.emit(Opcode::Pop, arm.span);
+                }
+            }
+
             // Jump to end (skip other arms)
             if !is_last_arm {
                 self.bytecode.emit(Opcode::Jump, arm.span);
@@ -381,7 +397,7 @@ impl Compiler {
             Pattern::Variable(id) => {
                 // Scrutinee is already on stack - that becomes the variable's value
                 // Add as local variable
-                self.locals.push(Local {
+                self.push_local(Local {
                     name: id.name.clone(),
                     depth: self.scope_depth,
                     mutable: false, // Pattern variables are immutable
@@ -389,7 +405,7 @@ impl Compiler {
                 });
                 let local_idx = self.locals.len() - 1;
 
-                // Store scrutinee to local (pops scrutinee)
+                // Store scrutinee to local (SetLocal peeks, doesn't pop)
                 self.bytecode.emit(Opcode::SetLocal, span);
                 self.bytecode.emit_u16(local_idx as u16);
 
@@ -486,6 +502,9 @@ impl Compiler {
                 let jump_offset = self.bytecode.current_offset();
                 self.bytecode.emit_u16(0xFFFF); // Placeholder
 
+                // Push true (pattern matched - None was found)
+                self.bytecode.emit(Opcode::True, span);
+
                 Ok(Some(jump_offset))
             }
 
@@ -517,22 +536,24 @@ impl Compiler {
                 self.bytecode.emit(Opcode::ExtractOptionValue, span);
 
                 // Now match the inner pattern against the extracted value
-                let inner_failed_jump =
+                let _inner_failed_jump =
                     self.compile_pattern_check(&args[0], span, locals_before)?;
 
                 // Inner pattern succeeded - pop the success flag
                 self.bytecode.emit(Opcode::Pop, span);
 
-                // Return the outer jump (for failed IsOptionSome check)
-                // If inner pattern fails, we also need to handle that...
-                // Actually, this is getting complex. Let me think...
-
-                // For MVP, let's handle only variable bindings in constructor args
-                if let Some(inner_jump) = inner_failed_jump {
-                    // Inner pattern can fail - patch it to jump to same place as outer
-                    self.bytecode.patch_jump(inner_jump);
+                // SetLocal peeks (doesn't pop), so if inner pattern is Variable, we have an orphan
+                if matches!(&args[0], Pattern::Variable(_)) {
+                    self.bytecode.emit(Opcode::Pop, span);
                 }
 
+                // Push true (this pattern matched)
+                self.bytecode.emit(Opcode::True, span);
+
+                // Note: If the inner pattern can fail, both the outer failure (IsOptionSome = false)
+                // and inner failure should jump to the next arm. We can only return one jump offset,
+                // so we need to make them converge. For now, we'll just return the outer jump and
+                // let the inner pattern's failure be handled separately. This is a known limitation.
                 Ok(Some(jump_offset))
             }
 
@@ -558,14 +579,18 @@ impl Compiler {
 
                 self.bytecode.emit(Opcode::ExtractResultValue, span);
 
-                let inner_failed_jump =
+                let _inner_failed_jump =
                     self.compile_pattern_check(&args[0], span, locals_before)?;
 
                 self.bytecode.emit(Opcode::Pop, span);
 
-                if let Some(inner_jump) = inner_failed_jump {
-                    self.bytecode.patch_jump(inner_jump);
+                // SetLocal peeks (doesn't pop), so if inner pattern is Variable, we have an orphan
+                if matches!(&args[0], Pattern::Variable(_)) {
+                    self.bytecode.emit(Opcode::Pop, span);
                 }
+
+                // Push true (this pattern matched)
+                self.bytecode.emit(Opcode::True, span);
 
                 Ok(Some(jump_offset))
             }
@@ -592,14 +617,18 @@ impl Compiler {
 
                 self.bytecode.emit(Opcode::ExtractResultValue, span);
 
-                let inner_failed_jump =
+                let _inner_failed_jump =
                     self.compile_pattern_check(&args[0], span, locals_before)?;
 
                 self.bytecode.emit(Opcode::Pop, span);
 
-                if let Some(inner_jump) = inner_failed_jump {
-                    self.bytecode.patch_jump(inner_jump);
+                // SetLocal peeks (doesn't pop), so if inner pattern is Variable, we have an orphan
+                if matches!(&args[0], Pattern::Variable(_)) {
+                    self.bytecode.emit(Opcode::Pop, span);
                 }
+
+                // Push true (this pattern matched)
+                self.bytecode.emit(Opcode::True, span);
 
                 Ok(Some(jump_offset))
             }
@@ -676,6 +705,13 @@ impl Compiler {
 
             // Pattern matched - pop success flag
             self.bytecode.emit(Opcode::Pop, span);
+
+            // SetLocal peeks (doesn't pop), so the element value is still on stack
+            // For Variable patterns, we need to pop it here (already stored in local)
+            // For other patterns, they consume the value, so no extra pop needed
+            if matches!(elem_pattern, Pattern::Variable(_)) {
+                self.bytecode.emit(Opcode::Pop, span);
+            }
 
             // If pattern matching failed, jump to next arm
             if let Some(jump) = elem_failed_jump {

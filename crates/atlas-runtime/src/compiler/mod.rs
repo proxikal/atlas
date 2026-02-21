@@ -57,6 +57,10 @@ pub struct Compiler {
     pub(super) current_function_base: usize,
     /// Global variable mutability tracking (true = mutable, false = immutable)
     pub(super) global_mutability: std::collections::HashMap<String, bool>,
+    /// High-water mark: maximum self.locals.len() seen within the current function.
+    /// Updated whenever a local is pushed. Reset at function start.
+    /// Used to compute accurate `local_count` even after match arm truncation.
+    pub(super) locals_watermark: usize,
 }
 
 impl Compiler {
@@ -72,6 +76,7 @@ impl Compiler {
             next_func_id: 0,
             current_function_base: 0,
             global_mutability: std::collections::HashMap::new(),
+            locals_watermark: 0,
         }
     }
 
@@ -94,6 +99,7 @@ impl Compiler {
             next_func_id: 0,
             current_function_base: 0,
             global_mutability: std::collections::HashMap::new(),
+            locals_watermark: 0,
         }
     }
 
@@ -199,9 +205,12 @@ impl Compiler {
         let old_scope = self.scope_depth;
         self.scope_depth += 1;
 
+        // Reset watermark for this function. Save previous value for nesting.
+        let prev_watermark = std::mem::replace(&mut self.locals_watermark, old_locals_len);
+
         // Add parameters as locals
         for param in &func.params {
-            self.locals.push(Local {
+            self.push_local(Local {
                 name: param.name.name.clone(),
                 depth: self.scope_depth,
                 mutable: true, // Parameters are always mutable
@@ -218,8 +227,14 @@ impl Compiler {
         // Restore function base
         self.current_function_base = prev_function_base;
 
-        // Calculate total local count (all locals added during function compilation)
-        let total_local_count = self.locals.len() - old_locals_len;
+        // Calculate total local count using the watermark.
+        // self.locals may have been truncated by match arm cleanup, so
+        // self.locals.len() - old_locals_len would undercount. The watermark
+        // records the maximum ever seen during this function's compilation.
+        let total_local_count = self.locals_watermark - old_locals_len;
+
+        // Restore watermark for the enclosing function (or top level)
+        self.locals_watermark = prev_watermark;
 
         // If function doesn't end with explicit return, add implicit "return null"
         self.bytecode.emit(Opcode::Null, func.span);
@@ -242,6 +257,14 @@ impl Compiler {
         self.bytecode.patch_jump(skip_jump);
 
         Ok(())
+    }
+
+    /// Push a local variable, updating the high-water mark for accurate `local_count`.
+    pub(super) fn push_local(&mut self, local: Local) {
+        self.locals.push(local);
+        if self.locals.len() > self.locals_watermark {
+            self.locals_watermark = self.locals.len();
+        }
     }
 
     /// Resolve a local variable by name, returning its index if found
