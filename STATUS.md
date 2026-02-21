@@ -110,7 +110,7 @@ Top research priorities (after completion sprint):
 
 | Resource | Location |
 |----------|----------|
-| Memory | `memory/` (patterns.md, decisions.md, testing-patterns.md) |
+| Memory | Claude auto-memory (NOT in repo — patterns.md, decisions.md, testing-patterns.md) |
 | Specs | `docs/specification/` |
 | Active phases | `phases/v02-completion/` |
 | v0.1 archive | `phases/*/archive/v0.1/` |
