@@ -849,17 +849,19 @@ fn builtin_registry() -> &'static HashMap<&'static str, BuiltinFn> {
         m.insert("httpIsServerError", |a, s, _, _| {
             http::http_is_server_error(a, s)
         });
-        m.insert("httpSend", |a, s, _, _| http::http_send(a, s));
-        m.insert("httpGet", |a, s, _, _| http::http_get(a, s));
-        m.insert("httpPost", |a, s, _, _| http::http_post(a, s));
-        m.insert("httpPut", |a, s, _, _| http::http_put(a, s));
-        m.insert("httpDelete", |a, s, _, _| http::http_delete(a, s));
-        m.insert("httpPatch", |a, s, _, _| http::http_patch(a, s));
-        m.insert("httpPostJson", |a, s, _, _| http::http_post_json(a, s));
+        m.insert("httpSend", |a, s, sec, _| http::http_send(a, s, sec));
+        m.insert("httpGet", |a, s, sec, _| http::http_get(a, s, sec));
+        m.insert("httpPost", |a, s, sec, _| http::http_post(a, s, sec));
+        m.insert("httpPut", |a, s, sec, _| http::http_put(a, s, sec));
+        m.insert("httpDelete", |a, s, sec, _| http::http_delete(a, s, sec));
+        m.insert("httpPatch", |a, s, sec, _| http::http_patch(a, s, sec));
+        m.insert("httpPostJson", |a, s, sec, _| {
+            http::http_post_json(a, s, sec)
+        });
         m.insert("httpParseJson", |a, s, _, _| http::http_parse_json(a, s));
-        m.insert("httpGetJson", |a, s, _, _| http::http_get_json(a, s));
-        m.insert("httpCheckPermission", |a, s, _, _| {
-            http::http_check_permission(a, s)
+        m.insert("httpGetJson", |a, s, sec, _| http::http_get_json(a, s, sec));
+        m.insert("httpCheckPermission", |a, s, sec, _| {
+            http::http_check_permission(a, s, sec)
         });
 
         // ====================================================================

@@ -32,6 +32,7 @@ impl OptimizationPass for PeepholePass {
         stats.bytecode_size_before = bytecode.instructions.len();
         stats.passes_run = 1;
 
+        let top_level_local_count = bytecode.top_level_local_count;
         let mut decoded = decode_instructions(&bytecode);
         let mut constants = bytecode.constants.clone();
 
@@ -163,7 +164,7 @@ impl OptimizationPass for PeepholePass {
 
         fix_all_references(&mut decoded, &mut constants);
 
-        let result = encode_instructions(&decoded, constants);
+        let result = encode_instructions(&decoded, constants, top_level_local_count);
         stats.bytecode_size_after = result.instructions.len();
         (result, stats)
     }

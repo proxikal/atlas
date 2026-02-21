@@ -1816,6 +1816,7 @@ fn make_bytecode(spans: Vec<(usize, usize, usize)>) -> Bytecode {
                 span: Span::new(start, end),
             })
             .collect(),
+        top_level_local_count: 0,
     }
 }
 
@@ -1941,6 +1942,7 @@ fn test_generate_empty_bytecode() {
         instructions: Vec::new(),
         constants: Vec::new(),
         debug_info: Vec::new(),
+        top_level_local_count: 0,
     };
     let options = SourceMapOptions::default();
     let map = generate_source_map(&bytecode, "empty.atlas", Some(""), &options);

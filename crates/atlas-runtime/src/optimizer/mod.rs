@@ -399,6 +399,7 @@ pub(crate) fn decode_instructions(bytecode: &Bytecode) -> Vec<DecodedInstruction
 pub(crate) fn encode_instructions(
     decoded: &[DecodedInstruction],
     constants: Vec<Value>,
+    top_level_local_count: usize,
 ) -> Bytecode {
     let mut instructions = Vec::new();
     let mut debug_info = Vec::new();
@@ -418,6 +419,7 @@ pub(crate) fn encode_instructions(
         instructions,
         constants,
         debug_info,
+        top_level_local_count,
     }
 }
 
@@ -635,7 +637,7 @@ mod tests {
 
         let constants = bc.constants.clone();
         let decoded = decode_instructions(&bc);
-        let rebuilt = encode_instructions(&decoded, constants);
+        let rebuilt = encode_instructions(&decoded, constants, 0);
 
         assert_eq!(rebuilt.instructions, bc.instructions);
         assert_eq!(rebuilt.debug_info.len(), bc.debug_info.len());

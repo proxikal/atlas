@@ -150,6 +150,9 @@ impl Compiler {
         // Take ownership of the bytecode
         let mut bytecode = std::mem::take(&mut self.bytecode);
 
+        // Record peak local count so the VM can initialize the main frame correctly.
+        bytecode.top_level_local_count = self.locals_watermark;
+
         // Apply optimization if enabled
         if let Some(ref optimizer) = self.optimizer {
             bytecode = optimizer.optimize(bytecode);

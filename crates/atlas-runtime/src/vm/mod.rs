@@ -76,7 +76,7 @@ impl VM {
             function_name: "<main>".to_string(),
             return_ip: 0,
             stack_base: 0,
-            local_count: 0,
+            local_count: bytecode.top_level_local_count,
             upvalues: std::sync::Arc::new(Vec::new()),
         };
 

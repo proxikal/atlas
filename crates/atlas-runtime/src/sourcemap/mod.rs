@@ -117,6 +117,7 @@ pub fn generate_from_debug_spans(
         instructions: Vec::new(),
         constants: Vec::new(),
         debug_info: spans.to_vec(),
+        top_level_local_count: 0,
     };
     generate_source_map(&bytecode, source_file, source_text, options)
 }

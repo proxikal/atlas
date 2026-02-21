@@ -3,6 +3,7 @@
 //! Provides HTTP request building, execution, and response handling.
 
 use crate::json_value::JsonValue;
+use crate::security::SecurityContext;
 use crate::span::Span;
 use crate::stdlib::collections::hash::HashKey;
 use crate::stdlib::collections::hashmap::AtlasHashMap;
@@ -10,6 +11,23 @@ use crate::value::{RuntimeError, Value};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+
+/// Extract the hostname from a URL string for security checking.
+fn extract_host(url: &str) -> Option<String> {
+    // Strip scheme (http:// or https://)
+    let rest = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))?;
+    // Take everything before the first '/' or end of string
+    let host_and_port = rest.split('/').next()?;
+    // Strip port if present
+    let host = host_and_port.split(':').next()?;
+    if host.is_empty() {
+        None
+    } else {
+        Some(host.to_string())
+    }
+}
 
 /// HTTP Request configuration
 #[derive(Debug, Clone)]
@@ -553,7 +571,11 @@ pub fn http_is_success(args: &[Value], span: Span) -> Result<Value, RuntimeError
 /// ```atlas
 /// let result = httpSend(request);
 /// ```atlas
-pub fn http_send(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+pub fn http_send(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::TypeError {
             msg: "httpSend: expected 1 argument (request)".to_string(),
@@ -562,6 +584,17 @@ pub fn http_send(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let request = expect_http_request(&args[0], "request", span)?;
+
+    // Enforce network permission before making the request
+    let url = request.build_url();
+    if let Some(host) = extract_host(&url) {
+        security
+            .check_network(&host)
+            .map_err(|e| RuntimeError::TypeError {
+                msg: format!("httpSend: {}", e),
+                span,
+            })?;
+    }
 
     // Build reqwest client
     let client = match reqwest::blocking::Client::builder()
@@ -666,7 +699,11 @@ pub fn http_send(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 /// ```atlas
 /// let result = httpGet("https://httpbin.org/get");
 /// ```atlas
-pub fn http_get(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+pub fn http_get(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::TypeError {
             msg: "httpGet: expected 1 argument (url)".to_string(),
@@ -675,7 +712,7 @@ pub fn http_get(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let request = http_request_get(args, span)?;
-    http_send(&[request], span)
+    http_send(&[request], span, security)
 }
 
 /// Simple POST request
@@ -690,7 +727,11 @@ pub fn http_get(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 /// ```atlas
 /// let result = httpPost("https://httpbin.org/post", "data");
 /// ```atlas
-pub fn http_post(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+pub fn http_post(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::TypeError {
             msg: "httpPost: expected 2 arguments (url, body)".to_string(),
@@ -699,7 +740,7 @@ pub fn http_post(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let request = http_request_post(args, span)?;
-    http_send(&[request], span)
+    http_send(&[request], span, security)
 }
 
 /// POST JSON data
@@ -714,7 +755,11 @@ pub fn http_post(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 /// ```atlas
 /// let result = httpPostJson("https://httpbin.org/post", jsonParse("{\"key\":\"value\"}"));
 /// ```atlas
-pub fn http_post_json(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+pub fn http_post_json(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::TypeError {
             msg: "httpPostJson: expected 2 arguments (url, json)".to_string(),
@@ -748,7 +793,7 @@ pub fn http_post_json(args: &[Value], span: Span) -> Result<Value, RuntimeError>
         span,
     )?;
 
-    http_send(&[request_with_header], span)
+    http_send(&[request_with_header], span, security)
 }
 
 /// Parse JSON from response body
@@ -870,7 +915,11 @@ pub fn http_request_patch(args: &[Value], span: Span) -> Result<Value, RuntimeEr
 }
 
 /// Simple PUT request
-pub fn http_put(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+pub fn http_put(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::TypeError {
             msg: "httpPut: expected 2 arguments (url, body)".to_string(),
@@ -879,11 +928,15 @@ pub fn http_put(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let request = http_request_put(args, span)?;
-    http_send(&[request], span)
+    http_send(&[request], span, security)
 }
 
 /// Simple DELETE request
-pub fn http_delete(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+pub fn http_delete(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::TypeError {
             msg: "httpDelete: expected 1 argument (url)".to_string(),
@@ -892,11 +945,15 @@ pub fn http_delete(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let request = http_request_delete(args, span)?;
-    http_send(&[request], span)
+    http_send(&[request], span, security)
 }
 
 /// Simple PATCH request
-pub fn http_patch(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+pub fn http_patch(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::TypeError {
             msg: "httpPatch: expected 2 arguments (url, body)".to_string(),
@@ -905,7 +962,7 @@ pub fn http_patch(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let request = http_request_patch(args, span)?;
-    http_send(&[request], span)
+    http_send(&[request], span, security)
 }
 
 /// Set query parameter on request
@@ -1118,7 +1175,11 @@ pub fn http_is_server_error(args: &[Value], span: Span) -> Result<Value, Runtime
 }
 
 /// GET and parse JSON in one call
-pub fn http_get_json(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+pub fn http_get_json(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::TypeError {
             msg: "httpGetJson: expected 1 argument (url)".to_string(),
@@ -1126,8 +1187,8 @@ pub fn http_get_json(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
         });
     }
 
-    // Execute GET request
-    let get_result = http_get(args, span)?;
+    // Execute GET request (security enforced inside http_get → http_send)
+    let get_result = http_get(args, span, security)?;
 
     // Extract result
     match get_result {
@@ -1143,9 +1204,15 @@ pub fn http_get_json(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
     }
 }
 
-/// Placeholder for permission checking
-/// Note: Full permission integration requires architectural changes to pass SecurityContext to stdlib functions
-pub fn http_check_permission(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
+/// Check whether the active security context permits a network request to the given URL.
+///
+/// Returns `true` if the host is allowed, `false` if denied.
+/// Does not throw — use this to check permission before attempting a request.
+pub fn http_check_permission(
+    args: &[Value],
+    span: Span,
+    security: &SecurityContext,
+) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::TypeError {
             msg: "httpCheckPermission: expected 1 argument (url)".to_string(),
@@ -1153,12 +1220,12 @@ pub fn http_check_permission(args: &[Value], span: Span) -> Result<Value, Runtim
         });
     }
 
-    let _url = expect_string(&args[0], "url", span)?;
-
-    // TODO: Full implementation requires SecurityContext access
-    // For now, always return true (allow all)
-    // This should be updated when SecurityContext can be passed to stdlib functions
-    Ok(Value::Bool(true))
+    let url = expect_string(&args[0], "url", span)?;
+    let allowed = match extract_host(&url) {
+        Some(host) => security.check_network(&host).is_ok(),
+        None => false, // Unparseable URL — deny
+    };
+    Ok(Value::Bool(allowed))
 }
 
 // ============================================================================

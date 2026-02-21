@@ -38,6 +38,7 @@ impl OptimizationPass for DeadCodeEliminationPass {
             return (bytecode, stats);
         }
 
+        let top_level_local_count = bytecode.top_level_local_count;
         let decoded = decode_instructions(&bytecode);
         if decoded.is_empty() {
             stats.bytecode_size_after = bytecode.instructions.len();
@@ -73,7 +74,7 @@ impl OptimizationPass for DeadCodeEliminationPass {
         let mut constants = bytecode.constants;
         fix_all_references(&mut live, &mut constants);
 
-        let result = encode_instructions(&live, constants);
+        let result = encode_instructions(&live, constants, top_level_local_count);
         stats.bytecode_size_after = result.instructions.len();
         (result, stats)
     }
