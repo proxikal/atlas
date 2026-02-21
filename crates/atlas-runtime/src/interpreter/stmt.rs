@@ -380,10 +380,7 @@ impl Interpreter {
 
         // Extract array elements
         let elements = match &iterable {
-            Value::Array(arr) => {
-                let arr_ref = arr.lock().unwrap();
-                arr_ref.clone()
-            }
+            Value::Array(arr) => arr.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: format!("for-in requires an array, found {}", iterable.type_name()),
