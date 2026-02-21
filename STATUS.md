@@ -2,18 +2,17 @@
 
 **Last Updated:** 2026-02-21
 **Version:** v0.3 — The Foundation Version
-**Progress:** v0.2 COMPLETE ✅ | v0.3 ready for phase scaffolding
+**Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 scaffolded — ready for execution
 
 ---
 
 ## Current State
 
-**Status:** v0.3 phase scaffolding ready — plan locked, memory model decided
-**Next action:** Scaffold v0.3 phases using `docs/internal/V03_PLAN.md`
+**Status:** Block 1 scaffolded (25 phases) — begin execution at Phase-01
+**Next action:** `Start Phase-01` in `phases/v0.3/block-01-memory-model/`
 
-> **Read before scaffolding:** `docs/internal/V03_PLAN.md` contains the 9-block dependency
-> order, acceptance criteria per block, phase file template, and the lesson from v0.2
-> dependency hell. Do not scaffold without reading it first.
+> **Active phases:** `phases/v0.3/block-01-memory-model/` — 25 phases, execute sequentially.
+> Phase 16 (return value propagation) is the highest-risk phase — read it before starting Phase 07.
 
 ---
 
@@ -21,7 +20,7 @@
 
 | Block | Theme | Phases | Status |
 |-------|-------|--------|--------|
-| 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25–35 | ⬜ Not started |
+| 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25 | 🔨 Scaffolded — executing |
 | 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 15–20 | ⬜ Blocked on Block 1 |
 | 3 | Trait System (`trait`, `impl`, Copy/Move/Drop) | 20–25 | ⬜ Blocked on Block 2 |
 | 4 | Closures + Anonymous Functions | 15–20 | ⬜ Blocked on Block 3 |
