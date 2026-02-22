@@ -52,6 +52,12 @@ EOF
 ## PR Workflow — Block Complete Flush
 ```bash
 # ONLY when the block's final AC check phase is committed:
+
+# 1. Rebase on latest main BEFORE pushing (strict CI policy requires up-to-date branch)
+git fetch origin
+git rebase origin/main   # resolve any conflicts; re-run tests if rebase had changes
+
+# 2. Push and open PR
 git push -u origin block/{name}
 gh pr create --title "feat(block-XX): ..." --body "..."
 gh pr merge --auto --squash
@@ -60,6 +66,10 @@ gh pr merge --auto --squash
 git checkout main && git pull origin main
 git branch -d block/{name}
 ```
+
+**Why rebase before push:** `strict_required_status_checks_policy=true` in the ruleset
+means GitHub auto-merge will stall if any commit landed on main after the branch was
+last rebased. Always rebase immediately before push to guarantee auto-merge proceeds.
 
 **Exception:** Blocking fixes (`fix/`) or CI issues (`ci/`) may PR immediately — these are the ONLY valid early-PR cases.
 
