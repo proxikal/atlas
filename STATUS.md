@@ -1,18 +1,16 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-21 (Phase 19 complete)
+**Last Updated:** 2026-02-21 (Block 1 complete — phases 20–25 done)
 **Version:** v0.3 — The Foundation Version
-**Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 in progress
+**Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 COMPLETE ✅
 
 ---
 
 ## Current State
 
-**Status:** Block 1 in progress — executing phases
-**Last Completed:** Phase 19 — Interpreter/VM parity verification (32 new parity tests, zero divergence)
-**Next Phase:** `phases/v0.3/block-01-memory-model/phase-20-performance-baseline.md`
-
-> **Active block:** Block 1 — Memory Model (25 phases, execute sequentially)
+**Status:** Block 1 complete — ready for Block 2 scaffolding
+**Last Completed:** Phases 20–25 — Clippy/fmt/docs, full test suite (9,152 passing), Block 1 acceptance check (8/8 AC met)
+**Next:** Scaffold Block 2 (Ownership Syntax) — trigger: "Scaffold Block 2"
 
 ---
 
@@ -20,18 +18,35 @@
 
 | Block | Theme | Phases | Status |
 |-------|-------|--------|--------|
-| 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25 | 🔨 Scaffolded — executing |
-| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 15–20 | ⬜ Blocked on Block 1 |
+| 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25 | ✅ Complete (2026-02-21) |
+| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 15–20 | ⬜ Unblocked — ready to scaffold |
 | 3 | Trait System (`trait`, `impl`, Copy/Move/Drop) | 20–25 | ⬜ Blocked on Block 2 |
 | 4 | Closures + Anonymous Functions | 15–20 | ⬜ Blocked on Block 3 |
 | 5 | Type Inference (locals + return types) | 10–15 | ⬜ Blocked on Block 3 |
 | 6 | Error Handling (`?` operator) | 10–15 | ⬜ Blocked on Block 3 |
-| 7 | JIT Integration (wire atlas-jit to VM) | 10–15 | ⬜ Blocked on Block 1 |
+| 7 | JIT Integration (wire atlas-jit to VM) | 10–15 | ⬜ Unblocked — ready to scaffold |
 | 8 | Async/Await Syntax | 10–15 | ⬜ Blocked on Block 6 |
-| 9 | Quick Wins (string interp, implicit returns) | 5–10 | ⬜ Blocked on Block 1 |
+| 9 | Quick Wins (string interp, implicit returns) | 5–10 | ⬜ Unblocked — ready to scaffold |
 
 **Rule:** Blocks are strictly sequential within their dependency chain. Block N cannot begin
 until all acceptance criteria in its dependency block are met. See V03_PLAN.md.
+
+---
+
+## Block 1 Completion Metrics
+
+| Metric | Value |
+|--------|-------|
+| Phases | 25/25 |
+| Tests at completion | **9,152** (target was ≥9,000 ✅) |
+| Test failures | 0 |
+| Arc<Mutex<Vec<Value>>> removed | 100% |
+| Arc<Mutex<Atlas*>> removed | 100% |
+| Parity tests | 32+ new (zero divergence) |
+| CoW regression tests | 10 (both engines) |
+| Clippy | 0 warnings (-D warnings) |
+| Fmt | Clean |
+| Acceptance criteria | **8/8** |
 
 ---
 
@@ -39,14 +54,14 @@ until all acceptance criteria in its dependency block are met. See V03_PLAN.md.
 
 | Metric | Value |
 |--------|-------|
-| Total tests | 7,165 |
-| Test failures | 0 |
+| Tests at v0.2 close | 7,165 |
+| Tests after Block 1 | **9,152** |
 | Stdlib functions | 300+ |
 | LSP features | 16 |
 | CLI commands | 15 |
 | Fuzz targets | 7 |
 | Benchmarks | 117 |
-| **v0.3 test target** | **≥ 9,000** |
+| **v0.3 test target** | **≥ 9,000 ✅ achieved** |
 
 ---
 

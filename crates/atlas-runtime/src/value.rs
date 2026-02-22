@@ -1,12 +1,37 @@
 //! Runtime value representation
 //!
-//! Shared value representation for interpreter and VM.
-//! - Numbers, Bools, Null: Immediate values (stack-allocated)
-//! - Strings: Heap-allocated, reference-counted (Arc<String>), immutable
-//! - Arrays: Copy-on-write (ValueArray wrapping Arc<Vec<Value>>), value semantics
-//! - Functions: Reference to bytecode or builtin
-//! - NativeFunction: Rust closures callable from Atlas
-//! - JsonValue: Isolated dynamic type for JSON interop (Arc<JsonValue>)
+//! All Atlas values use **value semantics** — copying a value creates an independent
+//! copy. Mutations to a copy never affect the original.
+//!
+//! ## Value Categories
+//!
+//! ### Immediate (stack-allocated, always copied)
+//! - `Number(f64)` — IEEE 754 double
+//! - `Bool(bool)`
+//! - `Null`
+//!
+//! ### Copy-on-write (cheap to clone via refcount, independent on mutation)
+//! - `String(Arc<String>)` — immutable interned string, shared until reassigned
+//! - `Array(ValueArray)` — `Arc<Vec<Value>>` with `Arc::make_mut` CoW
+//! - `HashMap(ValueHashMap)` — `Arc<AtlasHashMap>` with CoW
+//! - `HashSet(ValueHashSet)` — `Arc<AtlasHashSet>` with CoW
+//! - `Queue(ValueQueue)` — `Arc<VecDeque<Value>>` with CoW
+//! - `Stack(ValueStack)` — `Arc<Vec<Value>>` with CoW
+//!
+//! ### Explicit reference semantics (opt-in only)
+//! - `SharedValue(Arc<Mutex<Value>>)` — mutations visible to all aliases.
+//!   Only used when the program explicitly annotates a binding as `shared<T>`.
+//!
+//! ### Identity / resource types (compared by reference, not content)
+//! - `NativeFunction`, `Future`, `TaskHandle`, `ChannelSender`, `ChannelReceiver`, `AsyncMutex`
+//! - `JsonValue` — isolated dynamic type for JSON interop
+//!
+//! ## CoW Write-Back (Phase 15–16)
+//!
+//! Mutating stdlib functions (e.g. `arrayPush`, `arrayPop`) return a new collection.
+//! The interpreter and VM automatically write back the updated collection to the
+//! variable that was passed as the first argument, preserving value semantics without
+//! requiring the programmer to reassign manually.
 
 use crate::json_value::JsonValue;
 use std::collections::HashMap;

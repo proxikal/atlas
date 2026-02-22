@@ -151,6 +151,48 @@ When no annotation is specified:
 
 ---
 
+## Implementation Notes (v0.3 — Block 1 complete)
+
+The v0.3 Block 1 migration replaced all implicit reference semantics with CoW value types.
+These notes document the concrete Rust types behind each Atlas concept.
+
+### CoW Wrapper Types
+
+| Atlas type | Rust implementation | CoW mechanism |
+|-----------|-------------------|---------------|
+| `array<T>` | `ValueArray(Arc<Vec<Value>>)` | `Arc::make_mut` on mutation |
+| `map<K,V>` | `ValueHashMap(Arc<AtlasHashMap>)` | `Arc::make_mut` on mutation |
+| `set<T>` | `ValueHashSet(Arc<AtlasHashSet>)` | `Arc::make_mut` on mutation |
+| `Queue<T>` | `ValueQueue(Arc<VecDeque<Value>>)` | `Arc::make_mut` on mutation |
+| `Stack<T>` | `ValueStack(Arc<Vec<Value>>)` | `Arc::make_mut` on mutation |
+| `shared<T>` | `Arc<Mutex<Value>>` | Explicit reference semantics |
+
+### Mutation Write-Back Pattern
+
+Stdlib mutation functions return the updated collection. Both engines (interpreter and VM)
+detect when the first argument is a local variable and automatically write the returned
+collection back to that variable. This preserves value semantics transparently:
+
+```atlas
+arr.push(x)    // interpreter/VM calls arrayPush(arr, x), writes result back to arr
+arr.pop()      // calls arrayPop(arr), writes [result, new_arr] pair; arr shrinks
+```
+
+The write-back is triggered by `TypeTag::Array` / `TypeTag::HashMap` in method dispatch.
+Free-function variants (e.g. `push(arr, x)`) also write back via the same mechanism.
+
+### Equality Semantics
+
+| Type | Equality |
+|------|----------|
+| `number`, `bool`, `null` | Value equality |
+| `string` | Content equality |
+| `array`, `map`, `set`, `queue`, `stack` | Structural (content) equality |
+| `shared<T>` | Reference equality (same allocation = equal) |
+| Functions, handles | Reference equality |
+
+---
+
 ## Migration from Arc<Mutex<Value>> (v0.2 → v0.3)
 
 The v0.2 implementation used `Arc<Mutex<Value>>` for all heap values. This is the bootstrap
