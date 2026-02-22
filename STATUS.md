@@ -1,6 +1,6 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-22 (Block 2 Phases 01, 02, 03, 04, 05, 06, 07 complete)
+**Last Updated:** 2026-02-22 (Block 2 Phases 01, 02, 03, 04, 05, 06, 07, 08 complete)
 **Version:** v0.3 — The Foundation Version
 **Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 COMPLETE ✅
 
@@ -8,9 +8,9 @@
 
 ## Current State
 
-**Status:** Block 2 in progress — Phases 01, 02, 03, 04, 05, 06, 07 complete
-**Last Completed:** Phase 07 — Typechecker call-site ownership checking (7,291 tests passing)
-**Next:** Phase 08 — Runtime `own` enforcement in interpreter (`phases/v0.3/block-02-ownership-syntax/phase-08-runtime-own-enforcement-interpreter.md`)
+**Status:** Block 2 in progress — Phases 01, 02, 03, 04, 05, 06, 07, 08 complete
+**Last Completed:** Phase 08 — Runtime `own` enforcement in interpreter (7,296 tests passing)
+**Next:** Phase 09 — Runtime `shared` enforcement in interpreter (`phases/v0.3/block-02-ownership-syntax/phase-09-runtime-shared-enforcement-interpreter.md`)
 
 ---
 
@@ -19,7 +19,7 @@
 | Block | Theme | Phases | Status |
 |-------|-------|--------|--------|
 | 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25 | ✅ Complete (2026-02-21) |
-| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 16 | 🔄 In progress — Phases 01 ✅ 02 ✅ 03 ✅ 04 ✅ 05 ✅ 06 ✅ 07 ✅ |
+| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 16 | 🔄 In progress — Phases 01 ✅ 02 ✅ 03 ✅ 04 ✅ 05 ✅ 06 ✅ 07 ✅ 08 ✅ |
 | 3 | Trait System (`trait`, `impl`, Copy/Move/Drop) | 20–25 | ⬜ Blocked on Block 2 |
 | 4 | Closures + Anonymous Functions | 15–20 | ⬜ Blocked on Block 3 |
 | 5 | Type Inference (locals + return types) | 10–15 | ⬜ Blocked on Block 3 |

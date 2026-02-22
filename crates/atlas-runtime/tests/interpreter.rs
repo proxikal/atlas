@@ -4544,3 +4544,100 @@ fn test_value_semantics_regression_three_way_copy() {
     "#;
     assert_eval_number(code, 3.0);
 }
+
+// ============================================================================
+// Phase 08: Runtime `own` enforcement in interpreter (debug mode)
+// ============================================================================
+
+/// After passing a variable to an `own` parameter, reading it must fail in debug mode.
+#[test]
+fn test_own_param_consumes_binding_debug() {
+    let src = r#"
+        fn consume(own data: array<number>) -> void { }
+        let arr: array<number> = [1, 2, 3];
+        consume(arr);
+        arr;
+    "#;
+    let result = run_interpreter(src);
+    assert!(
+        result.is_err(),
+        "Expected error after consuming arr, got: {:?}",
+        result
+    );
+    assert!(
+        result.unwrap_err().contains("use of moved value"),
+        "Error should mention 'use of moved value'"
+    );
+}
+
+/// A `borrow` parameter must NOT consume the caller's binding.
+#[test]
+fn test_borrow_param_does_not_consume_binding() {
+    let src = r#"
+        fn read(borrow data: array<number>) -> void { }
+        let arr: array<number> = [1, 2, 3];
+        read(arr);
+        len(arr);
+    "#;
+    let result = run_interpreter(src);
+    assert!(
+        result.is_ok(),
+        "borrow should not consume binding, got: {:?}",
+        result
+    );
+    assert_eq!(result.unwrap(), "Number(3)");
+}
+
+/// An unannotated parameter must NOT consume the caller's binding.
+#[test]
+fn test_unannotated_param_does_not_consume_binding() {
+    let src = r#"
+        fn take(data: array<number>) -> void { }
+        let arr: array<number> = [1, 2, 3];
+        take(arr);
+        len(arr);
+    "#;
+    let result = run_interpreter(src);
+    assert!(
+        result.is_ok(),
+        "unannotated param should not consume binding, got: {:?}",
+        result
+    );
+    assert_eq!(result.unwrap(), "Number(3)");
+}
+
+/// Passing a literal to an `own` parameter must not attempt to consume any binding.
+#[test]
+fn test_own_param_with_literal_arg_no_consume() {
+    let src = r#"
+        fn consume(own data: array<number>) -> void { }
+        consume([1, 2, 3]);
+        42;
+    "#;
+    let result = run_interpreter(src);
+    assert!(
+        result.is_ok(),
+        "literal arg to own param should not error, got: {:?}",
+        result
+    );
+    assert_eq!(result.unwrap(), "Number(42)");
+}
+
+/// Passing an expression result to an `own` parameter must not consume any binding.
+#[test]
+fn test_own_param_with_expression_arg_no_consume() {
+    let src = r#"
+        fn make_arr() -> array<number> { [10, 20]; }
+        fn consume(own data: array<number>) -> void { }
+        let arr: array<number> = [1, 2, 3];
+        consume(make_arr());
+        len(arr);
+    "#;
+    let result = run_interpreter(src);
+    assert!(
+        result.is_ok(),
+        "expression arg to own param should not consume unrelated binding, got: {:?}",
+        result
+    );
+    assert_eq!(result.unwrap(), "Number(3)");
+}

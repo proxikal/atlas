@@ -305,6 +305,17 @@ impl Interpreter {
 
                 // User-defined function - look up body
                 if let Some(func) = self.function_bodies.get(&func_ref.name).cloned() {
+                    // In debug mode, mark caller bindings consumed for `own` parameters.
+                    // Only applies when the argument is a direct variable reference —
+                    // literals and expression results have no binding to consume.
+                    #[cfg(debug_assertions)]
+                    for (param, arg_expr) in func.params.iter().zip(call.args.iter()) {
+                        if param.ownership == Some(crate::ast::OwnershipAnnotation::Own) {
+                            if let Expr::Identifier(id) = arg_expr {
+                                self.mark_consumed(&id.name);
+                            }
+                        }
+                    }
                     return self.call_user_function(&func, args, call.span);
                 }
 
