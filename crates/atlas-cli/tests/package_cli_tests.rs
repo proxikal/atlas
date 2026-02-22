@@ -12,7 +12,7 @@ use tempfile::TempDir;
 // ============================================================================
 
 fn atlas() -> Command {
-    Command::from(assert_cmd::cargo::cargo_bin_cmd!("atlas"))
+    assert_cmd::cargo::cargo_bin_cmd!("atlas")
 }
 
 fn create_test_project(dir: &std::path::Path) {
