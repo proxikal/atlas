@@ -221,6 +221,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs passed
+        env:
+          FMT: ${{ needs.fmt.result }}
+          CLIPPY: ${{ needs.clippy.result }}
+          CHECK: ${{ needs.check.result }}
+          TEST: ${{ needs.test.result }}
+          TEST_MATRIX: ${{ needs.test-matrix.result }}
         run: |
           echo "fmt:          ${{ needs.fmt.result }}"
           echo "clippy:       ${{ needs.clippy.result }}"
