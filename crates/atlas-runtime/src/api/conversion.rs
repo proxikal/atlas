@@ -21,7 +21,7 @@
 
 use crate::value::Value;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 /// Error type for value conversion failures
 #[derive(Debug, Clone, PartialEq)]
@@ -116,6 +116,7 @@ fn type_name(value: &Value) -> &'static str {
         Value::ChannelReceiver(_) => "ChannelReceiver",
         Value::AsyncMutex(_) => "AsyncMutex",
         Value::Closure(_) => "closure",
+        Value::SharedValue(_) => "shared",
     }
 }
 
@@ -225,9 +226,9 @@ impl<T: FromAtlas> FromAtlas for Vec<T> {
     fn from_atlas(value: &Value) -> Result<Self, ConversionError> {
         match value {
             Value::Array(arr) => {
-                let arr_borrow = arr.lock().unwrap();
-                let mut result = Vec::with_capacity(arr_borrow.len());
-                for (index, elem) in arr_borrow.iter().enumerate() {
+                let arr_slice = arr.as_slice();
+                let mut result = Vec::with_capacity(arr_slice.len());
+                for (index, elem) in arr_slice.iter().enumerate() {
                     match T::from_atlas(elem) {
                         Ok(converted) => result.push(converted),
                         Err(ConversionError::TypeMismatch { expected, found }) => {
@@ -253,7 +254,7 @@ impl<T: FromAtlas> FromAtlas for Vec<T> {
 impl<T: ToAtlas> ToAtlas for Vec<T> {
     fn to_atlas(self) -> Value {
         let values: Vec<Value> = self.into_iter().map(|v| v.to_atlas()).collect();
-        Value::Array(Arc::new(Mutex::new(values)))
+        Value::array(values)
     }
 }
 
@@ -290,8 +291,8 @@ impl<T: ToAtlas> ToAtlas for HashMap<String, T> {
                 Value::String(s) => JV::String(s.to_string()),
                 Value::Array(arr) => {
                     // Convert array to JSON array
-                    let arr_borrow = arr.lock().unwrap();
-                    let json_arr: Vec<JV> = arr_borrow
+                    let json_arr: Vec<JV> = arr
+                        .as_slice()
                         .iter()
                         .map(|v| match v {
                             Value::Null => JV::Null,
@@ -461,11 +462,10 @@ mod tests {
         let value = vec.to_atlas();
         match value {
             Value::Array(arr) => {
-                let arr_borrow = arr.lock().unwrap();
-                assert_eq!(arr_borrow.len(), 3);
-                assert!(matches!(arr_borrow[0], Value::Number(n) if n == 1.0));
-                assert!(matches!(arr_borrow[1], Value::Number(n) if n == 2.0));
-                assert!(matches!(arr_borrow[2], Value::Number(n) if n == 3.0));
+                assert_eq!(arr.len(), 3);
+                assert!(matches!(arr.as_slice()[0], Value::Number(n) if n == 1.0));
+                assert!(matches!(arr.as_slice()[1], Value::Number(n) if n == 2.0));
+                assert!(matches!(arr.as_slice()[2], Value::Number(n) if n == 3.0));
             }
             _ => panic!("Expected Array"),
         }
@@ -474,7 +474,7 @@ mod tests {
     #[test]
     fn test_vec_from_atlas() {
         let arr = vec![Value::Number(1.0), Value::Number(2.0), Value::Number(3.0)];
-        let value = Value::Array(Arc::new(Mutex::new(arr)));
+        let value = Value::array(arr);
         let result: Vec<f64> = FromAtlas::from_atlas(&value).unwrap();
         assert_eq!(result, vec![1.0, 2.0, 3.0]);
     }
@@ -492,7 +492,7 @@ mod tests {
             Value::Number(1.0),
             Value::String(Arc::new("oops".to_string())),
         ];
-        let value = Value::Array(Arc::new(Mutex::new(arr)));
+        let value = Value::array(arr);
         let result: Result<Vec<f64>, _> = FromAtlas::from_atlas(&value);
         assert!(result.is_err());
         match result.unwrap_err() {

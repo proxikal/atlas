@@ -66,7 +66,7 @@ fn test_split_empty_string_with_separator() {
     let result = eval_ok(r#"split("", ",");"#);
     match result {
         Value::Array(arr) => {
-            let b = arr.lock().unwrap();
+            let b = arr.as_slice();
             assert_eq!(b.len(), 1);
             assert_eq!(b[0], Value::string(""));
         }
@@ -80,7 +80,7 @@ fn test_split_empty_string_empty_separator() {
     let result = eval_ok(r#"split("", "");"#);
     match result {
         Value::Array(arr) => {
-            let b = arr.lock().unwrap();
+            let b = arr.as_slice();
             assert_eq!(b.len(), 0);
         }
         _ => panic!("Expected array"),
@@ -92,7 +92,7 @@ fn test_split_separator_not_found() {
     let result = eval_ok(r#"split("abc", ",");"#);
     match result {
         Value::Array(arr) => {
-            let b = arr.lock().unwrap();
+            let b = arr.as_slice();
             assert_eq!(b.len(), 1);
             assert_eq!(b[0], Value::string("abc"));
         }
@@ -384,7 +384,7 @@ fn test_string_includes_empty_haystack() {
 fn test_reverse_empty_array() {
     let result = eval_ok("reverse([]);");
     match result {
-        Value::Array(arr) => assert_eq!(arr.lock().unwrap().len(), 0),
+        Value::Array(arr) => assert_eq!(arr.len(), 0),
         _ => panic!("Expected array"),
     }
 }
@@ -394,7 +394,7 @@ fn test_reverse_single_element() {
     let result = eval_ok("reverse([42]);");
     match result {
         Value::Array(arr) => {
-            let b = arr.lock().unwrap();
+            let b = arr.as_slice();
             assert_eq!(b.len(), 1);
             assert_eq!(b[0], Value::Number(42.0));
         }
@@ -415,7 +415,7 @@ fn test_reverse_parity() {
 fn test_concat_empty_arrays() {
     let result = eval_ok("concat([], []);");
     match result {
-        Value::Array(arr) => assert_eq!(arr.lock().unwrap().len(), 0),
+        Value::Array(arr) => assert_eq!(arr.len(), 0),
         _ => panic!("Expected array"),
     }
 }
@@ -433,7 +433,7 @@ fn test_concat_parity() {
 fn test_flatten_empty_array() {
     let result = eval_ok("flatten([]);");
     match result {
-        Value::Array(arr) => assert_eq!(arr.lock().unwrap().len(), 0),
+        Value::Array(arr) => assert_eq!(arr.len(), 0),
         _ => panic!("Expected array"),
     }
 }
@@ -442,7 +442,7 @@ fn test_flatten_empty_array() {
 fn test_flatten_nested_empty_arrays() {
     let result = eval_ok("flatten([[], []]);");
     match result {
-        Value::Array(arr) => assert_eq!(arr.lock().unwrap().len(), 0),
+        Value::Array(arr) => assert_eq!(arr.len(), 0),
         _ => panic!("Expected array"),
     }
 }
@@ -454,7 +454,7 @@ fn test_flatten_one_level_only() {
     let result = eval_ok("flatten([[[1, 2]], [[3, 4]]]);");
     match result {
         Value::Array(arr) => {
-            let b = arr.lock().unwrap();
+            let b = arr.as_slice();
             assert_eq!(
                 b.len(),
                 2,
@@ -517,7 +517,7 @@ fn test_slice_end_beyond_length_clamps() {
     let result = eval_ok("slice([0, 1, 2, 3, 4], 1, 100);");
     match result {
         Value::Array(arr) => {
-            let b = arr.lock().unwrap();
+            let b = arr.as_slice();
             assert_eq!(b.len(), 4);
             assert_eq!(b[0], Value::Number(1.0));
         }
@@ -529,7 +529,7 @@ fn test_slice_end_beyond_length_clamps() {
 fn test_slice_empty_array() {
     let result = eval_ok("slice([], 0, 0);");
     match result {
-        Value::Array(arr) => assert_eq!(arr.lock().unwrap().len(), 0),
+        Value::Array(arr) => assert_eq!(arr.len(), 0),
         _ => panic!("Expected array"),
     }
 }
@@ -538,7 +538,7 @@ fn test_slice_empty_array() {
 fn test_slice_start_equals_end() {
     let result = eval_ok("slice([1, 2, 3], 1, 1);");
     match result {
-        Value::Array(arr) => assert_eq!(arr.lock().unwrap().len(), 0),
+        Value::Array(arr) => assert_eq!(arr.len(), 0),
         _ => panic!("Expected array"),
     }
 }
@@ -563,7 +563,7 @@ fn test_unshift_to_empty() {
     let result = eval_ok("unshift([], 42);");
     match result {
         Value::Array(arr) => {
-            let b = arr.lock().unwrap();
+            let b = arr.as_slice();
             assert_eq!(b.len(), 1);
             assert_eq!(b[0], Value::Number(42.0));
         }

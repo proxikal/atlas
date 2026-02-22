@@ -1141,6 +1141,7 @@ impl<'a> TypeChecker<'a> {
                 "void" => Type::Void,
                 "null" => Type::Null,
                 "json" => Type::JsonValue,
+                "array" => Type::Array(Box::new(Type::Unknown)),
                 "Comparable" | "Numeric" => Type::Number,
                 "Iterable" => Type::Array(Box::new(Type::Unknown)),
                 "Equatable" => {

@@ -133,8 +133,8 @@ OR if no updates:
 ## Git Finalization (After Memory Check)
 
 1. `git add -A && git commit -m "feat(category): description"`
-2. `git push -u origin HEAD && gh pr create && gh pr merge --squash --auto`
-3. Walk away - automation handles merge
-4. Next session syncs main automatically
+2. `git checkout main && git merge --no-ff <feature-branch>`
+3. `git branch -d <feature-branch>`
+4. `git -C /Users/proxikal/dev/projects/atlas-dev rebase main && git -C /Users/proxikal/dev/projects/atlas-docs rebase main`   # REQUIRED — sync ALL worktree home branches via git -C (never checkout a branch live in another worktree)
 
 **Next:** Report completion summary with Memory section.

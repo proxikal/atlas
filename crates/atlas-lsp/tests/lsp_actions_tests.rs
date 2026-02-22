@@ -407,7 +407,8 @@ fn test_refactor_convert_to_template() {
 
     // May or may not have template action depending on parsing
     // Just verify we get some actions for valid code selection
-    assert!(!actions.is_empty() || has_refactor || true); // Accept any result since template detection is heuristic
+    // Template detection is heuristic — just ensure the call doesn't panic
+    let _ = (!actions.is_empty(), has_refactor);
 }
 
 // === Source Action Tests ===
@@ -467,7 +468,7 @@ fn test_no_actions_on_empty_selection() {
         CodeActionOrCommand::CodeAction(ca) => ca
             .kind
             .as_ref()
-            .map_or(false, |k| k.as_str().starts_with("refactor")),
+            .is_some_and(|k| k.as_str().starts_with("refactor")),
         _ => false,
     });
     assert!(!has_refactor);
@@ -487,7 +488,7 @@ fn test_no_actions_without_diagnostics() {
         CodeActionOrCommand::CodeAction(ca) => ca
             .kind
             .as_ref()
-            .map_or(false, |k| *k == CodeActionKind::QUICKFIX),
+            .is_some_and(|k| *k == CodeActionKind::QUICKFIX),
         _ => false,
     });
     assert!(!has_quickfix);

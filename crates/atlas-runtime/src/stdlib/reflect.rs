@@ -87,7 +87,7 @@ pub fn get_length_fn(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
     }
 
     match &args[0] {
-        Value::Array(arr) => Ok(Value::Number(arr.lock().unwrap().len() as f64)),
+        Value::Array(arr) => Ok(Value::Number(arr.len() as f64)),
         Value::String(s) => Ok(Value::Number(s.chars().count() as f64)),
         _ => Err(RuntimeError::TypeError {
             msg: "get_length() requires array or string".to_string(),
@@ -110,7 +110,7 @@ pub fn is_empty_fn(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     match &args[0] {
-        Value::Array(arr) => Ok(Value::Bool(arr.lock().unwrap().is_empty())),
+        Value::Array(arr) => Ok(Value::Bool(arr.is_empty())),
         Value::String(s) => Ok(Value::Bool(s.is_empty())),
         _ => Err(RuntimeError::TypeError {
             msg: "isEmpty() requires array or string".to_string(),
@@ -198,8 +198,8 @@ fn deep_equals_impl(a: &Value, b: &Value) -> bool {
         (Value::Null, Value::Null) => true,
 
         (Value::Array(arr_a), Value::Array(arr_b)) => {
-            let a_borrowed = arr_a.lock().unwrap();
-            let b_borrowed = arr_b.lock().unwrap();
+            let a_borrowed = arr_a.as_slice();
+            let b_borrowed = arr_b.as_slice();
 
             if a_borrowed.len() != b_borrowed.len() {
                 return false;

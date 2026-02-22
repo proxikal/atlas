@@ -304,8 +304,11 @@ impl Compiler {
                 // Compile the value
                 self.compile_expr(&assign.value)?;
 
-                // Emit SetIndex
+                // Emit SetIndex — CoW: mutated container is pushed back onto the stack
                 self.bytecode.emit(Opcode::SetIndex, assign.span);
+                // Write the mutated container back to the variable binding.
+                // compile_stmt emits Pop after compile_assign, so we do NOT Pop here.
+                self.emit_index_cow_write_back(target, assign.span)?;
             }
         }
 
@@ -432,18 +435,146 @@ impl Compiler {
     }
 
     /// Compile a for-in loop
+    ///
+    /// Desugars `for x in arr { body }` into index-based iteration using 4 hidden
+    /// stack-resident locals: __for_arr, __for_len, __for_idx, and the loop variable x.
+    ///
+    /// Loop structure:
+    ///   init: arr=iterable, len=GetArrayLen(arr), idx=0, x=null
+    ///   Jump → condition             ; skip increment on first pass
+    ///   increment:                   ; continue jumps here
+    ///     idx = idx + 1
+    ///   condition:
+    ///     if idx >= len: jump cleanup
+    ///     x = arr[idx]
+    ///     <body>
+    ///     Loop → increment
+    ///   cleanup:                     ; break and normal exit both land here
+    ///     Pop × 4                    ; remove hidden locals from stack
     fn compile_for_in(&mut self, for_in_stmt: &ForInStmt) -> Result<(), Vec<Diagnostic>> {
-        // TODO(Phase-20c): Full VM support requires array length opcode
-        // For now, for-in loops work in interpreter mode only
-        // VM support will be added in a future phase when ArrayLength opcode is available
-        Err(vec![crate::diagnostic::Diagnostic::error_with_code(
-            "AT9998",
-            "For-in loops are not yet supported in VM mode (use interpreter mode)",
-            for_in_stmt.span,
-        )
-        .with_help(
-            "For-in loops work in interpreter mode. VM support coming soon.".to_string(),
-        )])
+        let span = for_in_stmt.span;
+        let locals_before = self.locals.len();
+
+        // ── Init: Push 4 values; each stays on stack as its local slot ─────────
+
+        // __for_arr = iterable
+        self.compile_expr(&for_in_stmt.iterable)?;
+        let arr_rel = (self.locals.len() - self.current_function_base) as u16;
+        self.push_local(Local {
+            name: "__for_arr".to_string(),
+            depth: self.scope_depth + 1,
+            mutable: false,
+            scoped_name: None,
+        });
+
+        // __for_len = GetArrayLen(__for_arr)
+        self.bytecode.emit(Opcode::GetLocal, span);
+        self.bytecode.emit_u16(arr_rel);
+        self.bytecode.emit(Opcode::GetArrayLen, span);
+        let len_rel = (self.locals.len() - self.current_function_base) as u16;
+        self.push_local(Local {
+            name: "__for_len".to_string(),
+            depth: self.scope_depth + 1,
+            mutable: false,
+            scoped_name: None,
+        });
+
+        // __for_idx = 0
+        let zero_const = self.bytecode.add_constant(crate::value::Value::Number(0.0));
+        self.bytecode.emit(Opcode::Constant, span);
+        self.bytecode.emit_u16(zero_const);
+        let idx_rel = (self.locals.len() - self.current_function_base) as u16;
+        self.push_local(Local {
+            name: "__for_idx".to_string(),
+            depth: self.scope_depth + 1,
+            mutable: true,
+            scoped_name: None,
+        });
+
+        // x = null  (placeholder; set on each iteration)
+        self.bytecode.emit(Opcode::Null, span);
+        let var_rel = (self.locals.len() - self.current_function_base) as u16;
+        self.push_local(Local {
+            name: for_in_stmt.variable.name.clone(),
+            depth: self.scope_depth + 1,
+            mutable: true,
+            scoped_name: None,
+        });
+        // Stack is now: [..., arr, len, 0, null]
+
+        // ── Jump over the increment on the first pass ─────────────────────────
+        self.bytecode.emit(Opcode::Jump, span);
+        let first_pass_jump = self.bytecode.current_offset();
+        self.bytecode.emit_u16(0xFFFF); // Placeholder — patched to condition_check
+
+        // ── Increment target — continue jumps here ────────────────────────────
+        let increment_start = self.bytecode.current_offset();
+        // idx = idx + 1  (GetLocal + Constant 1 + Add → new value on stack)
+        self.bytecode.emit(Opcode::GetLocal, span);
+        self.bytecode.emit_u16(idx_rel);
+        let one_const = self.bytecode.add_constant(crate::value::Value::Number(1.0));
+        self.bytecode.emit(Opcode::Constant, span);
+        self.bytecode.emit_u16(one_const);
+        self.bytecode.emit(Opcode::Add, span);
+        // SetLocal peeks (doesn't pop), then we Pop the temporary
+        self.bytecode.emit(Opcode::SetLocal, span);
+        self.bytecode.emit_u16(idx_rel);
+        self.bytecode.emit(Opcode::Pop, span);
+
+        // ── Condition check — patch first_pass_jump here ──────────────────────
+        self.bytecode.patch_jump(first_pass_jump);
+
+        // Push loop context with increment_start so `continue` jumps there
+        self.loops.push(crate::compiler::LoopContext {
+            start_offset: increment_start,
+            break_jumps: Vec::new(),
+        });
+
+        // if idx < len → continue; else jump to cleanup
+        self.bytecode.emit(Opcode::GetLocal, span);
+        self.bytecode.emit_u16(idx_rel);
+        self.bytecode.emit(Opcode::GetLocal, span);
+        self.bytecode.emit_u16(len_rel);
+        self.bytecode.emit(Opcode::Less, span);
+        self.bytecode.emit(Opcode::JumpIfFalse, span);
+        let exit_jump = self.bytecode.current_offset();
+        self.bytecode.emit_u16(0xFFFF); // Patched to cleanup
+
+        // ── Load arr[idx] into loop variable ─────────────────────────────────
+        self.bytecode.emit(Opcode::GetLocal, span);
+        self.bytecode.emit_u16(arr_rel);
+        self.bytecode.emit(Opcode::GetLocal, span);
+        self.bytecode.emit_u16(idx_rel);
+        self.bytecode.emit(Opcode::GetIndex, span);
+        self.bytecode.emit(Opcode::SetLocal, span);
+        self.bytecode.emit_u16(var_rel);
+        self.bytecode.emit(Opcode::Pop, span); // clean up temporary
+
+        // ── Compile loop body ─────────────────────────────────────────────────
+        self.compile_block(&for_in_stmt.body)?;
+
+        // ── Loop back to increment ────────────────────────────────────────────
+        let offset = increment_start as i32 - (self.bytecode.current_offset() as i32 + 3);
+        self.bytecode.emit(Opcode::Loop, span);
+        self.bytecode.emit_i16(offset as i16);
+
+        // ── Cleanup: patch exit_jump and all break_jumps here ─────────────────
+        self.bytecode.patch_jump(exit_jump);
+        let loop_ctx = self.loops.pop().unwrap();
+        for break_jump in loop_ctx.break_jumps {
+            self.bytecode.patch_jump(break_jump);
+        }
+
+        // Pop the 4 hidden locals (var, idx, len, arr — top to bottom)
+        self.bytecode.emit(Opcode::Pop, span); // x
+        self.bytecode.emit(Opcode::Pop, span); // __for_idx
+        self.bytecode.emit(Opcode::Pop, span); // __for_len
+        self.bytecode.emit(Opcode::Pop, span); // __for_arr
+
+        // Remove hidden locals from compile-time tracking
+        self.locals.truncate(locals_before);
+
+        Ok(())
     }
 
     /// Compile a compound assignment (+=, -=, *=, /=, %=)
@@ -650,9 +781,11 @@ impl Compiler {
                 self.bytecode.emit(opcode, compound.span);
                 // Stack: [array_set, index_set, result]
 
-                // Now SetIndex
+                // Now SetIndex — CoW: mutated container is pushed back
                 self.bytecode.emit(Opcode::SetIndex, *span);
-                // Stack: [] (SetIndex consumes all three)
+                // Write back then pop (compound assign is a statement — no residual value)
+                self.emit_index_cow_write_back(target, *span)?;
+                self.bytecode.emit(Opcode::Pop, *span);
             }
         }
 
@@ -751,8 +884,11 @@ impl Compiler {
                 self.bytecode.emit_u16(one_idx);
                 self.bytecode.emit(Opcode::Add, inc.span);
 
-                // SetIndex
+                // SetIndex — CoW: mutated container is pushed back
                 self.bytecode.emit(Opcode::SetIndex, *span);
+                // Write back then pop (increment is a statement — no residual value)
+                self.emit_index_cow_write_back(target, *span)?;
+                self.bytecode.emit(Opcode::Pop, *span);
             }
         }
 
@@ -851,11 +987,43 @@ impl Compiler {
                 self.bytecode.emit_u16(one_idx);
                 self.bytecode.emit(Opcode::Sub, dec.span);
 
-                // SetIndex
+                // SetIndex — CoW: mutated container is pushed back
                 self.bytecode.emit(Opcode::SetIndex, *span);
+                // Write back then pop (decrement is a statement — no residual value)
+                self.emit_index_cow_write_back(target, *span)?;
+                self.bytecode.emit(Opcode::Pop, *span);
             }
         }
 
+        Ok(())
+    }
+
+    /// Write the CoW-mutated container (top of stack) back to the variable binding.
+    ///
+    /// `SetIndex` pushes the mutated container back after mutating. This helper emits
+    /// `SetLocal` or `SetGlobal` to store it into the variable. It does NOT emit `Pop`;
+    /// callers that need to discard the value (statement context) must emit `Pop` after.
+    ///
+    /// For nested index targets (`Expr::Index`), the write-back is skipped — the value
+    /// remains on the stack and the caller must still emit `Pop` to maintain stack balance.
+    fn emit_index_cow_write_back(
+        &mut self,
+        target: &Expr,
+        span: Span,
+    ) -> Result<(), Vec<Diagnostic>> {
+        if let Expr::Identifier(ident) = target {
+            if let Some(local_idx) = self.resolve_local(&ident.name) {
+                self.bytecode.emit(Opcode::SetLocal, span);
+                self.bytecode.emit_u16(local_idx as u16);
+            } else {
+                let name_idx = self.bytecode.add_constant(Value::string(&ident.name));
+                self.bytecode.emit(Opcode::SetGlobal, span);
+                self.bytecode.emit_u16(name_idx);
+            }
+        }
+        // For nested targets (Expr::Index), the mutated inner element cannot be written
+        // back without stack rotation support. The value remains on the stack;
+        // the caller must Pop it to maintain stack balance.
         Ok(())
     }
 

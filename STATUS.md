@@ -1,108 +1,93 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-21
-**Version:** v0.2 completion sprint | **Progress:** 133/133 v0.2 phases + 5/5 completion phases done
+**Last Updated:** 2026-02-21 (Block 1 complete — phases 20–25 done)
+**Version:** v0.3 — The Foundation Version
+**Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 COMPLETE ✅
 
 ---
 
-## Current Phase
+## Current State
 
-**Status:** v0.2 Completion Sprint — closing gaps before v0.3
-**Next:** v0.3 planning (see V03_EXPLORATION_PLAN.md)
-
-> **Why a completion sprint?** Post-mortem intel revealed 3 genuine v0.2 gaps:
-> match/Result/Option has no dedicated test suite, stdlib has 15-20% shallow implementations,
-> and atlas-jit + closure semantics are undocumented. These must be clean before v0.3 starts.
+**Status:** Block 1 complete — ready for Block 2 scaffolding
+**Last Completed:** Phases 20–25 — Clippy/fmt/docs, full test suite (9,152 passing), Block 1 acceptance check (8/8 AC met)
+**Next:** Scaffold Block 2 (Ownership Syntax) — trigger: "Scaffold Block 2"
 
 ---
 
-## v0.2 Completion Sprint
+## v0.3 Block Progress
 
-| Phase | File | Status |
-|-------|------|--------|
-| v02-completion-01 | `phases/v02-completion/phase-01-match-result-option-coverage.md` | ✅ Complete |
-| v02-completion-02 | `phases/v02-completion/phase-02-match-guard-or-patterns.md` | ✅ Complete |
-| v02-completion-03 | `phases/v02-completion/phase-03-stdlib-core-hardening.md` | ✅ Complete |
-| v02-completion-04 | `phases/v02-completion/phase-04-stdlib-extended-hardening.md` | ✅ Complete |
-| v02-completion-05 | `phases/v02-completion/phase-05-jit-status-and-closure-foundations.md` | ✅ Complete |
+| Block | Theme | Phases | Status |
+|-------|-------|--------|--------|
+| 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25 | ✅ Complete (2026-02-21) |
+| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 15–20 | ⬜ Unblocked — ready to scaffold |
+| 3 | Trait System (`trait`, `impl`, Copy/Move/Drop) | 20–25 | ⬜ Blocked on Block 2 |
+| 4 | Closures + Anonymous Functions | 15–20 | ⬜ Blocked on Block 3 |
+| 5 | Type Inference (locals + return types) | 10–15 | ⬜ Blocked on Block 3 |
+| 6 | Error Handling (`?` operator) | 10–15 | ⬜ Blocked on Block 3 |
+| 7 | JIT Integration (wire atlas-jit to VM) | 10–15 | ⬜ Unblocked — ready to scaffold |
+| 8 | Async/Await Syntax | 10–15 | ⬜ Blocked on Block 6 |
+| 9 | Quick Wins (string interp, implicit returns) | 5–10 | ⬜ Unblocked — ready to scaffold |
 
-**Execution order:** 01 → 02 → 03 → 04 → 05 (sequential, each depends on previous)
+**Rule:** Blocks are strictly sequential within their dependency chain. Block N cannot begin
+until all acceptance criteria in its dependency block are met. See V03_PLAN.md.
 
 ---
 
-## v0.2 Milestone — COMPLETE ✅
+## Block 1 Completion Metrics
 
-**Completed:** 2026-02-20
-**Total phases:** 133/133
-**All phase files:** Archived in `phases/*/archive/v0.2/`
-
-### Final Metrics (v0.2 close)
 | Metric | Value |
 |--------|-------|
-| Total tests | 6,805 |
+| Phases | 25/25 |
+| Tests at completion | **9,152** (target was ≥9,000 ✅) |
 | Test failures | 0 |
-| Fuzz targets | 7 |
-| Benchmarks | 117 |
+| Arc<Mutex<Vec<Value>>> removed | 100% |
+| Arc<Mutex<Atlas*>> removed | 100% |
+| Parity tests | 32+ new (zero divergence) |
+| CoW regression tests | 10 (both engines) |
+| Clippy | 0 warnings (-D warnings) |
+| Fmt | Clean |
+| Acceptance criteria | **8/8** |
+
+---
+
+## v0.3 Baseline Metrics (v0.2 close)
+
+| Metric | Value |
+|--------|-------|
+| Tests at v0.2 close | 7,165 |
+| Tests after Block 1 | **9,152** |
 | Stdlib functions | 300+ |
 | LSP features | 16 |
 | CLI commands | 15 |
-
-### Category Summary (all archived)
-| Category | Phases | Archive |
-|----------|--------|---------|
-| Infra | 20 | `phases/infra/archive/v0.2/` |
-| Correctness | 12 | `phases/correctness/archive/v0.2/` |
-| Foundation | 33 | `phases/foundation/archive/v0.2/` |
-| Stdlib | 28 | `phases/stdlib/archive/v0.2/` |
-| Bytecode-VM | 8 | `phases/bytecode-vm/archive/v0.2/` |
-| Frontend | 5 | `phases/frontend/archive/v0.2/` |
-| Typing | 7 | `phases/typing/archive/v0.2/` |
-| Interpreter | 2 | `phases/interpreter/archive/v0.2/` |
-| CLI | 6 | `phases/cli/archive/v0.2/` |
-| LSP | 7 | `phases/lsp/archive/v0.2/` |
-| Polish | 5 | `phases/polish/archive/v0.2/` |
-
-### Audit Reports
-| Report | Location |
-|--------|----------|
-| Testing | `TESTING_REPORT_v02.md` |
-| Performance | `PERFORMANCE_REPORT_v02.md` |
-| Documentation | `DOCS_AUDIT_SUMMARY_v02.md` |
-| Stability | `STABILITY_AUDIT_REPORT_v02.md` |
-| Development Report | `V02_DEVELOPMENT_REPORT.md` |
-| Known Issues | `V02_KNOWN_ISSUES.md` |
-| Lessons Learned | `V02_LESSONS_LEARNED.md` |
-| v0.3 Exploration | `V03_EXPLORATION_PLAN.md` |
+| Fuzz targets | 7 |
+| Benchmarks | 117 |
+| **v0.3 test target** | **≥ 9,000 ✅ achieved** |
 
 ---
 
-## v0.3 Status
+## v0.2 — COMPLETE ✅
 
-**Phase:** Blocked on completion sprint
-**Document:** See `V03_EXPLORATION_PLAN.md`
-
-Top research priorities (after completion sprint):
-1. Hindley-Milner type inference
-2. Result<T, E> hardening (builds on completion-01/02)
-3. Incremental LSP analysis
-4. Closures / anonymous functions (builds on completion-05)
+**Completed:** 2026-02-21 (including post-v0.2 fixes)
+**Total phases:** 133/133 + 6/6 completion phases
+**All phase files:** Archived in `phases/*/archive/v0.2/`
+**Audit reports:** `TESTING_REPORT_v02.md`, `STABILITY_AUDIT_REPORT_v02.md`, `V02_KNOWN_ISSUES.md`
 
 ---
 
 ## Handoff Protocol
 
 **When you complete a phase:**
-1. Mark ⬜ → ✅ in this file
-2. Update "Last Completed" and "Next Phase"
-3. Update category count in progress table
-4. Update "Last Updated" date
-5. Check memory (GATE 7)
-6. Commit all changes to feature branch
-7. Push and create PR
-8. Wait for CI: `fmt → clippy → test → ci-success`
-9. Merge PR (squash), delete branch
-10. Sync local main: `git checkout main && git pull`
-11. Report completion (user is NOT involved in Git operations)
+1. Mark ⬜ → ✅ in the Block Progress table above
+2. Update "Last Updated" date
+3. Check memory (GATE 7)
+4. Commit → merge to local main → rebase worktree/dev
+5. Report completion
+
+**When you complete a full block:**
+1. Verify ALL acceptance criteria in `V03_PLAN.md` for that block
+2. Run full test suite — must be 100% passing
+3. Update block status to ✅ Complete
+4. Only then begin the next dependent block
 
 ---
 
@@ -110,11 +95,11 @@ Top research priorities (after completion sprint):
 
 | Resource | Location |
 |----------|----------|
-| Memory | Claude auto-memory (NOT in repo — patterns.md, decisions.md, testing-patterns.md) |
+| **v0.3 block plan** | `docs/internal/V03_PLAN.md` ← start here |
+| **Memory model spec** | `docs/specification/memory-model.md` ← architectural foundation |
+| Roadmap | `ROADMAP.md` |
 | Specs | `docs/specification/` |
-| Active phases | `phases/v02-completion/` |
-| v0.1 archive | `phases/*/archive/v0.1/` |
 | v0.2 archive | `phases/*/archive/v0.2/` |
-| v0.3 plan | `V03_EXPLORATION_PLAN.md` |
+| **Auto-memory** | Claude auto-memory (NOT in repo) — `patterns.md`, `decisions/`, `testing-patterns.md` |
 
 **For humans:** Point AI to this file — "Read STATUS.md and continue"

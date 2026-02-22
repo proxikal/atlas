@@ -4772,3 +4772,228 @@ fn test_parity_result_and_then_invalid_callback() {
 fn test_parity_result_or_else_invalid_callback() {
     assert_error_parity(r#"result_or_else(Err("e"), "not a function");"#);
 }
+
+// ============================================================================
+// for-in VM parity tests (fix/pre-v03-blockers)
+// ============================================================================
+
+#[test]
+fn test_forin_vm_sum_array() {
+    assert_parity(
+        r#"
+var sum = 0;
+let arr = [1, 2, 3, 4, 5];
+for x in arr {
+    sum = sum + x;
+}
+sum;
+"#,
+    );
+}
+
+#[test]
+fn test_forin_vm_empty_array() {
+    assert_parity(
+        r#"
+var count = 0;
+let arr: number[] = [];
+for x in arr {
+    count = count + 1;
+}
+count;
+"#,
+    );
+}
+
+#[test]
+fn test_forin_vm_single_element() {
+    assert_parity(
+        r#"
+var result = 0;
+let arr = [42];
+for x in arr {
+    result = x;
+}
+result;
+"#,
+    );
+}
+
+#[test]
+fn test_forin_vm_string_array() {
+    assert_parity(
+        r#"
+var count = 0;
+let words = ["hello", "world", "atlas"];
+for w in words {
+    count = count + 1;
+}
+count;
+"#,
+    );
+}
+
+#[test]
+fn test_forin_vm_nested_loop() {
+    assert_parity(
+        r#"
+var total = 0;
+let outer = [1, 2, 3];
+let inner = [10, 20];
+for a in outer {
+    for b in inner {
+        total = total + a + b;
+    }
+}
+total;
+"#,
+    );
+}
+
+#[test]
+fn test_forin_vm_break() {
+    assert_parity(
+        r#"
+var found = 0;
+let arr = [1, 2, 3, 4, 5];
+for x in arr {
+    if (x == 3) {
+        found = x;
+        break;
+    }
+}
+found;
+"#,
+    );
+}
+
+#[test]
+fn test_forin_vm_last_value() {
+    assert_parity(
+        r#"
+var last = 0;
+let arr = [10, 20, 30];
+for x in arr {
+    last = x;
+}
+last;
+"#,
+    );
+}
+
+// ============================================================================
+// Phase 16: Array method CoW write-back — VM parity tests
+// Tests use run_vm() which runs the full pipeline (incl. typechecker).
+// ============================================================================
+
+#[test]
+fn test_vm_array_push_cow_writeback() {
+    let result = run_vm(r#"var arr: array = [1, 2, 3]; arr.push(4); arr[3];"#);
+    assert_eq!(result, Ok("Number(4)".to_string()));
+}
+
+#[test]
+fn test_vm_array_push_len_increases() {
+    let result = run_vm(r#"var arr: array = [1, 2]; arr.push(9); len(arr);"#);
+    assert_eq!(result, Ok("Number(3)".to_string()));
+}
+
+#[test]
+fn test_vm_array_pop_returns_element() {
+    let result = run_vm(r#"var arr: array = [1, 2, 3]; let x = arr.pop(); x;"#);
+    assert_eq!(result, Ok("Number(3)".to_string()));
+}
+
+#[test]
+fn test_vm_array_pop_shrinks_receiver() {
+    let result = run_vm(r#"var arr: array = [1, 2, 3]; arr.pop(); len(arr);"#);
+    assert_eq!(result, Ok("Number(2)".to_string()));
+}
+
+#[test]
+fn test_vm_array_sort_non_mutating() {
+    // sort() should not update the receiver
+    let result = run_vm(r#"var arr: array = [3, 1, 2]; let s = arr.sort(); arr[0];"#);
+    assert_eq!(result, Ok("Number(3)".to_string()));
+}
+
+#[test]
+fn test_vm_array_sort_result_sorted() {
+    let result = run_vm(r#"var arr: array = [3, 1, 2]; let s = arr.sort(); s[0];"#);
+    assert_eq!(result, Ok("Number(1)".to_string()));
+}
+
+#[test]
+fn test_vm_array_push_parity() {
+    let code = r#"var arr: array = [10, 20]; arr.push(30); arr[2];"#;
+    let vm_result = run_vm(code);
+    assert_eq!(vm_result, Ok("Number(30)".to_string()));
+}
+
+#[test]
+fn test_vm_free_fn_pop_cow_writeback() {
+    let result = run_vm(r#"var arr: array = [1, 2, 3]; let x = pop(arr); x;"#);
+    assert_eq!(result, Ok("Number(3)".to_string()));
+}
+
+#[test]
+fn test_vm_free_fn_pop_receiver_updated() {
+    let result = run_vm(r#"var arr: array = [1, 2, 3]; pop(arr); len(arr);"#);
+    assert_eq!(result, Ok("Number(2)".to_string()));
+}
+
+#[test]
+fn test_vm_free_fn_shift_cow_writeback() {
+    let result = run_vm(r#"var arr: array = [10, 20, 30]; let x = shift(arr); x;"#);
+    assert_eq!(result, Ok("Number(10)".to_string()));
+}
+
+#[test]
+fn test_vm_free_fn_reverse_cow_writeback() {
+    let result = run_vm(r#"var arr: array = [1, 2, 3]; reverse(arr); arr[0];"#);
+    assert_eq!(result, Ok("Number(3)".to_string()));
+}
+
+// ============================================================================
+// Value semantics regression tests — CoW behavior must never regress (VM)
+// ============================================================================
+
+/// Regression: assignment creates independent copy; mutation of source does not
+/// affect the copy (CoW value semantics).
+#[test]
+fn test_vm_value_semantics_regression_assign_copy() {
+    let result = run_vm(r#"let a: number[] = [1, 2, 3]; let b: number[] = a; a[0] = 99; b[0];"#);
+    assert_eq!(result, Ok("Number(1)".to_string()));
+}
+
+/// Regression: mutation of assigned copy does not affect source.
+#[test]
+fn test_vm_value_semantics_regression_copy_mutation_isolated() {
+    let result = run_vm(r#"let a: number[] = [1, 2, 3]; let b: number[] = a; b[0] = 42; a[0];"#);
+    assert_eq!(result, Ok("Number(1)".to_string()));
+}
+
+/// Regression: push on assigned copy does not grow the source.
+#[test]
+fn test_vm_value_semantics_regression_push_copy_isolated() {
+    let result = run_vm(r#"var a: array = [1, 2, 3]; var b: array = a; b.push(4); len(a);"#);
+    assert_eq!(result, Ok("Number(3)".to_string()));
+}
+
+/// Regression: function parameter is an independent copy — mutations stay local.
+#[test]
+fn test_vm_value_semantics_regression_fn_param_copy() {
+    let result = run_vm(
+        r#"fn fill(arr: number[]) -> void { arr[0] = 999; } let nums: number[] = [1, 2, 3]; fill(nums); nums[0];"#,
+    );
+    assert_eq!(result, Ok("Number(1)".to_string()));
+}
+
+/// Regression: three-way copy — each variable is independent.
+#[test]
+fn test_vm_value_semantics_regression_three_way_copy() {
+    let result = run_vm(
+        r#"let a: number[] = [1, 2, 3]; let b: number[] = a; let c: number[] = b; b[0] = 10; c[1] = 20; a[0] + a[1];"#,
+    );
+    assert_eq!(result, Ok("Number(3)".to_string()));
+}

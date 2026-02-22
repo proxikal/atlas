@@ -9,7 +9,7 @@ use crate::value::{RuntimeError, Value};
 use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use zip::write::FileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
@@ -682,7 +682,7 @@ pub fn zip_list(zip_path: &Value, span: Span) -> Result<Value, RuntimeError> {
                 HashKey::String(Arc::new("method".to_string())),
                 Value::string(entry.method.clone()),
             );
-            Value::HashMap(Arc::new(Mutex::new(map)))
+            Value::HashMap(crate::value::ValueHashMap::from_atlas(map))
         })
         .collect();
 
@@ -785,9 +785,9 @@ fn extract_string_array(
 ) -> Result<Vec<PathBuf>, RuntimeError> {
     match value {
         Value::Array(arr) => {
-            let guard = arr.lock().unwrap();
-            let mut paths = Vec::with_capacity(guard.len());
-            for v in guard.iter() {
+            let arr_slice = arr.as_slice();
+            let mut paths = Vec::with_capacity(arr_slice.len());
+            for v in arr_slice.iter() {
                 match v {
                     Value::String(s) => paths.push(PathBuf::from(s.as_ref())),
                     _ => {

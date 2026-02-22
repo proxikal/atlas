@@ -229,7 +229,7 @@ mod format_workflow {
 
         // File should be modified
         let content = fs::read_to_string(&file).unwrap();
-        assert!(content.len() > 0);
+        assert!(!content.is_empty());
     }
 
     #[test]

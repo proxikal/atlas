@@ -521,6 +521,7 @@ impl<'a> TypeChecker<'a> {
         // Annotate MemberExpr with TypeTag for method dispatch parity
         let type_tag = match target_type.normalized() {
             Type::JsonValue => Some(crate::method_dispatch::TypeTag::JsonValue),
+            Type::Array(_) => Some(crate::method_dispatch::TypeTag::Array),
             _ => None,
         };
         member.type_tag.set(type_tag);

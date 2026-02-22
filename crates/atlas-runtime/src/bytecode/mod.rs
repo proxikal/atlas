@@ -56,6 +56,10 @@ pub struct Bytecode {
     pub constants: Vec<Value>,
     /// Debug information (instruction offset -> source span)
     pub debug_info: Vec<DebugSpan>,
+    /// Number of local slots required by top-level code (set by compiler).
+    /// Used by the VM to initialize the main frame's local_count so that
+    /// SetLocal in top-level for-in loops and other constructs works correctly.
+    pub top_level_local_count: usize,
 }
 
 impl Bytecode {
@@ -65,6 +69,7 @@ impl Bytecode {
             instructions: Vec::new(),
             constants: Vec::new(),
             debug_info: Vec::new(),
+            top_level_local_count: 0,
         }
     }
 
@@ -276,6 +281,7 @@ impl Bytecode {
             instructions,
             constants,
             debug_info,
+            top_level_local_count: 0,
         })
     }
 

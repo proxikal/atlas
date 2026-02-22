@@ -464,8 +464,8 @@ fn parse_command(value: &Value, span: Span) -> Result<(String, Vec<String>), Run
             Ok((s.as_ref().clone(), vec![]))
         }
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
-            if arr_guard.is_empty() {
+            let arr_slice = arr.as_slice();
+            if arr_slice.is_empty() {
                 return Err(RuntimeError::TypeError {
                     msg: "Command array cannot be empty".to_string(),
                     span,
@@ -473,7 +473,7 @@ fn parse_command(value: &Value, span: Span) -> Result<(String, Vec<String>), Run
             }
 
             // First element is the program
-            let program = match &arr_guard[0] {
+            let program = match &arr_slice[0] {
                 Value::String(s) => s.as_ref().clone(),
                 _ => {
                     return Err(RuntimeError::TypeError {
@@ -485,7 +485,7 @@ fn parse_command(value: &Value, span: Span) -> Result<(String, Vec<String>), Run
 
             // Rest are arguments
             let mut args = Vec::new();
-            for arg_val in &arr_guard[1..] {
+            for arg_val in &arr_slice[1..] {
                 match arg_val {
                     Value::String(s) => args.push(s.as_ref().clone()),
                     _ => {

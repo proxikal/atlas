@@ -1,22 +1,17 @@
 # Security - Dependency auditing and supply chain verification
 #
-# DISABLED - Preserving GitHub Actions credits
-# Run manually when needed: cargo audit && cargo deny check
+# Runs on PRs that touch Cargo.toml/Cargo.lock, and on a weekly schedule.
+# Run manually: cargo audit && cargo deny check
 
 name: Security
 
 on:
-  # Disabled automatic triggers - run manually with workflow_dispatch
-  # schedule:
-  #   - cron: '0 0 * * *'
-  # push:
-  #   paths:
-  #     - '**/Cargo.toml'
-  #     - '**/Cargo.lock'
-  # pull_request:
-  #   paths:
-  #     - '**/Cargo.toml'
-  #     - '**/Cargo.lock'
+  pull_request:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly, Monday 6am UTC
   workflow_dispatch:
 
 concurrency:
@@ -31,7 +26,7 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-audit
@@ -46,7 +41,7 @@ jobs:
         run: cargo audit --deny warnings
 
       - name: Upload results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-audit-results
@@ -55,7 +50,7 @@ jobs:
 
       - name: Create issue on vulnerability
         if: failure()
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
@@ -78,7 +73,7 @@ jobs:
     name: Supply Chain
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-deny

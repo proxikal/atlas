@@ -25,7 +25,7 @@ fn expect_string(value: &Value, param_name: &str, span: Span) -> Result<String, 
 #[allow(dead_code)]
 fn expect_array(value: &Value, param_name: &str, span: Span) -> Result<Vec<Value>, RuntimeError> {
     match value {
-        Value::Array(arr) => Ok(arr.lock().unwrap().clone()),
+        Value::Array(arr) => Ok(arr.as_slice().to_vec()),
         _ => Err(RuntimeError::TypeError {
             msg: format!("{} must be an array", param_name),
             span,
@@ -105,7 +105,7 @@ pub fn path_parse(path_str: &str, _span: Span) -> Result<Value, RuntimeError> {
 
     // Build result object as HashMap
     use crate::stdlib::collections::hash::HashKey;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
     let mut map = crate::stdlib::collections::hashmap::AtlasHashMap::new();
     map.insert(
         HashKey::String(Arc::new("root".to_string())),
@@ -128,7 +128,7 @@ pub fn path_parse(path_str: &str, _span: Span) -> Result<Value, RuntimeError> {
         Value::string(name),
     );
 
-    Ok(Value::HashMap(Arc::new(Mutex::new(map))))
+    Ok(Value::HashMap(crate::value::ValueHashMap::from_atlas(map)))
 }
 
 /// Normalize path

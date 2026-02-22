@@ -3397,7 +3397,7 @@ fn test_read_dir_empty() {
 
     assert!(result.is_ok());
     if let atlas_runtime::Value::Array(arr) = result.unwrap() {
-        assert_eq!(arr.lock().unwrap().len(), 0);
+        assert_eq!(arr.len(), 0);
     } else {
         panic!("Expected array");
     }
@@ -3414,7 +3414,7 @@ fn test_read_dir_mixed_contents() {
 
     assert!(result.is_ok());
     if let atlas_runtime::Value::Array(arr) = result.unwrap() {
-        assert_eq!(arr.lock().unwrap().len(), 2);
+        assert_eq!(arr.len(), 2);
     } else {
         panic!("Expected array");
     }
@@ -12220,7 +12220,7 @@ mod vm_stdlib {
 
         assert!(result.is_ok());
         if let atlas_runtime::Value::Array(arr) = result.unwrap() {
-            assert_eq!(arr.lock().unwrap().len(), 0);
+            assert_eq!(arr.len(), 0);
         } else {
             panic!("Expected array");
         }
@@ -12240,7 +12240,7 @@ mod vm_stdlib {
 
         assert!(result.is_ok());
         if let atlas_runtime::Value::Array(arr) = result.unwrap() {
-            assert_eq!(arr.lock().unwrap().len(), 2);
+            assert_eq!(arr.len(), 2);
         } else {
             panic!("Expected array");
         }

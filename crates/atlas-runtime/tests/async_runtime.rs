@@ -108,8 +108,8 @@ fn test_future_in_array() {
     let result = eval_ok("[futureResolve(1), futureResolve(2), futureResolve(3)]");
     match result {
         Value::Array(arr) => {
-            assert_eq!(arr.lock().unwrap().len(), 3);
-            for val in arr.lock().unwrap().iter() {
+            assert_eq!(arr.len(), 3);
+            for val in arr.as_slice().iter() {
                 assert_eq!(val.type_name(), "future");
             }
         }
@@ -166,7 +166,7 @@ fn test_future_state_check_resolved() {
     let result = eval_ok(code);
     match result {
         Value::Array(arr) => {
-            let values = arr.lock().unwrap();
+            let values = arr.as_slice();
             assert_eq!(values[0], Value::Bool(true)); // isResolved
             assert_eq!(values[1], Value::Bool(false)); // isRejected
             assert_eq!(values[2], Value::Bool(false)); // isPending
@@ -184,7 +184,7 @@ fn test_future_state_check_rejected() {
     let result = eval_ok(code);
     match result {
         Value::Array(arr) => {
-            let values = arr.lock().unwrap();
+            let values = arr.as_slice();
             assert_eq!(values[0], Value::Bool(false)); // isResolved
             assert_eq!(values[1], Value::Bool(true)); // isRejected
             assert_eq!(values[2], Value::Bool(false)); // isPending
@@ -1261,7 +1261,7 @@ fn test_parallel_file_reads_with_future_all() {
 
     match combined.get_state() {
         FutureState::Resolved(Value::Array(arr)) => {
-            assert_eq!(arr.lock().unwrap().len(), 3);
+            assert_eq!(arr.len(), 3);
         }
         _ => panic!("Expected array of results"),
     }
@@ -1294,7 +1294,7 @@ fn test_parallel_http_requests_with_future_all() {
 
     match combined.get_state() {
         FutureState::Resolved(Value::Array(arr)) => {
-            assert_eq!(arr.lock().unwrap().len(), 2);
+            assert_eq!(arr.len(), 2);
         }
         _ => panic!(),
     }
@@ -1461,7 +1461,7 @@ fn test_ordered_results_from_future_all() {
 
     match combined.get_state() {
         FutureState::Resolved(Value::Array(arr)) => {
-            let values = arr.lock().unwrap();
+            let values = arr.as_slice();
             assert_eq!(values.len(), 5);
             // Results should be in order
             for (i, val) in values.iter().enumerate() {

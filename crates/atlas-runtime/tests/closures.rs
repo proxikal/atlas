@@ -833,3 +833,168 @@ outer(6, 7);
         42.0,
     );
 }
+
+// ============================================================================
+// Category I: Capture-by-value behavioral pins (v0.2 defined semantics)
+//
+// The VM captures outer locals BY VALUE at inner function definition time.
+// These tests pin that behavior explicitly so v0.3 reference-semantics work
+// can be measured against a clear baseline.
+//
+// IMPORTANT: These tests intentionally exercise only the VM, because the
+// interpreter uses live dynamic scoping and cannot replicate capture-by-value
+// semantics for returned closures (the outer frame no longer exists).
+// Where both engines can be exercised, parity helpers are used.
+// ============================================================================
+
+/// Helper: run only the VM and return the last value.
+fn vm_eval_last(source: &str) -> Value {
+    vm_eval(source).unwrap_or(Value::Null)
+}
+
+#[test]
+fn test_vm_upvalue_captures_let_at_definition_time() {
+    // let is immutable — captured value equals definition-time value.
+    // Both engines agree: no divergence possible.
+    assert_parity_number(
+        r#"
+fn outer() -> number {
+    let x = 10;
+    fn get_x() -> number {
+        return x;
+    }
+    return get_x();
+}
+outer();
+"#,
+        10.0,
+    );
+}
+
+#[test]
+fn test_vm_upvalue_captures_var_at_definition_time() {
+    // VM: inner fn captures var BY VALUE at definition time.
+    // The outer var is NOT mutated before the inner fn is called here,
+    // so both engines agree.
+    assert_parity_number(
+        r#"
+fn outer() -> number {
+    var x = 5;
+    fn get_x() -> number {
+        return x;
+    }
+    return get_x();
+}
+outer();
+"#,
+        5.0,
+    );
+}
+
+#[test]
+fn test_vm_upvalue_var_mutation_before_inner_def_is_captured() {
+    // Outer var is mutated BEFORE inner function is defined.
+    // VM captures the value AT DEFINITION TIME of the inner fn (which is 20).
+    // Both engines agree because the inner fn is defined after the mutation.
+    assert_parity_number(
+        r#"
+fn outer() -> number {
+    var x = 5;
+    x = 20;
+    fn get_x() -> number {
+        return x;
+    }
+    return get_x();
+}
+outer();
+"#,
+        20.0,
+    );
+}
+
+#[test]
+fn test_vm_upvalue_is_snapshot_not_live_reference() {
+    // VM: outer var is mutated AFTER inner fn is defined.
+    // VM sees the captured snapshot (5), not the updated value (99).
+    // This is the defined v0.2 capture-by-value behavior.
+    // NOTE: Only VM is tested here — interpreter uses live scoping and would see 99.
+    let result = vm_eval_last(
+        r#"
+fn outer() -> number {
+    var x = 5;
+    fn get_x() -> number {
+        return x;
+    }
+    x = 99;
+    return get_x();
+}
+outer();
+"#,
+    );
+    assert_eq!(
+        result,
+        Value::Number(5.0),
+        "VM must return captured snapshot (5), not updated value (99)"
+    );
+}
+
+#[test]
+fn test_vm_returned_closure_accesses_top_level_globals() {
+    // A returned inner function that references top-level globals works after scope exit.
+    // Top-level globals are always alive — both engines agree.
+    assert_parity_number(
+        r#"
+let base = 100;
+fn make_fn() -> (number) -> number {
+    fn add_base(n: number) -> number {
+        return n + base;
+    }
+    return add_base;
+}
+let f = make_fn();
+f(42);
+"#,
+        142.0,
+    );
+}
+
+#[test]
+fn test_vm_upvalue_param_captured_correctly() {
+    // Outer function parameter is captured by inner fn.
+    // Both engines: parameter value at call time is the captured value.
+    assert_parity_number(
+        r#"
+fn make_adder(n: number) -> number {
+    fn add(x: number) -> number {
+        return x + n;
+    }
+    return add(10);
+}
+make_adder(32);
+"#,
+        42.0,
+    );
+}
+
+#[test]
+fn test_vm_two_inner_fns_capture_same_var_independently() {
+    // Two inner functions capture the same outer var independently at their
+    // respective definition times. Since var is not mutated between definitions,
+    // both see the same value. Both engines agree.
+    assert_parity_number(
+        r#"
+fn outer() -> number {
+    var shared = 7;
+    fn get_a() -> number {
+        return shared;
+    }
+    fn get_b() -> number {
+        return shared;
+    }
+    return get_a() + get_b();
+}
+outer();
+"#,
+        14.0,
+    );
+}

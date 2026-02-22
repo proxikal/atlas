@@ -10,6 +10,35 @@ use crate::value::{RuntimeError, Value};
 // Core Operations
 // ============================================================================
 
+/// Append element to array
+///
+/// Returns new array with element appended at the end
+pub fn push(arr: &[Value], element: Value) -> Value {
+    let mut new_arr = arr.to_vec();
+    new_arr.push(element);
+    Value::array(new_arr)
+}
+
+/// Sort array by natural order (numbers ascending, strings lexicographic)
+///
+/// Returns new sorted array; original is not modified.
+pub fn sort_natural(arr: &[Value]) -> Value {
+    let mut new_arr = arr.to_vec();
+    new_arr.sort_by(compare_values_natural);
+    Value::array(new_arr)
+}
+
+/// Natural comparison for sort: numbers by value, everything else by debug repr
+fn compare_values_natural(a: &Value, b: &Value) -> std::cmp::Ordering {
+    match (a, b) {
+        (Value::Number(x), Value::Number(y)) => {
+            x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal)
+        }
+        (Value::String(x), Value::String(y)) => x.as_ref().cmp(y.as_ref()),
+        _ => format!("{a:?}").cmp(&format!("{b:?}")),
+    }
+}
+
 /// Remove and return last element from array
 ///
 /// Returns two-element array: [removed_element, new_array]
@@ -86,7 +115,7 @@ pub fn flatten(arr: &[Value], _span: Span) -> Result<Value, RuntimeError> {
     for elem in arr {
         match elem {
             Value::Array(nested) => {
-                result.extend(nested.lock().unwrap().clone());
+                result.extend(nested.as_slice().iter().cloned());
             }
             other => {
                 result.push(other.clone());
@@ -188,10 +217,10 @@ mod tests {
         // Should return [removed_element, new_array]
         match result {
             Value::Array(result_arr) => {
-                let borrowed = result_arr.lock().unwrap();
-                assert_eq!(borrowed.len(), 2);
-                assert_eq!(borrowed[0], Value::Number(3.0)); // Removed element
-                                                             // borrowed[1] is the new array
+                let s = result_arr.as_slice();
+                assert_eq!(s.len(), 2);
+                assert_eq!(s[0], Value::Number(3.0)); // Removed element
+                                                      // s[1] is the new array
             }
             _ => panic!("Expected array"),
         }
@@ -211,9 +240,9 @@ mod tests {
         // Should return [removed_element, new_array]
         match result {
             Value::Array(result_arr) => {
-                let borrowed = result_arr.lock().unwrap();
-                assert_eq!(borrowed.len(), 2);
-                assert_eq!(borrowed[0], Value::Number(1.0)); // Removed element
+                let s = result_arr.as_slice();
+                assert_eq!(s.len(), 2);
+                assert_eq!(s[0], Value::Number(1.0)); // Removed element
             }
             _ => panic!("Expected array"),
         }
@@ -226,9 +255,9 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.lock().unwrap();
-                assert_eq!(borrowed.len(), 3);
-                assert_eq!(borrowed[0], Value::Number(1.0));
+                let s = new_arr.as_slice();
+                assert_eq!(s.len(), 3);
+                assert_eq!(s[0], Value::Number(1.0));
             }
             _ => panic!("Expected array"),
         }
@@ -241,9 +270,9 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.lock().unwrap();
-                assert_eq!(borrowed[0], Value::Number(3.0));
-                assert_eq!(borrowed[2], Value::Number(1.0));
+                let s = new_arr.as_slice();
+                assert_eq!(s[0], Value::Number(3.0));
+                assert_eq!(s[2], Value::Number(1.0));
             }
             _ => panic!("Expected array"),
         }
@@ -257,8 +286,7 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.lock().unwrap();
-                assert_eq!(borrowed.len(), 4);
+                assert_eq!(new_arr.len(), 4);
             }
             _ => panic!("Expected array"),
         }
@@ -272,8 +300,7 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.lock().unwrap();
-                assert_eq!(borrowed.len(), 4);
+                assert_eq!(new_arr.len(), 4);
             }
             _ => panic!("Expected array"),
         }
@@ -320,9 +347,9 @@ mod tests {
 
         match result {
             Value::Array(new_arr) => {
-                let borrowed = new_arr.lock().unwrap();
-                assert_eq!(borrowed.len(), 3);
-                assert_eq!(borrowed[0], Value::Number(1.0));
+                let s = new_arr.as_slice();
+                assert_eq!(s.len(), 3);
+                assert_eq!(s[0], Value::Number(1.0));
             }
             _ => panic!("Expected array"),
         }

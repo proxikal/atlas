@@ -2,7 +2,48 @@
 
 **Purpose:** Strategic direction for Atlas development. Reference for AI agents during phase scaffolding.
 **Philosophy:** Quality gates, not deadlines. Features ship when ready, not on schedule.
-**Last verified:** 2026-02-19 (codebase audit performed)
+**Last verified:** 2026-02-21 (post-v0.2 architectural decision session)
+
+---
+
+## Long-Term Goal: Systems Language
+
+Atlas's end goal is **systems-level programming** — a language capable of replacing C/Rust/Zig
+for performance-critical, low-level work, while being the most AI-generation-friendly language
+ever built. These goals are not in conflict. They reinforce each other.
+
+**The trajectory:**
+- v0.1–v0.2: Bootstrap (scripting semantics, Arc<Mutex<>> model, establish correctness)
+- v0.3: Foundation (value semantics, ownership model, traits — the permanent base layer)
+- v0.4–v0.6: Type system maturity (compile-time ownership verification, advanced generics)
+- v0.7–v0.9: Systems features (AOT native compilation, embedded targets, OS-level primitives)
+- v1.0: Stability commitment — first stable release
+
+**Why this trajectory is right:**
+- Go chose GC early and permanently closed the systems-programming door. Atlas will not repeat this.
+- Rust got memory safety right but the borrow checker is the hardest thing for LLMs to generate.
+  Atlas achieves the same safety with explicit ownership syntax — visible in signatures, generatable by AI.
+- Swift started high-level and is retroactively adding ownership (Swift 5.9/6 — `consuming`, `borrowing`).
+  Atlas bakes ownership syntax in from the foundation, avoiding the retrofit problem.
+
+**The memory model decision is final.** See `docs/specification/memory-model.md`.
+
+---
+
+## Memory Model Strategy (LOCKED)
+
+**No GC. Ever.**
+
+The permanent Atlas memory model:
+1. **Value types by default** — arrays, maps, and objects are copy-on-write (CoW)
+2. **Explicit ownership** — `own`, `borrow`, `shared` parameter annotations
+3. **`shared<T>` for opt-in reference semantics** — explicit Arc, not implicit
+4. **No implicit borrow checker** — ownership expressed in syntax, verified by compiler
+
+This is implemented in **v0.3** (value semantics + ownership syntax + runtime verification).
+Compile-time ownership proof is **v0.4** (requires v0.3 foundation to be stable first).
+
+Full specification: `docs/specification/memory-model.md`
 
 ---
 
@@ -18,321 +59,235 @@ Atlas uses semantic versioning with deliberate pacing:
 
 ---
 
-## Implementation Status (Verified)
+## Implementation Status (Verified — 2026-02-21)
 
 ### Already Implemented
 
-These features exist in the codebase and should NOT be re-planned:
-
 | Feature | Location | Notes |
 |---------|----------|-------|
-| **atlas.toml manifest** | `atlas-config/`, `atlas-package/` | Full manifest parsing, demos exist |
-| **Package management** | `atlas-package/` | Resolver, lockfile, registry, caching, conflict resolution |
-| **Pattern matching** | `ast.rs`, `parser/`, `compiler/` | `MatchExpr`, `Pattern` enum, all variants |
-| **Bytecode optimizer** | `optimizer/` | Constant folding, dead code elimination, peephole |
+| **atlas.toml manifest** | `atlas-config/`, `atlas-package/` | Full manifest parsing |
+| **Package management** | `atlas-package/` | Resolver, lockfile, registry, caching |
+| **Pattern matching** | `ast.rs`, `parser/`, `compiler/` | All variants including guards/OR (v0.3) |
+| **Bytecode optimizer** | `optimizer/` | Constant folding, dead code, peephole |
 | **Async runtime** | `async_runtime/` | Tokio integration, futures, channels, tasks |
-| **Debugger** | `debugger/` | Breakpoints, stepping, inspection, source mapping |
+| **Debugger** | `debugger/` | Breakpoints, stepping, source mapping |
 | **Formatter** | `atlas-formatter/` | Comment preservation, configurable |
-| **REPL history** | `cli/commands/repl.rs` | File persistence, TUI mode |
-| **LSP foundation** | `atlas-lsp/` | Navigation, completion, document symbols |
+| **REPL** | `cli/commands/repl.rs` | History, TUI mode |
+| **LSP** | `atlas-lsp/` | 16 features: navigation, completion, symbols |
 | **Compression** | `stdlib/compression/` | gzip, tar, zip |
-| **HTTP client** | `stdlib/http.rs` | Full HTTP support |
+| **HTTP client** | `stdlib/http.rs` | Full HTTP, security-context enforced |
 | **Regex** | `stdlib/regex.rs` | Pattern matching |
 | **DateTime** | `stdlib/datetime.rs` | Chrono integration |
 | **Collections** | `stdlib/collections/` | HashMap, HashSet, Queue, Stack |
 | **FFI** | `ffi/` | Callbacks, marshaling, safety |
 | **Security** | `security/` | Permissions, sandbox, audit |
+| **JIT foundation** | `atlas-jit/` | Cranelift backend, arithmetic opcodes, hotspot profiler |
+| **VM upvalue capture** | `vm/mod.rs` | MakeClosure, GetUpvalue, SetUpvalue opcodes |
+| **for-in loops** | `compiler/stmt.rs` | VM parity complete (v0.2 close) |
+| **Source maps** | `sourcemap/` | v3 spec, inline generation |
 
-### Still Missing (Verified)
+### Missing — Targeted in v0.3
 
-| Feature | Spec Reference | Blocker? |
-|---------|---------------|----------|
-| **Closures** | types.md: "No closure capture... planned for v0.3+" | High impact |
-| **Anonymous functions** | types.md: "No anonymous function syntax" | High impact |
-| **async/await syntax** | Runtime exists, no language syntax | Medium |
-| **User-defined generics** | Only built-in (Option, Result, Array) | Medium |
-| **Guard clauses** | `pattern if condition` not in parser | Low |
-| **OR patterns** | `0 \| 1 \| 2` not in Pattern enum | Low |
-| **Rest patterns** | `[first, ...rest]` not implemented | Low |
-
----
-
-## Current: v0.2 (In Progress)
-
-**Theme:** First Usable Release
-
-**Status:** See STATUS.md for current progress
-
-### Remaining Work
-
-| Category | Status | Focus |
-|----------|--------|-------|
-| Interpreter | Complete | Debugger integration, REPL polish |
-| CLI | Complete | Test runner, watch mode, package CLI |
-| LSP | In Progress | Hover, refactoring, find references |
-| Polish | Pending | Testing, docs, stability |
-
-### v0.2 Exit Criteria
-
-- [x] Interpreter complete
-- [x] CLI complete
-- [ ] LSP provides usable IDE experience
-- [ ] Polish phases complete
+| Feature | Block | Notes |
+|---------|-------|-------|
+| **Value semantics (CoW)** | Block 1 | Replace Arc<Mutex<Value>> — foundational |
+| **Ownership syntax** | Block 2 | `own`, `borrow`, `shared` annotations |
+| **Trait system** | Block 3 | `trait`, `impl`, `Copy`/`Move`/`Drop` built-ins |
+| **Anonymous functions** | Block 4 | `fn(x) { }` and `(x) => x` syntax |
+| **Closure value capture** | Block 4 | CoW semantics for captured values |
+| **Type inference** | Block 5 | Local variable and return type inference |
+| **`?` operator** | Block 6 | Result/Option error propagation |
+| **JIT control flow** | Block 7 | Wire atlas-jit to VM, Jump/Call opcodes |
+| **Async/await syntax** | Block 8 | `async fn`, `await expr` (runtime exists) |
+| **String interpolation** | Block 9 | `"Hello, ${name}!"` |
+| **Implicit returns** | Block 9 | Single-expression functions |
 
 ---
 
-## v0.3: Closures & Lambdas
+## Current: v0.3 — The Foundation Version
 
-**Theme:** Complete Functional Programming Support
+**Status:** Ready for phase scaffolding
+**Phase plan:** `docs/internal/V03_PLAN.md` — READ THIS BEFORE SCAFFOLDING
+**Phase target:** ~130–150 phases across 9 blocks
+**Theme:** Memory model, ownership, traits — the permanent architectural foundation
 
-### Planned Features
+### The 9 Blocks (strict dependency order)
 
-| Feature | Current State | Work Required |
-|---------|---------------|---------------|
-| **Closures** | Functions can't capture outer scope | Environment capture, lifetime tracking |
-| **Anonymous functions** | No `fn(x) { x + 1 }` syntax | Parser, typechecker, compiler changes |
-| **Nested function capture** | Nested fns exist but can't close over | Same as closures |
+| Block | Theme | Phases | Depends On |
+|-------|-------|--------|-----------|
+| 1 | Memory Model (CoW value types) | 25–35 | Nothing |
+| 2 | Ownership Syntax | 15–20 | Block 1 |
+| 3 | Trait System | 20–25 | Block 2 |
+| 4 | Closures + Anonymous Functions | 15–20 | Block 3 |
+| 5 | Type Inference | 10–15 | Block 3 |
+| 6 | Error Handling (`?` operator) | 10–15 | Block 3 |
+| 7 | JIT Integration | 10–15 | Block 1 only |
+| 8 | Async/Await Syntax | 10–15 | Block 6 |
+| 9 | Quick Wins | 5–10 | Block 1 |
 
-### Why This Matters
-
-First-class functions without closures feels incomplete. This is the single most impactful gap for users expecting modern language ergonomics.
+**CRITICAL:** Blocks are strictly sequential. Block N cannot begin until Block N-1 acceptance
+criteria are ALL met. This is the lesson from v0.2 dependency hell. Do not reorder.
 
 ### v0.3 Exit Criteria
-
-- [ ] `let add = fn(x) { x + y }` works (captures `y`)
-- [ ] Closures work in interpreter AND VM (parity)
-- [ ] No memory leaks from captured references
-- [ ] All existing tests pass
+- [ ] No `Arc<Mutex<Value>>` in production code
+- [ ] Value semantics: mutation does not affect aliased copies
+- [ ] Ownership annotations runtime-verified in both engines
+- [ ] Trait system: Copy, Move, Drop + user-defined traits
+- [ ] Closures with correct capture semantics
+- [ ] Type inference for locals and return types
+- [ ] `?` operator propagates Result/Option
+- [ ] JIT hot functions compile to native (10x+ speedup target)
+- [ ] Async/await syntax in both engines
+- [ ] ≥ 9,000 tests, 0 failures
 
 ---
 
-## v0.4: Async Language Syntax
+## v0.4: Compile-Time Verification
 
-**Theme:** async/await as First-Class Citizens
+**Theme:** Prove ownership at compile time. Type system maturity.
 
-### Current State
+### Why v0.4 and not v0.3
+Compile-time ownership verification requires the v0.3 syntax foundation to be stable.
+You cannot write a verifier until you know what syntax you're verifying. Sequencing is correct.
 
-The async **runtime** exists (`async_runtime/`):
-- Tokio integration
-- `AtlasFuture` type
-- Channels, tasks, primitives
-- `spawn_task`, `join_all`, `timeout`
+### Planned work
+| Feature | Notes |
+|---------|-------|
+| **Compile-time ownership verification** | Static analysis pass over typed AST |
+| **Trait object dispatch (vtable)** | Dynamic dispatch for trait objects |
+| **User-defined generics** | Generic types, not just functions |
+| **Advanced type inference** | Cross-function inference, improved H-M |
+| **Lifetime annotations (if needed)** | Only if runtime verification proves insufficient |
 
-What's missing is **language syntax**:
-- `async fn` declarations
-- `await` expressions
-- Integration with type system
+---
 
-### Planned Features
+## v0.5: Native Compilation (AOT)
+
+**Theme:** Compile Atlas programs to native binaries. No runtime required.
+
+### Planned work
+| Feature | Notes |
+|---------|-------|
+| **Cranelift AOT backend** | atlas-jit already has Cranelift — extend to full AOT |
+| **LLVM IR backend** | Alternative backend for maximum optimization |
+| **Static binary output** | `atlas build --release` produces native executable |
+| **Embedded target** | No-std mode for microcontrollers |
+
+---
+
+## v0.6: Developer Experience
+
+**Theme:** World-class tooling for the world-class language.
 
 | Feature | Notes |
 |---------|-------|
-| `async fn` | Function modifier |
-| `await expr` | Suspend until future completes |
-| `Future<T>` type | First-class in type system |
-
-### v0.4 Exit Criteria
-
-- [ ] `async fn fetch() -> string { ... }` parses and typechecks
-- [ ] `await fetch()` suspends execution correctly
-- [ ] Existing stdlib async functions use new syntax
-- [ ] Interpreter/VM parity for async
+| **REPL tab completion** | Keywords, locals, stdlib, types |
+| **REPL syntax highlighting** | Colorized output |
+| **`.type expr` inspection** | Show inferred type in REPL |
+| **LSP incremental analysis** | Re-analyze only changed functions |
+| **LSP semantic tokens** | Full syntax highlighting in editors |
 
 ---
 
-## v0.5: Developer Experience
+## v0.7: Package Ecosystem
 
-**Theme:** REPL and Tooling Polish
-
-### Current State
-
-- REPL history: ✅ Implemented
-- TUI mode: ✅ Implemented
-- Tab completion: ❌ Missing
-- Syntax highlighting: ❌ Missing
-- Inspection commands: ❌ Missing
-
-### Planned Features
+**Theme:** Atlas packages are a first-class ecosystem.
 
 | Feature | Notes |
 |---------|-------|
-| **Tab completion** | Keywords, locals, stdlib |
-| **Syntax highlighting** | Colorized output |
-| **`.type expr`** | Show inferred type |
-| **`.ast expr`** | Show parsed AST |
-| **Session save/load** | Export REPL session |
-
-### v0.5 Exit Criteria
-
-- [ ] Tab completion works for all identifiers
-- [ ] REPL output is colorized
-- [ ] Inspection commands functional
-
----
-
-## v0.6: Advanced Types
-
-**Theme:** Type System Expansion
-
-### Candidates
-
-| Feature | Complexity | Value |
-|---------|------------|-------|
-| **User-defined generics** | High | High - enables libraries |
-| **Type aliases** | Low | Medium - ergonomics |
-| **Union types** | Medium | Medium - flexibility |
-| **Guard clauses** | Low | Low - pattern matching |
-| **OR patterns** | Low | Low - pattern matching |
-
-### v0.6 Exit Criteria
-
-- [ ] At least user-defined generics OR union types
-- [ ] Type aliases if low-hanging fruit
-- [ ] Pattern matching enhancements if time permits
-
----
-
-## v0.7: Package Ecosystem Polish
-
-**Theme:** Package Management Enhancements
-
-### Current State
-
-Package CLI is **complete** (v0.2 CLI-05):
-- `atlas add <pkg>` — adds dependency
-- `atlas remove <pkg>` — removes dependency
-- `atlas update` — updates dependencies
-- Lockfile generation
-- Registry support
-
-### v0.7 Focus
-
-- [ ] `atlas publish` command (push to registry)
-- [ ] Private registry authentication
-- [ ] Workspace support (monorepo)
-- [ ] Dependency audit
+| **`atlas publish`** | Publish to registry |
+| **Private registry auth** | Token-based authentication |
+| **Workspace support** | Monorepo with multiple Atlas packages |
+| **Content-addressed storage** | Reproducible builds, hash-pinned deps |
 
 ---
 
 ## v0.8: Performance & Profiling
 
-**Theme:** Production Readiness
+**Theme:** Make Atlas fast enough to replace C for numeric workloads.
 
-### Current State
-
-- Optimizer: ✅ All 3 passes implemented
-- Profiler: ✅ Exists in `profiler/`
-- Benchmarks: ✅ Criterion suite exists
-
-### Planned Focus
-
-- Inline caching for method dispatch
-- Benchmark regression testing
-- Memory profiling
-- GC evaluation (Arc vs tracing)
-
-### v0.8 Exit Criteria
-
-- [ ] Benchmark suite tracks regressions
-- [ ] No performance cliffs identified
-- [ ] Memory model finalized
+| Feature | Notes |
+|---------|-------|
+| **Inline caching** | Method dispatch without hash map lookup |
+| **Benchmark regression CI** | Block performance regressions at PR time |
+| **Memory profiling** | Track allocation patterns, identify waste |
+| **Profile-guided optimization** | Use profiler data to drive JIT thresholds |
 
 ---
 
 ## v0.9: Stabilization
 
-**Theme:** Production Preparation
-
-### Focus Areas
+**Theme:** Prepare for 1.0. Fix everything before the stability commitment.
 
 | Area | Work |
 |------|------|
-| **Fuzz testing** | Expand corpus, fix edge cases |
-| **Error messages** | Audit all diagnostics |
-| **Documentation** | Complete language reference |
-| **Breaking changes** | Finalize before 1.0 lock |
-
-### v0.9 Exit Criteria
-
-- [ ] No known crashes
-- [ ] All error messages reviewed
-- [ ] Documentation complete
-- [ ] 6+ months of v0.8 stability
+| **Fuzz testing** | Expand corpus to 50+ targets, fix all crashes |
+| **Error messages** | Audit all 200+ diagnostic codes |
+| **Documentation** | Complete language reference, stdlib reference |
+| **Breaking changes** | Final list of changes before 1.0 lock |
+| **Security audit** | External review of security model |
 
 ---
 
 ## v1.0: Production Ready
 
-**Theme:** Stability Commitment
-
-### What v1.0 Means
-
-- **Language stability:** Syntax won't break
-- **API stability:** Stdlib follows semver
-- **Semantic stability:** Behavior predictable
-- **Support commitment:** Security fixes guaranteed
-
-### v1.0 Requirements
-
-- [ ] All major features shipped or explicitly deferred
-- [ ] Real-world usage feedback incorporated
-- [ ] Security audit completed
-- [ ] Performance acceptable
+**What v1.0 means:**
+- Language syntax is stable — no breaking changes without major version bump
+- Stdlib is stable — semver followed strictly
+- Behavior is predictable — no known correctness bugs
+- Security is verified — audit complete
+- AI generation is proven — measurable reliability metrics
 
 ---
 
-## Post-1.0: Future Considerations
+## Phase Scaffolding Reference
 
-Not committed, may be explored:
+### File structure
+```
+phases/
+  v0.3/
+    block-01-memory-model/
+    block-02-ownership-syntax/
+    block-03-trait-system/
+    block-04-closures/
+    block-05-type-inference/
+    block-06-error-handling/
+    block-07-jit-integration/
+    block-08-async-await/
+    block-09-quick-wins/
+```
 
-| Feature | Notes |
-|---------|-------|
-| **JIT compilation** | Major effort, ~10-100x speedup potential |
-| **Native codegen** | LLVM or Cranelift backend |
-| **WASM target** | Browser execution |
-| **Embeddability** | Library mode for other apps |
-
----
-
-## Phase Scaffolding Guidelines
-
-When creating phases for a new version:
-
-### Phase File Template
-
+### Phase file template
 ```markdown
 # Phase XX: {Title}
 
-**Category:** {category}
-**Version:** {target version}
+**Block:** {N} ({Block Name})
+**Depends on:** {Block N-1 complete | None}
 **Complexity:** {low/medium/high}
+**Files to modify:** {list}
 
 ## Summary
 {1-2 sentences}
 
 ## Current State
-{What exists today - VERIFY against codebase}
+{Verified against codebase — not assumed}
 
 ## Requirements
-{Numbered list of specific, testable requirements}
+{Numbered, specific, testable}
 
 ## Acceptance Criteria
-{Checkboxes that must all pass}
+{Checkboxes — all must pass}
 
-## Files to Modify
-{List expected files - helps AI agents}
-
-## References
-- {Spec files}
-- {Related decisions}
+## Tests Required
+{What tests prove this works}
 ```
 
-### Quality Rules
-
-1. **~100 lines per phase** - Keep focused
-2. **Verify current state** - Check codebase before planning
-3. **Testable criteria** - Every requirement verifiable
-4. **Dependencies explicit** - List blocking phases
+### Quality rules
+1. ~100 lines per phase file
+2. Verify current state against codebase before writing
+3. Every requirement must be testable
+4. Every phase must pass: build + tests (100%) + clippy + fmt
+5. No phase is done until parity is verified (both engines identical output)
 
 ---
 
@@ -342,11 +297,13 @@ When creating phases for a new version:
 |----------|---------|
 | `PRD.md` | Product requirements, principles |
 | `STATUS.md` | Current progress tracking |
+| `docs/specification/memory-model.md` | **Memory model decision — READ FIRST** |
 | `docs/specification/` | Language specifications |
-| `memory/` | AI knowledge base |
+| `docs/internal/V03_PLAN.md` | v0.3 block plan and scaffolding guide |
+| `memory/` | AI agent knowledge base (auto-memory) |
 | `phases/` | Active work queue |
 
 ---
 
-*Last updated: 2026-02-20*
-*Based on: Codebase verification (not just spec documents)*
+*Last updated: 2026-02-21*
+*Memory model decision locked. v0.3 plan locked. Ready for phase scaffolding.*

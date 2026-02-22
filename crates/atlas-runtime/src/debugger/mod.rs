@@ -369,24 +369,19 @@ fn format_value(value: &Value) -> String {
         Value::Null => "null".to_string(),
         Value::String(s) => format!("\"{}\"", s.as_ref()),
         Value::Array(arr) => {
-            let guard = arr.lock().unwrap();
-            format!("[{} items]", guard.len())
+            format!("[{} items]", arr.len())
         }
         Value::HashMap(m) => {
-            let guard = m.lock().unwrap();
-            format!("{{HashMap, {} entries}}", guard.len())
+            format!("{{HashMap, {} entries}}", m.inner().len())
         }
         Value::HashSet(s) => {
-            let guard = s.lock().unwrap();
-            format!("{{HashSet, {} items}}", guard.len())
+            format!("{{HashSet, {} items}}", s.inner().len())
         }
         Value::Queue(q) => {
-            let guard = q.lock().unwrap();
-            format!("[Queue, {} items]", guard.len())
+            format!("[Queue, {} items]", q.inner().len())
         }
         Value::Stack(s) => {
-            let guard = s.lock().unwrap();
-            format!("[Stack, {} items]", guard.len())
+            format!("[Stack, {} items]", s.inner().len())
         }
         Value::Function(f) => format!("<fn {}>", f.name),
         _ => format!("{:?}", value),

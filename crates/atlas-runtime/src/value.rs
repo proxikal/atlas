@@ -1,17 +1,399 @@
 //! Runtime value representation
 //!
-//! Shared value representation for interpreter and VM.
-//! - Numbers, Bools, Null: Immediate values (stack-allocated)
-//! - Strings: Heap-allocated, reference-counted (Arc<String>), immutable
-//! - Arrays: Heap-allocated, reference-counted (Arc<Mutex<Vec<Value>>>), mutable
-//! - Functions: Reference to bytecode or builtin
-//! - NativeFunction: Rust closures callable from Atlas
-//! - JsonValue: Isolated dynamic type for JSON interop (Arc<JsonValue>)
+//! All Atlas values use **value semantics** — copying a value creates an independent
+//! copy. Mutations to a copy never affect the original.
+//!
+//! ## Value Categories
+//!
+//! ### Immediate (stack-allocated, always copied)
+//! - `Number(f64)` — IEEE 754 double
+//! - `Bool(bool)`
+//! - `Null`
+//!
+//! ### Copy-on-write (cheap to clone via refcount, independent on mutation)
+//! - `String(Arc<String>)` — immutable interned string, shared until reassigned
+//! - `Array(ValueArray)` — `Arc<Vec<Value>>` with `Arc::make_mut` CoW
+//! - `HashMap(ValueHashMap)` — `Arc<AtlasHashMap>` with CoW
+//! - `HashSet(ValueHashSet)` — `Arc<AtlasHashSet>` with CoW
+//! - `Queue(ValueQueue)` — `Arc<VecDeque<Value>>` with CoW
+//! - `Stack(ValueStack)` — `Arc<Vec<Value>>` with CoW
+//!
+//! ### Explicit reference semantics (opt-in only)
+//! - `SharedValue(Arc<Mutex<Value>>)` — mutations visible to all aliases.
+//!   Only used when the program explicitly annotates a binding as `shared<T>`.
+//!
+//! ### Identity / resource types (compared by reference, not content)
+//! - `NativeFunction`, `Future`, `TaskHandle`, `ChannelSender`, `ChannelReceiver`, `AsyncMutex`
+//! - `JsonValue` — isolated dynamic type for JSON interop
+//!
+//! ## CoW Write-Back (Phase 15–16)
+//!
+//! Mutating stdlib functions (e.g. `arrayPush`, `arrayPop`) return a new collection.
+//! The interpreter and VM automatically write back the updated collection to the
+//! variable that was passed as the first argument, preserving value semantics without
+//! requiring the programmer to reassign manually.
 
 use crate::json_value::JsonValue;
+use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
+
+/// Copy-on-write array. Cheap to clone (refcount bump).
+/// Mutations on a shared array clone the inner Vec first (Arc::make_mut).
+#[derive(Clone, Debug)]
+pub struct ValueArray(Arc<Vec<Value>>);
+
+impl ValueArray {
+    pub fn new() -> Self {
+        ValueArray(Arc::new(Vec::new()))
+    }
+
+    pub fn from_vec(v: Vec<Value>) -> Self {
+        ValueArray(Arc::new(v))
+    }
+
+    /// Read access — no clone needed.
+    pub fn as_slice(&self) -> &[Value] {
+        &self.0
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Get element by index — returns reference into inner Vec.
+    pub fn get(&self, index: usize) -> Option<&Value> {
+        self.0.get(index)
+    }
+
+    /// Mutating access — triggers CoW if Arc is shared.
+    pub fn push(&mut self, value: Value) {
+        Arc::make_mut(&mut self.0).push(value);
+    }
+
+    pub fn pop(&mut self) -> Option<Value> {
+        Arc::make_mut(&mut self.0).pop()
+    }
+
+    pub fn set(&mut self, index: usize, value: Value) -> bool {
+        let inner = Arc::make_mut(&mut self.0);
+        if index < inner.len() {
+            inner[index] = value;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn insert(&mut self, index: usize, value: Value) {
+        Arc::make_mut(&mut self.0).insert(index, value);
+    }
+
+    pub fn remove(&mut self, index: usize) -> Value {
+        Arc::make_mut(&mut self.0).remove(index)
+    }
+
+    pub fn truncate(&mut self, len: usize) {
+        Arc::make_mut(&mut self.0).truncate(len);
+    }
+
+    pub fn extend(&mut self, iter: impl IntoIterator<Item = Value>) {
+        Arc::make_mut(&mut self.0).extend(iter);
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Value> {
+        self.0.iter()
+    }
+
+    /// Returns true if this array is the sole owner (no other clones).
+    /// Used by the VM to decide whether to mutate in-place or CoW-copy.
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+
+    /// Convert to owned Vec — clones only if shared.
+    pub fn into_vec(self) -> Vec<Value> {
+        Arc::try_unwrap(self.0).unwrap_or_else(|arc| (*arc).clone())
+    }
+
+    /// Expose inner Arc for cases that need to check sharing (e.g., equality).
+    pub fn arc(&self) -> &Arc<Vec<Value>> {
+        &self.0
+    }
+}
+
+impl Default for ValueArray {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PartialEq for ValueArray {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_slice() == other.0.as_slice()
+    }
+}
+
+impl std::ops::Index<usize> for ValueArray {
+    type Output = Value;
+    fn index(&self, index: usize) -> &Value {
+        &self.0[index]
+    }
+}
+
+impl From<Vec<Value>> for ValueArray {
+    fn from(v: Vec<Value>) -> Self {
+        ValueArray::from_vec(v)
+    }
+}
+
+impl FromIterator<Value> for ValueArray {
+    fn from_iter<I: IntoIterator<Item = Value>>(iter: I) -> Self {
+        ValueArray(Arc::new(iter.into_iter().collect()))
+    }
+}
+
+/// Copy-on-write string-keyed map. Cheap to clone (refcount bump).
+/// Mutations clone the inner HashMap if shared (Arc::make_mut).
+#[derive(Clone, Debug, Default)]
+pub struct ValueMap(Arc<HashMap<String, Value>>);
+
+impl ValueMap {
+    pub fn new() -> Self {
+        ValueMap(Arc::new(HashMap::new()))
+    }
+
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        self.0.get(key)
+    }
+
+    pub fn insert(&mut self, key: String, value: Value) {
+        Arc::make_mut(&mut self.0).insert(key, value);
+    }
+
+    pub fn remove(&mut self, key: &str) -> Option<Value> {
+        Arc::make_mut(&mut self.0).remove(key)
+    }
+
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.0.contains_key(key)
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, String, Value> {
+        self.0.iter()
+    }
+
+    pub fn keys(&self) -> std::collections::hash_map::Keys<'_, String, Value> {
+        self.0.keys()
+    }
+
+    pub fn values(&self) -> std::collections::hash_map::Values<'_, String, Value> {
+        self.0.values()
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl PartialEq for ValueMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+impl From<HashMap<String, Value>> for ValueMap {
+    fn from(m: HashMap<String, Value>) -> Self {
+        ValueMap(Arc::new(m))
+    }
+}
+
+/// Copy-on-write wrapper for AtlasHashMap
+#[derive(Clone, Debug, Default)]
+pub struct ValueHashMap(Arc<crate::stdlib::collections::hashmap::AtlasHashMap>);
+
+impl ValueHashMap {
+    pub fn new() -> Self {
+        ValueHashMap(Arc::new(
+            crate::stdlib::collections::hashmap::AtlasHashMap::new(),
+        ))
+    }
+
+    pub fn inner(&self) -> &crate::stdlib::collections::hashmap::AtlasHashMap {
+        &self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut crate::stdlib::collections::hashmap::AtlasHashMap {
+        Arc::make_mut(&mut self.0)
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+
+    /// Wrap an existing AtlasHashMap in a CoW wrapper.
+    pub fn from_atlas(m: crate::stdlib::collections::hashmap::AtlasHashMap) -> Self {
+        ValueHashMap(Arc::new(m))
+    }
+}
+
+impl PartialEq for ValueHashMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+/// Copy-on-write wrapper for AtlasHashSet
+#[derive(Clone, Debug, Default)]
+pub struct ValueHashSet(Arc<crate::stdlib::collections::hashset::AtlasHashSet>);
+
+impl ValueHashSet {
+    pub fn new() -> Self {
+        ValueHashSet(Arc::new(
+            crate::stdlib::collections::hashset::AtlasHashSet::new(),
+        ))
+    }
+
+    pub fn inner(&self) -> &crate::stdlib::collections::hashset::AtlasHashSet {
+        &self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut crate::stdlib::collections::hashset::AtlasHashSet {
+        Arc::make_mut(&mut self.0)
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+
+    /// Wrap an existing AtlasHashSet in a CoW wrapper.
+    pub fn from_atlas(s: crate::stdlib::collections::hashset::AtlasHashSet) -> Self {
+        ValueHashSet(Arc::new(s))
+    }
+}
+
+impl PartialEq for ValueHashSet {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+/// Copy-on-write wrapper for AtlasQueue
+#[derive(Clone, Debug, Default)]
+pub struct ValueQueue(Arc<crate::stdlib::collections::queue::AtlasQueue>);
+
+impl ValueQueue {
+    pub fn new() -> Self {
+        ValueQueue(Arc::new(
+            crate::stdlib::collections::queue::AtlasQueue::new(),
+        ))
+    }
+
+    pub fn inner(&self) -> &crate::stdlib::collections::queue::AtlasQueue {
+        &self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut crate::stdlib::collections::queue::AtlasQueue {
+        Arc::make_mut(&mut self.0)
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl PartialEq for ValueQueue {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+/// Copy-on-write wrapper for AtlasStack
+#[derive(Clone, Debug, Default)]
+pub struct ValueStack(Arc<crate::stdlib::collections::stack::AtlasStack>);
+
+impl ValueStack {
+    pub fn new() -> Self {
+        ValueStack(Arc::new(
+            crate::stdlib::collections::stack::AtlasStack::new(),
+        ))
+    }
+
+    pub fn inner(&self) -> &crate::stdlib::collections::stack::AtlasStack {
+        &self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut crate::stdlib::collections::stack::AtlasStack {
+        Arc::make_mut(&mut self.0)
+    }
+
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl PartialEq for ValueStack {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+/// Explicit reference semantics wrapper.
+///
+/// `Shared<T>` opts into reference semantics: all clones point to the same underlying
+/// value. Mutation through any clone is visible to all other clones. This is the
+/// intentional escape hatch from CoW — used when the program explicitly requests
+/// shared mutable state (e.g., `shared<Buffer>`).
+///
+/// Contrast with `ValueArray` which uses `Arc<Vec<Value>>` + CoW: mutations on a
+/// `ValueArray` clone never affect the original. Mutations on a `Shared<T>` always do.
+#[derive(Clone, Debug)]
+pub struct Shared<T>(Arc<Mutex<T>>);
+
+impl<T> Shared<T> {
+    pub fn new(value: T) -> Self {
+        Shared(Arc::new(Mutex::new(value)))
+    }
+
+    /// Acquire the lock and apply a read function.
+    pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
+        let guard = self.0.lock().expect("Shared<T> lock poisoned");
+        f(&*guard)
+    }
+
+    /// Acquire the lock and apply a mutation function.
+    pub fn with_mut<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
+        let mut guard = self.0.lock().expect("Shared<T> lock poisoned");
+        f(&mut *guard)
+    }
+
+    /// Returns true if this is the only reference to the inner value.
+    pub fn is_exclusively_owned(&self) -> bool {
+        Arc::strong_count(&self.0) == 1
+    }
+}
+
+impl<T: PartialEq> PartialEq for Shared<T> {
+    fn eq(&self, other: &Self) -> bool {
+        // Pointer equality — two Shared<T> are equal only if they are the same allocation.
+        // This matches reference semantics: two different `shared<T>` variables with the
+        // same contents are NOT equal unless they are the same reference.
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
 
 /// Native function type - Rust closure callable from Atlas
 ///
@@ -30,8 +412,8 @@ pub enum Value {
     Bool(bool),
     /// Null value
     Null,
-    /// Array value (reference-counted, mutable through Mutex)
-    Array(Arc<Mutex<Vec<Value>>>),
+    /// Array value (copy-on-write, value semantics)
+    Array(ValueArray),
     /// Function reference (bytecode or builtin)
     Function(FunctionRef),
     /// Builtin stdlib function (dispatched through the registry by name)
@@ -45,13 +427,13 @@ pub enum Value {
     /// Result value (Ok(value) or Err(error))
     Result(Result<Box<Value>, Box<Value>>),
     /// HashMap collection (key-value pairs)
-    HashMap(Arc<Mutex<crate::stdlib::collections::hashmap::AtlasHashMap>>),
+    HashMap(ValueHashMap),
     /// HashSet collection (unique values)
-    HashSet(Arc<Mutex<crate::stdlib::collections::hashset::AtlasHashSet>>),
+    HashSet(ValueHashSet),
     /// Queue collection (FIFO)
-    Queue(Arc<Mutex<crate::stdlib::collections::queue::AtlasQueue>>),
+    Queue(ValueQueue),
     /// Stack collection (LIFO)
-    Stack(Arc<Mutex<crate::stdlib::collections::stack::AtlasStack>>),
+    Stack(ValueStack),
     /// Regular expression pattern
     Regex(Arc<regex::Regex>),
     /// DateTime value (UTC timezone)
@@ -72,6 +454,9 @@ pub enum Value {
     AsyncMutex(Arc<tokio::sync::Mutex<Value>>),
     /// Closure (function + captured upvalue environment)
     Closure(ClosureRef),
+    /// Explicitly shared reference — reference semantics (see Shared<T>).
+    /// Mutations are visible to all aliases. Used for `shared<T>` annotated values.
+    SharedValue(Shared<Box<Value>>),
 }
 
 /// Function reference
@@ -105,7 +490,7 @@ impl Value {
 
     /// Create a new array value
     pub fn array(values: Vec<Value>) -> Self {
-        Value::Array(Arc::new(Mutex::new(values)))
+        Value::Array(ValueArray::from_vec(values))
     }
 
     /// Get the type name of this value
@@ -136,6 +521,7 @@ impl Value {
             Value::ChannelReceiver(_) => "ChannelReceiver",
             Value::AsyncMutex(_) => "AsyncMutex",
             Value::Closure(_) => "function",
+            Value::SharedValue(_) => "shared",
         }
     }
 
@@ -155,54 +541,54 @@ impl Value {
 }
 
 impl PartialEq for Value {
+    /// Equality contract:
+    ///
+    /// **Value types** (content equality — two equal values may be different allocations):
+    /// - Number, String, Bool, Null: primitive equality
+    /// - Array, HashMap, HashSet, Queue, Stack: CoW wrappers compare by content
+    /// - Regex: compare by pattern string
+    /// - DateTime: compare timestamps
+    /// - HttpRequest, HttpResponse: compare by field content
+    /// - Option, Result, JsonValue: deep structural equality
+    /// - Function, Builtin: compare by name
+    /// - Closure: compare by function name
+    ///
+    /// **Reference types** (identity equality — only the same allocation is equal):
+    /// - NativeFunction: closures have no meaningful content equality
+    /// - SharedValue: Shared<T> uses Arc::ptr_eq (reference semantics by design)
+    /// - Future, TaskHandle, ChannelSender, ChannelReceiver, AsyncMutex:
+    ///   live runtime objects — identity is the only meaningful equality
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            // --- Value types: content equality ---
             (Value::Number(a), Value::Number(b)) => a == b,
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::Null, Value::Null) => true,
-            // Arrays use reference identity, not deep equality
-            (Value::Array(a), Value::Array(b)) => Arc::ptr_eq(a, b),
-            // Functions are equal if they have the same name
-            (Value::Function(a), Value::Function(b)) => a.name == b.name,
-            // Builtins are equal if they have the same name
-            (Value::Builtin(a), Value::Builtin(b)) => a == b,
-            // Native functions use pointer equality
-            (Value::NativeFunction(a), Value::NativeFunction(b)) => Arc::ptr_eq(a, b),
-            // JsonValue uses structural equality
-            (Value::JsonValue(a), Value::JsonValue(b)) => a == b,
-            // Option uses deep equality
-            (Value::Option(a), Value::Option(b)) => a == b,
-            // Result uses deep equality
-            (Value::Result(a), Value::Result(b)) => a == b,
-            // HashMap uses reference identity (like arrays)
-            (Value::HashMap(a), Value::HashMap(b)) => Arc::ptr_eq(a, b),
-            // HashSet uses reference identity (like arrays)
-            (Value::HashSet(a), Value::HashSet(b)) => Arc::ptr_eq(a, b),
-            // Queue uses reference identity (like arrays)
-            (Value::Queue(a), Value::Queue(b)) => Arc::ptr_eq(a, b),
-            // Stack uses reference identity (like arrays)
-            (Value::Stack(a), Value::Stack(b)) => Arc::ptr_eq(a, b),
-            // Regex uses reference identity (like arrays)
-            (Value::Regex(a), Value::Regex(b)) => Arc::ptr_eq(a, b),
-            // DateTime uses value equality (compare timestamps)
+            (Value::Array(a), Value::Array(b)) => a == b,
+            (Value::HashMap(a), Value::HashMap(b)) => a == b,
+            (Value::HashSet(a), Value::HashSet(b)) => a == b,
+            (Value::Queue(a), Value::Queue(b)) => a == b,
+            (Value::Stack(a), Value::Stack(b)) => a == b,
+            (Value::Regex(a), Value::Regex(b)) => a.as_str() == b.as_str(),
             (Value::DateTime(a), Value::DateTime(b)) => a == b,
-            // HttpRequest uses reference identity
-            (Value::HttpRequest(a), Value::HttpRequest(b)) => Arc::ptr_eq(a, b),
-            // HttpResponse uses reference identity
-            (Value::HttpResponse(a), Value::HttpResponse(b)) => Arc::ptr_eq(a, b),
-            // Future uses reference identity
-            (Value::Future(a), Value::Future(b)) => Arc::ptr_eq(a, b),
-            // TaskHandle uses reference identity
-            (Value::TaskHandle(a), Value::TaskHandle(b)) => Arc::ptr_eq(a, b),
-            // ChannelSender uses reference identity
-            (Value::ChannelSender(a), Value::ChannelSender(b)) => Arc::ptr_eq(a, b),
-            // ChannelReceiver uses reference identity
-            (Value::ChannelReceiver(a), Value::ChannelReceiver(b)) => Arc::ptr_eq(a, b),
-            // AsyncMutex uses reference identity
-            (Value::AsyncMutex(a), Value::AsyncMutex(b)) => Arc::ptr_eq(a, b),
-            // Closures are equal if they have the same function name
+            (Value::HttpRequest(a), Value::HttpRequest(b)) => a.as_ref() == b.as_ref(),
+            (Value::HttpResponse(a), Value::HttpResponse(b)) => a.as_ref() == b.as_ref(),
+            (Value::JsonValue(a), Value::JsonValue(b)) => a == b,
+            (Value::Option(a), Value::Option(b)) => a == b,
+            (Value::Result(a), Value::Result(b)) => a == b,
+            (Value::Function(a), Value::Function(b)) => a.name == b.name,
+            (Value::Builtin(a), Value::Builtin(b)) => a == b,
             (Value::Closure(a), Value::Closure(b)) => a.func.name == b.func.name,
+            // --- Reference types: identity equality ---
+            (Value::NativeFunction(a), Value::NativeFunction(b)) => Arc::ptr_eq(a, b),
+            (Value::SharedValue(a), Value::SharedValue(b)) => a == b,
+            (Value::Future(a), Value::Future(b)) => Arc::ptr_eq(a, b),
+            (Value::TaskHandle(a), Value::TaskHandle(b)) => Arc::ptr_eq(a, b),
+            (Value::ChannelSender(a), Value::ChannelSender(b)) => Arc::ptr_eq(a, b),
+            (Value::ChannelReceiver(a), Value::ChannelReceiver(b)) => Arc::ptr_eq(a, b),
+            (Value::AsyncMutex(a), Value::AsyncMutex(b)) => Arc::ptr_eq(a, b),
+            // Different variants are never equal
             _ => false,
         }
     }
@@ -225,8 +611,7 @@ impl fmt::Display for Value {
             Value::Bool(b) => write!(f, "{}", b),
             Value::Null => write!(f, "null"),
             Value::Array(arr) => {
-                let borrowed = arr.lock().unwrap();
-                let elements: Vec<String> = borrowed.iter().map(|v| v.to_string()).collect();
+                let elements: Vec<String> = arr.iter().map(|v| v.to_string()).collect();
                 write!(f, "[{}]", elements.join(", "))
             }
             Value::Function(func) => write!(f, "<fn {}>", func.name),
@@ -241,10 +626,10 @@ impl fmt::Display for Value {
                 Ok(val) => write!(f, "Ok({})", val),
                 Err(err) => write!(f, "Err({})", err),
             },
-            Value::HashMap(map) => write!(f, "<HashMap size={}>", map.lock().unwrap().len()),
-            Value::HashSet(set) => write!(f, "<HashSet size={}>", set.lock().unwrap().len()),
-            Value::Queue(queue) => write!(f, "<Queue size={}>", queue.lock().unwrap().len()),
-            Value::Stack(stack) => write!(f, "<Stack size={}>", stack.lock().unwrap().len()),
+            Value::HashMap(map) => write!(f, "<HashMap size={}>", map.inner().len()),
+            Value::HashSet(set) => write!(f, "<HashSet size={}>", set.inner().len()),
+            Value::Queue(queue) => write!(f, "<Queue size={}>", queue.inner().len()),
+            Value::Stack(stack) => write!(f, "<Stack size={}>", stack.inner().len()),
             Value::Regex(r) => write!(f, "<Regex /{}/>", r.as_str()),
             Value::DateTime(dt) => write!(f, "{}", dt.to_rfc3339()),
             Value::HttpRequest(req) => write!(f, "<HttpRequest {} {}>", req.method(), req.url()),
@@ -255,6 +640,7 @@ impl fmt::Display for Value {
             Value::ChannelReceiver(_) => write!(f, "<ChannelReceiver>"),
             Value::AsyncMutex(_) => write!(f, "<AsyncMutex>"),
             Value::Closure(c) => write!(f, "<fn {}>", c.func.name),
+            Value::SharedValue(s) => s.with(|v| write!(f, "shared({})", v)),
         }
     }
 }
@@ -266,20 +652,17 @@ impl fmt::Debug for Value {
             Value::String(s) => write!(f, "String({:?})", s),
             Value::Bool(b) => write!(f, "Bool({})", b),
             Value::Null => write!(f, "Null"),
-            Value::Array(arr) => {
-                let borrowed = arr.lock().unwrap();
-                write!(f, "Array({:?})", &*borrowed)
-            }
+            Value::Array(arr) => write!(f, "Array({:?})", arr.as_slice()),
             Value::Function(func) => write!(f, "Function({:?})", func),
             Value::Builtin(name) => write!(f, "Builtin({:?})", name),
             Value::NativeFunction(_) => write!(f, "NativeFunction(<closure>)"),
             Value::JsonValue(json) => write!(f, "JsonValue({:?})", json),
             Value::Option(opt) => write!(f, "Option({:?})", opt),
             Value::Result(res) => write!(f, "Result({:?})", res),
-            Value::HashMap(map) => write!(f, "HashMap(size={})", map.lock().unwrap().len()),
-            Value::HashSet(set) => write!(f, "HashSet(size={})", set.lock().unwrap().len()),
-            Value::Queue(queue) => write!(f, "Queue(size={})", queue.lock().unwrap().len()),
-            Value::Stack(stack) => write!(f, "Stack(size={})", stack.lock().unwrap().len()),
+            Value::HashMap(map) => write!(f, "HashMap(size={})", map.inner().len()),
+            Value::HashSet(set) => write!(f, "HashSet(size={})", set.inner().len()),
+            Value::Queue(queue) => write!(f, "Queue(size={})", queue.inner().len()),
+            Value::Stack(stack) => write!(f, "Stack(size={})", stack.inner().len()),
             Value::Regex(r) => write!(f, "Regex(/{}/)", r.as_str()),
             Value::DateTime(dt) => write!(f, "DateTime({})", dt.to_rfc3339()),
             Value::HttpRequest(req) => write!(f, "HttpRequest({} {})", req.method(), req.url()),
@@ -290,6 +673,7 @@ impl fmt::Debug for Value {
             Value::ChannelReceiver(_) => write!(f, "ChannelReceiver"),
             Value::AsyncMutex(_) => write!(f, "AsyncMutex"),
             Value::Closure(c) => write!(f, "Closure({:?})", c.func),
+            Value::SharedValue(s) => s.with(|v| write!(f, "SharedValue({:?})", v)),
         }
     }
 }
@@ -533,29 +917,48 @@ mod tests {
     }
 
     #[test]
-    fn test_array_reference_identity() {
+    fn test_array_value_equality() {
         let arr1 = Value::array(vec![Value::Number(1.0)]);
-        let arr2 = arr1.clone(); // Same reference
-        let arr3 = Value::array(vec![Value::Number(1.0)]); // Different reference
+        let arr2 = arr1.clone(); // Shared Arc — same content
+        let arr3 = Value::array(vec![Value::Number(1.0)]); // Different allocation
 
-        assert_eq!(arr1, arr2); // Same reference
-        assert_ne!(arr1, arr3); // Different reference, even with same contents
+        assert_eq!(arr1, arr2); // same content
+        assert_eq!(arr1, arr3); // content equal — value semantics
     }
 
     #[test]
-    fn test_array_mutation_visible_through_references() {
+    fn test_array_cow_mutation_independent() {
         let arr1 = Value::array(vec![Value::Number(1.0), Value::Number(2.0)]);
-        let arr2 = arr1.clone(); // Same reference
+        let mut arr2 = arr1.clone(); // Shared Arc before mutation
 
-        // Mutate through arr1
-        if let Value::Array(a) = &arr1 {
-            a.lock().unwrap()[0] = Value::Number(42.0);
+        // Mutate arr2 — triggers CoW, arr1 is unaffected
+        if let Value::Array(ref mut a) = arr2 {
+            a.set(0, Value::Number(42.0));
         }
 
-        // Verify arr2 sees the change
-        if let Value::Array(a) = &arr2 {
-            assert_eq!(a.lock().unwrap()[0], Value::Number(42.0));
+        // arr1 still has original value
+        if let Value::Array(ref a) = arr1 {
+            assert_eq!(a[0], Value::Number(1.0));
         }
+    }
+
+    #[test]
+    fn value_array_clone_is_independent() {
+        let a = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        let mut b = a.clone();
+        if let Value::Array(ref mut arr) = b {
+            arr.push(Value::Number(2.0));
+        }
+        if let Value::Array(ref arr) = a {
+            assert_eq!(arr.len(), 1);
+        }
+    }
+
+    #[test]
+    fn value_array_equality_is_by_content() {
+        let a = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        let b = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        assert_eq!(a, b); // content equal, different allocation
     }
 
     #[test]
@@ -627,10 +1030,7 @@ mod tests {
     fn test_array_can_be_sent_to_thread() {
         use std::thread;
 
-        let arr = Value::Array(Arc::new(Mutex::new(vec![
-            Value::Number(1.0),
-            Value::Number(2.0),
-        ])));
+        let arr = Value::array(vec![Value::Number(1.0), Value::Number(2.0)]);
         let handle = thread::spawn(move || arr);
         let result = handle.join().unwrap();
         assert!(matches!(result, Value::Array(_)));
@@ -1082,6 +1482,161 @@ mod tests {
         match runtime.eval(code) {
             Ok(Value::Bool(b)) => assert!(b),
             _ => panic!("Expected successful execution"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod cow_type_tests {
+    use super::*;
+
+    #[test]
+    fn value_array_cow_push_does_not_affect_clone() {
+        let mut a = ValueArray::from_vec(vec![Value::Number(1.0)]);
+        let b = a.clone();
+        a.push(Value::Number(2.0));
+        assert_eq!(a.len(), 2);
+        assert_eq!(b.len(), 1); // b is unaffected
+    }
+
+    #[test]
+    fn value_array_in_place_mutation_when_exclusive() {
+        let mut a = ValueArray::from_vec(vec![Value::Number(1.0)]);
+        assert!(a.is_exclusively_owned());
+        a.push(Value::Number(2.0)); // no copy — exclusive owner
+        assert_eq!(a.len(), 2);
+    }
+
+    #[test]
+    fn value_array_equality_by_content() {
+        let a = ValueArray::from_vec(vec![Value::Number(1.0), Value::Number(2.0)]);
+        let b = ValueArray::from_vec(vec![Value::Number(1.0), Value::Number(2.0)]);
+        assert_eq!(a, b); // same content, different Arc
+    }
+
+    #[test]
+    fn value_map_cow_insert_does_not_affect_clone() {
+        let mut a = ValueMap::new();
+        a.insert("x".to_string(), Value::Number(1.0));
+        let b = a.clone();
+        a.insert("y".to_string(), Value::Number(2.0));
+        assert_eq!(a.len(), 2);
+        assert_eq!(b.len(), 1); // b is unaffected
+    }
+
+    #[test]
+    fn value_hashmap_cow_insert_does_not_affect_clone() {
+        use crate::stdlib::collections::hash::HashKey;
+        use std::sync::Arc;
+        let mut a = ValueHashMap::new();
+        a.inner_mut().insert(
+            HashKey::String(Arc::new("x".to_string())),
+            Value::Number(1.0),
+        );
+        let b = a.clone();
+        a.inner_mut().insert(
+            HashKey::String(Arc::new("y".to_string())),
+            Value::Number(2.0),
+        );
+        assert_eq!(b.inner().len(), 1);
+    }
+
+    #[test]
+    fn value_collection_equality_by_content() {
+        use crate::stdlib::collections::hash::HashKey;
+        use std::sync::Arc;
+        let mut a = ValueHashMap::new();
+        a.inner_mut().insert(
+            HashKey::String(Arc::new("k".to_string())),
+            Value::Number(1.0),
+        );
+        let mut b = ValueHashMap::new();
+        b.inner_mut().insert(
+            HashKey::String(Arc::new("k".to_string())),
+            Value::Number(1.0),
+        );
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn value_map_equality_by_content() {
+        let mut a = ValueMap::new();
+        a.insert("k".to_string(), Value::Number(42.0));
+        let mut b = ValueMap::new();
+        b.insert("k".to_string(), Value::Number(42.0));
+        assert_eq!(a, b);
+    }
+}
+
+#[cfg(test)]
+mod equality_tests {
+    use super::*;
+
+    #[test]
+    fn array_equality_by_content_not_identity() {
+        let a = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        let b = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        assert_eq!(a, b); // different allocations, same content
+    }
+
+    #[test]
+    fn array_inequality_after_mutation() {
+        let a = Value::Array(ValueArray::from_vec(vec![Value::Number(1.0)]));
+        let mut b = a.clone();
+        if let Value::Array(ref mut arr) = b {
+            arr.push(Value::Number(2.0));
+        }
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn regex_equality_by_pattern() {
+        use regex::Regex;
+        let a = Value::Regex(Arc::new(Regex::new(r"\d+").unwrap()));
+        let b = Value::Regex(Arc::new(Regex::new(r"\d+").unwrap()));
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn native_function_inequality_different_closures() {
+        let f1: NativeFn = Arc::new(|_| Ok(Value::Null));
+        let f2: NativeFn = Arc::new(|_| Ok(Value::Null));
+        let a = Value::NativeFunction(f1);
+        let b = Value::NativeFunction(f2);
+        assert_ne!(a, b); // different closures — identity inequality
+    }
+}
+
+#[cfg(test)]
+mod shared_tests {
+    use super::*;
+
+    #[test]
+    fn shared_mutation_visible_through_all_aliases() {
+        let s = Shared::new(42i64);
+        let s2 = s.clone();
+        s.with_mut(|v| *v = 100);
+        assert_eq!(s2.with(|v| *v), 100);
+    }
+
+    #[test]
+    fn shared_equality_is_reference_not_content() {
+        let a: Shared<i64> = Shared::new(42);
+        let b: Shared<i64> = Shared::new(42); // same content, different allocation
+        let c = a.clone(); // same allocation as a
+        assert_ne!(a, b); // different references — not equal
+        assert_eq!(a, c); // same reference — equal
+    }
+
+    #[test]
+    fn value_shared_clone_shares_mutation() {
+        let original = Value::SharedValue(Shared::new(Box::new(Value::Number(1.0))));
+        let alias = original.clone();
+        if let Value::SharedValue(ref s) = original {
+            s.with_mut(|v| **v = Value::Number(99.0));
+        }
+        if let Value::SharedValue(ref s) = alias {
+            s.with(|v| assert_eq!(**v, Value::Number(99.0)));
         }
     }
 }

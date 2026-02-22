@@ -9,35 +9,18 @@ use crate::value::Value;
 ///
 /// Backed by Vec for optimal performance.
 /// Supports all standard stack operations: push, pop, peek.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AtlasStack {
     inner: Vec<Value>,
 }
 
 impl AtlasStack {
     /// Create new empty stack
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// let stack = AtlasStack::new();
-    /// assert!(stack.is_empty());
-    /// ```
     pub fn new() -> Self {
         Self { inner: Vec::new() }
     }
 
     /// Create stack with pre-allocated capacity
-    ///
-    /// Useful for performance when stack size is known.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// let stack = AtlasStack::with_capacity(100);
-    /// ```
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             inner: Vec::with_capacity(capacity),
@@ -45,16 +28,6 @@ impl AtlasStack {
     }
 
     /// Push element onto top of stack (LIFO order)
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// # use std::sync::Arc;
-    /// let mut stack = AtlasStack::new();
-    /// stack.push(Value::Number(1.0));
-    /// stack.push(Value::String(Arc::new("hello".to_string())));
-    /// ```
     pub fn push(&mut self, value: Value) {
         self.inner.push(value);
     }
@@ -62,16 +35,6 @@ impl AtlasStack {
     /// Pop element from top of stack
     ///
     /// Returns `None` if stack is empty.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// let mut stack = AtlasStack::new();
-    /// stack.push(Value::Number(1.0));
-    /// assert_eq!(stack.pop(), Some(Value::Number(1.0)));
-    /// assert_eq!(stack.pop(), None);
-    /// ```
     pub fn pop(&mut self) -> Option<Value> {
         self.inner.pop()
     }
@@ -79,59 +42,21 @@ impl AtlasStack {
     /// View top element without removing
     ///
     /// Returns `None` if stack is empty.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// let mut stack = AtlasStack::new();
-    /// stack.push(Value::Number(42.0));
-    /// assert_eq!(stack.peek(), Some(&Value::Number(42.0)));
-    /// assert_eq!(stack.len(), 1); // Still has 1 element
-    /// ```
     pub fn peek(&self) -> Option<&Value> {
         self.inner.last()
     }
 
     /// Get number of elements in stack
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// let mut stack = AtlasStack::new();
-    /// assert_eq!(stack.len(), 0);
-    /// stack.push(Value::Number(1.0));
-    /// assert_eq!(stack.len(), 1);
-    /// ```
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
     /// Check if stack is empty
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// let stack = AtlasStack::new();
-    /// assert!(stack.is_empty());
-    /// ```
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 
     /// Remove all elements from stack
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// let mut stack = AtlasStack::new();
-    /// stack.push(Value::Number(1.0));
-    /// stack.clear();
-    /// assert!(stack.is_empty());
-    /// ```
     pub fn clear(&mut self) {
         self.inner.clear();
     }
@@ -139,17 +64,6 @@ impl AtlasStack {
     /// Convert stack to array (bottom to top order)
     ///
     /// Bottom of stack becomes first array element.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use atlas_runtime::stdlib::collections::stack::AtlasStack;
-    /// # use atlas_runtime::value::Value;
-    /// let mut stack = AtlasStack::new();
-    /// stack.push(Value::Number(1.0));
-    /// stack.push(Value::Number(2.0));
-    /// let arr = stack.to_vec();
-    /// assert_eq!(arr, vec![Value::Number(1.0), Value::Number(2.0)]);
-    /// ```
     pub fn to_vec(&self) -> Vec<Value> {
         self.inner.clone()
     }
@@ -167,14 +81,11 @@ impl Default for AtlasStack {
 
 use crate::span::Span;
 use crate::stdlib::stdlib_arity_error;
-use crate::value::RuntimeError;
-use std::sync::Arc;
-use std::sync::Mutex;
+use crate::value::{RuntimeError, ValueStack};
 
-/// Extract stack from value
-fn extract_stack(value: &Value, span: Span) -> Result<Arc<Mutex<AtlasStack>>, RuntimeError> {
+fn extract_stack_ref(value: &Value, span: Span) -> Result<&ValueStack, RuntimeError> {
     match value {
-        Value::Stack(stack) => Ok(Arc::clone(stack)),
+        Value::Stack(s) => Ok(s),
         _ => Err(RuntimeError::TypeError {
             msg: format!("Expected Stack, got {}", value.type_name()),
             span,
@@ -187,35 +98,45 @@ pub fn new_stack(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if !args.is_empty() {
         return Err(stdlib_arity_error("Stack.new", 0, args.len(), span));
     }
-    Ok(Value::Stack(Arc::new(Mutex::new(AtlasStack::new()))))
+    Ok(Value::Stack(ValueStack::new()))
 }
 
-/// Push element onto top of stack
+/// Push element onto top of stack. Returns modified Stack (CoW).
 pub fn push(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(stdlib_arity_error("Stack.push", 2, args.len(), span));
     }
 
-    let stack = extract_stack(&args[0], span)?;
     let element = args[1].clone();
-
-    stack.lock().unwrap().push(element);
-    Ok(Value::Null)
+    let mut stack_val = args[0].clone();
+    if let Value::Stack(ref mut s) = stack_val {
+        s.inner_mut().push(element);
+    }
+    Ok(stack_val)
 }
 
-/// Pop element from top of stack
+/// Pop element from top of stack.
+/// Returns [Option<Value>, modified Stack].
 pub fn pop(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(stdlib_arity_error("Stack.pop", 1, args.len(), span));
     }
 
-    let stack = extract_stack(&args[0], span)?;
-    let value = stack.lock().unwrap().pop();
+    let mut stack_val = args[0].clone();
+    let value = if let Value::Stack(ref mut s) = stack_val {
+        s.inner_mut().pop()
+    } else {
+        return Err(RuntimeError::TypeError {
+            msg: format!("Expected Stack, got {}", args[0].type_name()),
+            span,
+        });
+    };
 
-    Ok(match value {
+    let item_opt = match value {
         Some(v) => Value::Option(Some(Box::new(v))),
         None => Value::Option(None),
-    })
+    };
+    Ok(Value::array(vec![item_opt, stack_val]))
 }
 
 /// View top element without removing
@@ -224,8 +145,8 @@ pub fn peek(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(stdlib_arity_error("Stack.peek", 1, args.len(), span));
     }
 
-    let stack = extract_stack(&args[0], span)?;
-    let value = stack.lock().unwrap().peek().cloned();
+    let stack = extract_stack_ref(&args[0], span)?;
+    let value = stack.inner().peek().cloned();
 
     Ok(match value {
         Some(v) => Value::Option(Some(Box::new(v))),
@@ -239,9 +160,8 @@ pub fn size(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(stdlib_arity_error("Stack.size", 1, args.len(), span));
     }
 
-    let stack = extract_stack(&args[0], span)?;
-    let len = stack.lock().unwrap().len();
-    Ok(Value::Number(len as f64))
+    let stack = extract_stack_ref(&args[0], span)?;
+    Ok(Value::Number(stack.inner().len() as f64))
 }
 
 /// Check if stack is empty
@@ -250,20 +170,21 @@ pub fn is_empty(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(stdlib_arity_error("Stack.isEmpty", 1, args.len(), span));
     }
 
-    let stack = extract_stack(&args[0], span)?;
-    let empty = stack.lock().unwrap().is_empty();
-    Ok(Value::Bool(empty))
+    let stack = extract_stack_ref(&args[0], span)?;
+    Ok(Value::Bool(stack.inner().is_empty()))
 }
 
-/// Remove all elements from stack
+/// Remove all elements from stack. Returns cleared Stack.
 pub fn clear(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(stdlib_arity_error("Stack.clear", 1, args.len(), span));
     }
 
-    let stack = extract_stack(&args[0], span)?;
-    stack.lock().unwrap().clear();
-    Ok(Value::Null)
+    let mut stack_val = args[0].clone();
+    if let Value::Stack(ref mut s) = stack_val {
+        s.inner_mut().clear();
+    }
+    Ok(stack_val)
 }
 
 /// Convert stack to array (bottom to top order)
@@ -272,9 +193,9 @@ pub fn to_array(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         return Err(stdlib_arity_error("Stack.toArray", 1, args.len(), span));
     }
 
-    let stack = extract_stack(&args[0], span)?;
-    let elements = stack.lock().unwrap().to_vec();
-    Ok(Value::Array(Arc::new(Mutex::new(elements))))
+    let stack = extract_stack_ref(&args[0], span)?;
+    let elements = stack.inner().to_vec();
+    Ok(Value::array(elements))
 }
 
 #[cfg(test)]

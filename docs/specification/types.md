@@ -95,22 +95,23 @@ g(5);  // 10
 ### Current Limitations
 - No anonymous function syntax (`fn(x) { ... }`)
 - All function values must be named functions
-- **Let-bound variables at top-level scope** are accessible from any named function defined in
-  the same scope — this works in both the interpreter and VM.
+- **Let-bound variables at top-level scope** are accessible from any named function — works in
+  both interpreter and VM.
 - **Var-bound variables at top-level scope** are readable and mutable from any named function —
-  this also works in both engines.
-- **Inner functions referencing outer FUNCTION locals** (variables declared inside another
-  function's body): this works in the interpreter (dynamic scope lookup) but NOT in the VM
-  (the bytecode compiler emits GetGlobal for parent-scope locals, which are not in the globals
-  table at runtime). Treat this as **implementation-defined behavior** — rely only on top-level
-  variables for cross-function access until v0.3 closure redesign.
-- No closure environment capture: functions do not capture a snapshot of their defining scope.
-  A named function returned as a value and called after its defining scope is gone will not
-  have access to that scope's locals.
+  works in both engines.
+- **Inner functions referencing outer function locals:** Both engines support this via upvalue
+  capture. The VM captures outer locals **by value at closure definition time**. The interpreter
+  uses live dynamic scope lookup. For `let`-bound (immutable) outer variables, both engines
+  produce identical results. For `var`-bound outer variables, the captured value reflects the
+  state at the time the inner function was defined — mutations to the outer `var` after the
+  inner function is defined are NOT visible through the captured upvalue in the VM. This is the
+  defined v0.2 behavior. Reference semantics are planned for v0.3.
+- **Returned closures:** A named inner function returned as a value and called after its defining
+  scope has exited can only access top-level globals. Outer function locals captured at definition
+  time (by value) are frozen in the upvalue slot — no further mutations from the outer scope are
+  reflected.
 
 See `ROADMAP.md` for planned enhancements (Hindley-Milner, proper closures in v0.3).
-
-See `ROADMAP.md` for planned enhancements.
 
 ---
 

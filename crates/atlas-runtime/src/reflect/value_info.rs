@@ -27,7 +27,7 @@ impl ValueInfo {
     /// Get the length of arrays or strings
     pub fn get_length(&self) -> Option<usize> {
         match &self.value {
-            Value::Array(arr) => Some(arr.lock().unwrap().len()),
+            Value::Array(arr) => Some(arr.len()),
             Value::String(s) => Some(s.len()),
             _ => None,
         }
@@ -36,7 +36,7 @@ impl ValueInfo {
     /// Check if a collection is empty
     pub fn is_empty(&self) -> bool {
         match &self.value {
-            Value::Array(arr) => arr.lock().unwrap().is_empty(),
+            Value::Array(arr) => arr.is_empty(),
             Value::String(s) => s.is_empty(),
             _ => false,
         }
@@ -66,7 +66,7 @@ impl ValueInfo {
     /// Get array elements
     pub fn get_array_elements(&self) -> Option<Vec<Value>> {
         match &self.value {
-            Value::Array(arr) => Some(arr.lock().unwrap().clone()),
+            Value::Array(arr) => Some(arr.as_slice().to_vec()),
             _ => None,
         }
     }

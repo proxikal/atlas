@@ -91,7 +91,7 @@ fn test_path_parse_basic() {
 
     match result {
         Value::HashMap(map) => {
-            let m = map.lock().unwrap();
+            let m = map.inner();
             // Check that keys exist (cross-platform checking would be complex)
             assert!(m.len() == 5); // root, dir, base, ext, name
         }
@@ -568,7 +568,7 @@ fn test_path_parsing_workflow() {
     // Should have all components
     match parsed {
         Value::HashMap(map) => {
-            let m = map.lock().unwrap();
+            let m = map.inner();
             assert_eq!(m.len(), 5);
         }
         _ => panic!("Expected HashMap"),
@@ -629,7 +629,7 @@ fn extract_bool(value: &Value) -> bool {
 
 fn extract_array(value: &Value) -> Vec<Value> {
     match value {
-        Value::Array(arr) => arr.lock().unwrap().clone(),
+        Value::Array(arr) => arr.as_slice().to_vec(),
         _ => panic!("Expected array value"),
     }
 }
@@ -1432,7 +1432,7 @@ fn bytes_to_atlas_array(bytes: &[u8]) -> Value {
 fn atlas_array_to_bytes(value: &Value) -> Vec<u8> {
     match value {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
+            let arr_guard = arr.as_slice();
             arr_guard
                 .iter()
                 .map(|v| match v {
@@ -2241,7 +2241,7 @@ fn test_tar_extract_basic() {
     let result = tar::tar_extract(&tar_val, &out_val, span()).unwrap();
     match result {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
+            let arr_guard = arr.as_slice();
             assert!(!arr_guard.is_empty());
         }
         _ => panic!("Expected array result"),
@@ -2383,7 +2383,7 @@ fn test_tar_extract_returns_file_list() {
     let result = tar::tar_extract(&tar_val, &out_val, span()).unwrap();
     match result {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
+            let arr_guard = arr.as_slice();
             assert!(!arr_guard.is_empty());
 
             // Check that all entries are strings
@@ -2417,7 +2417,7 @@ fn test_tar_extract_gz_basic() {
     let result = tar::tar_extract_gz(&tar_gz_val, &out_val, span()).unwrap();
     match result {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
+            let arr_guard = arr.as_slice();
             assert!(!arr_guard.is_empty());
         }
         _ => panic!("Expected array result"),
@@ -2521,7 +2521,7 @@ fn test_tar_list_basic() {
 
     match result {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
+            let arr_guard = arr.as_slice();
             assert!(!arr_guard.is_empty());
 
             // Check that entries are HashMaps
@@ -2554,7 +2554,7 @@ fn test_tar_list_multiple_files() {
 
     match result {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
+            let arr_guard = arr.as_slice();
             assert_eq!(arr_guard.len(), 2);
         }
         _ => panic!("Expected array result"),
@@ -2732,7 +2732,7 @@ fn test_tar_roundtrip_with_list() {
     // List should return non-empty array
     match list_result {
         Value::Array(arr) => {
-            assert!(!arr.lock().unwrap().is_empty());
+            assert!(!arr.is_empty());
         }
         _ => panic!("Expected array result"),
     }
@@ -2889,9 +2889,9 @@ fn test_zip_create_store_compression() {
     // With STORE, the entry's compressed size should equal the uncompressed size
     let list = atlas_zip::zip_list(&output, span()).unwrap();
     if let Value::Array(arr) = list {
-        let guard = arr.lock().unwrap();
+        let guard = arr.as_slice();
         if let Some(Value::HashMap(entry_map)) = guard.first() {
-            let guard = entry_map.lock().unwrap();
+            let guard = entry_map.inner();
             use atlas_runtime::stdlib::collections::hash::HashKey;
             use std::sync::Arc;
             let method_key = HashKey::String(Arc::new("method".to_string()));
@@ -3263,7 +3263,7 @@ fn test_zip_list_contents() {
     let list = atlas_zip::zip_list(&str_value(zip_path.to_str().unwrap()), span()).unwrap();
 
     if let Value::Array(arr) = &list {
-        let guard = arr.lock().unwrap();
+        let guard = arr.as_slice();
         assert_eq!(guard.len(), 2);
     } else {
         panic!("zipList should return an array");
@@ -3604,14 +3604,14 @@ fn test_zip_list_metadata_fields() {
     let list = atlas_zip::zip_list(&str_value(zip_path.to_str().unwrap()), span()).unwrap();
 
     if let Value::Array(arr) = &list {
-        let guard = arr.lock().unwrap();
+        let guard = arr.as_slice();
         let first = &guard[0];
 
         if let Value::HashMap(map) = first {
             use atlas_runtime::stdlib::collections::hash::HashKey;
             use std::sync::Arc;
 
-            let map_guard = map.lock().unwrap();
+            let map_guard = map.inner();
 
             // Must have all required fields
             let name_key = HashKey::String(Arc::new("name".to_string()));

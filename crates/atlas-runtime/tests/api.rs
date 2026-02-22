@@ -684,7 +684,7 @@ fn test_vec_f64_to_atlas() {
     let value = vec.to_atlas();
     match value {
         Value::Array(arr) => {
-            let arr_borrow = arr.lock().unwrap();
+            let arr_borrow = arr.as_slice();
             assert_eq!(arr_borrow.len(), 3);
             assert!(matches!(arr_borrow[0], Value::Number(n) if n == 1.0));
             assert!(matches!(arr_borrow[1], Value::Number(n) if n == 2.0));
@@ -697,7 +697,7 @@ fn test_vec_f64_to_atlas() {
 #[test]
 fn test_vec_f64_from_atlas() {
     let arr = vec![Value::Number(1.0), Value::Number(2.0), Value::Number(3.0)];
-    let value = Value::Array(Arc::new(Mutex::new(arr)));
+    let value = Value::array(arr);
     let result: Vec<f64> = FromAtlas::from_atlas(&value).unwrap();
     assert_eq!(result, vec![1.0, 2.0, 3.0]);
 }
@@ -708,7 +708,7 @@ fn test_vec_string_to_atlas() {
     let value = vec.to_atlas();
     match value {
         Value::Array(arr) => {
-            let arr_borrow = arr.lock().unwrap();
+            let arr_borrow = arr.as_slice();
             assert_eq!(arr_borrow.len(), 3);
             assert!(matches!(&arr_borrow[0], Value::String(s) if s.as_ref() == "a"));
             assert!(matches!(&arr_borrow[1], Value::String(s) if s.as_ref() == "b"));
@@ -724,7 +724,7 @@ fn test_vec_string_from_atlas() {
         Value::String(Arc::new("x".to_string())),
         Value::String(Arc::new("y".to_string())),
     ];
-    let value = Value::Array(Arc::new(Mutex::new(arr)));
+    let value = Value::array(arr);
     let result: Vec<String> = FromAtlas::from_atlas(&value).unwrap();
     assert_eq!(result, vec!["x".to_string(), "y".to_string()]);
 }
@@ -735,7 +735,7 @@ fn test_vec_empty_to_atlas() {
     let value = vec.to_atlas();
     match value {
         Value::Array(arr) => {
-            let arr_borrow = arr.lock().unwrap();
+            let arr_borrow = arr.as_slice();
             assert_eq!(arr_borrow.len(), 0);
         }
         _ => panic!("Expected Array"),
@@ -744,7 +744,7 @@ fn test_vec_empty_to_atlas() {
 
 #[test]
 fn test_vec_empty_from_atlas() {
-    let value = Value::Array(Arc::new(Mutex::new(vec![])));
+    let value = Value::array(vec![]);
     let result: Vec<f64> = FromAtlas::from_atlas(&value).unwrap();
     assert_eq!(result.len(), 0);
 }
@@ -762,7 +762,7 @@ fn test_vec_from_atlas_element_type_mismatch() {
         Value::Number(1.0),
         Value::String(Arc::new("oops".to_string())),
     ];
-    let value = Value::Array(Arc::new(Mutex::new(arr)));
+    let value = Value::array(arr);
     let result: Result<Vec<f64>, _> = FromAtlas::from_atlas(&value);
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -1173,7 +1173,7 @@ fn test_native_with_array_args(#[case] mode: ExecutionMode) {
     let mut runtime = Runtime::new(mode);
 
     runtime.register_function("arrayLength", 1, |args| match &args[0] {
-        Value::Array(arr) => Ok(Value::Number(arr.lock().unwrap().len() as f64)),
+        Value::Array(arr) => Ok(Value::Number(arr.len() as f64)),
         _ => Err(RuntimeError::TypeError {
             msg: "Expected array".to_string(),
             span: Span::dummy(),
@@ -1219,7 +1219,7 @@ fn test_native_returning_array(#[case] mode: ExecutionMode) {
     let result = runtime.eval("makeRange(5)").unwrap();
     match result {
         Value::Array(arr) => {
-            let borrowed = arr.lock().unwrap();
+            let borrowed = arr.as_slice();
             assert_eq!(borrowed.len(), 5);
             assert_eq!(borrowed[0], Value::Number(0.0));
             assert_eq!(borrowed[4], Value::Number(4.0));

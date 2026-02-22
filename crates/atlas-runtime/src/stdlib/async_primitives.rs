@@ -229,7 +229,7 @@ pub fn join_all(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
     }
 
     let handles_array = match &args[0] {
-        Value::Array(arr) => arr.lock().unwrap(),
+        Value::Array(arr) => arr,
         _ => {
             return Err(RuntimeError::TypeError {
                 msg: format!("Expected array of TaskHandles, got {}", args[0].type_name()),
@@ -360,7 +360,7 @@ pub fn channel_select(args: &[Value], span: Span) -> Result<Value, RuntimeError>
     }
 
     let receivers_array = match &args[0] {
-        Value::Array(arr) => arr.lock().unwrap(),
+        Value::Array(arr) => arr,
         _ => {
             return Err(RuntimeError::TypeError {
                 msg: format!(

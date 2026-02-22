@@ -2813,13 +2813,15 @@ fn test_array_assignment() {
 
 #[test]
 fn test_array_reference_semantics() {
+    // CoW value semantics: arr2 is a logical copy of arr1.
+    // Mutating arr1[0] triggers CoW — arr2 retains the original value.
     let code = r#"
         let arr1: number[] = [1, 2, 3];
         let arr2: number[] = arr1;
         arr1[0] = 42;
         arr2[0]
     "#;
-    assert_eval_number(code, 42.0);
+    assert_eval_number(code, 1.0);
 }
 
 #[test]
@@ -2886,6 +2888,8 @@ fn test_array_invalid_index(#[case] code: &str, #[case] error_code: &str) {
 
 #[test]
 fn test_array_mutation_in_function() {
+    // CoW value semantics: function receives a logical copy of the array.
+    // Mutations inside the function do not affect the caller's binding.
     let code = r#"
         fn modify(arr: number[]) -> void {
             arr[0] = 999;
@@ -2894,7 +2898,7 @@ fn test_array_mutation_in_function() {
         modify(numbers);
         numbers[0]
     "#;
-    assert_eval_number(code, 999.0);
+    assert_eval_number(code, 1.0);
 }
 
 #[test]
@@ -2913,13 +2917,15 @@ fn test_array_aliasing_multiple_aliases() {
 
 #[test]
 fn test_array_aliasing_nested_arrays() {
+    // CoW value semantics: `row` is a logical copy of matrix[0].
+    // Mutating row[0] does not affect matrix[0][0].
     let code = r#"
         let matrix: number[][] = [[1, 2], [3, 4]];
         let row: number[] = matrix[0];
         row[0] = 99;
         matrix[0][0]
     "#;
-    assert_eval_number(code, 99.0);
+    assert_eval_number(code, 1.0);
 }
 
 #[test]
@@ -2934,12 +2940,14 @@ fn test_array_aliasing_identity_equality() {
 
 #[test]
 fn test_array_aliasing_different_arrays_not_equal() {
+    // CoW value semantics: equality is structural (same content = equal).
+    // Two independently-constructed [1,2,3] arrays are equal.
     let code = r#"
         let arr1: number[] = [1, 2, 3];
         let arr2: number[] = [1, 2, 3];
         arr1 == arr2
     "#;
-    assert_eval_bool(code, false);
+    assert_eval_bool(code, true);
 }
 
 #[test]
@@ -3543,20 +3551,28 @@ use atlas_runtime::vm::VM;
 
 /// Run code through both interpreter and VM, assert identical results
 fn assert_parity(source: &str) {
-    // Run interpreter
+    // Run interpreter (with binder + typechecker for type-tag resolution)
     let mut lexer = Lexer::new(source);
     let (tokens, _) = lexer.tokenize();
     let mut parser = Parser::new(tokens);
     let (program, _) = parser.parse();
+    let mut binder = Binder::new();
+    let (mut symbol_table, _) = binder.bind(&program);
+    let mut typechecker = TypeChecker::new(&mut symbol_table);
+    let _ = typechecker.check(&program);
 
     let mut interp = Interpreter::new();
     let interp_result = interp.eval(&program, &SecurityContext::allow_all());
 
-    // Run VM
+    // Run VM (with binder + typechecker so compiler has type tags)
     let mut lexer2 = Lexer::new(source);
     let (tokens2, _) = lexer2.tokenize();
     let mut parser2 = Parser::new(tokens2);
     let (program2, _) = parser2.parse();
+    let mut binder2 = Binder::new();
+    let (mut symbol_table2, _) = binder2.bind(&program2);
+    let mut typechecker2 = TypeChecker::new(&mut symbol_table2);
+    let _ = typechecker2.check(&program2);
 
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&program2).expect("compilation failed");
@@ -3685,6 +3701,135 @@ fn test_parity_arrays(#[case] code: &str) {
 #[case(r#"toUpperCase("hello");"#)]
 #[case(r#"toLowerCase("WORLD");"#)]
 fn test_parity_strings(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// ============================================================================
+// Phase 19: Interpreter/VM Parity — Array & Collection Operations
+// ============================================================================
+
+// Array: index read
+#[rstest]
+#[case("let arr: number[] = [10, 20, 30]; arr[1];")]
+#[case("let arr: number[] = [10, 20, 30]; arr[0];")]
+#[case("let arr: number[] = [10, 20, 30]; arr[2];")]
+fn test_parity_array_index_read(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: length
+#[rstest]
+#[case("let arr: number[] = [1, 2, 3]; len(arr);")]
+#[case("let arr: number[] = []; len(arr);")]
+#[case("let arr: number[] = [1, 2, 3]; arr.len();")]
+fn test_parity_array_length(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: push (CoW — original unaffected)
+#[rstest]
+#[case("var a: array = [1, 2]; var b: array = a; b.push(3); len(a);")]
+#[case("var a: array = [1]; a.push(2); a.push(3); len(a);")]
+fn test_parity_array_push_cow(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: pop (CoW — pops from receiver, returns length)
+#[rstest]
+#[case("var a: array = [1, 2, 3]; a.pop(); len(a);")]
+#[case("var a: array = [1, 2, 3]; var b: array = a; a.pop(); len(b);")]
+fn test_parity_array_pop(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: sort (returns new sorted array, receiver unchanged)
+#[rstest]
+#[case("var a: array = [3, 1, 2]; let s = a.sort(); s[0];")]
+#[case("var a: array = [3, 1, 2]; let s = a.sort(); a[0];")]
+fn test_parity_array_sort(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: concat via + operator
+#[rstest]
+#[case("let a: number[] = [1, 2]; let b: number[] = [3, 4]; let c = a + b; len(c);")]
+#[case("let a: number[] = [1, 2]; let b: number[] = [3, 4]; let c = a + b; c[0];")]
+fn test_parity_array_concat(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: for-each (sum over elements)
+#[rstest]
+#[case("var sum: number = 0; for x in [1, 2, 3] { sum = sum + x; } sum;")]
+#[case("var count: number = 0; for _x in [10, 20, 30] { count = count + 1; } count;")]
+fn test_parity_array_foreach(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: map/filter with closures — both engines error (acceptable parity until Block 4)
+// These are included so parity is verified even for unsupported operations.
+#[rstest]
+#[case("let a: number[] = [1, 2, 3]; map(a, fn(x: number) -> number { return x * 2; });")]
+#[case("let a: number[] = [1, 2, 3, 4]; filter(a, fn(x: number) -> bool { return x > 2; });")]
+fn test_parity_array_map_filter_both_error(#[case] code: &str) {
+    assert_parity(code); // Both engines must agree (both succeed or both fail)
+}
+
+// Map (HashMap): get
+#[rstest]
+#[case("let m: HashMap = hashMapNew(); hashMapPut(m, \"a\", 1); unwrap(hashMapGet(m, \"a\"));")]
+#[case("let m: HashMap = hashMapNew(); hashMapPut(m, \"x\", 42); unwrap(hashMapGet(m, \"x\"));")]
+fn test_parity_hashmap_get(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Map (HashMap): set with CoW — original unaffected after copy
+#[rstest]
+#[case("var m: HashMap = hashMapNew(); hashMapPut(m, \"a\", 1); var n: HashMap = m; hashMapPut(n, \"b\", 2); hashMapSize(m);")]
+fn test_parity_hashmap_set_cow(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Map (HashMap): keys count
+#[rstest]
+#[case("let m: HashMap = hashMapNew(); hashMapPut(m, \"a\", 1); hashMapPut(m, \"b\", 2); hashMapSize(m);")]
+fn test_parity_hashmap_keys(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Map (HashMap): remove (delete a key)
+#[rstest]
+#[case("let m: HashMap = hashMapNew(); hashMapPut(m, \"a\", 1); hashMapPut(m, \"b\", 2); hashMapRemove(m, \"a\"); hashMapSize(m);")]
+fn test_parity_hashmap_remove(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Queue: enqueue/dequeue/size
+#[rstest]
+#[case("let q: Queue = queueNew(); queueEnqueue(q, 1); queueEnqueue(q, 2); queueEnqueue(q, 3); queueSize(q);")]
+#[case("let q: Queue = queueNew(); queueEnqueue(q, 10); queueEnqueue(q, 20); unwrap(queueDequeue(q)); queueSize(q);")]
+#[case("let q: Queue = queueNew(); queueEnqueue(q, 42); unwrap(queueDequeue(q));")]
+fn test_parity_queue_operations(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Stack: push/pop/size
+#[rstest]
+#[case(
+    "let s: Stack = stackNew(); stackPush(s, 1); stackPush(s, 2); stackPush(s, 3); stackSize(s);"
+)]
+#[case("let s: Stack = stackNew(); stackPush(s, 10); stackPush(s, 20); unwrap(stackPop(s)); stackSize(s);")]
+#[case("let s: Stack = stackNew(); stackPush(s, 99); unwrap(stackPop(s));")]
+fn test_parity_stack_operations(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// CoW semantics: identical behavior in both engines
+#[rstest]
+#[case("let a: number[] = [1, 2, 3]; let b: number[] = a; a[0] = 99; b[0];")]
+#[case("var a: array = [1, 2]; var b: array = a; b.push(9); len(a);")]
+#[case("let a: number[] = [1, 2, 3]; let b: number[] = a; b[2] = 100; a[2];")]
+fn test_parity_cow_semantics(#[case] code: &str) {
     assert_parity(code);
 }
 
@@ -4102,4 +4247,300 @@ fn test_edge_while_loop_early_break() {
         first_over_5();
     "#;
     assert_eval_number(code, 6.0);
+}
+
+// ============================================================================
+// Phase 07: Array Mutation CoW Semantics (Interpreter)
+// ============================================================================
+
+/// Index assignment writes back to the variable in the environment.
+///
+/// Previously, `set_array_element` mutated a local copy and discarded it.
+/// Now `assign_at_index` clones the container, mutates via CoW, and writes back.
+#[test]
+fn test_array_index_assignment_write_back() {
+    assert_eval_number("var arr: array = [10, 20, 30]; arr[1] = 99; arr[1];", 99.0);
+}
+
+#[test]
+fn test_array_index_assignment_first_element() {
+    assert_eval_number("var arr: array = [1, 2, 3]; arr[0] = 42; arr[0];", 42.0);
+}
+
+#[test]
+fn test_array_index_assignment_last_element() {
+    assert_eval_number("var arr: array = [1, 2, 3]; arr[2] = 77; arr[2];", 77.0);
+}
+
+/// CoW: mutating a cloned array does not affect the original.
+///
+/// `var a = [1, 2, 3]; var b = a; b[0] = 99;`
+/// After mutation, `a[0]` must still be 1 — CoW cloned the underlying data.
+#[test]
+fn test_cow_index_mutation_does_not_affect_original() {
+    assert_eval_number(
+        "var a: array = [1, 2, 3]; var b: array = a; b[0] = 99; a[0];",
+        1.0,
+    );
+}
+
+#[test]
+fn test_cow_cloned_array_gets_mutation() {
+    assert_eval_number(
+        "var a: array = [1, 2, 3]; var b: array = a; b[0] = 99; b[0];",
+        99.0,
+    );
+}
+
+/// Compound assignment (`+=`) on array index writes back correctly.
+#[test]
+fn test_array_compound_assign_add() {
+    assert_eval_number("var arr: array = [10, 20, 30]; arr[1] += 5; arr[1];", 25.0);
+}
+
+/// Increment (`++`) on array index writes back correctly.
+#[test]
+fn test_array_increment_writes_back() {
+    assert_eval_number("var arr: array = [5, 6, 7]; arr[0]++; arr[0];", 6.0);
+}
+
+/// Decrement (`--`) on array index writes back correctly.
+#[test]
+fn test_array_decrement_writes_back() {
+    assert_eval_number("var arr: array = [5, 6, 7]; arr[2]--; arr[2];", 6.0);
+}
+
+/// Multiple mutations accumulate on the same variable.
+#[test]
+fn test_array_multiple_mutations_accumulate() {
+    assert_eval_number(
+        "var arr: array = [0, 0, 0]; arr[0] = 10; arr[1] = 20; arr[2] = 30; arr[0] + arr[1] + arr[2];",
+        60.0,
+    );
+}
+
+/// Loop-based array mutation: each iteration writes back correctly.
+#[test]
+fn test_array_mutation_in_loop() {
+    assert_eval_number(
+        r#"
+            var arr: array = [1, 2, 3, 4, 5];
+            var i = 0;
+            while (i < 5) {
+                arr[i] = arr[i] * 2;
+                i = i + 1;
+            }
+            arr[0] + arr[1] + arr[2] + arr[3] + arr[4];
+        "#,
+        30.0,
+    );
+}
+
+// ============================================================================
+// Phase 16: Stdlib Return Value Propagation — array method CoW write-back
+// ============================================================================
+
+/// arr.push(x) — receiver variable updated in place (CoW write-back)
+#[test]
+fn test_array_method_push_updates_receiver() {
+    assert_eval_number(r#"var arr: array = [1, 2, 3]; arr.push(4); arr[3];"#, 4.0);
+}
+
+/// arr.push(x) — length increases
+#[test]
+fn test_array_method_push_increases_len() {
+    assert_eval_number(r#"var arr: array = [1, 2]; arr.push(3); len(arr);"#, 3.0);
+}
+
+/// arr.push chained — multiple pushes accumulate
+#[test]
+fn test_array_method_push_multiple() {
+    assert_eval_number(
+        r#"var arr: array = []; arr.push(10); arr.push(20); arr.push(30); arr[1];"#,
+        20.0,
+    );
+}
+
+/// arr.pop() — returns the popped element
+#[test]
+fn test_array_method_pop_returns_element() {
+    assert_eval_number(r#"var arr: array = [1, 2, 3]; let x = arr.pop(); x;"#, 3.0);
+}
+
+/// arr.pop() — receiver shortened by one element
+#[test]
+fn test_array_method_pop_shrinks_receiver() {
+    assert_eval_number(r#"var arr: array = [1, 2, 3]; arr.pop(); len(arr);"#, 2.0);
+}
+
+/// arr.pop() — receiver still holds correct remaining elements
+#[test]
+fn test_array_method_pop_receiver_correct() {
+    assert_eval_number(
+        r#"var arr: array = [10, 20, 30]; arr.pop(); arr[0] + arr[1];"#,
+        30.0,
+    );
+}
+
+/// arr.sort() — returns a new sorted array
+#[test]
+fn test_array_method_sort_returns_sorted() {
+    assert_eval_number(
+        r#"var arr: array = [3, 1, 2]; let s = arr.sort(); s[0];"#,
+        1.0,
+    );
+}
+
+/// arr.sort() — does NOT mutate the receiver
+#[test]
+fn test_array_method_sort_non_mutating() {
+    assert_eval_number(
+        r#"var arr: array = [3, 1, 2]; let s = arr.sort(); arr[0];"#,
+        3.0,
+    );
+}
+
+/// arr.sort() — numeric sort (ascending by value)
+#[test]
+fn test_array_method_sort_numeric() {
+    assert_eval_number(
+        r#"var arr: array = [10, 2, 30, 4]; let s = arr.sort(); s[0];"#,
+        2.0,
+    );
+}
+
+/// arr.reverse() — receiver is updated with reversed array (mutating)
+#[test]
+fn test_array_method_reverse_updates_receiver() {
+    assert_eval_number(r#"var arr: array = [1, 2, 3]; arr.reverse(); arr[0];"#, 3.0);
+}
+
+/// arr.reverse() — result is the reversed array
+#[test]
+fn test_array_method_reverse_result_correct() {
+    assert_eval_number(
+        r#"var arr: array = [1, 2, 3]; let r = arr.reverse(); r[0];"#,
+        3.0,
+    );
+}
+
+/// Free function pop(arr) CoW write-back — pop() as free function also updates receiver
+#[test]
+fn test_free_fn_pop_cow_writeback() {
+    assert_eval_number(
+        r#"var arr: array = [1, 2, 3]; let x = pop(arr); len(arr);"#,
+        2.0,
+    );
+}
+
+/// Free function pop(arr) — returns removed element
+#[test]
+fn test_free_fn_pop_returns_element() {
+    assert_eval_number(r#"var arr: array = [1, 2, 3]; let x = pop(arr); x;"#, 3.0);
+}
+
+/// Free function shift(arr) — removes first element
+#[test]
+fn test_free_fn_shift_cow_writeback() {
+    assert_eval_number(
+        r#"var arr: array = [10, 20, 30]; let x = shift(arr); x;"#,
+        10.0,
+    );
+}
+
+/// Free function shift(arr) — receiver is updated
+#[test]
+fn test_free_fn_shift_receiver_updated() {
+    assert_eval_number(
+        r#"var arr: array = [10, 20, 30]; shift(arr); len(arr);"#,
+        2.0,
+    );
+}
+
+/// Free function reverse(arr) — writes new array back to receiver
+#[test]
+fn test_free_fn_reverse_cow_writeback() {
+    assert_eval_number(r#"var arr: array = [1, 2, 3]; reverse(arr); arr[0];"#, 3.0);
+}
+
+/// arr.push with inferred array type (no annotation)
+#[test]
+fn test_array_method_push_inferred_type() {
+    assert_eval_number(r#"let arr = [1, 2, 3]; arr.push(4); arr[3];"#, 4.0);
+}
+
+/// Parity: interpreter and VM produce same result for push
+#[test]
+fn test_array_method_push_parity_via_atlas_eval() {
+    let code = r#"var arr: array = [1, 2, 3]; arr.push(99); arr[3];"#;
+    assert_eval_number(code, 99.0);
+}
+
+// ============================================================================
+// Value semantics regression tests — CoW behavior must never regress
+// ============================================================================
+
+/// Regression: assignment creates independent copy; mutation of source does not
+/// affect the copy (CoW value semantics).
+#[test]
+fn test_value_semantics_regression_assign_copy() {
+    let code = r#"
+        let a: number[] = [1, 2, 3];
+        let b: number[] = a;
+        a[0] = 99;
+        b[0]
+    "#;
+    assert_eval_number(code, 1.0);
+}
+
+/// Regression: mutation of assigned copy does not affect source.
+#[test]
+fn test_value_semantics_regression_copy_mutation_isolated() {
+    let code = r#"
+        let a: number[] = [1, 2, 3];
+        let b: number[] = a;
+        b[0] = 42;
+        a[0]
+    "#;
+    assert_eval_number(code, 1.0);
+}
+
+/// Regression: push on assigned copy does not grow the source.
+#[test]
+fn test_value_semantics_regression_push_copy_isolated() {
+    let code = r#"
+        var a: array = [1, 2, 3];
+        var b: array = a;
+        b.push(4);
+        len(a)
+    "#;
+    assert_eval_number(code, 3.0);
+}
+
+/// Regression: function parameter is an independent copy — mutations stay local.
+#[test]
+fn test_value_semantics_regression_fn_param_copy() {
+    let code = r#"
+        fn fill(arr: number[]) -> void {
+            arr[0] = 999;
+        }
+        let nums: number[] = [1, 2, 3];
+        fill(nums);
+        nums[0]
+    "#;
+    assert_eval_number(code, 1.0);
+}
+
+/// Regression: three-way copy — each variable is independent.
+#[test]
+fn test_value_semantics_regression_three_way_copy() {
+    let code = r#"
+        let a: number[] = [1, 2, 3];
+        let b: number[] = a;
+        let c: number[] = b;
+        b[0] = 10;
+        c[1] = 20;
+        a[0] + a[1]
+    "#;
+    assert_eval_number(code, 3.0);
 }

@@ -1,13 +1,13 @@
 # Benchmarks - Performance regression tracking
 #
-# DISABLED - Run locally: cargo bench -p atlas-runtime
+# Manual trigger only (workflow_dispatch) — benchmarks are expensive.
+# Run locally: cargo bench -p atlas-runtime
 #
-# To re-enable: uncomment the push trigger below
+# To run automatically on main: uncomment the push trigger below.
 
 name: Benchmarks
 
 on:
-  # DISABLED - saves GitHub Actions credits
   # push:
   #   branches: [main]
   #   paths:
@@ -32,7 +32,7 @@ jobs:
     name: Performance Benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -48,18 +48,15 @@ jobs:
           name: Atlas Runtime Benchmarks
           tool: 'cargo'
           output-file-path: benchmark-results.txt
-          # Store in gh-pages branch (auto-created)
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
-          # Alert on regression
           alert-threshold: '110%'
           comment-on-alert: true
           fail-on-alert: false
-          # Compare against previous
           save-data-file: true
 
       - name: Upload raw Criterion results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: criterion-results

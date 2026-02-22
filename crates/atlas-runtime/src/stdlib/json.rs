@@ -357,7 +357,7 @@ fn value_to_json(
         }
         Value::Array(arr_ref) => {
             // Check for circular reference using pointer address
-            let ptr = Arc::as_ptr(arr_ref) as usize;
+            let ptr = Arc::as_ptr(arr_ref.arc()) as usize;
             if !visited.insert(ptr) {
                 return Err(RuntimeError::TypeError {
                     msg: "Circular reference detected in array".to_string(),
@@ -365,8 +365,8 @@ fn value_to_json(
                 });
             }
 
-            let arr = arr_ref.lock().unwrap();
-            let elements: Result<Vec<String>, RuntimeError> = arr
+            let elements: Result<Vec<String>, RuntimeError> = arr_ref
+                .as_slice()
                 .iter()
                 .map(|v| value_to_json(v, visited, span))
                 .collect();
@@ -444,6 +444,10 @@ fn value_to_json(
         }),
         Value::AsyncMutex(_) => Err(RuntimeError::TypeError {
             msg: "Cannot serialize AsyncMutex to JSON".to_string(),
+            span,
+        }),
+        Value::SharedValue(_) => Err(RuntimeError::TypeError {
+            msg: "Cannot serialize SharedValue to JSON".to_string(),
             span,
         }),
     }

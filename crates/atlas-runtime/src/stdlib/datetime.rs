@@ -10,7 +10,6 @@ use crate::value::Value;
 use chrono::{Datelike, Local, TimeZone, Timelike, Utc, Weekday};
 use chrono_tz::Tz;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 // ============================================================================
 // DateTime Construction
@@ -784,7 +783,7 @@ pub fn date_time_try_parse(args: &[Value], span: Span) -> Result<Value, RuntimeE
     let text = expect_string(&args[0], "text", span)?;
     let formats_array = expect_array(&args[1], "formats", span)?;
 
-    for format_value in formats_array.lock().unwrap().iter() {
+    for format_value in formats_array.as_slice().iter() {
         if let Value::String(format_str) = format_value {
             if let Ok(naive_dt) = chrono::NaiveDateTime::parse_from_str(&text, format_str.as_ref())
             {
@@ -1108,12 +1107,12 @@ pub fn duration_format(args: &[Value], span: Span) -> Result<Value, RuntimeError
     }
 
     let duration_map = expect_hashmap(&args[0], "duration", span)?;
-    let map = duration_map.lock().unwrap();
+    let map = duration_map.inner();
 
-    let days = get_number_from_map(&map, "days", span)?;
-    let hours = get_number_from_map(&map, "hours", span)?;
-    let minutes = get_number_from_map(&map, "minutes", span)?;
-    let seconds = get_number_from_map(&map, "seconds", span)?;
+    let days = get_number_from_map(map, "days", span)?;
+    let hours = get_number_from_map(map, "hours", span)?;
+    let minutes = get_number_from_map(map, "minutes", span)?;
+    let seconds = get_number_from_map(map, "seconds", span)?;
 
     let mut parts = Vec::new();
     if days != 0 {
@@ -1192,13 +1191,13 @@ fn expect_datetime(
 }
 
 /// Expect an Array value
-fn expect_array(
-    value: &Value,
+fn expect_array<'a>(
+    value: &'a Value,
     arg_name: &str,
     span: Span,
-) -> Result<Arc<Mutex<Vec<Value>>>, RuntimeError> {
+) -> Result<&'a crate::value::ValueArray, RuntimeError> {
     match value {
-        Value::Array(arr) => Ok(arr.clone()),
+        Value::Array(arr) => Ok(arr),
         _ => Err(RuntimeError::TypeError {
             msg: format!(
                 "expected array for '{}', got {}",
@@ -1211,13 +1210,13 @@ fn expect_array(
 }
 
 /// Expect a HashMap value
-fn expect_hashmap(
-    value: &Value,
+fn expect_hashmap<'a>(
+    value: &'a Value,
     arg_name: &str,
     span: Span,
-) -> Result<Arc<Mutex<AtlasHashMap>>, RuntimeError> {
+) -> Result<&'a crate::value::ValueHashMap, RuntimeError> {
     match value {
-        Value::HashMap(map) => Ok(map.clone()),
+        Value::HashMap(map) => Ok(map),
         _ => Err(RuntimeError::TypeError {
             msg: format!(
                 "expected hashmap for '{}', got {}",
@@ -1288,5 +1287,5 @@ fn create_duration_map(total_seconds: i64) -> Value {
         }),
     );
 
-    Value::HashMap(Arc::new(Mutex::new(map)))
+    Value::HashMap(crate::value::ValueHashMap::from_atlas(map))
 }

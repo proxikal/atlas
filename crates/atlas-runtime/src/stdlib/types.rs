@@ -229,6 +229,7 @@ pub fn type_of(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::ChannelReceiver(_) => "ChannelReceiver",
         Value::AsyncMutex(_) => "AsyncMutex",
         Value::Closure(_) => "closure",
+        Value::SharedValue(_) => "shared",
     };
 
     Ok(Value::string(type_name))
@@ -353,7 +354,7 @@ pub fn has_field(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         )),
         Value::HashMap(map) => {
             let key = HashKey::from_value(&Value::string(field), span)?;
-            let exists = map.lock().unwrap().contains_key(&key);
+            let exists = map.inner().contains_key(&key);
             Ok(Value::Bool(exists))
         }
         _ => Ok(Value::Bool(false)),
@@ -384,7 +385,7 @@ pub fn has_method(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         )),
         Value::HashMap(map) => {
             let key = HashKey::from_value(&Value::string(field), span)?;
-            let exists = map.lock().unwrap().contains_key(&key);
+            let exists = map.inner().contains_key(&key);
             Ok(Value::Bool(exists))
         }
         _ => Ok(Value::Bool(false)),
@@ -418,7 +419,7 @@ pub fn has_tag(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         }
         Value::HashMap(map) => {
             let key = HashKey::from_value(&Value::string("tag"), span)?;
-            if let Some(Value::String(value)) = map.lock().unwrap().get(&key) {
+            if let Some(Value::String(value)) = map.inner().get(&key) {
                 return Ok(Value::Bool(value.as_ref() == tag_value));
             }
             Ok(Value::Bool(false))
@@ -491,6 +492,7 @@ pub fn to_string(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         Value::ChannelSender(_) => "[ChannelSender]".to_string(),
         Value::ChannelReceiver(_) => "[ChannelReceiver]".to_string(),
         Value::AsyncMutex(_) => "[AsyncMutex]".to_string(),
+        Value::SharedValue(_) => "[Shared]".to_string(),
     };
 
     Ok(Value::string(string_value))
@@ -573,7 +575,8 @@ pub fn to_bool(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
         | Value::ChannelSender(_)
         | Value::ChannelReceiver(_)
         | Value::AsyncMutex(_)
-        | Value::Closure(_) => true,
+        | Value::Closure(_)
+        | Value::SharedValue(_) => true,
     };
 
     Ok(Value::Bool(bool_value))
@@ -719,6 +722,7 @@ fn type_name(value: &Value) -> &str {
         Value::ChannelReceiver(_) => "ChannelReceiver",
         Value::AsyncMutex(_) => "AsyncMutex",
         Value::Closure(_) => "closure",
+        Value::SharedValue(_) => "shared",
     }
 }
 
@@ -756,6 +760,7 @@ fn value_to_display_string(value: &Value) -> String {
         Value::ChannelSender(_) => "[ChannelSender]".to_string(),
         Value::ChannelReceiver(_) => "[ChannelReceiver]".to_string(),
         Value::AsyncMutex(_) => "[AsyncMutex]".to_string(),
+        Value::SharedValue(_) => "[Shared]".to_string(),
     }
 }
 

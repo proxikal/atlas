@@ -277,6 +277,16 @@ pub fn get_value_type_info(value: &Value) -> TypeInfo {
             type_args: vec![],
             alias_target: None,
         },
+        Value::SharedValue(_) => TypeInfo {
+            name: "shared".to_string(),
+            kind: TypeKind::Generic,
+            fields: vec![],
+            parameters: vec![],
+            return_type: None,
+            element_type: None,
+            type_args: vec![],
+            alias_target: None,
+        },
     }
 }
 

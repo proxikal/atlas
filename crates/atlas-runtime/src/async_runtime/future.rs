@@ -382,8 +382,7 @@ mod tests {
 
         match result.get_state() {
             FutureState::Resolved(Value::Array(arr)) => {
-                let values = arr.lock().unwrap();
-                assert_eq!(values.len(), 3);
+                assert_eq!(arr.len(), 3);
             }
             _ => panic!("Expected array of results"),
         }
@@ -413,7 +412,7 @@ mod tests {
 
         match result.get_state() {
             FutureState::Resolved(Value::Array(arr)) => {
-                assert_eq!(arr.lock().unwrap().len(), 0);
+                assert_eq!(arr.len(), 0);
             }
             _ => panic!("Expected empty array"),
         }

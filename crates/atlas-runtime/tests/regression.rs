@@ -520,14 +520,13 @@ fn stability_determinism_error_reporting() {
         r1,
         r2
     );
-    match (&r1, &r2) {
-        (Err(d1), Err(d2)) => assert!(
+    if let (Err(d1), Err(d2)) = (&r1, &r2) {
+        assert!(
             d1.len() == d2.len(),
             "Diagnostic count mismatch: {} != {}",
             d1.len(),
             d2.len()
-        ),
-        _ => {}
+        )
     }
 }
 

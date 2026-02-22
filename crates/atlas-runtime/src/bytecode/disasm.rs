@@ -203,6 +203,7 @@ fn format_value(value: &crate::value::Value) -> String {
         Value::ChannelReceiver(_) => "<ChannelReceiver>".to_string(),
         Value::AsyncMutex(_) => "<AsyncMutex>".to_string(),
         Value::Closure(c) => format!("<fn {}>", c.func.name),
+        Value::SharedValue(_) => "<shared>".to_string(),
     }
 }
 

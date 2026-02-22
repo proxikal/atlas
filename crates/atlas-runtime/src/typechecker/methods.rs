@@ -68,6 +68,36 @@ impl MethodTable {
         self.register("json", "as_number", vec![], Type::Number);
         self.register("json", "as_bool", vec![], Type::Bool);
         self.register("json", "is_null", vec![], Type::Bool);
+
+        // Array methods
+        // Mutating collection methods — return the updated array
+        let any_array = Type::Array(Box::new(Type::Unknown));
+        self.register("array", "push", vec![Type::Unknown], any_array.clone());
+        self.register("array", "unshift", vec![Type::Unknown], any_array.clone());
+        self.register("array", "reverse", vec![], any_array.clone());
+        // Mutating pair methods — return the extracted element (receiver updated as side effect)
+        self.register("array", "pop", vec![], Type::Unknown);
+        self.register("array", "shift", vec![], Type::Unknown);
+        // Non-mutating methods — return new value, receiver unchanged
+        self.register("array", "sort", vec![], any_array.clone());
+        self.register("array", "len", vec![], Type::Number);
+        self.register("array", "includes", vec![Type::Unknown], Type::Bool);
+        self.register("array", "indexOf", vec![Type::Unknown], Type::Number);
+        self.register("array", "lastIndexOf", vec![Type::Unknown], Type::Number);
+        self.register(
+            "array",
+            "slice",
+            vec![Type::Number, Type::Number],
+            any_array.clone(),
+        );
+        self.register(
+            "array",
+            "concat",
+            vec![any_array.clone()],
+            any_array.clone(),
+        );
+        self.register("array", "flatten", vec![], any_array.clone());
+        self.register("array", "join", vec![Type::String], Type::String);
     }
 }
 

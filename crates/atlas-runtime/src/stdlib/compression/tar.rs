@@ -11,7 +11,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tar::{Archive, Builder, EntryType};
 
 // ============================================================================
@@ -370,9 +370,9 @@ pub fn tar_create(sources: &Value, output: &Value, span: Span) -> Result<Value, 
     // Extract source paths
     let source_paths = match sources {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
+            let arr_slice = arr.as_slice();
             let mut paths = Vec::new();
-            for val in arr_guard.iter() {
+            for val in arr_slice.iter() {
                 match val {
                     Value::String(s) => paths.push(PathBuf::from(s.as_ref())),
                     _ => {
@@ -444,9 +444,9 @@ pub fn tar_create_gz(
     // Extract source paths
     let source_paths = match sources {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
+            let arr_slice = arr.as_slice();
             let mut paths = Vec::new();
-            for val in arr_guard.iter() {
+            for val in arr_slice.iter() {
                 match val {
                     Value::String(s) => paths.push(PathBuf::from(s.as_ref())),
                     _ => {
@@ -591,7 +591,7 @@ pub fn tar_list(tar_path: &Value, span: Span) -> Result<Value, RuntimeError> {
                 HashKey::String(Arc::new("type".to_string())),
                 Value::string(entry.entry_type.clone()),
             );
-            Value::HashMap(Arc::new(Mutex::new(map)))
+            Value::HashMap(crate::value::ValueHashMap::from_atlas(map))
         })
         .collect();
 

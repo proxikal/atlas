@@ -1,6 +1,6 @@
 # GATE 6: Final Testing
 
-**Condition:** Implementation complete, ready for PR
+**Condition:** Implementation complete, ready to commit
 
 **Source of truth:** auto-memory `testing-patterns.md` for crate-specific testing protocols
 
@@ -11,147 +11,67 @@
 Run the full test suite for the package you modified:
 
 ```bash
-cargo nextest run -p <package>  # e.g., atlas-lsp, atlas-runtime, atlas-cli
+cargo build --workspace                          # Full build — MUST be clean
+cargo nextest run -p <package>                   # e.g., atlas-lsp, atlas-runtime, atlas-cli
+cargo clippy -p <package> -- -D warnings         # Zero warnings
+cargo fmt --check -p <package>                   # Perfectly formatted
 ```
+
+**All four must pass. No exceptions.**
 
 ---
 
-## Test Failure Triage
+## Pass Requirement: 100%
 
-**Not all failures are equal.** Use this decision tree:
+**There is no acceptable failure rate.** Every test must pass before committing.
 
-### Blocking Failures (MUST FIX)
+- ✅ 100% pass → Proceed to GATE 7
+- ❌ Any failure → Fix it. Do not proceed.
 
-Stop immediately and fix these:
+**If a test is genuinely flaky** (non-deterministic, timing-dependent): fix the test first, then commit. Flaky tests are not an excuse to ship — they are a bug to fix.
 
-- ❌ **Wrong results** - Code produces incorrect output
-- ❌ **Panics/crashes** - Unexpected panics or segfaults
-- ❌ **Data corruption** - Tests show data is corrupted
-- ❌ **Security issues** - Security-related test failures
-- ❌ **Parity breaks** - Interpreter and VM produce different results (for runtime code)
-- ❌ **> 5% failure rate** - More than 5% of tests failing
-
-**Action:** Fix the code, don't proceed until green.
-
-### Non-Blocking Failures (NOTE IN PR)
-
-You may proceed, but document in PR:
-
-- ⚠️ **Flaky tests** - Test passes sometimes, fails others (< 5% failure rate)
-- ⚠️ **Overly strict assertions** - Test assumes something that's not actually required
-- ⚠️ **Cosmetic issues** - Formatting, whitespace, non-functional differences
-- ⚠️ **Edge case assertions** - Feature works, but test is too strict about edge cases
-
-**Example PR note:**
-```markdown
-## Known Issues
-- 4/277 tests fail on edge case assertions (code actions, inlay hints)
-- Features work correctly, test assertions are too strict
-- Will address in follow-up
-```
+**If a test has an overly strict assertion**: fix the assertion to match the correct behavior, then commit. A wrong test is still a failure.
 
 ---
 
-## Decision Matrix
+## Failure Triage
 
-| Pass Rate | Blocking Failures | Non-Blocking Failures | Action |
-|-----------|-------------------|----------------------|--------|
-| 100% | 0 | 0 | ✅ Proceed |
-| 95-99% | 0 | Some | ✅ Proceed, note in PR |
-| 95-99% | Any | Any | ❌ Fix blocking, then proceed |
-| < 95% | Any | Any | ❌ Fix failures |
-| < 95% | 0 | Many | ⚠️ Investigate, likely real issue |
+**When tests fail, work through this in order:**
+
+1. **Understand it** — read the failure output completely
+2. **Reproduce it** — run the specific test in isolation: `cargo nextest run -p <package> -- test_name`
+3. **Classify it:**
+   - Wrong output → bug in implementation, fix the code
+   - Panic/crash → bug in implementation, fix the code
+   - Parity break → CRITICAL, both engines must match, fix both
+   - Flaky (intermittent) → fix the test
+   - Assertion too strict → fix the assertion to match correct behavior
+4. **Fix it** — minimal fix, don't refactor unrelated code
+5. **Re-run full suite** — confirm 100%
+
+**Time limit:** If debugging a single failure exceeds 30 minutes, stop and escalate to user. Do not ship with failures.
 
 ---
 
 ## Examples
 
-### ✅ Good: Proceed
+### ✅ Correct: Proceed
+
+```
+7151 tests: 7151 passed
+Build: clean
+Clippy: 0 warnings
+Fmt: clean
+```
+
+### ❌ Wrong: Stop and Fix
 
 ```
 277 tests: 273 passed, 4 failed
-Failures: test_code_actions (assertion too strict)
+Failures: test_code_actions, test_hover, test_completion, test_inlay_hints
 ```
 
-**Analysis:** 98.6% pass rate, non-blocking failures, feature works.
-**Action:** Proceed, note in PR.
-
-### ❌ Bad: Stop and Fix
-
-```
-100 tests: 90 passed, 10 failed
-Failures: test_calculation (wrong result: expected 42, got 43)
-```
-
-**Analysis:** 90% pass rate, wrong results = blocking.
-**Action:** Fix the bug.
-
-### ⚠️ Investigate
-
-```
-500 tests: 450 passed, 50 failed
-All failures: similar assertion errors
-```
-
-**Analysis:** 90% pass rate, but no wrong results. Might be test quality issue.
-**Action:** Investigate 2-3 failures, determine if blocking or test issue.
-
----
-
-## Quality Checks (Also Run)
-
-In addition to tests, run:
-
-```bash
-# Clippy (linting)
-cargo clippy -p <package> -- -D warnings
-
-# Formatting
-cargo fmt --check -p <package>
-```
-
-**These must pass with 0 warnings/errors.**
-
----
-
-## Pragmatic Workflow
-
-**If you encounter test failures:**
-
-1. **First 2 failures:** Investigate immediately
-2. **Understand the pattern:** Are they all similar? Related to one feature?
-3. **Classify:** Blocking or non-blocking?
-4. **Decide:**
-   - Blocking → Fix now
-   - Non-blocking → Note in PR, proceed
-5. **Time limit:** Don't spend > 15 minutes debugging flaky tests
-
-**Remember:** The goal is working code, not perfect tests. If the feature works and tests are just overly strict, that's a test improvement task, not a blocker.
-
----
-
-## What to Report in PR
-
-Always include test results in PR body:
-
-**Good example:**
-```markdown
-## Testing
-
-cargo nextest run -p atlas-lsp: 273/277 passed (98.6%)
-
-**Known Issues:**
-- 4 integration tests fail on edge cases (strict assertions)
-- Features verified working correctly
-- Tests need assertion fixes (non-blocking)
-
-All core LSP features validated ✅
-```
-
-**Bad example:**
-```markdown
-Tests mostly pass.
-```
+4 failures = 4 bugs. Fix them. "The feature works" is not a valid reason to ship failing tests.
 
 ---
 

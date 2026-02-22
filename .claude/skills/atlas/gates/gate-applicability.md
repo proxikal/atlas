@@ -75,17 +75,12 @@ cargo nextest run -p <package> --test <domain_file>
 **When to skip:** Obvious (internal refactors, test-only changes)
 
 ### GATE 6: Final Testing
-**Run before PR creation.** Full test suite for the package.
+**Run before committing.** Full test suite for the package.
 
-**Triage test failures:**
-- **Blocking:** Wrong results, panics, data corruption, security issues
-- **Non-blocking:** Flaky tests (< 5% failure rate), overly strict assertions, cosmetic issues
+**Requirement: 100% pass rate. No exceptions.**
 
-**Decision criteria:**
-- ✅ 100% pass rate → Proceed
-- ✅ 95-99% pass rate + non-blocking failures → Proceed (note in PR)
-- ❌ < 95% pass rate → Fix before proceeding
-- ❌ Any blocking failure → Fix immediately
+- ✅ 100% pass → Proceed to GATE 7
+- ❌ Any failure → Fix it, do not proceed
 
 ### GATE 7: Memory Check
 **Always run.** Update memory if you discovered new patterns or made decisions.
@@ -121,9 +116,9 @@ cargo nextest run -p <package> --test <domain_file>
 - **Test cross-platform** paths (use `Path` APIs, not string manipulation)
 
 ### Documentation
-- **No CI checks** for docs-only PRs
-- **Fast merge** (~1 min through merge queue)
-- **Still use PR process** (no direct commits to main)
+- Commit directly to feature branch in `atlas-docs/` worktree
+- Merge to local main when complete
+- Push to GitHub on weekly cadence (no PR needed)
 
 ---
 

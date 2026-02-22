@@ -262,36 +262,32 @@ fn format_value_recursive(value: &Value, depth: usize, max_depth: usize) -> Stri
         Value::Null => "null".to_string(),
         Value::String(s) => format!("\"{}\"", s.as_ref()),
         Value::Array(arr) => {
-            let guard = arr.lock().unwrap();
             if depth >= max_depth {
-                return format!("[{} items]", guard.len());
+                return format!("[{} items]", arr.len());
             }
-            let items: Vec<String> = guard
+            let items: Vec<String> = arr
+                .as_slice()
                 .iter()
                 .take(10)
                 .map(|v| format_value_recursive(v, depth + 1, max_depth))
                 .collect();
-            if guard.len() > 10 {
-                format!("[{}, ... +{} more]", items.join(", "), guard.len() - 10)
+            if arr.len() > 10 {
+                format!("[{}, ... +{} more]", items.join(", "), arr.len() - 10)
             } else {
                 format!("[{}]", items.join(", "))
             }
         }
         Value::HashMap(m) => {
-            let guard = m.lock().unwrap();
-            format!("{{HashMap, {} entries}}", guard.len())
+            format!("{{HashMap, {} entries}}", m.inner().len())
         }
         Value::HashSet(s) => {
-            let guard = s.lock().unwrap();
-            format!("{{HashSet, {} items}}", guard.len())
+            format!("{{HashSet, {} items}}", s.inner().len())
         }
         Value::Queue(q) => {
-            let guard = q.lock().unwrap();
-            format!("[Queue, {} items]", guard.len())
+            format!("[Queue, {} items]", q.inner().len())
         }
         Value::Stack(s) => {
-            let guard = s.lock().unwrap();
-            format!("[Stack, {} items]", guard.len())
+            format!("[Stack, {} items]", s.inner().len())
         }
         Value::Function(f) => format!("<fn {}>", f.name),
         _ => format!("{:?}", value),

@@ -1,14 +1,8 @@
 # Atlas CI Pipeline
 #
-# DISABLED - AI runs full test suite locally before pushing.
-# CI skipped to preserve GitHub Actions credits.
-#
-# All validation is done locally:
-# - cargo fmt --check
-# - cargo clippy -- -D warnings
-# - cargo nextest run
-#
-# To re-enable: Change SKIP_CI to false
+# Runs on every PR and merge queue entry.
+# Validates: fmt, clippy, cargo check.
+# Tests run locally by AI before pushing — not in CI (9k+ tests = expensive minutes).
 
 name: CI
 
@@ -33,13 +27,12 @@ jobs:
   # ==========================================================================
 
   changes:
-    name: Detect Changes (skipped)
+    name: Detect Changes
     runs-on: ubuntu-latest
-    if: false  # CI disabled
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -51,27 +44,26 @@ jobs:
               - '.github/workflows/**'
 
   # ==========================================================================
-  # Fast checks - The only CI jobs needed
+  # Fast checks
   # ==========================================================================
 
   fmt:
-    name: Format (skipped)
+    name: Format
     runs-on: ubuntu-latest
-    if: false  # CI disabled - AI validates locally
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
       - run: cargo fmt --all --check
 
   clippy:
-    name: Clippy (skipped)
+    name: Clippy
     runs-on: ubuntu-latest
     needs: [fmt, changes]
-    if: false  # CI disabled - AI validates locally
+    if: needs.changes.outputs.code == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -79,12 +71,12 @@ jobs:
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
   check:
-    name: Check (skipped)
+    name: Check
     runs-on: ubuntu-latest
     needs: [fmt, changes]
-    if: false  # CI disabled - AI validates locally
+    if: needs.changes.outputs.code == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --all-targets --all-features
@@ -99,13 +91,15 @@ jobs:
     needs: [fmt, clippy, check, changes]
     runs-on: ubuntu-latest
     steps:
-      - name: CI Validation
+      - name: Check all jobs passed
         run: |
-          # CI disabled - AI validates locally before pushing
-          # All jobs are skipped, so we just pass
-          echo "CI disabled - validation done locally by AI"
-          echo "Jobs status:"
-          echo "  fmt: ${{ needs.fmt.result }}"
-          echo "  clippy: ${{ needs.clippy.result }}"
-          echo "  check: ${{ needs.check.result }}"
-          echo "All jobs skipped as expected - passing"
+          echo "fmt:     ${{ needs.fmt.result }}"
+          echo "clippy:  ${{ needs.clippy.result }}"
+          echo "check:   ${{ needs.check.result }}"
+          if [[ "${{ needs.fmt.result }}" == "failure" || \
+                "${{ needs.clippy.result }}" == "failure" || \
+                "${{ needs.check.result }}" == "failure" ]]; then
+            echo "One or more CI jobs failed"
+            exit 1
+          fi
+          echo "All CI jobs passed (or skipped for docs-only PRs)"

@@ -194,7 +194,7 @@ pub fn future_all_fn(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
 
     // Extract futures from array
     let mut futures = Vec::new();
-    for value in futures_array.lock().unwrap().iter() {
+    for value in futures_array.as_slice().iter() {
         match value {
             Value::Future(f) => futures.push((**f).clone()),
             _ => {
@@ -234,7 +234,7 @@ pub fn future_race_fn(args: &[Value], span: Span) -> Result<Value, RuntimeError>
 
     // Extract futures from array
     let mut futures = Vec::new();
-    for value in futures_array.lock().unwrap().iter() {
+    for value in futures_array.as_slice().iter() {
         match value {
             Value::Future(f) => futures.push((**f).clone()),
             _ => {

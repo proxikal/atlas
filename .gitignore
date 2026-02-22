@@ -10,10 +10,13 @@ Cargo.lock
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Codex app local data
+# AI tooling (local machine only)
 .codex/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Testing
 *.profraw
@@ -27,15 +30,15 @@ crates/atlas-runtime/fuzz/coverage/
 # Build artifacts
 /release/
 /dist/
+atlas-dev
 
 # Temporary files
 *.tmp
 *.temp
 .*.sw?
 
-# OS
-.DS_Store
-Thumbs.db
-
 # Logs
 *.log
+
+# Worktree identity (local machine only, never commit)
+.worktree-id

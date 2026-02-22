@@ -13,38 +13,49 @@ description: Atlas - AI-first programming language compiler. Doc-driven developm
 ## On Skill Activation (EVERY SESSION)
 
 ```bash
-git checkout main && git pull && git fetch --prune   # Sync main, prune remotes
-git branch | grep -v main | xargs -r git branch -D   # Delete ALL local branches except main
+cat .worktree-id 2>/dev/null || echo "unknown"   # Detect worktree identity
 ```
 
-**Why:** PRs merge async via squash (different SHA). Use `-D` not `-d`. Always sync.
+**Full state audit runs in GATE -1** — worktree state, uncommitted work, unmerged branches, other worktrees. See `gates/gate-minus1-sanity.md`.
 
 ---
 
-## Mode: EXECUTION (Default)
+## Roles
 
-**You:** Autonomous Lead Developer (full authority, execute immediately)
-**User:** Overseer (catch mistakes only, has "no technical experience")
+**User:** Co-Architect + Product Owner. Makes foundational decisions (language design,
+memory model, roadmap direction, version scope). Has final authority on all strategic
+decisions. Technical input from the user is VALID — they designed this system.
+When the user gives a directive that contradicts a spec, flag it with evidence, but
+respect the final call. Never dismiss user input as non-technical.
+
+**You (AI):** Lead Developer + Co-Architect. Full authority on implementation decisions,
+code quality, compiler standards, Rust patterns, test coverage, and anything the spec
+is silent on. Execute immediately. Make intelligent decisions. Log them in auto-memory.
+
+**Session types:**
+- **Architecture session** (like this): User and AI co-architect. Produce locked decisions,
+  updated docs, updated roadmap. No code written.
+- **Phase execution session**: AI executes autonomously. User triggers with phase directive.
+- **Scaffolding session**: AI scaffolds one block of phases. User approves block kickoff doc first.
+
 **Phase directive = START NOW** (no permission needed)
-
 **Never ask during execution:** "Ready?" "What's next?" "Should I proceed?" "Is this correct?"
 **Answer source:** STATUS.md, phases/, auto-memory/, docs/specification/
 
-**Triggers:** "Next: Phase-XX" | "Start Phase-XX" | User pastes handoff
+**Triggers:** "Next: Phase-XX" | "Start Phase-XX" | "Scaffold Block N" | User pastes handoff
 
 ---
 
 ## Core Rules (NON-NEGOTIABLE)
 
 ### 1. Autonomous Execution
-1. Check STATUS.md (verify phase not complete)
-2. **Git Setup:** Create feature branch from main (see Git Workflow below)
-3. Run GATE -1 (sanity check + local security scan)
+1. **Run GATE -1** — full state audit (worktree state, unfinished work, stale branches, build verification, security scan)
+2. Check STATUS.md (verify phase not complete)
+3. **Git Setup:** GATE -1 determines branch state — create new branch or resume existing
 4. Declare workflow type
 5. **Execute applicable gates** 0→1→2→3→4→5→6→7 (see `gates/gate-applicability.md` for which to run)
-6. **Git Finalize:** Commit, push, create PR with auto-merge
-7. **Sync immediately:** PR merges in ~30-60s (no CI), sync main and delete local branch
-8. Deliver completion summary
+6. **Git Finalize:** Commit locally → merge to main → clean up feature branch (see Git Workflow)
+7. Deliver completion summary
 
 ### 2. Spec Compliance (100%)
 Spec defines it → implement EXACTLY. No shortcuts, no "good enough", no partial implementations.
@@ -54,11 +65,13 @@ ALL must be met. Phase says "50+ tests" → deliver 50+ (not 45).
 **ALL tests MUST pass** → 0 failures before handoff.
 
 ### 4. Intelligent Decisions (When Spec Silent)
-1. Analyze codebase patterns
-2. Decide intelligently
-3. Log decision in auto-memory `decisions/{domain}.md` (use DR-XXX format)
+1. Grep codebase — verify actual patterns before deciding
+2. Check auto-memory `decisions/*.md` — decision may already be made
+3. Decide intelligently, consistent with Rust compiler standards
+4. Log in auto-memory `decisions/{domain}.md` (use DR-XXX format)
 
-**Never:** Ask user | Leave TODO | Guess without analysis
+**Never:** Leave TODO | Guess without codebase verification | Contradict a locked decision
+**Locked decisions live in:** `docs/specification/memory-model.md`, `ROADMAP.md`, `docs/internal/V03_PLAN.md`
 
 ### 5. World-Class Quality (NO SHORTCUTS)
 **Banned:** `// TODO`, `unimplemented!()`, "MVP for now", partial implementations, stubs
@@ -89,47 +102,57 @@ feat/{short-description}      # Features (e.g., feat/array-slice)
 ci/{short-description}        # CI/infra (e.g., ci/optimize-workflows)
 ```
 
-**START of phase (sync happens here):**
+**START of phase (after GATE -1 state audit):**
 ```bash
-git checkout main && git pull                    # Picks up any merged PRs
-git branch -d <old-branch> 2>/dev/null || true   # Lazy cleanup of old branches
+git rebase main                                  # Sync home branch to LOCAL main
 git checkout -b phase/{category}-{number}        # Create feature branch
+# (or continue existing feature branch if GATE -1 detected unfinished work)
 ```
 
-**END of phase (fire and forget):**
+**DURING phase (multi-part):**
 ```bash
-git add -A && git commit -m "feat(phase): Description"   # Commit all
-git push -u origin HEAD                                   # Push branch
-gh pr create --title "Phase X: Title" --body "..."       # Create PR
-gh pr merge --squash --auto                               # Queue for merge
-# DONE - move on immediately, no waiting
-```
-
-**Why no waiting:**
-- Merge queue processes PR in ~30-60s (no CI)
-- Remote branch auto-deleted after merge
-- Next phase START syncs main automatically
-- Branch cleanup is lazy (not blocking)
-
-**BANNED (wastes time):**
-- `sleep` after pushing — sync happens at next phase START
-- `gh pr view` or `gh pr checks` — never check PR status
-- Any PR monitoring — it WILL merge, trust the queue
-
-**Multi-part phases (A, B, C sub-phases):**
-```bash
-# Stay on SAME branch, commit locally between parts
-<work on part A>
-cargo nextest run -p atlas-runtime                        # Local validation
+# Commit locally between parts — never leave uncommitted work at session end
+cargo build --workspace                          # Must pass before committing
+cargo nextest run -p atlas-runtime               # Must be 100%
 git add -A && git commit -m "feat(phase-XX): Part A - description"
-
-<work on part B, C, etc. - same pattern>
-
-# ALL parts done → push ONCE
-git push -u origin HEAD && gh pr create ... && gh pr merge --squash --auto
+# Continue Part B, C, etc.
 ```
-- **One branch, multiple commits** = traceable history in PR
-- **Squash merge** = atomic feature on main
+
+**END of phase (local merge):**
+```bash
+# 1. Final verification — all must pass
+cargo build --workspace
+cargo nextest run -p atlas-runtime
+cargo clippy -p atlas-runtime -- -D warnings
+cargo fmt --check -p atlas-runtime
+
+# 2. Commit
+git add -A && git commit -m "feat(phase-XX): Description
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+
+# 3. Merge to local main
+git checkout main
+git merge --no-ff phase/{category}-{number} -m "feat(phase-XX): Description"
+git branch -d phase/{category}-{number}
+
+# 4. Sync ALL worktree home branches to main (REQUIRED — prevents future merge conflicts)
+# Always use git -C — never git checkout a branch that lives in another worktree
+git -C /Users/proxikal/dev/projects/atlas-dev rebase main
+git -C /Users/proxikal/dev/projects/atlas-docs rebase main
+```
+
+**Weekly push (user says "push to GitHub"):**
+```bash
+# From atlas/ (main worktree) only
+git push origin main
+```
+
+**BANNED:**
+- Creating PRs for normal phase/doc work
+- Pushing on every phase
+- Working directly on `main` branch
+- Leaving uncommitted changes at session end
 
 **User involvement:** NONE. Agent handles entire Git lifecycle autonomously.
 
@@ -179,21 +202,20 @@ After GATE -1, declare one:
 
 ## Phase Handoff
 
-**CRITICAL:** Only hand off when ALL tests pass locally AND PR is queued.
+**CRITICAL:** Only hand off when ALL tests pass AND work is committed to local main.
 
 **Protocol:**
-1. All gates passed (tests, clippy, fmt, security scan)
+1. All gates passed (build, tests, clippy, fmt, security scan)
 2. STATUS.md updated
 3. Memory checked (GATE 7)
-4. Commit → Push → Create PR → Auto-merge (queued)
-5. Deliver summary — DO NOT WAIT for merge
+4. Commit → Merge to local main → Clean up feature branch
+5. Deliver summary
 
 **Required in summary:**
-- Status: "✅ PHASE COMPLETE - PR QUEUED"
-- PR URL (merge happens async)
+- Status: "✅ PHASE COMPLETE - COMMITTED TO LOCAL MAIN"
 - Final Stats (bullets)
 - **Memory:** Updated X / No updates needed (MANDATORY - see GATE 7)
-- Progress (X/131 phases)
+- Progress (X/~140 phases estimate — see STATUS.md block table)
 - Next phase
 
 ---
@@ -243,15 +265,45 @@ memory/
 
 ---
 
+## Scaffolding Protocol (trigger: "Scaffold Block N")
+
+Before writing any phase files for a block:
+
+1. **Read** `docs/internal/V03_PLAN.md` — block spec, acceptance criteria, dependency rules
+2. **Audit blast radius** — grep every file the block will touch, list them
+3. **Produce Block Kickoff doc** (one page):
+   ```
+   Block N Kickoff: {Theme}
+   Files affected: [verified list from codebase grep]
+   Architectural decisions required: [none | list with pointers to where they're locked]
+   Risks: [what could break outside this block]
+   Phase list: [title + ~5 word description each]
+   ```
+4. **Present kickoff doc to user** — wait for approval ("looks right, go")
+5. **Only then** scaffold all phase files for that block
+
+**Why the kickoff approval step:** Catches blast radius surprises before 30 phase files
+are written on wrong assumptions. Takes 2 minutes. Prevents v0.2-style dependency hell.
+
+**After block execution completes:**
+- Verify all block acceptance criteria from V03_PLAN.md
+- Update V03_PLAN.md with any "planned vs. actual" discoveries
+- Update auto-memory with new patterns/decisions found
+- Only then trigger next block scaffolding
+
+---
+
 ## Quick Reference
 
 **Project structure:**
 - `crates/atlas-runtime/src/` - Runtime core
 - `crates/atlas-runtime/src/stdlib/` - Standard library
-- `crates/atlas-runtime/src/value.rs` - Value enum (all types)
+- `crates/atlas-runtime/src/value.rs` - Value enum (all types) ← Block 1 blast radius center
 - `crates/atlas-runtime/tests/` - Integration tests
-- `phases/` - Work queue (~100 lines each)
-- `docs/specification/` - Language spec (grammar, syntax, types, runtime)
+- `phases/v0.3/` - v0.3 phase files (block subdirectories)
+- `docs/specification/` - Language spec
+- `docs/specification/memory-model.md` - Memory model (LOCKED) ← read before any value work
+- `docs/internal/V03_PLAN.md` - v0.3 block plan ← read before scaffolding
 
 **Key patterns:** See auto-memory `patterns.md`
 **Decisions:** See auto-memory `decisions/*.md` (split by domain)

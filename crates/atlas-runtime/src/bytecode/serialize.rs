@@ -123,6 +123,9 @@ pub(super) fn serialize_value(value: &Value, bytes: &mut Vec<u8>) {
             // They are runtime-only values
             panic!("Cannot serialize Closure values in bytecode constants");
         }
+        Value::SharedValue(_) => {
+            panic!("Cannot serialize SharedValue in bytecode constants");
+        }
     }
 }
 

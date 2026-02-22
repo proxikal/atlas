@@ -154,9 +154,9 @@ pub fn gzip_compress(
     let bytes = match data {
         Value::String(s) => s.as_ref().as_bytes().to_vec(),
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
-            let mut bytes = Vec::with_capacity(arr_guard.len());
-            for val in arr_guard.iter() {
+            let arr_slice = arr.as_slice();
+            let mut bytes = Vec::with_capacity(arr_slice.len());
+            for val in arr_slice.iter() {
                 match val {
                     Value::Number(n) => {
                         let byte = *n as i32;
@@ -204,9 +204,9 @@ pub fn gzip_decompress(compressed: &Value, span: Span) -> Result<Value, RuntimeE
     // Extract byte array
     let bytes = match compressed {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
-            let mut bytes = Vec::with_capacity(arr_guard.len());
-            for val in arr_guard.iter() {
+            let arr_slice = arr.as_slice();
+            let mut bytes = Vec::with_capacity(arr_slice.len());
+            for val in arr_slice.iter() {
                 match val {
                     Value::Number(n) => {
                         let byte = *n as i32;
@@ -254,9 +254,9 @@ pub fn gzip_decompress_string(compressed: &Value, span: Span) -> Result<Value, R
     // Extract byte array
     let bytes = match compressed {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
-            let mut bytes = Vec::with_capacity(arr_guard.len());
-            for val in arr_guard.iter() {
+            let arr_slice = arr.as_slice();
+            let mut bytes = Vec::with_capacity(arr_slice.len());
+            for val in arr_slice.iter() {
                 match val {
                     Value::Number(n) => {
                         let byte = *n as i32;
@@ -298,9 +298,9 @@ pub fn gzip_is_gzip(data: &Value, span: Span) -> Result<Value, RuntimeError> {
     // Extract byte array
     let bytes = match data {
         Value::Array(arr) => {
-            let arr_guard = arr.lock().unwrap();
-            let mut bytes = Vec::with_capacity(arr_guard.len().min(2));
-            for val in arr_guard.iter().take(2) {
+            let arr_slice = arr.as_slice();
+            let mut bytes = Vec::with_capacity(arr_slice.len().min(2));
+            for val in arr_slice.iter().take(2) {
                 match val {
                     Value::Number(n) => {
                         let byte = *n as i32;

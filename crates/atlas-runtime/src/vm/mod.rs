@@ -17,9 +17,9 @@ pub use profiler::Profiler;
 use crate::bytecode::{Bytecode, Opcode};
 use crate::ffi::{ExternFunction, LibraryLoader};
 use crate::span::Span;
-use crate::value::{RuntimeError, Value};
+use crate::value::{RuntimeError, Value, ValueArray, ValueHashMap, ValueHashSet};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 /// Result returned by [`VM::run_debuggable`].
 #[derive(Debug)]
@@ -76,7 +76,7 @@ impl VM {
             function_name: "<main>".to_string(),
             return_ip: 0,
             stack_base: 0,
-            local_count: 0,
+            local_count: bytecode.top_level_local_count,
             upvalues: std::sync::Arc::new(Vec::new()),
         };
 
@@ -1077,7 +1077,7 @@ impl VM {
                         elements.push(self.pop());
                     }
                     elements.reverse(); // Stack is LIFO, so reverse to get correct order
-                    self.push(Value::Array(Arc::new(Mutex::new(elements))));
+                    self.push(Value::Array(ValueArray::from_vec(elements)));
                 }
                 Opcode::GetIndex => {
                     let index_val = self.pop();
@@ -1094,15 +1094,14 @@ impl VM {
                                     });
                                 }
                                 let idx = index as usize;
-                                let borrowed = arr.lock().unwrap();
-                                if idx >= borrowed.len() {
+                                if idx >= arr.len() {
                                     return Err(RuntimeError::OutOfBounds {
                                         span: self
                                             .current_span()
                                             .unwrap_or_else(crate::span::Span::dummy),
                                     });
                                 }
-                                self.push(borrowed[idx].clone());
+                                self.push(arr[idx].clone());
                             } else {
                                 return Err(RuntimeError::InvalidIndex {
                                     span: self
@@ -1138,8 +1137,8 @@ impl VM {
                 Opcode::SetIndex => {
                     let value = self.pop();
                     let index = self.pop_number()?;
-                    let array = self.pop();
-                    match array {
+                    let mut array = self.pop();
+                    match &mut array {
                         Value::Array(arr) => {
                             if index.fract() != 0.0 || index < 0.0 {
                                 return Err(RuntimeError::InvalidIndex {
@@ -1149,18 +1148,15 @@ impl VM {
                                 });
                             }
                             let idx = index as usize;
-                            let mut borrowed = arr.lock().unwrap();
-                            if idx >= borrowed.len() {
+                            if idx >= arr.len() {
                                 return Err(RuntimeError::OutOfBounds {
                                     span: self
                                         .current_span()
                                         .unwrap_or_else(crate::span::Span::dummy),
                                 });
                             }
-                            borrowed[idx] = value.clone();
-                            // Push the assigned value back (assignment expressions return the value)
-                            drop(borrowed); // Release the borrow before pushing
-                            self.push(value);
+                            // CoW: set triggers Arc::make_mut if arr is shared
+                            arr.set(idx, value);
                         }
                         _ => {
                             return Err(RuntimeError::TypeError {
@@ -1169,6 +1165,9 @@ impl VM {
                             })
                         }
                     }
+                    // Push the mutated array back — compiler emits SetLocal/SetGlobal to write it
+                    // back to the variable, then Pop removes it from the expression stack.
+                    self.push(array);
                 }
 
                 // ===== Stack Manipulation =====
@@ -1241,7 +1240,7 @@ impl VM {
                     let value = self.pop();
                     match value {
                         Value::Array(arr) => {
-                            let len = arr.lock().unwrap().len();
+                            let len = arr.len();
                             self.push(Value::Number(len as f64));
                         }
                         _ => {
@@ -1437,7 +1436,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "map() first argument must be array".to_string(),
@@ -1479,7 +1478,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "filter() first argument must be array".to_string(),
@@ -1530,7 +1529,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "reduce() first argument must be array".to_string(),
@@ -1570,7 +1569,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "forEach() first argument must be array".to_string(),
@@ -1608,7 +1607,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "find() first argument must be array".to_string(),
@@ -1656,7 +1655,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "findIndex() first argument must be array".to_string(),
@@ -1704,7 +1703,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "flatMap() first argument must be array".to_string(),
@@ -1728,7 +1727,7 @@ impl VM {
             let callback_result = self.vm_call_function_value(callback, vec![elem], span)?;
             match callback_result {
                 Value::Array(nested) => {
-                    result.extend(nested.lock().unwrap().clone());
+                    result.extend(nested.iter().cloned());
                 }
                 other => result.push(other),
             }
@@ -1750,7 +1749,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "some() first argument must be array".to_string(),
@@ -1798,7 +1797,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "every() first argument must be array".to_string(),
@@ -1846,7 +1845,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sort() first argument must be array".to_string(),
@@ -1907,7 +1906,7 @@ impl VM {
         }
 
         let arr = match &args[0] {
-            Value::Array(a) => a.lock().unwrap().clone(),
+            Value::Array(a) => a.iter().cloned().collect::<Vec<_>>(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "sortBy() first argument must be array".to_string(),
@@ -2135,7 +2134,7 @@ impl VM {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.lock().unwrap().entries(),
+            Value::HashMap(m) => m.inner().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapForEach() first argument must be HashMap".to_string(),
@@ -2174,7 +2173,7 @@ impl VM {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.lock().unwrap().entries(),
+            Value::HashMap(m) => m.inner().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapMap() first argument must be HashMap".to_string(),
@@ -2200,9 +2199,7 @@ impl VM {
             result_map.insert(key, new_value);
         }
 
-        Ok(Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(
-            result_map,
-        ))))
+        Ok(Value::HashMap(ValueHashMap::from_atlas(result_map)))
     }
 
     fn vm_intrinsic_hashmap_filter(
@@ -2218,7 +2215,7 @@ impl VM {
         }
 
         let map = match &args[0] {
-            Value::HashMap(m) => m.lock().unwrap().entries(),
+            Value::HashMap(m) => m.inner().entries(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashMapFilter() first argument must be HashMap".to_string(),
@@ -2258,9 +2255,7 @@ impl VM {
             }
         }
 
-        Ok(Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(
-            result_map,
-        ))))
+        Ok(Value::HashMap(ValueHashMap::from_atlas(result_map)))
     }
 
     fn vm_intrinsic_hashset_for_each(
@@ -2276,7 +2271,7 @@ impl VM {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.lock().unwrap().to_vec(),
+            Value::HashSet(s) => s.inner().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetForEach() first argument must be HashSet".to_string(),
@@ -2315,7 +2310,7 @@ impl VM {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.lock().unwrap().to_vec(),
+            Value::HashSet(s) => s.inner().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetMap() first argument must be HashSet".to_string(),
@@ -2357,7 +2352,7 @@ impl VM {
         }
 
         let set = match &args[0] {
-            Value::HashSet(s) => s.lock().unwrap().to_vec(),
+            Value::HashSet(s) => s.inner().to_vec(),
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: "hashSetFilter() first argument must be HashSet".to_string(),
@@ -2394,9 +2389,7 @@ impl VM {
             }
         }
 
-        Ok(Value::HashSet(std::sync::Arc::new(std::sync::Mutex::new(
-            result_set,
-        ))))
+        Ok(Value::HashSet(ValueHashSet::from_atlas(result_set)))
     }
 
     /// Regex intrinsic: Replace first match using callback (VM version)
@@ -2494,7 +2487,7 @@ impl VM {
                 );
             }
 
-            let match_value = Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
+            let match_value = Value::HashMap(ValueHashMap::from_atlas(match_map));
 
             // Call callback with match data
             let replacement_value =
@@ -2630,7 +2623,7 @@ impl VM {
                 );
             }
 
-            let match_value = Value::HashMap(std::sync::Arc::new(std::sync::Mutex::new(match_map)));
+            let match_value = Value::HashMap(ValueHashMap::from_atlas(match_map));
 
             // Call callback with match data
             let replacement_value =
@@ -2818,11 +2811,10 @@ mod tests {
     fn test_vm_array_literal() {
         let result = execute_source("[1, 2, 3];").unwrap();
         if let Some(Value::Array(arr)) = result {
-            let borrowed = arr.lock().unwrap();
-            assert_eq!(borrowed.len(), 3);
-            assert_eq!(borrowed[0], Value::Number(1.0));
-            assert_eq!(borrowed[1], Value::Number(2.0));
-            assert_eq!(borrowed[2], Value::Number(3.0));
+            assert_eq!(arr.len(), 3);
+            assert_eq!(arr[0], Value::Number(1.0));
+            assert_eq!(arr[1], Value::Number(2.0));
+            assert_eq!(arr[2], Value::Number(3.0));
         } else {
             panic!("Expected array result");
         }

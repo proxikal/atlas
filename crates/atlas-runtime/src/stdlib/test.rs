@@ -86,13 +86,13 @@ fn values_deep_equal(a: &Value, b: &Value) -> bool {
         (Value::Bool(x), Value::Bool(y)) => x == y,
         (Value::Null, Value::Null) => true,
         (Value::Array(x), Value::Array(y)) => {
-            let xg = x.lock().unwrap();
-            let yg = y.lock().unwrap();
-            if xg.len() != yg.len() {
+            let xs = x.as_slice();
+            let ys = y.as_slice();
+            if xs.len() != ys.len() {
                 return false;
             }
-            xg.iter()
-                .zip(yg.iter())
+            xs.iter()
+                .zip(ys.iter())
                 .all(|(a, b)| values_deep_equal(a, b))
         }
         (Value::Option(x), Value::Option(y)) => match (x, y) {
@@ -113,8 +113,7 @@ fn values_deep_equal(a: &Value, b: &Value) -> bool {
 fn display(v: &Value) -> String {
     match v {
         Value::Array(arr) => {
-            let g = arr.lock().unwrap();
-            let items: Vec<String> = g.iter().map(display).collect();
+            let items: Vec<String> = arr.as_slice().iter().map(display).collect();
             format!("[{}]", items.join(", "))
         }
         Value::Option(opt) => match opt {
@@ -321,11 +320,7 @@ pub fn assert_contains(args: &[Value], span: Span) -> Result<Value, RuntimeError
     };
     let needle = &args[1];
 
-    let found = arr
-        .lock()
-        .unwrap()
-        .iter()
-        .any(|v| values_deep_equal(v, needle));
+    let found = arr.as_slice().iter().any(|v| values_deep_equal(v, needle));
 
     if !found {
         return Err(assertion_error(
@@ -344,7 +339,7 @@ pub fn assert_empty(args: &[Value], span: Span) -> Result<Value, RuntimeError> {
 
     match &args[0] {
         Value::Array(arr) => {
-            let len = arr.lock().unwrap().len();
+            let len = arr.len();
             if len != 0 {
                 return Err(assertion_error(
                     format!("assertEmpty: expected empty array, got length {}", len),
@@ -383,7 +378,7 @@ pub fn assert_length(args: &[Value], span: Span) -> Result<Value, RuntimeError> 
         other => return Err(type_error("number", other.type_name(), span)),
     };
 
-    let actual_len = arr.lock().unwrap().len();
+    let actual_len = arr.len();
     if actual_len != expected_len {
         return Err(assertion_error(
             format!(
