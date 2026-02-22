@@ -3551,20 +3551,28 @@ use atlas_runtime::vm::VM;
 
 /// Run code through both interpreter and VM, assert identical results
 fn assert_parity(source: &str) {
-    // Run interpreter
+    // Run interpreter (with binder + typechecker for type-tag resolution)
     let mut lexer = Lexer::new(source);
     let (tokens, _) = lexer.tokenize();
     let mut parser = Parser::new(tokens);
     let (program, _) = parser.parse();
+    let mut binder = Binder::new();
+    let (mut symbol_table, _) = binder.bind(&program);
+    let mut typechecker = TypeChecker::new(&mut symbol_table);
+    let _ = typechecker.check(&program);
 
     let mut interp = Interpreter::new();
     let interp_result = interp.eval(&program, &SecurityContext::allow_all());
 
-    // Run VM
+    // Run VM (with binder + typechecker so compiler has type tags)
     let mut lexer2 = Lexer::new(source);
     let (tokens2, _) = lexer2.tokenize();
     let mut parser2 = Parser::new(tokens2);
     let (program2, _) = parser2.parse();
+    let mut binder2 = Binder::new();
+    let (mut symbol_table2, _) = binder2.bind(&program2);
+    let mut typechecker2 = TypeChecker::new(&mut symbol_table2);
+    let _ = typechecker2.check(&program2);
 
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&program2).expect("compilation failed");
@@ -3693,6 +3701,135 @@ fn test_parity_arrays(#[case] code: &str) {
 #[case(r#"toUpperCase("hello");"#)]
 #[case(r#"toLowerCase("WORLD");"#)]
 fn test_parity_strings(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// ============================================================================
+// Phase 19: Interpreter/VM Parity — Array & Collection Operations
+// ============================================================================
+
+// Array: index read
+#[rstest]
+#[case("let arr: number[] = [10, 20, 30]; arr[1];")]
+#[case("let arr: number[] = [10, 20, 30]; arr[0];")]
+#[case("let arr: number[] = [10, 20, 30]; arr[2];")]
+fn test_parity_array_index_read(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: length
+#[rstest]
+#[case("let arr: number[] = [1, 2, 3]; len(arr);")]
+#[case("let arr: number[] = []; len(arr);")]
+#[case("let arr: number[] = [1, 2, 3]; arr.len();")]
+fn test_parity_array_length(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: push (CoW — original unaffected)
+#[rstest]
+#[case("var a: array = [1, 2]; var b: array = a; b.push(3); len(a);")]
+#[case("var a: array = [1]; a.push(2); a.push(3); len(a);")]
+fn test_parity_array_push_cow(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: pop (CoW — pops from receiver, returns length)
+#[rstest]
+#[case("var a: array = [1, 2, 3]; a.pop(); len(a);")]
+#[case("var a: array = [1, 2, 3]; var b: array = a; a.pop(); len(b);")]
+fn test_parity_array_pop(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: sort (returns new sorted array, receiver unchanged)
+#[rstest]
+#[case("var a: array = [3, 1, 2]; let s = a.sort(); s[0];")]
+#[case("var a: array = [3, 1, 2]; let s = a.sort(); a[0];")]
+fn test_parity_array_sort(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: concat via + operator
+#[rstest]
+#[case("let a: number[] = [1, 2]; let b: number[] = [3, 4]; let c = a + b; len(c);")]
+#[case("let a: number[] = [1, 2]; let b: number[] = [3, 4]; let c = a + b; c[0];")]
+fn test_parity_array_concat(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: for-each (sum over elements)
+#[rstest]
+#[case("var sum: number = 0; for x in [1, 2, 3] { sum = sum + x; } sum;")]
+#[case("var count: number = 0; for _x in [10, 20, 30] { count = count + 1; } count;")]
+fn test_parity_array_foreach(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Array: map/filter with closures — both engines error (acceptable parity until Block 4)
+// These are included so parity is verified even for unsupported operations.
+#[rstest]
+#[case("let a: number[] = [1, 2, 3]; map(a, fn(x: number) -> number { return x * 2; });")]
+#[case("let a: number[] = [1, 2, 3, 4]; filter(a, fn(x: number) -> bool { return x > 2; });")]
+fn test_parity_array_map_filter_both_error(#[case] code: &str) {
+    assert_parity(code); // Both engines must agree (both succeed or both fail)
+}
+
+// Map (HashMap): get
+#[rstest]
+#[case("let m: HashMap = hashMapNew(); hashMapPut(m, \"a\", 1); unwrap(hashMapGet(m, \"a\"));")]
+#[case("let m: HashMap = hashMapNew(); hashMapPut(m, \"x\", 42); unwrap(hashMapGet(m, \"x\"));")]
+fn test_parity_hashmap_get(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Map (HashMap): set with CoW — original unaffected after copy
+#[rstest]
+#[case("var m: HashMap = hashMapNew(); hashMapPut(m, \"a\", 1); var n: HashMap = m; hashMapPut(n, \"b\", 2); hashMapSize(m);")]
+fn test_parity_hashmap_set_cow(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Map (HashMap): keys count
+#[rstest]
+#[case("let m: HashMap = hashMapNew(); hashMapPut(m, \"a\", 1); hashMapPut(m, \"b\", 2); hashMapSize(m);")]
+fn test_parity_hashmap_keys(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Map (HashMap): remove (delete a key)
+#[rstest]
+#[case("let m: HashMap = hashMapNew(); hashMapPut(m, \"a\", 1); hashMapPut(m, \"b\", 2); hashMapRemove(m, \"a\"); hashMapSize(m);")]
+fn test_parity_hashmap_remove(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Queue: enqueue/dequeue/size
+#[rstest]
+#[case("let q: Queue = queueNew(); queueEnqueue(q, 1); queueEnqueue(q, 2); queueEnqueue(q, 3); queueSize(q);")]
+#[case("let q: Queue = queueNew(); queueEnqueue(q, 10); queueEnqueue(q, 20); unwrap(queueDequeue(q)); queueSize(q);")]
+#[case("let q: Queue = queueNew(); queueEnqueue(q, 42); unwrap(queueDequeue(q));")]
+fn test_parity_queue_operations(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// Stack: push/pop/size
+#[rstest]
+#[case(
+    "let s: Stack = stackNew(); stackPush(s, 1); stackPush(s, 2); stackPush(s, 3); stackSize(s);"
+)]
+#[case("let s: Stack = stackNew(); stackPush(s, 10); stackPush(s, 20); unwrap(stackPop(s)); stackSize(s);")]
+#[case("let s: Stack = stackNew(); stackPush(s, 99); unwrap(stackPop(s));")]
+fn test_parity_stack_operations(#[case] code: &str) {
+    assert_parity(code);
+}
+
+// CoW semantics: identical behavior in both engines
+#[rstest]
+#[case("let a: number[] = [1, 2, 3]; let b: number[] = a; a[0] = 99; b[0];")]
+#[case("var a: array = [1, 2]; var b: array = a; b.push(9); len(a);")]
+#[case("let a: number[] = [1, 2, 3]; let b: number[] = a; b[2] = 100; a[2];")]
+fn test_parity_cow_semantics(#[case] code: &str) {
     assert_parity(code);
 }
 
