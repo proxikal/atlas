@@ -100,11 +100,13 @@ Read `git worktree list` output from Step 1. For each other worktree:
 ## Step 5: Branch Setup
 
 ```bash
-git rebase main                           # Sync home branch to local main (NOT origin/main)
-git checkout -b phase/{category}-{number} # Create feature branch for this session's work
+git checkout main && git pull origin main  # Sync local main from remote
+git checkout -b phase/{category}-{number}  # Create feature branch for this session's work
 ```
 
 If resuming an existing feature branch (from Step 1 State 2): skip branch creation, continue on existing branch.
+
+**Home branches** (`worktree/dev`, `worktree/docs`) are for navigation only — all work happens on feature branches.
 
 ---
 
