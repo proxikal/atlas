@@ -33,6 +33,24 @@ pub(super) fn serialize_value(value: &Value, bytes: &mut Vec<u8>) {
             bytes.push(func.arity as u8);
             // Serialize bytecode offset
             bytes.extend_from_slice(&(func.bytecode_offset as u32).to_be_bytes());
+            // Serialize param_ownership: count (1 byte) + each annotation (1 byte)
+            // None=0, Own=1, Borrow=2, Shared=3
+            bytes.push(func.param_ownership.len() as u8);
+            for ann in &func.param_ownership {
+                bytes.push(match ann {
+                    None => 0,
+                    Some(crate::ast::OwnershipAnnotation::Own) => 1,
+                    Some(crate::ast::OwnershipAnnotation::Borrow) => 2,
+                    Some(crate::ast::OwnershipAnnotation::Shared) => 3,
+                });
+            }
+            // Serialize return_ownership (1 byte)
+            bytes.push(match &func.return_ownership {
+                None => 0,
+                Some(crate::ast::OwnershipAnnotation::Own) => 1,
+                Some(crate::ast::OwnershipAnnotation::Borrow) => 2,
+                Some(crate::ast::OwnershipAnnotation::Shared) => 3,
+            });
         }
         Value::Builtin(name) => {
             bytes.push(0x05); // Type tag for Builtin
@@ -168,7 +186,8 @@ pub(super) fn deserialize_value(bytes: &[u8]) -> Result<(Value, usize), String> 
                 return Err("Truncated function value".to_string());
             }
             let name_len = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
-            if bytes.len() < 5 + name_len + 1 + 4 {
+            // Header: 4 (name_len) + name + 1 (arity) + 4 (offset) + 1 (param count) + 1 (return)
+            if bytes.len() < 5 + name_len + 1 + 4 + 1 + 1 {
                 return Err("Truncated function data".to_string());
             }
             let name = String::from_utf8(bytes[5..5 + name_len].to_vec())
@@ -180,14 +199,41 @@ pub(super) fn deserialize_value(bytes: &[u8]) -> Result<(Value, usize), String> 
                 bytes[8 + name_len],
                 bytes[9 + name_len],
             ]) as usize;
+            // Deserialize param_ownership
+            let param_count = bytes[10 + name_len] as usize;
+            if bytes.len() < 11 + name_len + param_count + 1 {
+                return Err("Truncated function ownership data".to_string());
+            }
+            let param_ownership: Vec<Option<crate::ast::OwnershipAnnotation>> = bytes
+                [11 + name_len..11 + name_len + param_count]
+                .iter()
+                .map(|&b| match b {
+                    0 => None,
+                    1 => Some(crate::ast::OwnershipAnnotation::Own),
+                    2 => Some(crate::ast::OwnershipAnnotation::Borrow),
+                    3 => Some(crate::ast::OwnershipAnnotation::Shared),
+                    _ => None, // Unknown tag: treat as unannotated
+                })
+                .collect();
+            // Deserialize return_ownership
+            let return_ownership = match bytes[11 + name_len + param_count] {
+                0 => None,
+                1 => Some(crate::ast::OwnershipAnnotation::Own),
+                2 => Some(crate::ast::OwnershipAnnotation::Borrow),
+                3 => Some(crate::ast::OwnershipAnnotation::Shared),
+                _ => None,
+            };
+            let total_consumed = 11 + name_len + param_count + 1;
             Ok((
                 Value::Function(crate::value::FunctionRef {
                     name,
                     arity,
                     bytecode_offset: offset,
-                    local_count: 0, // Deserialized from old format, will be set correctly on recompile
+                    local_count: 0, // Not serialized; set on recompile
+                    param_ownership,
+                    return_ownership,
                 }),
-                10 + name_len,
+                total_consumed,
             ))
         }
         0x05 => {

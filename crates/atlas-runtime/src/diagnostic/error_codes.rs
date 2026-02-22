@@ -49,6 +49,9 @@ pub const CONSTANT_CONDITION: &str = "AT2006";
 pub const UNNECESSARY_ANNOTATION: &str = "AT2007";
 pub const UNUSED_IMPORT: &str = "AT2008";
 pub const DEPRECATED_TYPE_ALIAS: &str = "AT2009";
+pub const OWN_ON_PRIMITIVE: &str = "AT2010";
+pub const BORROW_ON_SHARED: &str = "AT2011";
+pub const BORROW_TO_OWN: &str = "AT2012";
 
 // AT3xxx - Semantic and Type Checking Errors
 pub const TYPE_ERROR: &str = "AT3001";
@@ -67,6 +70,7 @@ pub const UNKNOWN_CONSTRUCTOR: &str = "AT3024";
 pub const UNSUPPORTED_PATTERN_TYPE: &str = "AT3025";
 pub const ARRAY_PATTERN_TYPE_MISMATCH: &str = "AT3026";
 pub const NON_EXHAUSTIVE_MATCH: &str = "AT3027";
+pub const NON_SHARED_TO_SHARED: &str = "AT3028";
 
 // AT5xxx - Module System Errors
 pub const INVALID_MODULE_PATH: &str = "AT5001";
@@ -281,6 +285,21 @@ pub static ERROR_CODES: &[ErrorCodeInfo] = &[
         description: "Deprecated type alias",
         help: Some("Use the recommended replacement instead of the deprecated alias."),
     },
+    ErrorCodeInfo {
+        code: "AT2010",
+        description: "`own` annotation on primitive type has no effect",
+        help: Some("Primitive types (number, bool, string) are always copied. The `own` annotation is ignored."),
+    },
+    ErrorCodeInfo {
+        code: "AT2011",
+        description: "`borrow` annotation on `shared<T>` type is redundant",
+        help: Some("`shared<T>` already has reference semantics. The `borrow` annotation has no additional effect."),
+    },
+    ErrorCodeInfo {
+        code: "AT2012",
+        description: "Passing borrowed value to `own` parameter — ownership cannot transfer",
+        help: Some("A `borrow` parameter cannot give up ownership. Pass an owned value instead."),
+    },
     // === AT3xxx: Semantic/Type Checking Errors ===
     ErrorCodeInfo {
         code: "AT3001",
@@ -361,6 +380,11 @@ pub static ERROR_CODES: &[ErrorCodeInfo] = &[
         code: "AT3027",
         description: "Non-exhaustive match",
         help: Some("Add a wildcard arm (_) or cover all possible cases."),
+    },
+    ErrorCodeInfo {
+        code: "AT3028",
+        description: "Passing non-`shared<T>` value to `shared` parameter",
+        help: Some("Wrap the value in a shared reference before passing it to a `shared` parameter."),
     },
     // === AT5xxx: Module System Errors ===
     ErrorCodeInfo {

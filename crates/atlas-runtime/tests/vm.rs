@@ -4997,3 +4997,84 @@ fn test_vm_value_semantics_regression_three_way_copy() {
     );
     assert_eq!(result, Ok("Number(3)".to_string()));
 }
+
+// ============================================================================
+// Phase 10: Compiler ownership metadata in FunctionRef
+// ============================================================================
+
+/// Helper: compile source and extract the FunctionRef for the named function from constants.
+fn find_function_ref(
+    bytecode: &atlas_runtime::bytecode::Bytecode,
+    name: &str,
+) -> atlas_runtime::value::FunctionRef {
+    for constant in &bytecode.constants {
+        if let atlas_runtime::value::Value::Function(f) = constant {
+            if f.name == name {
+                return f.clone();
+            }
+        }
+    }
+    panic!("Function '{}' not found in bytecode constants", name);
+}
+
+/// Compiling a function with an `own` param produces FunctionRef with param_ownership[0] = Some(Own).
+#[test]
+fn test_compiler_emits_own_annotation() {
+    use atlas_runtime::ast::OwnershipAnnotation;
+    let bc = compile("fn process(own data: number[]) -> void { }");
+    let func = find_function_ref(&bc, "process");
+    assert_eq!(func.param_ownership.len(), 1);
+    assert_eq!(func.param_ownership[0], Some(OwnershipAnnotation::Own));
+    assert_eq!(func.return_ownership, None);
+}
+
+/// Compiling a function with mixed annotations produces correct per-param ownership.
+#[test]
+fn test_compiler_emits_mixed_annotations() {
+    use atlas_runtime::ast::OwnershipAnnotation;
+    let bc = compile("fn f(own a: number, borrow b: string, c: bool) -> void { }");
+    let func = find_function_ref(&bc, "f");
+    assert_eq!(func.param_ownership.len(), 3);
+    assert_eq!(func.param_ownership[0], Some(OwnershipAnnotation::Own));
+    assert_eq!(func.param_ownership[1], Some(OwnershipAnnotation::Borrow));
+    assert_eq!(func.param_ownership[2], None);
+    assert_eq!(func.return_ownership, None);
+}
+
+/// Compiling an unannotated function produces param_ownership: [None].
+#[test]
+fn test_compiler_unannotated_function() {
+    let bc = compile("fn f(x: number) -> number { return x; }");
+    let func = find_function_ref(&bc, "f");
+    assert_eq!(func.param_ownership.len(), 1);
+    assert_eq!(func.param_ownership[0], None);
+    assert_eq!(func.return_ownership, None);
+}
+
+/// Bytecode serialize → deserialize round-trips ownership annotations correctly.
+#[test]
+fn test_bytecode_round_trips_ownership() {
+    use atlas_runtime::ast::OwnershipAnnotation;
+    let bc = compile("fn consume(own data: number[], borrow key: string) -> void { }");
+    let func_before = find_function_ref(&bc, "consume");
+
+    // Serialize and deserialize
+    let bytes = bc.to_bytes();
+    let bc2 =
+        atlas_runtime::bytecode::Bytecode::from_bytes(&bytes).expect("Deserialization failed");
+    let func_after = find_function_ref(&bc2, "consume");
+
+    assert_eq!(func_after.param_ownership.len(), 2);
+    assert_eq!(
+        func_after.param_ownership[0],
+        Some(OwnershipAnnotation::Own)
+    );
+    assert_eq!(
+        func_after.param_ownership[1],
+        Some(OwnershipAnnotation::Borrow)
+    );
+    assert_eq!(func_after.return_ownership, None);
+    assert_eq!(func_after.name, func_before.name);
+    assert_eq!(func_after.arity, func_before.arity);
+    assert_eq!(func_after.bytecode_offset, func_before.bytecode_offset);
+}

@@ -2552,3 +2552,66 @@ fn test_parse_ownership_annotation_error_no_identifier() {
         "expected parse error for 'own' without identifier"
     );
 }
+
+// ============================================================================
+// Parser Return Type Ownership Annotation Tests (Phase 04 — Block 2)
+// ============================================================================
+
+fn parse_fn_decl(src: &str) -> FunctionDecl {
+    let mut lexer = Lexer::new(src);
+    let (tokens, _) = lexer.tokenize();
+    let mut parser = Parser::new(tokens);
+    let (program, diags) = parser.parse();
+    let errors: Vec<_> = diags
+        .iter()
+        .filter(|d| d.level == DiagnosticLevel::Error)
+        .collect();
+    assert!(errors.is_empty(), "parse errors: {errors:?}");
+    match program
+        .items
+        .into_iter()
+        .next()
+        .expect("expected a function item")
+    {
+        atlas_runtime::ast::Item::Function(f) => f,
+        other => panic!("expected function, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_parse_own_return_type() {
+    let decl = parse_fn_decl("fn allocate(size: number) -> own number { return 0; }");
+    assert_eq!(decl.return_ownership, Some(OwnershipAnnotation::Own));
+    assert!(matches!(decl.return_type, TypeRef::Named(ref n, _) if n == "number"));
+}
+
+#[test]
+fn test_parse_borrow_return_type() {
+    let decl = parse_fn_decl("fn peek(borrow arr: number) -> borrow number { return arr; }");
+    assert_eq!(decl.return_ownership, Some(OwnershipAnnotation::Borrow));
+    assert!(matches!(decl.return_type, TypeRef::Named(ref n, _) if n == "number"));
+}
+
+#[test]
+fn test_parse_unannotated_return_type_unchanged() {
+    let decl = parse_fn_decl("fn f() -> number { return 1; }");
+    assert_eq!(decl.return_ownership, None);
+    assert!(matches!(decl.return_type, TypeRef::Named(ref n, _) if n == "number"));
+}
+
+#[test]
+fn test_parse_shared_return_type_is_error() {
+    let src = "fn bad() -> shared number { return 0; }";
+    let mut lexer = Lexer::new(src);
+    let (tokens, _) = lexer.tokenize();
+    let mut parser = Parser::new(tokens);
+    let (_, diags) = parser.parse();
+    let errors: Vec<_> = diags
+        .iter()
+        .filter(|d| d.level == DiagnosticLevel::Error)
+        .collect();
+    assert!(
+        !errors.is_empty(),
+        "expected parse error for `shared` in return annotation position"
+    );
+}

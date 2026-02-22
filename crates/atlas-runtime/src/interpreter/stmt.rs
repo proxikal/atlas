@@ -31,6 +31,8 @@ impl Interpreter {
                     arity: func.params.len(),
                     bytecode_offset: 0, // Not used in interpreter
                     local_count: 0,     // Not used in interpreter
+                    param_ownership: vec![],
+                    return_ownership: None,
                 });
 
                 // Store in current scope (functions are immutable bindings)

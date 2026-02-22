@@ -17,7 +17,7 @@ use crate::ffi::{CallbackHandle, ExternFunction, LibraryLoader};
 use crate::module_loader::ModuleLoader;
 use crate::resolver::ModuleResolver;
 use crate::value::{FunctionRef, RuntimeError, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -44,6 +44,10 @@ pub struct Interpreter {
     pub(super) globals: HashMap<String, (Value, bool)>,
     /// Local scopes (stack of environments) - each entry is (value, is_mutable)
     pub(super) locals: Vec<HashMap<String, (Value, bool)>>,
+    /// Consumed bindings per scope level (parallel to `locals`).
+    /// A binding is consumed when passed to an `own` parameter.
+    /// Reading a consumed binding is a runtime error in debug mode.
+    pub(super) consumed_locals: Vec<HashSet<String>>,
     /// User-defined function bodies (accessed via Value::Function references)
     pub(super) function_bodies: HashMap<String, UserFunction>,
     /// Current control flow state
@@ -78,6 +82,7 @@ impl Interpreter {
         let mut interpreter = Self {
             globals: HashMap::new(),
             locals: vec![HashMap::new()],
+            consumed_locals: vec![HashSet::new()],
             function_bodies: HashMap::new(),
             control_flow: ControlFlow::None,
             monomorphizer: crate::typechecker::generics::Monomorphizer::new(),
@@ -192,6 +197,8 @@ impl Interpreter {
                         arity: func.params.len(),
                         bytecode_offset: 0, // Not used in interpreter
                         local_count: 0,     // Not used in interpreter
+                        param_ownership: vec![],
+                        return_ownership: None,
                     });
                     self.globals
                         .insert(func.name.name.clone(), (func_value, false));
@@ -231,6 +238,8 @@ impl Interpreter {
                                 arity: func.params.len(),
                                 bytecode_offset: 0,
                                 local_count: 0,
+                                param_ownership: vec![],
+                                return_ownership: None,
                             });
                             self.globals
                                 .insert(func.name.name.clone(), (func_value, false));
@@ -298,6 +307,8 @@ impl Interpreter {
                         arity: extern_decl.params.len(),
                         bytecode_offset: 0, // Not used for extern functions
                         local_count: 0,     // Not used for extern functions
+                        param_ownership: vec![],
+                        return_ownership: None,
                     });
                     self.globals
                         .insert(extern_decl.name.clone(), (func_value, false));
@@ -336,8 +347,19 @@ impl Interpreter {
         span: crate::span::Span,
     ) -> Result<Value, RuntimeError> {
         // Check locals (innermost to outermost)
-        for scope in self.locals.iter().rev() {
-            if let Some((value, _mutable)) = scope.get(name) {
+        for i in (0..self.locals.len()).rev() {
+            if let Some((value, _mutable)) = self.locals[i].get(name) {
+                // In debug mode, reject reads of consumed (moved) bindings.
+                #[cfg(debug_assertions)]
+                if self.consumed_locals[i].contains(name) {
+                    return Err(RuntimeError::TypeError {
+                        msg: format!(
+                            "use of moved value: '{}' was passed to 'own' parameter and is no longer valid",
+                            name
+                        ),
+                        span,
+                    });
+                }
                 return Ok(value.clone());
             }
         }
@@ -542,11 +564,30 @@ impl Interpreter {
     /// Push a new scope
     pub(super) fn push_scope(&mut self) {
         self.locals.push(HashMap::new());
+        self.consumed_locals.push(HashSet::new());
     }
 
     /// Pop the current scope
     pub(super) fn pop_scope(&mut self) {
         self.locals.pop();
+        self.consumed_locals.pop();
+    }
+
+    /// Mark a binding as consumed (moved into an `own` parameter).
+    ///
+    /// Searches locals from innermost to outermost to find the scope containing
+    /// `name`, then records it as consumed in that scope level.
+    ///
+    /// Only compiled and called in debug builds — release builds skip this entirely.
+    #[cfg(debug_assertions)]
+    pub(super) fn mark_consumed(&mut self, name: &str) {
+        for i in (0..self.locals.len()).rev() {
+            if self.locals[i].contains_key(name) {
+                self.consumed_locals[i].insert(name.to_string());
+                return;
+            }
+        }
+        // Globals: not tracked (own params are typically local bindings)
     }
 
     /// Define a global variable (for testing/REPL)
@@ -600,6 +641,7 @@ impl Interpreter {
             let mut temp_interp = Interpreter {
                 globals: globals.clone(),
                 locals: vec![HashMap::new()],
+                consumed_locals: vec![HashSet::new()],
                 function_bodies: function_bodies.clone(),
                 control_flow: ControlFlow::None,
                 monomorphizer: crate::typechecker::generics::Monomorphizer::new(),

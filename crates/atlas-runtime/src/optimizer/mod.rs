@@ -811,6 +811,8 @@ mod tests {
             arity: 0,
             bytecode_offset: 10, // old offset
             local_count: 0,
+            param_ownership: vec![],
+            return_ownership: None,
         })];
 
         fix_all_references(&mut decoded, &mut constants);

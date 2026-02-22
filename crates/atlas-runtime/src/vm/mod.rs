@@ -191,6 +191,8 @@ impl VM {
                     arity: extern_decl.params.len(),
                     bytecode_offset: 0, // Not used for extern functions
                     local_count: 0,     // Not used for extern functions
+                    param_ownership: vec![],
+                    return_ownership: None,
                 });
                 self.globals.insert(extern_decl.name.clone(), func_value);
             }
@@ -3062,6 +3064,8 @@ mod tests {
             arity: 0,
             bytecode_offset: function_offset,
             local_count: 1,
+            param_ownership: vec![],
+            return_ownership: None,
         };
         let func_idx = bytecode.add_constant(Value::Function(func_ref));
 
@@ -3107,6 +3111,8 @@ mod tests {
             arity: 2,
             bytecode_offset: function_offset,
             local_count: 1,
+            param_ownership: vec![],
+            return_ownership: None,
         };
         let func_idx = bytecode.add_constant(Value::Function(func_ref));
 
@@ -3158,6 +3164,8 @@ mod tests {
             arity: 2, // Expects 2 args
             bytecode_offset: 10,
             local_count: 2,
+            param_ownership: vec![],
+            return_ownership: None,
         };
         let func_idx = bytecode.add_constant(Value::Function(func_ref));
 
@@ -3221,6 +3229,8 @@ mod tests {
             arity: 0,
             bytecode_offset: f1_offset,
             local_count: 0,
+            param_ownership: vec![],
+            return_ownership: None,
         };
         let f1_idx = bytecode.add_constant(Value::Function(f1_ref));
 
@@ -3241,6 +3251,8 @@ mod tests {
             arity: 0,
             bytecode_offset: f2_offset,
             local_count: 1,
+            param_ownership: vec![],
+            return_ownership: None,
         };
         let f2_idx = bytecode.add_constant(Value::Function(f2_ref));
 

@@ -193,11 +193,27 @@ impl Parser {
         self.consume(TokenKind::RightParen, "Expected ')' after parameters")?;
 
         // Parse return type (required in AST)
-        let return_type = if self.match_token(TokenKind::Arrow) {
-            self.parse_type_ref()?
+        let (return_type, return_ownership) = if self.match_token(TokenKind::Arrow) {
+            // Peek for ownership annotation: `own` or `borrow` are valid; `shared` is an error
+            let ownership = if self.match_token(TokenKind::Own) {
+                Some(OwnershipAnnotation::Own)
+            } else if self.match_token(TokenKind::Borrow) {
+                Some(OwnershipAnnotation::Borrow)
+            } else if self.check(TokenKind::Shared) {
+                self.advance();
+                self.diagnostics.push(Diagnostic::error(
+                    "`shared` is not valid as a return ownership annotation; \
+                     callers receive a `shared<T>` typed value instead",
+                    self.peek().span,
+                ));
+                return Err(());
+            } else {
+                None
+            };
+            (self.parse_type_ref()?, ownership)
         } else {
             // Default to null type if not specified
-            TypeRef::Named("null".to_string(), Span::dummy())
+            (TypeRef::Named("null".to_string(), Span::dummy()), None)
         };
 
         // Optional type predicate: `-> bool is param: Type`
@@ -231,7 +247,7 @@ impl Parser {
             type_params,
             params,
             return_type,
-            return_ownership: None,
+            return_ownership,
             predicate,
             body,
             span: fn_span.merge(end_span),

@@ -1009,6 +1009,8 @@ mod tests {
             arity: 2,
             bytecode_offset: 100,
             local_count: 0,
+            param_ownership: vec![],
+            return_ownership: None,
         }));
 
         let bytes = bytecode.to_bytes();
@@ -1365,6 +1367,8 @@ mod tests {
             arity: 3,
             bytecode_offset: 42,
             local_count: 0,
+            param_ownership: vec![],
+            return_ownership: None,
         }));
 
         let bytes = bytecode.to_bytes();

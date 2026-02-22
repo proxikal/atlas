@@ -1396,6 +1396,8 @@ fn function_call_bytecode() -> Bytecode {
         arity: 0,
         bytecode_offset: fn_body_offset,
         local_count: 1,
+        param_ownership: vec![],
+        return_ownership: None,
     };
     let func_idx = bc.add_constant(Value::Function(func_ref));
     let val_idx = bc.add_constant(Value::Number(42.0));

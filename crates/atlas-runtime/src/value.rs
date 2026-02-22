@@ -471,6 +471,12 @@ pub struct FunctionRef {
     /// Total number of local variables (parameters + locals)
     /// Used by VM to properly allocate stack space
     pub local_count: usize,
+    /// Ownership annotation per parameter, in parameter order.
+    /// `None` = unannotated (value-type copy semantics).
+    /// Populated by the compiler; empty for builtins and stdlib functions.
+    pub param_ownership: Vec<Option<crate::ast::OwnershipAnnotation>>,
+    /// Ownership annotation on the return type, if any.
+    pub return_ownership: Option<crate::ast::OwnershipAnnotation>,
 }
 
 /// Closure reference — a function with a captured upvalue environment
@@ -821,6 +827,8 @@ mod tests {
                 arity: 0,
                 bytecode_offset: 0,
                 local_count: 0,
+                param_ownership: vec![],
+                return_ownership: None,
             })
             .type_name(),
             "function"
@@ -883,6 +891,8 @@ mod tests {
             arity: 2,
             bytecode_offset: 0,
             local_count: 0,
+            param_ownership: vec![],
+            return_ownership: None,
         });
         assert_eq!(func.to_string(), "<fn test>");
     }
@@ -968,18 +978,24 @@ mod tests {
             arity: 0,
             bytecode_offset: 0,
             local_count: 0,
+            param_ownership: vec![],
+            return_ownership: None,
         });
         let func2 = Value::Function(FunctionRef {
             name: "test".to_string(),
             arity: 1,
             bytecode_offset: 100,
             local_count: 0,
+            param_ownership: vec![],
+            return_ownership: None,
         });
         let func3 = Value::Function(FunctionRef {
             name: "other".to_string(),
             arity: 0,
             bytecode_offset: 0,
             local_count: 0,
+            param_ownership: vec![],
+            return_ownership: None,
         });
 
         assert_eq!(func1, func2); // Same name, different arity/offset

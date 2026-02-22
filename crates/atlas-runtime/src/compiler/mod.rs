@@ -201,6 +201,8 @@ impl Compiler {
             arity: func.params.len(),
             bytecode_offset: 0, // Placeholder - will be updated after Jump
             local_count: 0,     // Will be updated after compiling body
+            param_ownership: vec![],
+            return_ownership: None,
         };
         let placeholder_value = crate::value::Value::Function(placeholder_ref);
 
@@ -276,12 +278,14 @@ impl Compiler {
         self.scope_depth = old_scope;
         self.locals.truncate(old_locals_len);
 
-        // Update the FunctionRef in constants with accurate local_count
+        // Update the FunctionRef in constants with accurate local_count and ownership metadata
         let updated_ref = crate::value::FunctionRef {
             name: func.name.name.clone(),
             arity: func.params.len(),
             bytecode_offset: function_offset,
             local_count: total_local_count,
+            param_ownership: func.params.iter().map(|p| p.ownership.clone()).collect(),
+            return_ownership: func.return_ownership.clone(),
         };
         self.bytecode.constants[const_idx as usize] = crate::value::Value::Function(updated_ref);
 

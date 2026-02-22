@@ -85,6 +85,8 @@ impl Compiler {
             arity: func.params.len(),
             bytecode_offset: function_offset,
             local_count: total_local_count,
+            param_ownership: func.params.iter().map(|p| p.ownership.clone()).collect(),
+            return_ownership: func.return_ownership.clone(),
         };
         let const_idx = self
             .bytecode

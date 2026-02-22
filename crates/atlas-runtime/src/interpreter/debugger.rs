@@ -339,6 +339,8 @@ impl InterpreterDebuggerSession {
                         arity: func.params.len(),
                         bytecode_offset: 0,
                         local_count: 0,
+                        param_ownership: vec![],
+                        return_ownership: None,
                     });
                     self.interpreter
                         .globals

@@ -1,6 +1,7 @@
 //! Expression type checking
 
 use crate::ast::*;
+use crate::diagnostic::error_codes;
 use crate::diagnostic::Diagnostic;
 use crate::span::Span;
 use crate::typechecker::suggestions;
@@ -49,6 +50,44 @@ impl<'a> TypeChecker<'a> {
         params: &[Type],
         return_type: &Type,
     ) -> Type {
+        self.check_call_against_signature_inner(
+            call,
+            callee_type,
+            type_params,
+            params,
+            return_type,
+            &[],
+        )
+    }
+
+    fn check_call_against_signature_with_types(
+        &mut self,
+        call: &CallExpr,
+        callee_type: &Type,
+        type_params: &[TypeParamDef],
+        params: &[Type],
+        return_type: &Type,
+        pre_evaluated: &[Type],
+    ) -> Type {
+        self.check_call_against_signature_inner(
+            call,
+            callee_type,
+            type_params,
+            params,
+            return_type,
+            pre_evaluated,
+        )
+    }
+
+    fn check_call_against_signature_inner(
+        &mut self,
+        call: &CallExpr,
+        callee_type: &Type,
+        type_params: &[TypeParamDef],
+        params: &[Type],
+        return_type: &Type,
+        pre_evaluated: &[Type],
+    ) -> Type {
         // Check argument count
         if call.args.len() != params.len() {
             self.diagnostics.push(
@@ -76,9 +115,23 @@ impl<'a> TypeChecker<'a> {
             return self.check_call_with_inference(type_params, params, return_type, call);
         }
 
-        // Non-generic function - check argument types normally
+        // Non-generic function - check argument types normally.
+        // Use pre-evaluated types when available to avoid double-evaluation.
+        self.check_arg_types(call, params, pre_evaluated);
+
+        return_type.clone()
+    }
+
+    /// Check argument types against expected param types.
+    /// `pre_evaluated` may be empty (args evaluated fresh) or contain pre-evaluated types
+    /// (reuse to avoid double-evaluation and duplicate diagnostics).
+    fn check_arg_types(&mut self, call: &CallExpr, params: &[Type], pre_evaluated: &[Type]) {
         for (i, arg) in call.args.iter().enumerate() {
-            let arg_type = self.check_expr(arg);
+            let arg_type = if let Some(t) = pre_evaluated.get(i) {
+                t.clone()
+            } else {
+                self.check_expr(arg)
+            };
             if let Some(expected_type) = params.get(i) {
                 if !arg_type.is_assignable_to(expected_type)
                     && arg_type.normalized() != Type::Unknown
@@ -112,8 +165,78 @@ impl<'a> TypeChecker<'a> {
                 }
             }
         }
+    }
 
-        return_type.clone()
+    /// Check ownership constraints at a call site.
+    ///
+    /// Accepts pre-evaluated argument types to avoid double-evaluating expressions.
+    /// Validates:
+    /// - `own` param: warn if argument is a `borrow`-annotated param of the caller
+    /// - `shared` param: error if argument type is not `shared<T>`
+    /// - `borrow` param: always accepted, no diagnostic
+    fn check_call_ownership(&mut self, call: &CallExpr, callee_name: &str, arg_types: &[Type]) {
+        let ownerships = match self.fn_ownership_registry.get(callee_name) {
+            Some(entry) => entry.0.clone(),
+            None => return,
+        };
+        for (i, arg) in call.args.iter().enumerate() {
+            let param_ownership = match ownerships.get(i) {
+                Some(o) => o.clone(),
+                None => continue,
+            };
+            match param_ownership {
+                Some(OwnershipAnnotation::Own) => {
+                    // Warn if argument is a `borrow`-annotated parameter of the enclosing function
+                    if let Expr::Identifier(id) = arg {
+                        let caller_ownership = self
+                            .current_fn_param_ownerships
+                            .get(&id.name)
+                            .cloned()
+                            .flatten();
+                        if caller_ownership == Some(OwnershipAnnotation::Borrow) {
+                            self.diagnostics.push(
+                                Diagnostic::warning_with_code(
+                                    error_codes::BORROW_TO_OWN,
+                                    format!(
+                                        "passing borrowed parameter `{}` to `own` parameter — \
+                                         ownership cannot transfer",
+                                        id.name
+                                    ),
+                                    arg.span(),
+                                )
+                                .with_help("pass an owned value instead of a `borrow` parameter"),
+                            );
+                        }
+                    }
+                }
+                Some(OwnershipAnnotation::Shared) => {
+                    // Error if argument type is not `shared<T>` (use pre-evaluated type)
+                    if let Some(arg_type) = arg_types.get(i) {
+                        let is_shared =
+                            matches!(arg_type, Type::Generic { name, .. } if name == "shared");
+                        if !is_shared && *arg_type != Type::Unknown {
+                            self.diagnostics.push(
+                                Diagnostic::error_with_code(
+                                    error_codes::NON_SHARED_TO_SHARED,
+                                    format!(
+                                        "expected `shared<T>` value for `shared` parameter, \
+                                         found `{}`",
+                                        arg_type.display_name()
+                                    ),
+                                    arg.span(),
+                                )
+                                .with_help(
+                                    "wrap the value in a shared reference before passing it",
+                                ),
+                            );
+                        }
+                    }
+                }
+                Some(OwnershipAnnotation::Borrow) | None => {
+                    // borrow and unannotated params accept any value — no diagnostic
+                }
+            }
+        }
     }
 
     /// Check a binary expression
@@ -300,18 +423,39 @@ impl<'a> TypeChecker<'a> {
         let callee_type = self.check_expr(&call.callee);
         let callee_norm = callee_type.normalized();
 
+        // Extract callee name for ownership registry lookup (direct calls only)
+        let callee_name = if let Expr::Identifier(id) = call.callee.as_ref() {
+            Some(id.name.clone())
+        } else {
+            None
+        };
+
+        // Pre-evaluate arg types for ownership checking (avoids double-evaluation in check_expr
+        // for the `shared` param path). check_call_against_signature re-evaluates independently.
+        let arg_types_for_ownership: Vec<Type> = if callee_name.is_some() {
+            call.args.iter().map(|a| self.check_expr(a)).collect()
+        } else {
+            Vec::new()
+        };
+
         match &callee_norm {
             Type::Function {
                 type_params,
                 params,
                 return_type,
-            } => self.check_call_against_signature(
-                call,
-                &callee_type,
-                type_params,
-                params,
-                return_type,
-            ),
+            } => {
+                if let Some(ref name) = callee_name {
+                    self.check_call_ownership(call, name, &arg_types_for_ownership);
+                }
+                self.check_call_against_signature_with_types(
+                    call,
+                    &callee_type,
+                    type_params,
+                    params,
+                    return_type,
+                    &arg_types_for_ownership,
+                )
+            }
             Type::Union(members) => {
                 if members.is_empty() {
                     return Type::Unknown;
