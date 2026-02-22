@@ -1,0 +1,206 @@
+# CodeRabbit configuration for Atlas
+# AI-first Rust compiler — strict quality gates, no shortcuts, no partial implementations.
+# https://docs.coderabbit.ai/reference/configuration
+
+language: "en-US"
+early_access: false
+
+tone_instructions: >
+  Be direct and technical. No praise, no softening. If something violates Atlas quality
+  standards (stubs, TODOs, partial implementations, missing tests, unsafe without
+  justification), flag it as a blocking issue. Treat spec compliance as law.
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_instructions: >
+    Summarize: what changed, which crates/modules are affected, and whether this is
+    spec-compliant. Flag any deviations from Atlas philosophy (no MVP, complete
+    implementations only).
+  review_status: true
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  auto_apply_labels: false
+  poem: false
+
+  path_filters:
+    - "!target/**"
+    - "!**/*.lock"
+    - "!phases/**"
+    - "!.claude/**"
+
+  path_instructions:
+    - path: "crates/atlas-runtime/src/**"
+      instructions: >
+        This is the core runtime. Review for:
+        - Complete implementations only — no unimplemented!(), todo!(), or stub functions
+        - No TODOs or FIXMEs in committed code
+        - Interpreter and VM parity — both engines must produce identical output for all constructs
+        - Memory model compliance: CoW semantics, own/borrow/shared (DR-B01/B02)
+        - Type checker correctness — generics, usage tracking, trait bounds
+        - Error codes must be defined in diagnostic/error_codes.rs
+        - All public APIs must have tests
+
+    - path: "crates/atlas-runtime/src/typechecker/**"
+      instructions: >
+        Type checker code. Verify:
+        - Every new language construct has corresponding type checking
+        - Error messages are user-facing quality (clear, actionable)
+        - No silent failures — every unresolved type must produce a diagnostic
+        - Generics monomorphization is correct
+        - Trait resolution follows spec
+
+    - path: "crates/atlas-runtime/src/interpreter/**"
+      instructions: >
+        Interpreter engine. Must maintain 100% parity with VM output.
+        Flag any construct that is handled by the interpreter but not the VM, or vice versa.
+
+    - path: "crates/atlas-runtime/src/vm/**"
+      instructions: >
+        VM/bytecode engine. Must maintain 100% parity with interpreter output.
+        Flag any construct that is handled by the VM but not the interpreter, or vice versa.
+
+    - path: "crates/atlas-lsp/src/**"
+      instructions: >
+        LSP server. Verify:
+        - Completions, hover, and diagnostics are consistent with the type checker
+        - No panics on malformed input — LSP must be resilient
+        - Incremental sync is handled correctly
+
+    - path: "crates/atlas-jit/src/**"
+      instructions: >
+        JIT compiler. Verify output matches interpreter/VM for all tested constructs.
+        Flag any divergence as a parity violation.
+
+    - path: "tests/**"
+      instructions: >
+        Integration tests. Verify:
+        - Tests cover both interpreter and VM paths
+        - Snapshot tests use the correct format
+        - Error case tests include the expected error code
+        - No ignored/skipped tests without a documented reason
+
+    - path: "crates/*/src/**/*.rs"
+      instructions: >
+        Rust source. Enforce:
+        - No unimplemented!(), todo!(), unreachable!() without a justification comment
+        - No clippy suppressions (#[allow(...)]) without a justification comment
+        - unsafe blocks require a SAFETY comment explaining the invariant
+        - Errors must implement the Atlas diagnostic system, not raw panics
+
+    - path: "docs/specification/**"
+      instructions: >
+        Specification documents. These are law for Atlas. Verify:
+        - No ambiguous language that could be interpreted multiple ways
+        - Grammar definitions are self-consistent
+        - New constructs include: syntax, semantics, type rules, and error conditions
+        - Changes are backward-compatible unless explicitly marked as breaking
+
+    - path: "docs/**"
+      instructions: >
+        Documentation. Verify accuracy against current implementation.
+        Flag any claims that contradict actual codebase behavior.
+
+    - path: ".github/workflows/**"
+      instructions: >
+        CI configuration. Verify:
+        - All required checks are present (build, test, clippy, fmt, cargo-deny)
+        - No jobs are accidentally skipped on non-docs branches
+        - Docs-only PRs correctly skip Rust jobs via path filters
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "wip"
+      - "DO NOT MERGE"
+    base_branches:
+      - "main"
+
+  finishing_touches:
+    docstrings:
+      enabled: false  # Atlas uses inline comments, not docstrings on all items
+    unit_tests:
+      enabled: true
+
+  pre_merge_checks:
+    title_check:
+      mode: warning
+      requirements: >
+        Must follow Conventional Commits: feat/fix/ci/docs/refactor/test + colon + description.
+        Block phases use format: feat(block-NN/phase-NN): description.
+    description_check:
+      mode: warning
+    issue_assessment:
+      mode: warning
+    custom_checks:
+      - name: "No stub implementations"
+        mode: error
+        instructions: >
+          Fail if any Rust file contains unimplemented!(), todo!(), or a function body
+          that is a single `panic!()` call without a SAFETY/REASON comment. Atlas requires
+          complete implementations only.
+      - name: "No bare TODOs"
+        mode: error
+        instructions: >
+          Fail if any committed Rust source file contains // TODO or // FIXME without
+          an associated issue reference (e.g., // TODO(#123)).
+      - name: "Interpreter/VM parity"
+        mode: warning
+        instructions: >
+          Warn if a PR adds handling for a language construct in the interpreter
+          (atlas-runtime/src/interpreter/) but has no corresponding change in the VM
+          (atlas-runtime/src/vm/), or vice versa. Parity must be maintained.
+      - name: "Diagnostic error codes"
+        mode: warning
+        instructions: >
+          Warn if a PR introduces new user-facing error messages in the type checker
+          or parser without a corresponding entry in diagnostic/error_codes.rs.
+
+tools:
+  github-checks:
+    enabled: true
+    timeout_ms: 120000
+  semgrep:
+    enabled: true
+  shellcheck:
+    enabled: true
+  languagetool:
+    enabled: true
+    disabled_rules:
+      - "EN_QUOTES"
+      - "WHITESPACE_RULE"
+    level: picky
+  ast-grep:
+    enabled: true
+
+chat:
+  auto_reply: true
+  art: false
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CLAUDE.md"
+      - ".claude/rules/*.md"
+      - "CONTRIBUTING.md"
+      - "TESTING.md"
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local
