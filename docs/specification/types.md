@@ -93,7 +93,7 @@ g(5);  // 10
 ```
 
 ### Current Limitations
-- No anonymous function syntax (`fn(x) { ... }`)
+- No anonymous function syntax (`fn(x) { ... }`) — planned Block 4
 - All function values must be named functions
 - **Let-bound variables at top-level scope** are accessible from any named function — works in
   both interpreter and VM.
@@ -103,15 +103,12 @@ g(5);  // 10
   capture. The VM captures outer locals **by value at closure definition time**. The interpreter
   uses live dynamic scope lookup. For `let`-bound (immutable) outer variables, both engines
   produce identical results. For `var`-bound outer variables, the captured value reflects the
-  state at the time the inner function was defined — mutations to the outer `var` after the
-  inner function is defined are NOT visible through the captured upvalue in the VM. This is the
-  defined v0.2 behavior. Reference semantics are planned for v0.3.
+  state at the time the inner function was defined.
 - **Returned closures:** A named inner function returned as a value and called after its defining
   scope has exited can only access top-level globals. Outer function locals captured at definition
-  time (by value) are frozen in the upvalue slot — no further mutations from the outer scope are
-  reflected.
+  time (by value) are frozen in the upvalue slot.
 
-See `ROADMAP.md` for planned enhancements (Hindley-Milner, proper closures in v0.3).
+**See:** `docs/internal/V03_PLAN.md` Block 4 for full closure semantics roadmap.
 
 ---
 
@@ -231,11 +228,11 @@ let arr2: Array<number> = [1, 2, 3];  // Explicit generic form
 ### Current Limitations
 
 - No user-defined generic types (only built-in: Option, Result, Array)
-- No type parameter constraints/bounds
+- No type parameter constraints/bounds — planned Block 3 (trait system)
 - No variance (all type parameters invariant)
 - No higher-kinded types
 
-See `ROADMAP.md` for planned enhancements.
+**See:** `docs/internal/V03_PLAN.md` Block 3 for trait system and generic constraints.
 
 ---
 
@@ -328,12 +325,12 @@ match x {
 
 ### Current Limitations
 
-- No guard clauses (`pattern if condition`)
-- No OR patterns (`0 | 1 | 2`)
-- No rest patterns in arrays (`[first, ...rest]`)
-- No struct patterns (no user-defined structs)
+- No guard clauses (`pattern if condition`) — planned Block 9
+- No OR patterns (`0 | 1 | 2`) — planned Block 9
+- No rest patterns in arrays (`[first, ...rest]`) — planned Block 9
+- No struct patterns (no user-defined structs) — planned Block 3+
 
-See `ROADMAP.md` for planned enhancements.
+**See:** `docs/internal/V03_PLAN.md` Blocks 3 and 9.
 
 ---
 

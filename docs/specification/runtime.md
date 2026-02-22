@@ -20,23 +20,25 @@ Atlas runtime model defines how values are represented in memory, how execution 
 - `bool` - Boolean (true/false)
 - `null` - Explicit absence
 
-### Reference-Counted Values (Heap-allocated)
-- `string` - Arc<String> (immutable, shared, thread-safe)
-- `array` - Arc<Mutex<Vec<Value>>> (mutable, shared, thread-safe)
-- `function` - FunctionRef (name + arity + bytecode offset)
-- `json` - Arc<JsonValue> (immutable, shared, thread-safe)
-- `Option` - Option<Box<Value>> (Some/None)
-- `Result` - Result<Box<Value>, Box<Value>> (Ok/Err)
-- `HashMap` - Arc<Mutex<AtlasHashMap>> (key-value collection)
-- `HashSet` - Arc<Mutex<AtlasHashSet>> (unique value collection)
-- `Queue` - Arc<Mutex<AtlasQueue>> (FIFO collection)
-- `Stack` - Arc<Mutex<AtlasStack>> (LIFO collection)
-- `Regex` - Arc<regex::Regex> (compiled regex pattern)
-- `DateTime` - Arc<chrono::DateTime<Utc>> (UTC timestamp)
-- `HttpRequest` - Arc<HttpRequest> (HTTP request config)
-- `HttpResponse` - Arc<HttpResponse> (HTTP response data)
+### Value Types (Copy-on-Write heap-allocated)
+- `string` - Arc<String> (immutable, shared)
+- `array` - `ValueArray(Arc<Vec<Value>>)` — CoW via `Arc::make_mut`
+- `map` - `ValueHashMap(Arc<AtlasHashMap>)` — CoW via `Arc::make_mut`
+- `set` - `ValueHashSet(Arc<AtlasHashSet>)` — CoW via `Arc::make_mut`
+- `Queue` - `ValueQueue(Arc<VecDeque<Value>>)` — CoW via `Arc::make_mut`
+- `Stack` - `ValueStack(Arc<Vec<Value>>)` — CoW via `Arc::make_mut`
+- `Option` - `Option<Box<Value>>` (Some/None)
+- `Result` - `Result<Box<Value>, Box<Value>>` (Ok/Err)
+- `json` - `Arc<JsonValue>` (immutable, shared)
+- `Regex` - `Arc<regex::Regex>` (compiled regex pattern)
+- `DateTime` - `Arc<chrono::DateTime<Utc>>` (UTC timestamp)
+- `HttpRequest` / `HttpResponse` - `Arc<T>` (immutable after construction)
 
-**Note:** All heap-allocated values use `Arc<Mutex<>>` (not `Rc<RefCell<>>`), migrated in phase-18 for thread safety.
+### Reference Types (Explicit opt-in)
+- `shared<T>` - `Arc<Mutex<Value>>` — explicit shared mutable state
+- `function` - FunctionRef (name + arity + bytecode offset)
+
+**See:** `docs/specification/memory-model.md` for the full CoW/ownership model.
 
 ---
 
@@ -57,8 +59,8 @@ Atlas runtime model defines how values are represented in memory, how execution 
 ### Array Semantics
 - Homogeneous elements (all same type)
 - Mutable - element assignment supported
-- Reference-counted - arrays share backing storage
-- Equality is reference identity (not deep equality)
+- **Value semantics (CoW):** mutation does not affect aliased copies
+- **Structural equality:** arrays compare by content, not reference identity
 - Indexing: whole numbers only (fractional = runtime error)
 - Out-of-bounds: runtime error (`AT0006`)
 
@@ -249,11 +251,11 @@ print(item);  // Prints 100 (outer variable unchanged)
 - Can be returned from functions
 
 ### Current Limitations
-- No anonymous function syntax (`fn(x) { ... }`)
-- No closures (functions cannot capture outer scope variables)
-- Can reference globals only
+- No anonymous function syntax (`fn(x) { ... }`) — planned Block 4
+- Named inner functions capture outer locals by value at definition time (see `types.md`)
+- Full closure semantics (reference capture, mutation visibility) — planned Block 4
 
-See `ROADMAP.md` for planned enhancements.
+**See:** `docs/internal/V03_PLAN.md` Block 4.
 
 ### Calling Convention
 - Callee-saves (function responsible for preserving state)
@@ -318,15 +320,15 @@ str(value: number | bool | null) -> string
 
 ---
 
-## Current Limitations
+## v0.3 Roadmap (in progress)
 
-The following are not yet supported:
+The following are planned for v0.3 blocks:
 
-- **Closures:** Functions cannot capture outer scope variables
-- **Anonymous functions:** No lambda syntax
-- **async/await syntax:** Runtime infrastructure exists, language syntax pending
+- **Ownership annotations:** `own`, `borrow`, `shared` parameter syntax — Block 2
+- **Closures + anonymous functions:** Block 4 (depends on Block 3 trait system)
+- **async/await syntax:** Block 8 (runtime infrastructure exists, language syntax pending)
 
-See `ROADMAP.md` for planned enhancements.
+**See:** `docs/internal/V03_PLAN.md` for full block plan and dependencies.
 
 ---
 

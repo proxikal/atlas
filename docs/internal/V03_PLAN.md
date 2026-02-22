@@ -96,15 +96,15 @@ something from a different block, it belongs in a later block — not the curren
 - `src/stdlib/` — all 25 stdlib modules
 - `src/compiler/` — value type handling in codegen
 
-### Acceptance criteria (ALL required)
-- [ ] No `Arc<Mutex<Vec<Value>>>` in production code
-- [ ] No `Arc<Mutex<HashMap<...>>>` in production code
-- [ ] Array mutation does not affect aliased copies
-- [ ] Map mutation does not affect aliased copies
-- [ ] `shared<T>` wrapper exists and works
-- [ ] All existing tests pass (no regressions)
-- [ ] Both engines produce identical output for all value operations
-- [ ] No deadlock-class bugs possible (Arc::ptr_eq hacks gone)
+### Acceptance criteria (ALL required) ✅ COMPLETE (2026-02-21)
+- [x] No `Arc<Mutex<Vec<Value>>>` in production code
+- [x] No `Arc<Mutex<HashMap<...>>>` in production code
+- [x] Array mutation does not affect aliased copies
+- [x] Map mutation does not affect aliased copies
+- [x] `shared<T>` wrapper exists and works
+- [x] All existing tests pass (no regressions)
+- [x] Both engines produce identical output for all value operations
+- [x] No deadlock-class bugs possible (Arc::ptr_eq hacks gone)
 
 ---
 
