@@ -88,6 +88,8 @@ impl Parser {
             Ok(Item::TypeAlias(self.parse_type_alias(doc_comment)?))
         } else if self.check(TokenKind::Trait) {
             Ok(Item::Trait(self.parse_trait()?))
+        } else if self.check(TokenKind::Impl) {
+            Ok(Item::Impl(self.parse_impl_block()?))
         } else {
             Ok(Item::Statement(self.parse_statement()?))
         }
@@ -480,6 +482,118 @@ impl Parser {
             return_type,
             span: start_span.merge(end_span),
         })
+    }
+
+    // =========================================================================
+    // Impl block parsing (v0.3+)
+    // =========================================================================
+
+    /// Parse an impl block.
+    ///
+    /// Syntax: `impl TraitName for TypeName { fn method(...) -> T { body } }`
+    fn parse_impl_block(&mut self) -> Result<ImplBlock, ()> {
+        let start_span = self.consume(TokenKind::Impl, "Expected 'impl'")?.span;
+
+        let trait_name_tok = self.consume_identifier("a trait name")?;
+        let trait_name = Identifier {
+            name: trait_name_tok.lexeme.clone(),
+            span: trait_name_tok.span,
+        };
+
+        // Optional type args: `impl Functor<number> for MyType`
+        let trait_type_args = if self.check(TokenKind::Less) {
+            self.parse_type_arg_list()?
+        } else {
+            vec![]
+        };
+
+        self.consume(
+            TokenKind::For,
+            "Expected 'for' after trait name in impl block",
+        )?;
+
+        let type_name_tok = self.consume_identifier("a type name")?;
+        let type_name = Identifier {
+            name: type_name_tok.lexeme.clone(),
+            span: type_name_tok.span,
+        };
+
+        self.consume(
+            TokenKind::LeftBrace,
+            "Expected '{' after type name in impl block",
+        )?;
+
+        let mut methods = Vec::new();
+        while !self.check(TokenKind::RightBrace) && !self.is_at_end() {
+            methods.push(self.parse_impl_method()?);
+        }
+
+        let end_span = self
+            .consume(TokenKind::RightBrace, "Expected '}' after impl body")?
+            .span;
+
+        Ok(ImplBlock {
+            trait_name,
+            trait_type_args,
+            type_name,
+            methods,
+            span: start_span.merge(end_span),
+        })
+    }
+
+    /// Parse a method implementation inside an impl block.
+    ///
+    /// Syntax: `fn method_name<T>(param: Type) -> ReturnType { body }`
+    /// Impl methods REQUIRE a body (unlike trait method signatures).
+    fn parse_impl_method(&mut self) -> Result<ImplMethod, ()> {
+        let start_span = self
+            .consume(TokenKind::Fn, "Expected 'fn' in impl body")?
+            .span;
+
+        let name_tok = self.consume_identifier("a method name")?;
+        let name = Identifier {
+            name: name_tok.lexeme.clone(),
+            span: name_tok.span,
+        };
+
+        let type_params = self.parse_type_params()?;
+
+        self.consume(TokenKind::LeftParen, "Expected '(' after method name")?;
+        let params = self.parse_params()?;
+        self.consume(
+            TokenKind::RightParen,
+            "Expected ')' after method parameters",
+        )?;
+
+        self.consume(TokenKind::Arrow, "Expected '->' after method parameters")?;
+        let return_type = self.parse_type_ref()?;
+
+        let body = self.parse_block()?;
+        let end_span = body.span;
+
+        Ok(ImplMethod {
+            name,
+            type_params,
+            params,
+            return_type,
+            body,
+            span: start_span.merge(end_span),
+        })
+    }
+
+    /// Parse a `<TypeRef, TypeRef, ...>` type argument list (including angle brackets).
+    /// Used for generic trait instantiation in impl blocks: `impl Foo<number> for ...`
+    fn parse_type_arg_list(&mut self) -> Result<Vec<TypeRef>, ()> {
+        self.consume(TokenKind::Less, "Expected '<'")?;
+        let mut args = Vec::new();
+        loop {
+            args.push(self.parse_type_ref()?);
+            if !self.match_token(TokenKind::Comma) {
+                break;
+            }
+        }
+        self.consume(TokenKind::Greater, "Expected '>' after type arguments")?;
+        Ok(args)
     }
 
     /// Parse an extern declaration (FFI function)

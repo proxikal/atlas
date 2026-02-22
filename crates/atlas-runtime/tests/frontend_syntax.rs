@@ -2775,3 +2775,154 @@ fn test_parse_trait_method_no_params() {
         panic!("expected Item::Trait");
     }
 }
+
+// ============================================================================
+// Block 3: Trait system — impl block parser tests
+// ============================================================================
+
+#[test]
+fn test_parse_simple_impl_block() {
+    let src = "
+        trait Display { fn display(self: Display) -> string; }
+        impl Display for number {
+            fn display(self: number) -> string { return str(self); }
+        }
+    ";
+    let (prog, diags) = parse_source(src);
+    assert!(diags.is_empty(), "unexpected diags: {diags:?}");
+    assert_eq!(prog.items.len(), 2);
+    assert!(matches!(prog.items[1], Item::Impl(_)));
+    if let Item::Impl(ib) = &prog.items[1] {
+        assert_eq!(ib.trait_name.name, "Display");
+        assert_eq!(ib.type_name.name, "number");
+        assert_eq!(ib.methods.len(), 1);
+        assert_eq!(ib.methods[0].name.name, "display");
+    } else {
+        panic!("expected Item::Impl");
+    }
+}
+
+#[test]
+fn test_parse_impl_with_multiple_methods() {
+    let src = "
+        trait Shape {
+            fn area(self: Shape) -> number;
+            fn perimeter(self: Shape) -> number;
+        }
+        impl Shape for Circle {
+            fn area(self: Circle) -> number { return 0.0; }
+            fn perimeter(self: Circle) -> number { return 0.0; }
+        }
+    ";
+    let (prog, diags) = parse_source(src);
+    assert!(diags.is_empty(), "unexpected diags: {diags:?}");
+    if let Item::Impl(ib) = &prog.items[1] {
+        assert_eq!(ib.methods.len(), 2);
+        assert_eq!(ib.methods[0].name.name, "area");
+        assert_eq!(ib.methods[1].name.name, "perimeter");
+    } else {
+        panic!("expected Item::Impl");
+    }
+}
+
+#[test]
+fn test_parse_impl_generic_trait() {
+    let src = "
+        trait Container<T> { fn size(self: Container<T>) -> number; }
+        impl Container<number> for NumberList {
+            fn size(self: NumberList) -> number { return 0; }
+        }
+    ";
+    let (prog, diags) = parse_source(src);
+    assert!(diags.is_empty(), "unexpected diags: {diags:?}");
+    if let Item::Impl(ib) = &prog.items[1] {
+        assert_eq!(ib.trait_name.name, "Container");
+        assert_eq!(ib.trait_type_args.len(), 1);
+        assert_eq!(ib.type_name.name, "NumberList");
+    } else {
+        panic!("expected Item::Impl");
+    }
+}
+
+#[test]
+fn test_parse_impl_requires_for_keyword() {
+    let src = "impl Display number { fn display(self: number) -> string { return \"\"; } }";
+    let (_, diags) = parse_source(src);
+    let errors: Vec<_> = diags
+        .iter()
+        .filter(|d| d.level == DiagnosticLevel::Error)
+        .collect();
+    assert!(
+        !errors.is_empty(),
+        "Missing 'for' keyword should produce a diagnostic"
+    );
+}
+
+#[test]
+fn test_parse_impl_method_requires_body() {
+    // Impl methods must have a body (unlike trait signatures)
+    let src = "trait T { fn m() -> void; } impl T for X { fn m() -> void; }";
+    let (_, diags) = parse_source(src);
+    let errors: Vec<_> = diags
+        .iter()
+        .filter(|d| d.level == DiagnosticLevel::Error)
+        .collect();
+    assert!(
+        !errors.is_empty(),
+        "Missing method body in impl should produce a diagnostic"
+    );
+}
+
+#[test]
+fn test_parse_impl_empty_body() {
+    // Impl with zero methods is valid (marker trait impl)
+    let src = "trait Marker { } impl Marker for number { }";
+    let (prog, diags) = parse_source(src);
+    assert!(diags.is_empty(), "unexpected diags: {diags:?}");
+    if let Item::Impl(ib) = &prog.items[1] {
+        assert!(ib.methods.is_empty());
+        assert_eq!(ib.trait_name.name, "Marker");
+        assert_eq!(ib.type_name.name, "number");
+    } else {
+        panic!("expected Item::Impl");
+    }
+}
+
+#[test]
+fn test_parse_impl_with_owned_params() {
+    // Ownership annotations work in impl methods
+    let src = "
+        trait Processor { fn process(own self: Processor, own data: number) -> number; }
+        impl Processor for MyProc {
+            fn process(own self: MyProc, own data: number) -> number { return data; }
+        }
+    ";
+    let (prog, diags) = parse_source(src);
+    assert!(diags.is_empty(), "unexpected diags: {diags:?}");
+    if let Item::Impl(ib) = &prog.items[1] {
+        assert_eq!(
+            ib.methods[0].params[1].ownership,
+            Some(OwnershipAnnotation::Own)
+        );
+    } else {
+        panic!("expected Item::Impl");
+    }
+}
+
+#[test]
+fn test_parse_trait_and_impl_coexist() {
+    // Multiple trait+impl pairs in the same file
+    let src = "
+        trait A { fn a() -> number; }
+        trait B { fn b() -> string; }
+        impl A for X { fn a() -> number { return 1; } }
+        impl B for X { fn b() -> string { return \"\"; } }
+    ";
+    let (prog, diags) = parse_source(src);
+    assert!(diags.is_empty(), "unexpected diags: {diags:?}");
+    assert_eq!(prog.items.len(), 4);
+    assert!(matches!(prog.items[0], Item::Trait(_)));
+    assert!(matches!(prog.items[1], Item::Trait(_)));
+    assert!(matches!(prog.items[2], Item::Impl(_)));
+    assert!(matches!(prog.items[3], Item::Impl(_)));
+}
