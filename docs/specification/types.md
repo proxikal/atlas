@@ -230,12 +230,107 @@ let arr2: Array<number> = [1, 2, 3];  // Explicit generic form
 
 ### Current Limitations
 
-- No user-defined generic types (only built-in: Option, Result, Array)
-- No type parameter constraints/bounds
+- No user-defined generic struct types (structs are v0.4)
+- Type parameter bounds supported via `:` syntax (`T: Copy`) — see Trait System below
 - No variance (all type parameters invariant)
 - No higher-kinded types
 
 See `ROADMAP.md` for planned enhancements.
+
+---
+
+## Trait System
+
+Traits define a set of method signatures that types can implement. A type that implements
+a trait can be used wherever that trait is required.
+
+### Declaring a Trait
+
+```atlas
+trait Display {
+    fn display(self: Display) -> string;
+}
+
+trait Shape {
+    fn area(self: Shape) -> number;
+    fn perimeter(self: Shape) -> number;
+}
+```
+
+Trait bodies contain **method signatures only** — no implementations. Each method
+signature ends with `;` instead of a block body.
+
+### Implementing a Trait
+
+```atlas
+impl Display for number {
+    fn display(self: number) -> string {
+        return str(self);
+    }
+}
+```
+
+All methods declared in the trait must be implemented. Method signatures must match
+exactly (parameter types and return type). Extra methods are allowed.
+
+### Calling Trait Methods
+
+```atlas
+let x: number = 42;
+let s: string = x.display();  // calls the Display impl for number
+```
+
+Method dispatch is **static** — the implementation is resolved at compile time based
+on the receiver's type.
+
+### Built-in Traits
+
+| Trait | Purpose | Methods |
+|-------|---------|---------|
+| `Copy` | Value semantics — types that can be freely copied | (marker, no methods) |
+| `Move` | Resource types requiring explicit ownership transfer | (marker, no methods) |
+| `Drop` | Custom destructor logic | `fn drop(self: T) -> void` |
+| `Display` | Human-readable string conversion | `fn display(self: T) -> string` |
+| `Debug` | Debug string representation | `fn debug_repr(self: T) -> string` |
+
+All primitive types (`number`, `string`, `bool`, `null`) implement `Copy`.
+
+### Trait Bounds on Generic Type Parameters
+
+```atlas
+fn safe_copy<T: Copy>(x: T) -> T {
+    return x;
+}
+
+fn display_and_return<T: Display>(x: T) -> string {
+    return x.display();
+}
+```
+
+### Error Codes
+
+| Code | Meaning |
+|------|---------|
+| AT3001 | Trait redefines a built-in trait |
+| AT3002 | Trait already defined |
+| AT3003 | Trait not found |
+| AT3004 | Impl is missing a required method |
+| AT3005 | Impl method has wrong signature |
+| AT3006 | Type does not implement the required trait |
+| AT3007 | Copy type required |
+| AT3008 | Trait bound not satisfied |
+| AT3009 | Impl already exists for (type, trait) |
+| AT3010 | (Warning) Move type passed without ownership annotation |
+| AT3035 | Type does not implement the trait required for a method |
+| AT3037 | Generic type argument does not satisfy a trait bound |
+
+### Current Limitations (v0.3)
+
+- Static dispatch only (no trait objects / vtable dispatch — v0.4)
+- No `impl Trait` in return position syntax (`-> impl Display` — v0.4)
+- `Drop` is not automatically called at scope exit — explicit only (v0.4)
+- User-defined generic types require structs (v0.4)
+- `str()` stdlib does not auto-dispatch through `Display` — call `.display()` explicitly (v0.4)
 
 ---
 

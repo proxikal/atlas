@@ -554,3 +554,351 @@ async fn test_is_in_param_position_detection() {
         }
     ));
 }
+
+// === Trait/Impl Completion Tests ===
+
+#[tokio::test]
+async fn test_completion_builtin_traits_after_impl() {
+    let (service, _socket) = LspService::new(AtlasLspServer::new);
+    let server = service.inner();
+    let uri = Url::parse("file:///test.atl").unwrap();
+
+    server
+        .did_open(DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.clone(),
+                language_id: "atlas".to_string(),
+                version: 1,
+                text: "impl ".to_string(),
+            },
+        })
+        .await;
+
+    let result = server
+        .completion(CompletionParams {
+            text_document_position: TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri: uri.clone() },
+                position: Position {
+                    line: 0,
+                    character: 5,
+                },
+            },
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+            context: None,
+        })
+        .await
+        .unwrap();
+
+    assert!(result.is_some());
+    if let Some(CompletionResponse::Array(items)) = result {
+        assert!(
+            items.iter().any(|i| i.label == "Copy"),
+            "Expected 'Copy' in completions after `impl`"
+        );
+        assert!(
+            items.iter().any(|i| i.label == "Display"),
+            "Expected 'Display' in completions after `impl`"
+        );
+        assert!(
+            items.iter().any(|i| i.label == "Debug"),
+            "Expected 'Debug' in completions after `impl`"
+        );
+    } else {
+        panic!("Expected Array completion response");
+    }
+}
+
+#[tokio::test]
+async fn test_completion_user_trait_after_impl() {
+    let (service, _socket) = LspService::new(AtlasLspServer::new);
+    let server = service.inner();
+    let uri = Url::parse("file:///test.atl").unwrap();
+
+    server
+        .did_open(DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.clone(),
+                language_id: "atlas".to_string(),
+                version: 1,
+                text: "trait MyTrait { }\nimpl ".to_string(),
+            },
+        })
+        .await;
+
+    let result = server
+        .completion(CompletionParams {
+            text_document_position: TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri: uri.clone() },
+                position: Position {
+                    line: 1,
+                    character: 5,
+                },
+            },
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+            context: None,
+        })
+        .await
+        .unwrap();
+
+    assert!(result.is_some());
+    if let Some(CompletionResponse::Array(items)) = result {
+        assert!(
+            items.iter().any(|i| i.label == "MyTrait"),
+            "Expected user-defined 'MyTrait' in completions after `impl`"
+        );
+    } else {
+        panic!("Expected Array completion response");
+    }
+}
+
+#[tokio::test]
+async fn test_completion_trait_names_classified_as_interface() {
+    let (service, _socket) = LspService::new(AtlasLspServer::new);
+    let server = service.inner();
+    let uri = Url::parse("file:///test.atl").unwrap();
+
+    server
+        .did_open(DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.clone(),
+                language_id: "atlas".to_string(),
+                version: 1,
+                text: "impl ".to_string(),
+            },
+        })
+        .await;
+
+    let result = server
+        .completion(CompletionParams {
+            text_document_position: TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri: uri.clone() },
+                position: Position {
+                    line: 0,
+                    character: 5,
+                },
+            },
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+            context: None,
+        })
+        .await
+        .unwrap();
+
+    if let Some(CompletionResponse::Array(items)) = result {
+        let trait_items: Vec<_> = items
+            .iter()
+            .filter(|i| {
+                matches!(
+                    i.label.as_str(),
+                    "Copy" | "Move" | "Drop" | "Display" | "Debug"
+                )
+            })
+            .collect();
+        assert!(!trait_items.is_empty(), "Expected trait completions");
+        for item in &trait_items {
+            assert_eq!(
+                item.kind,
+                Some(CompletionItemKind::INTERFACE),
+                "Trait '{}' should have kind INTERFACE",
+                item.label
+            );
+        }
+    } else {
+        panic!("Expected Array completion response");
+    }
+}
+
+#[tokio::test]
+async fn test_completion_builtin_traits_have_documentation() {
+    let (service, _socket) = LspService::new(AtlasLspServer::new);
+    let server = service.inner();
+    let uri = Url::parse("file:///test.atl").unwrap();
+
+    server
+        .did_open(DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.clone(),
+                language_id: "atlas".to_string(),
+                version: 1,
+                text: "impl ".to_string(),
+            },
+        })
+        .await;
+
+    let result = server
+        .completion(CompletionParams {
+            text_document_position: TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri: uri.clone() },
+                position: Position {
+                    line: 0,
+                    character: 5,
+                },
+            },
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+            context: None,
+        })
+        .await
+        .unwrap();
+
+    if let Some(CompletionResponse::Array(items)) = result {
+        let copy_item = items.iter().find(|i| i.label == "Copy");
+        assert!(copy_item.is_some(), "Expected 'Copy' in trait completions");
+        let copy = copy_item.unwrap();
+        assert!(
+            copy.documentation.is_some(),
+            "'Copy' trait completion should have documentation"
+        );
+    } else {
+        panic!("Expected Array completion response");
+    }
+}
+
+#[tokio::test]
+async fn test_completion_method_stubs_in_impl_body() {
+    let (service, _socket) = LspService::new(AtlasLspServer::new);
+    let server = service.inner();
+    let uri = Url::parse("file:///test.atl").unwrap();
+
+    server
+        .did_open(DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.clone(),
+                language_id: "atlas".to_string(),
+                version: 1,
+                text: "trait Display { fn display(self: Display) -> string; }\nimpl Display for number {\n    fn "
+                    .to_string(),
+            },
+        })
+        .await;
+
+    let result = server
+        .completion(CompletionParams {
+            text_document_position: TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri: uri.clone() },
+                position: Position {
+                    line: 2,
+                    character: 7,
+                },
+            },
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+            context: None,
+        })
+        .await
+        .unwrap();
+
+    assert!(result.is_some());
+    if let Some(CompletionResponse::Array(items)) = result {
+        assert!(
+            items.iter().any(|i| i.label == "display"),
+            "Expected 'display' method stub in completions inside impl body"
+        );
+        let display_item = items.iter().find(|i| i.label == "display").unwrap();
+        assert_eq!(
+            display_item.kind,
+            Some(CompletionItemKind::METHOD),
+            "Method stub should have kind METHOD"
+        );
+        assert!(
+            display_item
+                .detail
+                .as_deref()
+                .map(|d| d.contains("Display"))
+                .unwrap_or(false),
+            "Method stub detail should mention the trait name"
+        );
+    } else {
+        panic!("Expected Array completion response");
+    }
+}
+
+#[tokio::test]
+async fn test_completion_method_stubs_are_snippets() {
+    let (service, _socket) = LspService::new(AtlasLspServer::new);
+    let server = service.inner();
+    let uri = Url::parse("file:///test.atl").unwrap();
+
+    server
+        .did_open(DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.clone(),
+                language_id: "atlas".to_string(),
+                version: 1,
+                text: "trait Math { fn double(self: Math) -> number; }\nimpl Math for number {\n    fn "
+                    .to_string(),
+            },
+        })
+        .await;
+
+    let result = server
+        .completion(CompletionParams {
+            text_document_position: TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri: uri.clone() },
+                position: Position {
+                    line: 2,
+                    character: 7,
+                },
+            },
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+            context: None,
+        })
+        .await
+        .unwrap();
+
+    if let Some(CompletionResponse::Array(items)) = result {
+        let double_item = items.iter().find(|i| i.label == "double");
+        assert!(
+            double_item.is_some(),
+            "Expected 'double' method stub completion"
+        );
+        let item = double_item.unwrap();
+        assert_eq!(
+            item.insert_text_format,
+            Some(InsertTextFormat::SNIPPET),
+            "Method stub should use snippet format"
+        );
+        assert!(
+            item.insert_text.is_some(),
+            "Method stub should have insert_text snippet"
+        );
+    } else {
+        panic!("Expected Array completion response");
+    }
+}
+
+#[test]
+fn test_is_after_impl_keyword_basic() {
+    use atlas_lsp::completion::is_after_impl_keyword;
+    assert!(is_after_impl_keyword(
+        "impl ",
+        Position {
+            line: 0,
+            character: 5
+        }
+    ));
+    assert!(is_after_impl_keyword(
+        "impl",
+        Position {
+            line: 0,
+            character: 4
+        }
+    ));
+    assert!(!is_after_impl_keyword(
+        "let x = 5;",
+        Position {
+            line: 0,
+            character: 5
+        }
+    ));
+    assert!(!is_after_impl_keyword(
+        "fn foo() { impl ",
+        Position {
+            line: 0,
+            character: 5
+        }
+    ));
+}

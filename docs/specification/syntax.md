@@ -36,7 +36,7 @@
 ## Keywords
 
 ### Keywords
-`let`, `var`, `fn`, `if`, `else`, `while`, `for`, `return`, `break`, `continue`, `true`, `false`, `null`, `match`, `import`, `export`, `from`, `as`
+`let`, `var`, `fn`, `if`, `else`, `while`, `for`, `return`, `break`, `continue`, `true`, `false`, `null`, `match`, `import`, `export`, `from`, `as`, `trait`, `impl`
 
 **Note:** Keywords cannot be used as identifiers
 
@@ -457,6 +457,54 @@ continue;   // Skip to next iteration
 ```atlas
 fn();       // Function call
 expr;       // Any expression (value discarded)
+```
+
+---
+
+## Trait Declarations
+
+### Trait Declaration
+
+```
+trait_decl      := "trait" IDENT type_params? "{" trait_method_sig* "}"
+trait_method_sig := "fn" IDENT type_params? "(" params ")" "->" type_ref ";"
+```
+
+Note the `;` terminator — trait method signatures have no body.
+
+```atlas
+trait Display {
+    fn display(self: Display) -> string;
+}
+```
+
+### Impl Blocks
+
+```
+impl_block  := "impl" IDENT type_args? "for" IDENT "{" impl_method* "}"
+impl_method := "fn" IDENT type_params? "(" params ")" "->" type_ref block
+```
+
+```atlas
+impl Display for number {
+    fn display(self: number) -> string {
+        return str(self);
+    }
+}
+```
+
+### Type Parameter Bounds
+
+```
+type_params  := "<" type_param ("," type_param)* ">"
+type_param   := IDENT (":" trait_bound ("+" trait_bound)*)?
+trait_bound  := IDENT
+```
+
+```atlas
+fn safe_copy<T: Copy>(x: T) -> T {
+    return x;
+}
 ```
 
 ---

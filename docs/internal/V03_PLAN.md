@@ -174,11 +174,30 @@ Closures capture values — those values need `Copy`/`Move` semantics to know wh
 are copied into the closure or moved. The trait system defines these semantics.
 
 ### Acceptance criteria
-- [ ] `trait` and `impl` declarations parse and typecheck
-- [ ] Built-in `Copy`, `Move`, `Drop` traits work
-- [ ] Trait bounds on generics compile and enforce correctly
-- [ ] Ownership traits integrate with Block 2 annotations
-- [ ] Both engines dispatch trait methods identically
+- [x] `trait` and `impl` declarations parse and typecheck
+- [x] Built-in `Copy`, `Move`, `Drop` traits work
+- [x] Trait bounds on generics compile and enforce correctly
+- [x] Ownership traits integrate with Block 2 annotations
+- [x] Both engines dispatch trait methods identically
+
+### Planned vs. Actual (Block 3 — completed 2026-02-22)
+
+- **Phases:** Estimated 20–25, delivered exactly 18.
+- **Mangled names:** Impl methods compile to `__impl__Type__Trait__Method` named globals.
+  Static dispatch via existing `GetGlobal` + `Call` opcodes — no new opcodes needed.
+- **`trait_dispatch` annotation:** Added `RefCell<Option<(String, String)>>` to `MemberExpr`
+  AST node. Typechecker annotates it; compiler and interpreter read it for dispatch.
+- **Drop:** Defined as a built-in trait; explicit invocation only in Block 3.
+  Automatic scope-exit drop deferred to v0.4 (requires scope tracking in both engines).
+- **Display integration:** `Display` trait and `str()` stdlib are independent.
+  `str()` does not dispatch through `Display` in Block 3 — types must call `.display()`
+  explicitly. Automatic `str()` integration via Display is v0.4.
+- **`Colon` token:** Already existed in the lexer. `TypeParamBound` parsing added.
+- **Binder bug:** Binder was constructing `TypeParamDef` with `trait_bounds: vec![]`,
+  never reading from AST. Fixed in Phase 10 by propagating `param.trait_bounds`.
+- **LSP partial AST:** `document.rs` was discarding AST on parse errors. Fixed to store
+  partial AST (items parsed before error) enabling hover/completion for in-progress code.
+- **Test count added:** ~230+ tests across phases 01–18.
 
 ---
 

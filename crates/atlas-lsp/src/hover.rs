@@ -53,6 +53,10 @@ pub fn generate_hover(
             contents.push(hover_info);
         } else if let Some(hover_info) = find_parameter_hover(program, &identifier) {
             contents.push(hover_info);
+        } else if let Some(hover_info) = find_trait_hover(program, &identifier) {
+            contents.push(hover_info);
+        } else if let Some(hover_info) = find_impl_hover(program, &identifier) {
+            contents.push(hover_info);
         }
     }
 
@@ -291,6 +295,99 @@ fn find_parameter_hover(program: &Program, identifier: &str) -> Option<String> {
         }
     }
     None
+}
+
+/// Find hover information for a trait declaration
+fn find_trait_hover(program: &Program, identifier: &str) -> Option<String> {
+    for item in &program.items {
+        if let Item::Trait(trait_decl) = item {
+            if trait_decl.name.name == identifier {
+                let mut hover = String::new();
+                hover.push_str(&format!("**(trait)** `{}`\n\n", trait_decl.name.name));
+                if !trait_decl.methods.is_empty() {
+                    hover.push_str("```atlas\n");
+                    for method in &trait_decl.methods {
+                        hover.push_str(&format_trait_method_sig(method));
+                        hover.push('\n');
+                    }
+                    hover.push_str("```");
+                }
+                return Some(hover);
+            }
+        }
+    }
+    None
+}
+
+/// Find hover information for an impl block (hovering on trait name or type name)
+fn find_impl_hover(program: &Program, identifier: &str) -> Option<String> {
+    for item in &program.items {
+        if let Item::Impl(impl_block) = item {
+            let is_trait_name = impl_block.trait_name.name == identifier;
+            let is_type_name = impl_block.type_name.name == identifier;
+            if is_trait_name || is_type_name {
+                let mut hover = String::new();
+                hover.push_str(&format!(
+                    "**(impl)** `{}` implements `{}`\n\n",
+                    impl_block.type_name.name, impl_block.trait_name.name
+                ));
+                if !impl_block.methods.is_empty() {
+                    hover.push_str("```atlas\n");
+                    for method in &impl_block.methods {
+                        hover.push_str(&format_impl_method_sig(method));
+                        hover.push('\n');
+                    }
+                    hover.push_str("```");
+                }
+                return Some(hover);
+            }
+        }
+    }
+    None
+}
+
+/// Format a trait method signature (no body)
+fn format_trait_method_sig(method: &TraitMethodSig) -> String {
+    let params: Vec<String> = method
+        .params
+        .iter()
+        .map(|p| {
+            format!(
+                "{}{}: {}",
+                ownership_prefix(&p.ownership),
+                p.name.name,
+                format_type_ref(&p.type_ref)
+            )
+        })
+        .collect();
+    format!(
+        "fn {}({}) -> {};",
+        method.name.name,
+        params.join(", "),
+        format_type_ref(&method.return_type)
+    )
+}
+
+/// Format an impl method signature (with body indicator)
+fn format_impl_method_sig(method: &ImplMethod) -> String {
+    let params: Vec<String> = method
+        .params
+        .iter()
+        .map(|p| {
+            format!(
+                "{}{}: {}",
+                ownership_prefix(&p.ownership),
+                p.name.name,
+                format_type_ref(&p.type_ref)
+            )
+        })
+        .collect();
+    format!(
+        "fn {}({}) -> {} {{ ... }}",
+        method.name.name,
+        params.join(", "),
+        format_type_ref(&method.return_type)
+    )
 }
 
 /// Find hover information from symbol table
@@ -651,6 +748,24 @@ fn find_keyword_hover(identifier: &str) -> Option<String> {
         "borrow" => "Ownership annotation: parameter borrows the value without taking ownership.",
         "shared" => {
             "Ownership annotation: parameter receives a shared (reference-counted) reference."
+        }
+        "trait" => {
+            return Some(
+                "**trait** — Declares a trait — a named set of method signatures that types can implement.\n\n\
+                 ```atlas\n\
+                 trait Display {\n    fn display(self: Display) -> string;\n}\n\
+                 ```"
+                .to_string(),
+            );
+        }
+        "impl" => {
+            return Some(
+                "**impl** — Implements a trait for a type. All trait methods must be provided with matching signatures.\n\n\
+                 ```atlas\n\
+                 impl Display for number {\n    fn display(self: number) -> string { return str(self); }\n}\n\
+                 ```"
+                .to_string(),
+            );
         }
         _ => return None,
     };

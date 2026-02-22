@@ -320,6 +320,28 @@ impl Interpreter {
                 Item::TypeAlias(_) => {
                     // Type aliases are compile-time only
                 }
+                Item::Trait(_) => {
+                    // Trait declarations are type-info only — no runtime action needed.
+                }
+                Item::Impl(impl_block) => {
+                    // Register each impl method under its mangled name for static dispatch.
+                    let type_name = &impl_block.type_name.name;
+                    let trait_name = &impl_block.trait_name.name;
+                    for method in &impl_block.methods {
+                        let mangled_name = format!(
+                            "__impl__{}__{}__{}",
+                            type_name, trait_name, method.name.name
+                        );
+                        self.function_bodies.insert(
+                            mangled_name.clone(),
+                            UserFunction {
+                                name: mangled_name,
+                                params: method.params.clone(),
+                                body: method.body.clone(),
+                            },
+                        );
+                    }
+                }
             }
         }
 

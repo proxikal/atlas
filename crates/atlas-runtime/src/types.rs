@@ -9,6 +9,10 @@ use std::collections::HashMap;
 pub struct TypeParamDef {
     pub name: String,
     pub bound: Option<Box<Type>>,
+    /// Trait bounds from `:` syntax — e.g. `T: Copy + Display` → `["Copy", "Display"]`.
+    /// Populated from AST `TypeParam.trait_bounds` during type checking.
+    #[serde(default)]
+    pub trait_bounds: Vec<String>,
 }
 
 /// Structural type member (field or method signature)
@@ -363,6 +367,7 @@ impl Type {
                     .map(|param| TypeParamDef {
                         name: param.name.clone(),
                         bound: param.bound.as_ref().map(|b| Box::new(b.normalized())),
+                        trait_bounds: param.trait_bounds.clone(),
                     })
                     .collect(),
                 params: params.iter().map(|p| p.normalized()).collect(),

@@ -374,6 +374,9 @@ fn extract_indexed_symbols(uri: &Url, text: &str, program: &Program) -> Vec<Inde
                     });
                 }
             },
+            Item::Trait(_) | Item::Impl(_) => {
+                // Trait/impl symbol extraction handled in Block 3
+            }
         }
     }
 

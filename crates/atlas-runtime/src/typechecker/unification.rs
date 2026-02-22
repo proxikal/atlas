@@ -400,6 +400,7 @@ impl UnificationEngine {
                     .map(|tp| TypeParamDef {
                         name: tp.name.clone(),
                         bound: tp.bound.as_ref().map(|b| Box::new(self.apply(b))),
+                        trait_bounds: tp.trait_bounds.clone(),
                     })
                     .collect(),
                 params: params.iter().map(|p| self.apply(p)).collect(),

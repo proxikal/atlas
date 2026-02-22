@@ -195,6 +195,9 @@ impl SymbolIndex {
             Item::Import(_) | Item::Export(_) | Item::Extern(_) => {
                 // TODO: Handle imports/exports for cross-file indexing
             }
+            Item::Trait(_) | Item::Impl(_) => {
+                // Trait/impl indexing handled in Block 3
+            }
         }
     }
 

@@ -67,6 +67,10 @@ pub enum Item {
     Export(ExportDecl),
     Extern(ExternDecl),
     TypeAlias(TypeAliasDecl),
+    /// Trait declaration: `trait Foo { fn method(...) -> T; }`
+    Trait(TraitDecl),
+    /// Impl block: `impl TraitName for TypeName { ... }`
+    Impl(ImplBlock),
 }
 
 /// Import declaration
@@ -175,12 +179,92 @@ pub struct TypePredicate {
     pub span: Span,
 }
 
+// ============================================================================
+// Trait system (v0.3+)
+// ============================================================================
+
+/// A trait bound on a type parameter: `T: TraitName`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TraitBound {
+    /// The trait name (e.g., "Copy", "Display", "MyTrait")
+    pub trait_name: String,
+    pub span: Span,
+}
+
+/// A method signature in a trait declaration.
+/// Has no body — the body lives in the `ImplBlock`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TraitMethodSig {
+    pub name: Identifier,
+    pub type_params: Vec<TypeParam>,
+    pub params: Vec<Param>,
+    pub return_type: TypeRef,
+    pub span: Span,
+}
+
+/// A trait declaration.
+///
+/// Syntax: `trait Foo { fn method(self: Foo, arg: T) -> R; }`
+///
+/// Trait bodies contain only method signatures (no implementations).
+/// Implementations live in `ImplBlock`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TraitDecl {
+    pub name: Identifier,
+    /// Type parameters for generic traits (e.g., `trait Functor<T>`)
+    pub type_params: Vec<TypeParam>,
+    pub methods: Vec<TraitMethodSig>,
+    pub span: Span,
+}
+
+impl TraitDecl {
+    pub fn span(&self) -> Span {
+        self.span
+    }
+}
+
+/// A method implementation inside an `impl` block.
+/// Identical in structure to `FunctionDecl` but scoped to an impl.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImplMethod {
+    pub name: Identifier,
+    pub type_params: Vec<TypeParam>,
+    pub params: Vec<Param>,
+    pub return_type: TypeRef,
+    pub body: Block,
+    pub span: Span,
+}
+
+/// An impl block.
+///
+/// Syntax: `impl TraitName for TypeName { fn method(...) { ... } }`
+///
+/// `trait_name` is the trait being implemented (e.g., "Display").
+/// `type_name` is the type implementing the trait (e.g., "Buffer").
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImplBlock {
+    pub trait_name: Identifier,
+    /// Type arguments applied to the trait (e.g., `impl Functor<number> for MyType`)
+    pub trait_type_args: Vec<TypeRef>,
+    pub type_name: Identifier,
+    pub methods: Vec<ImplMethod>,
+    pub span: Span,
+}
+
+impl ImplBlock {
+    pub fn span(&self) -> Span {
+        self.span
+    }
+}
+
 /// Type parameter declaration (e.g., T in fn foo<T>(...))
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TypeParam {
     pub name: String,
     /// Optional constraint bound (e.g., `T extends number`)
     pub bound: Option<TypeRef>,
+    /// Trait bounds on this type parameter (e.g., `T: Copy + Display`)
+    pub trait_bounds: Vec<TraitBound>,
     pub span: Span,
 }
 
@@ -405,7 +489,7 @@ pub struct IndexExpr {
 ///
 /// Syntax: `expr.member` or `expr.method(args)`
 /// This is sugar for function calls: `Type::method(expr, args)`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemberExpr {
     /// The target expression (left side of dot)
     pub target: Box<Expr>,
@@ -416,7 +500,21 @@ pub struct MemberExpr {
     /// Type tag for method dispatch (set by typechecker, used by interpreter/compiler)
     #[serde(skip)]
     pub type_tag: Cell<Option<TypeTag>>,
+    /// Trait dispatch info: (type_name, trait_name) when this is a user trait method call.
+    /// Set by the typechecker, used by the compiler and interpreter for static dispatch.
+    #[serde(skip)]
+    pub trait_dispatch: std::cell::RefCell<Option<(String, String)>>,
     pub span: Span,
+}
+
+impl PartialEq for MemberExpr {
+    fn eq(&self, other: &Self) -> bool {
+        // type_tag and trait_dispatch are ephemeral annotations — exclude from equality
+        self.target == other.target
+            && self.member == other.member
+            && self.args == other.args
+            && self.span == other.span
+    }
 }
 
 /// Array literal expression
@@ -980,5 +1078,124 @@ mod tests {
             version_pos < items_pos,
             "ast_version should appear before items in JSON output"
         );
+    }
+
+    // =========================================================================
+    // Block 3: Trait system AST node tests
+    // =========================================================================
+
+    #[test]
+    fn test_trait_decl_construction() {
+        let decl = TraitDecl {
+            name: Identifier {
+                name: "Display".to_string(),
+                span: Span::new(6, 13),
+            },
+            type_params: vec![],
+            methods: vec![TraitMethodSig {
+                name: Identifier {
+                    name: "display".to_string(),
+                    span: Span::new(20, 27),
+                },
+                type_params: vec![],
+                params: vec![],
+                return_type: TypeRef::Named("string".to_string(), Span::new(32, 38)),
+                span: Span::new(17, 39),
+            }],
+            span: Span::new(0, 40),
+        };
+        assert_eq!(decl.name.name, "Display");
+        assert_eq!(decl.methods.len(), 1);
+        assert_eq!(decl.methods[0].name.name, "display");
+        assert_eq!(decl.span(), Span::new(0, 40));
+    }
+
+    #[test]
+    fn test_impl_block_construction() {
+        let impl_block = ImplBlock {
+            trait_name: Identifier {
+                name: "Display".to_string(),
+                span: Span::new(5, 12),
+            },
+            trait_type_args: vec![],
+            type_name: Identifier {
+                name: "Buffer".to_string(),
+                span: Span::new(17, 23),
+            },
+            methods: vec![],
+            span: Span::new(0, 30),
+        };
+        assert_eq!(impl_block.trait_name.name, "Display");
+        assert_eq!(impl_block.type_name.name, "Buffer");
+        assert_eq!(impl_block.span(), Span::new(0, 30));
+    }
+
+    #[test]
+    fn test_trait_bound_construction() {
+        let bound = TraitBound {
+            trait_name: "Copy".to_string(),
+            span: Span::new(3, 7),
+        };
+        assert_eq!(bound.trait_name, "Copy");
+    }
+
+    #[test]
+    fn test_type_param_with_trait_bounds() {
+        let param = TypeParam {
+            name: "T".to_string(),
+            bound: None,
+            trait_bounds: vec![TraitBound {
+                trait_name: "Copy".to_string(),
+                span: Span::new(3, 7),
+            }],
+            span: Span::new(0, 7),
+        };
+        assert_eq!(param.trait_bounds.len(), 1);
+        assert_eq!(param.trait_bounds[0].trait_name, "Copy");
+    }
+
+    #[test]
+    fn test_type_param_empty_trait_bounds() {
+        let param = TypeParam {
+            name: "T".to_string(),
+            bound: None,
+            trait_bounds: vec![],
+            span: Span::new(0, 1),
+        };
+        assert!(param.trait_bounds.is_empty());
+    }
+
+    #[test]
+    fn test_item_enum_trait_variant() {
+        let decl = TraitDecl {
+            name: Identifier {
+                name: "Foo".to_string(),
+                span: Span::new(6, 9),
+            },
+            type_params: vec![],
+            methods: vec![],
+            span: Span::new(0, 12),
+        };
+        let item = Item::Trait(decl);
+        assert!(matches!(item, Item::Trait(_)));
+    }
+
+    #[test]
+    fn test_item_enum_impl_variant() {
+        let impl_block = ImplBlock {
+            trait_name: Identifier {
+                name: "Foo".to_string(),
+                span: Span::new(5, 8),
+            },
+            trait_type_args: vec![],
+            type_name: Identifier {
+                name: "Bar".to_string(),
+                span: Span::new(13, 16),
+            },
+            methods: vec![],
+            span: Span::new(0, 19),
+        };
+        let item = Item::Impl(impl_block);
+        assert!(matches!(item, Item::Impl(_)));
     }
 }

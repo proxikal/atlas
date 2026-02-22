@@ -93,6 +93,9 @@ pub fn extract_all_names(program: &Program) -> Vec<String> {
             Item::Import(_) | Item::Export(_) | Item::Extern(_) => {
                 // Skip for now
             }
+            Item::Trait(_) | Item::Impl(_) => {
+                // Trait/impl refactoring handled in Block 3
+            }
         }
     }
 

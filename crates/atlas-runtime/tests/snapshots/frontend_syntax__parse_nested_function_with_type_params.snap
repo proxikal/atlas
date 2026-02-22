@@ -12,6 +12,7 @@ items:
       type_params:
         - name: T
           bound: ~
+          trait_bounds: []
           span:
             start: 18
             end: 19
@@ -34,6 +35,7 @@ items:
               type_params:
                 - name: E
                   bound: ~
+                  trait_bounds: []
                   span:
                     start: 54
                     end: 55

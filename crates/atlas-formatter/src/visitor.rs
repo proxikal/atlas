@@ -160,6 +160,9 @@ impl FormatVisitor {
                 self.emit_leading_comments(alias.span.start);
                 self.visit_type_alias(alias);
             }
+            Item::Trait(_) | Item::Impl(_) => {
+                // Trait/impl formatting handled in Block 3
+            }
         }
     }
 

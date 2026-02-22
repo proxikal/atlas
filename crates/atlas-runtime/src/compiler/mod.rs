@@ -189,6 +189,12 @@ impl Compiler {
                 Ok(())
             }
             Item::TypeAlias(_) => Ok(()),
+            Item::Trait(_) => {
+                // Trait declarations are type-info only — no bytecode emitted.
+                // The typechecker's TraitRegistry holds all needed runtime-check info.
+                Ok(())
+            }
+            Item::Impl(impl_block) => self.compile_impl_block(impl_block),
         }
     }
 
@@ -292,6 +298,108 @@ impl Compiler {
         self.bytecode.constants[const_idx as usize] = crate::value::Value::Function(updated_ref);
 
         // Patch the skip jump to go past the function body
+        self.bytecode.patch_jump(skip_jump);
+
+        Ok(())
+    }
+
+    /// Compile an impl block: each method becomes a mangled top-level function.
+    ///
+    /// Mangling: `__impl__{TypeName}__{TraitName}__{MethodName}`
+    /// e.g. `impl Display for number` → `__impl__number__Display__display`
+    fn compile_impl_block(
+        &mut self,
+        impl_block: &crate::ast::ImplBlock,
+    ) -> Result<(), Vec<Diagnostic>> {
+        let type_name = &impl_block.type_name.name;
+        let trait_name = &impl_block.trait_name.name;
+
+        for method in &impl_block.methods {
+            let mangled_name = format!(
+                "__impl__{}__{}__{}",
+                type_name, trait_name, method.name.name
+            );
+            self.compile_impl_method(method, &mangled_name, impl_block.span)?;
+        }
+        Ok(())
+    }
+
+    /// Compile one impl method as a named function with the given mangled name.
+    fn compile_impl_method(
+        &mut self,
+        method: &crate::ast::ImplMethod,
+        mangled_name: &str,
+        span: crate::span::Span,
+    ) -> Result<(), Vec<Diagnostic>> {
+        let placeholder_ref = crate::value::FunctionRef {
+            name: mangled_name.to_string(),
+            arity: method.params.len(),
+            bytecode_offset: 0,
+            local_count: 0,
+            param_ownership: vec![],
+            param_names: method.params.iter().map(|p| p.name.name.clone()).collect(),
+            return_ownership: None,
+        };
+        let placeholder_value = crate::value::Value::Function(placeholder_ref);
+
+        let const_idx = self.bytecode.add_constant(placeholder_value);
+        self.bytecode.emit(Opcode::Constant, span);
+        self.bytecode.emit_u16(const_idx);
+
+        let name_idx = self
+            .bytecode
+            .add_constant(crate::value::Value::string(mangled_name));
+        self.bytecode.emit(Opcode::SetGlobal, span);
+        self.bytecode.emit_u16(name_idx);
+        self.bytecode.emit(Opcode::Pop, span);
+
+        // Jump over the method body
+        self.bytecode.emit(Opcode::Jump, span);
+        let skip_jump = self.bytecode.current_offset();
+        self.bytecode.emit_u16(0xFFFF);
+
+        let function_offset = self.bytecode.current_offset();
+
+        let old_locals_len = self.locals.len();
+        let old_scope = self.scope_depth;
+        self.scope_depth += 1;
+        let prev_watermark = std::mem::replace(&mut self.locals_watermark, old_locals_len);
+
+        for param in &method.params {
+            self.push_local(Local {
+                name: param.name.name.clone(),
+                depth: self.scope_depth,
+                mutable: true,
+                scoped_name: None,
+            });
+        }
+
+        let prev_function_base = std::mem::replace(&mut self.current_function_base, old_locals_len);
+
+        self.compile_block(&method.body)?;
+
+        self.current_function_base = prev_function_base;
+
+        let total_local_count = self.locals_watermark - old_locals_len;
+        self.locals_watermark = prev_watermark;
+
+        self.bytecode.emit(Opcode::Null, span);
+        self.bytecode.emit(Opcode::Return, span);
+
+        self.scope_depth = old_scope;
+        self.locals.truncate(old_locals_len);
+
+        let updated_ref = crate::value::FunctionRef {
+            name: mangled_name.to_string(),
+            arity: method.params.len(),
+            bytecode_offset: function_offset,
+            local_count: total_local_count,
+            param_ownership: method.params.iter().map(|p| p.ownership.clone()).collect(),
+            param_names: method.params.iter().map(|p| p.name.name.clone()).collect(),
+            return_ownership: None,
+        };
+        self.bytecode.constants[const_idx as usize] = crate::value::Value::Function(updated_ref);
+
         self.bytecode.patch_jump(skip_jump);
 
         Ok(())

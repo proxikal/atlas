@@ -575,3 +575,92 @@ fn test_ownership_keywords_not_classified_as_variable() {
         }
     }
 }
+
+// === Trait/Impl Keyword Semantic Token Tests ===
+
+#[test]
+fn test_trait_keyword_is_keyword_semantic_token() {
+    // `trait` has length 5
+    let source = "trait Foo { }";
+    let (ast, symbols) = parse_source(source);
+    let result = generate_semantic_tokens(source, ast.as_ref(), symbols.as_ref());
+
+    if let SemanticTokensResult::Tokens(tokens) = result {
+        let has_trait_keyword = tokens
+            .data
+            .iter()
+            .any(|t| t.token_type == KEYWORD_TYPE_IDX && t.length == 5);
+        assert!(
+            has_trait_keyword,
+            "Expected 'trait' (len 5) to be classified as KEYWORD"
+        );
+    } else {
+        panic!("Expected Tokens result");
+    }
+}
+
+#[test]
+fn test_impl_keyword_is_keyword_semantic_token() {
+    // `impl` has length 4
+    let source = "trait Foo { } impl Foo for number { }";
+    let (ast, symbols) = parse_source(source);
+    let result = generate_semantic_tokens(source, ast.as_ref(), symbols.as_ref());
+
+    if let SemanticTokensResult::Tokens(tokens) = result {
+        let has_impl_keyword = tokens
+            .data
+            .iter()
+            .any(|t| t.token_type == KEYWORD_TYPE_IDX && t.length == 4);
+        assert!(
+            has_impl_keyword,
+            "Expected 'impl' (len 4) to be classified as KEYWORD"
+        );
+    } else {
+        panic!("Expected Tokens result");
+    }
+}
+
+#[test]
+fn test_trait_and_impl_keywords_not_classified_as_variable() {
+    const VARIABLE_TYPE_IDX: u32 = 8;
+    let source = "trait Foo { } impl Foo for number { }";
+    let (ast, symbols) = parse_source(source);
+    let result = generate_semantic_tokens(source, ast.as_ref(), symbols.as_ref());
+
+    if let SemanticTokensResult::Tokens(tokens) = result {
+        // Neither `trait` (len 5) nor `impl` (len 4) should be VARIABLE on line 0
+        let misclassified = tokens.data.iter().any(|t| {
+            t.token_type == VARIABLE_TYPE_IDX
+                && (t.length == 5 || t.length == 4)
+                && t.delta_line == 0
+        });
+        assert!(
+            !misclassified,
+            "trait/impl keywords should not be classified as VARIABLE"
+        );
+    } else {
+        panic!("Expected Tokens result");
+    }
+}
+
+#[test]
+fn test_for_keyword_in_impl_is_keyword_semantic_token() {
+    // `for` (in impl context) has length 3 — same as `for` loop but must be KEYWORD
+    let source = "trait Foo { } impl Foo for number { }";
+    let (ast, symbols) = parse_source(source);
+    let result = generate_semantic_tokens(source, ast.as_ref(), symbols.as_ref());
+
+    if let SemanticTokensResult::Tokens(tokens) = result {
+        // There should be at least one KEYWORD token of length 3 (the `for` keyword)
+        let has_for_keyword = tokens
+            .data
+            .iter()
+            .any(|t| t.token_type == KEYWORD_TYPE_IDX && t.length == 3);
+        assert!(
+            has_for_keyword,
+            "Expected 'for' (len 3) in impl block to be classified as KEYWORD"
+        );
+    } else {
+        panic!("Expected Tokens result");
+    }
+}

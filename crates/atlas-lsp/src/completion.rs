@@ -2,7 +2,9 @@
 
 use atlas_runtime::ast::*;
 use atlas_runtime::symbol::SymbolTable;
-use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind, InsertTextFormat, Position};
+use tower_lsp::lsp_types::{
+    CompletionItem, CompletionItemKind, Documentation, InsertTextFormat, Position,
+};
 
 /// Completion items for ownership annotation keywords, shown in parameter position only.
 pub fn ownership_annotation_completions() -> Vec<CompletionItem> {
@@ -329,6 +331,206 @@ pub fn symbol_completions(program: &Program, _symbols: &SymbolTable) -> Vec<Comp
     items
 }
 
+/// Check if cursor is in the trait name position after `impl `
+///
+/// Returns true if the text immediately before the cursor (trimmed) ends with `impl`.
+pub fn is_after_impl_keyword(text: &str, position: Position) -> bool {
+    let lines: Vec<&str> = text.lines().collect();
+    let line_idx = position.line as usize;
+    if line_idx >= lines.len() {
+        return false;
+    }
+    let line = lines[line_idx];
+    let col = (position.character as usize).min(line.len());
+
+    let mut prefix = String::new();
+    for l in lines.iter().take(line_idx) {
+        prefix.push_str(l);
+        prefix.push('\n');
+    }
+    prefix.push_str(&line[..col]);
+
+    let trimmed = prefix.trim_end();
+    trimmed.ends_with("impl")
+}
+
+/// Check if cursor is inside an impl body after `fn `, and extract the enclosing trait name.
+///
+/// Looks backward in the text for an `impl TraitName for` pattern before the cursor
+/// and checks that the cursor is inside the following `{ ... }` block after `fn `.
+pub fn get_impl_trait_for_method_completion(text: &str, position: Position) -> Option<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let line_idx = position.line as usize;
+    if line_idx >= lines.len() {
+        return None;
+    }
+    let line = lines[line_idx];
+    let col = (position.character as usize).min(line.len());
+
+    // Build prefix up to cursor
+    let mut prefix = String::new();
+    for l in lines.iter().take(line_idx) {
+        prefix.push_str(l);
+        prefix.push('\n');
+    }
+    prefix.push_str(&line[..col]);
+
+    // Check that the cursor is after `fn ` on the current line (inside impl body)
+    let line_prefix = &line[..col];
+    if !line_prefix.trim_start().starts_with("fn") && !line_prefix.contains(" fn ") {
+        return None;
+    }
+
+    // Find the most recent `impl <TraitName> for` before the cursor
+    // Simple text scan: look for last occurrence of `impl ` in prefix
+    let impl_idx = prefix.rfind("impl ")?;
+    let after_impl = &prefix[impl_idx + 5..];
+    // Extract trait name (first word after `impl `)
+    let trait_name: String = after_impl
+        .chars()
+        .take_while(|c| c.is_alphanumeric() || *c == '_')
+        .collect();
+    if trait_name.is_empty() {
+        return None;
+    }
+
+    Some(trait_name)
+}
+
+/// Completion items for built-in Atlas traits.
+pub fn builtin_trait_completions() -> Vec<CompletionItem> {
+    let built_ins = [
+        ("Copy", "Marker trait for types that can be freely copied (value semantics). All primitive types implement Copy."),
+        ("Move", "Marker trait for types that require explicit ownership transfer. Incompatible with Copy."),
+        ("Drop", "Trait for types with custom destructor logic. Implement `drop(self: T) -> void` to define cleanup."),
+        ("Display", "Trait for types that can be converted to a human-readable string. Implement `display(self: T) -> string`."),
+        ("Debug", "Trait for types that can be serialized to a debug string. Implement `debug_repr(self: T) -> string`."),
+    ];
+    built_ins
+        .iter()
+        .map(|(name, doc)| CompletionItem {
+            label: name.to_string(),
+            kind: Some(CompletionItemKind::INTERFACE),
+            detail: Some("built-in trait".to_string()),
+            documentation: Some(Documentation::String(doc.to_string())),
+            ..Default::default()
+        })
+        .collect()
+}
+
+/// Completion items for user-defined trait names found in the AST.
+pub fn user_trait_completions(program: &Program) -> Vec<CompletionItem> {
+    let built_in_names = ["Copy", "Move", "Drop", "Display", "Debug"];
+    program
+        .items
+        .iter()
+        .filter_map(|item| {
+            if let Item::Trait(trait_decl) = item {
+                let name = &trait_decl.name.name;
+                if !built_in_names.contains(&name.as_str()) {
+                    return Some(CompletionItem {
+                        label: name.clone(),
+                        kind: Some(CompletionItemKind::INTERFACE),
+                        detail: Some("trait".to_string()),
+                        ..Default::default()
+                    });
+                }
+            }
+            None
+        })
+        .collect()
+}
+
+/// Completion items for required method stubs of a trait.
+///
+/// Given a trait name and the program AST, finds the trait declaration and returns
+/// one completion per method with a snippet showing the method signature.
+pub fn impl_method_stub_completions(trait_name: &str, program: &Program) -> Vec<CompletionItem> {
+    for item in &program.items {
+        if let Item::Trait(trait_decl) = item {
+            if trait_decl.name.name == trait_name {
+                return trait_decl
+                    .methods
+                    .iter()
+                    .map(|method| {
+                        let params: Vec<String> = method
+                            .params
+                            .iter()
+                            .enumerate()
+                            .map(|(i, p)| {
+                                format!(
+                                    "${{{}:{}: {}}}",
+                                    i + 1,
+                                    p.name.name,
+                                    format_type_ref_str(&p.type_ref)
+                                )
+                            })
+                            .collect();
+                        let snippet = format!(
+                            "{}({}) -> {} {{\n\t$0\n}}",
+                            method.name.name,
+                            params.join(", "),
+                            format_type_ref_str(&method.return_type)
+                        );
+                        CompletionItem {
+                            label: method.name.name.clone(),
+                            kind: Some(CompletionItemKind::METHOD),
+                            detail: Some(format!("required by trait {trait_name}")),
+                            insert_text: Some(snippet),
+                            insert_text_format: Some(InsertTextFormat::SNIPPET),
+                            ..Default::default()
+                        }
+                    })
+                    .collect();
+            }
+        }
+    }
+    vec![]
+}
+
+/// Format a TypeRef as a string (minimal version for snippet generation)
+fn format_type_ref_str(type_ref: &TypeRef) -> String {
+    match type_ref {
+        TypeRef::Named(name, _) => name.clone(),
+        TypeRef::Array(inner, _) => format!("{}[]", format_type_ref_str(inner)),
+        TypeRef::Union { members, .. } => members
+            .iter()
+            .map(format_type_ref_str)
+            .collect::<Vec<_>>()
+            .join(" | "),
+        TypeRef::Function {
+            params,
+            return_type,
+            ..
+        } => {
+            let ps: Vec<String> = params.iter().map(format_type_ref_str).collect();
+            format!(
+                "({}) -> {}",
+                ps.join(", "),
+                format_type_ref_str(return_type)
+            )
+        }
+        TypeRef::Structural { members, .. } => {
+            let fs: Vec<String> = members
+                .iter()
+                .map(|m| format!("{}: {}", m.name, format_type_ref_str(&m.type_ref)))
+                .collect();
+            format!("{{ {} }}", fs.join(", "))
+        }
+        TypeRef::Generic {
+            name, type_args, ..
+        } => {
+            let args: Vec<String> = type_args.iter().map(format_type_ref_str).collect();
+            format!("{}<{}>", name, args.join(", "))
+        }
+        TypeRef::Intersection { members, .. } => members
+            .iter()
+            .map(format_type_ref_str)
+            .collect::<Vec<_>>()
+            .join(" & "),
+    }
+}
+
 /// Generate all completion items for the given cursor position.
 ///
 /// `text` and `position` are used for context detection: ownership annotation
@@ -351,6 +553,21 @@ pub fn generate_completions(
     if let (Some(src), Some(pos)) = (text, position) {
         if is_in_param_position(src, pos) {
             items.extend(ownership_annotation_completions());
+        }
+
+        // Trait name completions after `impl `
+        if is_after_impl_keyword(src, pos) {
+            items.extend(builtin_trait_completions());
+            if let Some(prog) = program {
+                items.extend(user_trait_completions(prog));
+            }
+        }
+
+        // Method stub completions inside impl body after `fn `
+        if let Some(prog) = program {
+            if let Some(trait_name) = get_impl_trait_for_method_completion(src, pos) {
+                items.extend(impl_method_stub_completions(&trait_name, prog));
+            }
         }
     }
 

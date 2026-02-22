@@ -228,6 +228,7 @@ impl TypeInferer {
                             .bound
                             .as_ref()
                             .map(|b| Box::new(self.apply_substitutions(b))),
+                        trait_bounds: param.trait_bounds.clone(),
                     })
                     .collect(),
                 params: params.iter().map(|p| self.apply_substitutions(p)).collect(),
@@ -510,6 +511,7 @@ mod tests {
         let type_params = vec![TypeParamDef {
             name: "T".to_string(),
             bound: None,
+            trait_bounds: vec![],
         }];
         let type_args = vec![Type::Number];
 
@@ -529,10 +531,12 @@ mod tests {
             TypeParamDef {
                 name: "T".to_string(),
                 bound: None,
+                trait_bounds: vec![],
             },
             TypeParamDef {
                 name: "E".to_string(),
                 bound: None,
+                trait_bounds: vec![],
             },
         ];
         let type_args = vec![Type::String, Type::Number];
@@ -553,6 +557,7 @@ mod tests {
         let type_params = vec![TypeParamDef {
             name: "T".to_string(),
             bound: None,
+            trait_bounds: vec![],
         }];
         let type_args = vec![Type::Number, Type::String]; // Too many
 
@@ -571,6 +576,7 @@ mod tests {
         let type_params = vec![TypeParamDef {
             name: "T".to_string(),
             bound: None,
+            trait_bounds: vec![],
         }];
         let type_args = vec![Type::Number];
 

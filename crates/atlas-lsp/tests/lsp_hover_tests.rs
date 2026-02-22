@@ -582,3 +582,183 @@ fn test_keyword_hover_shared() {
     let contents = format!("{:?}", hover.unwrap().contents);
     assert!(contents.contains("shared"));
 }
+
+// === Trait/Impl Keyword Hover Tests ===
+
+#[test]
+fn test_keyword_hover_trait() {
+    let hover = generate_hover(
+        "trait",
+        Position {
+            line: 0,
+            character: 2,
+        },
+        None,
+        None,
+    );
+    assert!(hover.is_some(), "Expected hover for 'trait' keyword");
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("trait"),
+        "Expected 'trait' in hover, got: {contents}"
+    );
+    assert!(
+        contents.contains("Declares a trait") || contents.contains("named set"),
+        "Expected trait description, got: {contents}"
+    );
+}
+
+#[test]
+fn test_keyword_hover_impl() {
+    let hover = generate_hover(
+        "impl",
+        Position {
+            line: 0,
+            character: 2,
+        },
+        None,
+        None,
+    );
+    assert!(hover.is_some(), "Expected hover for 'impl' keyword");
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("impl"),
+        "Expected 'impl' in hover, got: {contents}"
+    );
+    assert!(
+        contents.contains("Implements a trait") || contents.contains("matching signatures"),
+        "Expected impl description, got: {contents}"
+    );
+}
+
+#[test]
+fn test_hover_trait_name_in_declaration() {
+    let source = "trait Display { fn display(self: Display) -> string; }";
+    let (ast, symbols) = parse_source(source);
+    // Hover over 'Display' (the trait name) at character 6
+    let pos = Position {
+        line: 0,
+        character: 8,
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(hover.is_some(), "Expected hover for trait name 'Display'");
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("trait") && contents.contains("Display"),
+        "Expected '(trait) Display' in hover, got: {contents}"
+    );
+    assert!(
+        contents.contains("display"),
+        "Expected method name 'display' in trait hover, got: {contents}"
+    );
+}
+
+#[test]
+fn test_hover_trait_name_shows_method_signatures() {
+    let source = "trait Math { fn double(self: Math) -> number; fn triple(self: Math) -> number; }";
+    let (ast, symbols) = parse_source(source);
+    let pos = Position {
+        line: 0,
+        character: 8,
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(hover.is_some(), "Expected hover for 'Math' trait name");
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("double") && contents.contains("triple"),
+        "Expected both method signatures in trait hover, got: {contents}"
+    );
+}
+
+#[test]
+fn test_hover_impl_block_type_name() {
+    let source = "trait Display { fn display(self: Display) -> string; } \
+                  impl Display for number { fn display(self: number) -> string { return \"n\"; } }";
+    let (ast, symbols) = parse_source(source);
+    // Hover over 'number' in the impl block (after 'for ')
+    // 'impl Display for number' — 'number' starts at col 72
+    let pos = Position {
+        line: 0,
+        character: 74,
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(
+        hover.is_some(),
+        "Expected hover for type name in impl block"
+    );
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("impl") && contents.contains("number") && contents.contains("Display"),
+        "Expected impl hover showing type implements trait, got: {contents}"
+    );
+}
+
+#[test]
+fn test_hover_impl_block_trait_name() {
+    let source = "trait Display { fn display(self: Display) -> string; } \
+                  impl Display for number { fn display(self: number) -> string { return \"n\"; } }";
+    let (ast, symbols) = parse_source(source);
+    // Hover over 'Display' in the impl block header (col 60)
+    // Since Display is also a declared trait, find_trait_hover fires first → shows trait signature
+    let pos = Position {
+        line: 0,
+        character: 60,
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(
+        hover.is_some(),
+        "Expected hover for trait name in impl header"
+    );
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("Display"),
+        "Expected 'Display' in hover for trait name in impl header, got: {contents}"
+    );
+    assert!(
+        contents.contains("trait") || contents.contains("display"),
+        "Expected trait info for 'Display' hover, got: {contents}"
+    );
+}
+
+#[test]
+fn test_hover_trait_with_no_methods() {
+    let source = "trait Marker { }";
+    let (ast, symbols) = parse_source(source);
+    let pos = Position {
+        line: 0,
+        character: 8,
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(hover.is_some(), "Expected hover for trait with no methods");
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("Marker"),
+        "Expected trait name in hover, got: {contents}"
+    );
+}
+
+#[test]
+fn test_hover_impl_method_list_shown() {
+    let source =
+        "trait Shape { fn area(self: Shape) -> number; fn perimeter(self: Shape) -> number; } \
+                  impl Shape for number { \
+                    fn area(self: number) -> number { return self; } \
+                    fn perimeter(self: number) -> number { return self * 4; } \
+                  }";
+    let (ast, symbols) = parse_source(source);
+    // Hover over 'Shape' in 'impl Shape for number'
+    let pos = Position {
+        line: 0,
+        character: 90,
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(
+        hover.is_some(),
+        "Expected hover for trait name in impl block"
+    );
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("area") || contents.contains("perimeter"),
+        "Expected method names in impl hover, got: {contents}"
+    );
+}

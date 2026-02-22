@@ -197,7 +197,9 @@ fn classify_token(
         | TokenKind::Is
         | TokenKind::Own
         | TokenKind::Borrow
-        | TokenKind::Shared => (token_type_idx::KEYWORD, 0),
+        | TokenKind::Shared
+        | TokenKind::Trait
+        | TokenKind::Impl => (token_type_idx::KEYWORD, 0),
 
         // Boolean literals (also keywords semantically)
         TokenKind::True | TokenKind::False | TokenKind::Null => (token_type_idx::KEYWORD, 0),

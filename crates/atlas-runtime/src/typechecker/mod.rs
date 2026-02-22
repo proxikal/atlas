@@ -55,6 +55,177 @@ pub type FnOwnershipEntry = (
     Option<OwnershipAnnotation>,
 );
 
+/// A registered trait's method signature entry.
+#[derive(Debug, Clone)]
+pub struct TraitMethodEntry {
+    pub name: String,
+    pub type_params: Vec<TypeParamDef>,
+    pub param_types: Vec<Type>,
+    pub return_type: Type,
+}
+
+/// Registry of known traits (built-in + user-defined).
+#[derive(Debug, Default)]
+pub struct TraitRegistry {
+    /// Maps trait name -> list of required method signatures
+    pub traits: HashMap<String, Vec<TraitMethodEntry>>,
+    /// Set of built-in trait names (not user-definable)
+    pub built_in: HashSet<String>,
+    /// Maps (type_name, trait_name) -> whether type implements the trait.
+    /// For built-in types, pre-populated. For user types, populated during impl checking.
+    pub implementations: HashMap<(String, String), bool>,
+}
+
+impl TraitRegistry {
+    pub fn new() -> Self {
+        let mut registry = Self::default();
+        registry.register_built_ins();
+        registry
+    }
+
+    fn register_built_ins(&mut self) {
+        // Copy — types that can be freely copied (value semantics, marker trait)
+        self.register_built_in("Copy", vec![]);
+
+        // Move — types that require explicit ownership transfer (marker trait)
+        self.register_built_in("Move", vec![]);
+
+        // Drop — types with custom destructor logic
+        self.register_built_in(
+            "Drop",
+            vec![TraitMethodEntry {
+                name: "drop".to_string(),
+                type_params: vec![],
+                param_types: vec![],
+                return_type: Type::Void,
+            }],
+        );
+
+        // Display — types that can be converted to a string representation
+        self.register_built_in(
+            "Display",
+            vec![TraitMethodEntry {
+                name: "display".to_string(),
+                type_params: vec![],
+                param_types: vec![],
+                return_type: Type::String,
+            }],
+        );
+
+        // Debug — types that can be serialized to a debug string representation
+        self.register_built_in(
+            "Debug",
+            vec![TraitMethodEntry {
+                name: "debug_repr".to_string(),
+                type_params: vec![],
+                param_types: vec![],
+                return_type: Type::String,
+            }],
+        );
+
+        // All primitive types implement Copy (value semantics)
+        for primitive in &["number", "string", "bool", "null"] {
+            self.mark_implements(primitive, "Copy");
+        }
+        // Built-in types do NOT implement Display/Debug — they use stdlib str()/debug().
+        // User-defined types implement Display/Debug to customize str() output.
+    }
+
+    fn register_built_in(&mut self, name: &str, methods: Vec<TraitMethodEntry>) {
+        self.traits.insert(name.to_string(), methods);
+        self.built_in.insert(name.to_string());
+    }
+
+    pub fn register_user_trait(&mut self, name: &str, methods: Vec<TraitMethodEntry>) {
+        self.traits.insert(name.to_string(), methods);
+    }
+
+    pub fn mark_implements(&mut self, type_name: &str, trait_name: &str) {
+        self.implementations
+            .insert((type_name.to_string(), trait_name.to_string()), true);
+    }
+
+    pub fn implements(&self, type_name: &str, trait_name: &str) -> bool {
+        self.implementations
+            .get(&(type_name.to_string(), trait_name.to_string()))
+            .copied()
+            .unwrap_or(false)
+    }
+
+    pub fn trait_exists(&self, name: &str) -> bool {
+        self.traits.contains_key(name)
+    }
+
+    pub fn get_methods(&self, trait_name: &str) -> Option<&Vec<TraitMethodEntry>> {
+        self.traits.get(trait_name)
+    }
+
+    /// Returns the name of the first trait that declares a method with the given name.
+    pub fn find_trait_with_method(&self, method_name: &str) -> Option<&str> {
+        self.traits.iter().find_map(|(trait_name, methods)| {
+            if methods.iter().any(|m| m.name == method_name) {
+                Some(trait_name.as_str())
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn is_built_in(&self, name: &str) -> bool {
+        self.built_in.contains(name)
+    }
+}
+
+/// A resolved impl block entry — the methods available for dispatch.
+#[derive(Debug, Clone)]
+pub struct ImplEntry {
+    pub trait_name: String,
+    pub type_name: String,
+    /// Method name -> impl method definition
+    pub methods: HashMap<String, ImplMethod>,
+}
+
+/// Registry of all impl blocks: `(type_name, trait_name)` → `ImplEntry`.
+/// Used by Phases 12/13/14 for method dispatch.
+#[derive(Debug, Default)]
+pub struct ImplRegistry {
+    pub entries: HashMap<(String, String), ImplEntry>,
+}
+
+impl ImplRegistry {
+    pub fn register(
+        &mut self,
+        type_name: &str,
+        trait_name: &str,
+        methods: HashMap<String, ImplMethod>,
+    ) {
+        self.entries.insert(
+            (type_name.to_string(), trait_name.to_string()),
+            ImplEntry {
+                trait_name: trait_name.to_string(),
+                type_name: type_name.to_string(),
+                methods,
+            },
+        );
+    }
+
+    pub fn get_method(
+        &self,
+        type_name: &str,
+        trait_name: &str,
+        method_name: &str,
+    ) -> Option<&ImplMethod> {
+        self.entries
+            .get(&(type_name.to_string(), trait_name.to_string()))
+            .and_then(|entry| entry.methods.get(method_name))
+    }
+
+    pub fn has_impl(&self, type_name: &str, trait_name: &str) -> bool {
+        self.entries
+            .contains_key(&(type_name.to_string(), trait_name.to_string()))
+    }
+}
+
 /// Type checker state
 pub struct TypeChecker<'a> {
     /// Symbol table from binder
@@ -90,6 +261,27 @@ pub struct TypeChecker<'a> {
     /// Maps param name -> ownership annotation. Used by call-site checks to detect
     /// whether an argument is a `borrow` parameter of the enclosing function.
     pub(super) current_fn_param_ownerships: HashMap<String, Option<OwnershipAnnotation>>,
+    /// Registry of all known traits (built-in + user-defined).
+    pub trait_registry: TraitRegistry,
+    /// Registry of all impl blocks keyed by (type_name, trait_name).
+    pub impl_registry: ImplRegistry,
+}
+
+/// Convert a `Type` to a string key used for impl registry lookups.
+/// Returns `None` for types that don't support trait dispatch in Block 3
+/// (e.g. arrays, maps — user-defined struct types are added in v0.4).
+/// Convert a `Type` to a string key used for impl registry lookups.
+/// Returns `None` for types that don't support trait dispatch in Block 3.
+/// User-defined struct types (with named types) are added in v0.4.
+pub(crate) fn type_to_impl_key(ty: &Type) -> Option<String> {
+    match ty.normalized() {
+        Type::Number => Some("number".to_string()),
+        Type::String => Some("string".to_string()),
+        Type::Bool => Some("bool".to_string()),
+        // Generic with no type args represents an opaque user type (e.g. MyType<>)
+        Type::Generic { name, type_args } if type_args.is_empty() => Some(name),
+        _ => None,
+    }
 }
 
 impl<'a> TypeChecker<'a> {
@@ -112,6 +304,8 @@ impl<'a> TypeChecker<'a> {
             alias_resolution_stack: Vec::new(),
             fn_ownership_registry: HashMap::new(),
             current_fn_param_ownerships: HashMap::new(),
+            trait_registry: TraitRegistry::new(),
+            impl_registry: ImplRegistry::default(),
         }
     }
 
@@ -215,6 +409,8 @@ impl<'a> TypeChecker<'a> {
             Item::TypeAlias(_) => {
                 // Type aliases are validated in a pre-pass
             }
+            Item::Trait(trait_decl) => self.check_trait_decl(trait_decl),
+            Item::Impl(impl_block) => self.check_impl_block(impl_block),
         }
     }
 
@@ -245,6 +441,11 @@ impl<'a> TypeChecker<'a> {
                         None,
                     ))
                 }),
+                trait_bounds: param
+                    .trait_bounds
+                    .iter()
+                    .map(|tb| tb.trait_name.clone())
+                    .collect(),
             })
             .collect();
 
@@ -437,6 +638,222 @@ impl<'a> TypeChecker<'a> {
                 }
             }
         }
+    }
+
+    /// Check a trait declaration: register it in the trait registry, error on duplicates/builtins.
+    fn check_trait_decl(&mut self, trait_decl: &TraitDecl) {
+        let trait_name = trait_decl.name.name.clone();
+
+        // Error if re-declaring a built-in trait
+        if self.trait_registry.is_built_in(&trait_name) {
+            self.diagnostics.push(Diagnostic::error_with_code(
+                error_codes::TRAIT_REDEFINES_BUILTIN,
+                format!("Cannot redefine built-in trait '{}'", trait_name),
+                trait_decl.name.span,
+            ));
+            return;
+        }
+
+        // Error if duplicate user trait declaration
+        if self.trait_registry.trait_exists(&trait_name) {
+            self.diagnostics.push(Diagnostic::error_with_code(
+                error_codes::TRAIT_ALREADY_DEFINED,
+                format!("Trait '{}' is already defined", trait_name),
+                trait_decl.name.span,
+            ));
+            return;
+        }
+
+        // Resolve method signatures and register
+        let method_entries: Vec<TraitMethodEntry> = trait_decl
+            .methods
+            .iter()
+            .map(|method_sig| {
+                // Exclude `self` param — impl's self type differs from trait's self type
+                let param_types: Vec<Type> = method_sig
+                    .params
+                    .iter()
+                    .filter(|p| p.name.name != "self")
+                    .map(|p| self.resolve_type_ref(&p.type_ref))
+                    .collect();
+                let return_type = self.resolve_type_ref(&method_sig.return_type);
+                TraitMethodEntry {
+                    name: method_sig.name.name.clone(),
+                    type_params: method_sig
+                        .type_params
+                        .iter()
+                        .map(|tp| TypeParamDef {
+                            name: tp.name.clone(),
+                            bound: None,
+                            trait_bounds: tp
+                                .trait_bounds
+                                .iter()
+                                .map(|tb| tb.trait_name.clone())
+                                .collect(),
+                        })
+                        .collect(),
+                    param_types,
+                    return_type,
+                }
+            })
+            .collect();
+
+        self.trait_registry
+            .register_user_trait(&trait_name, method_entries);
+    }
+
+    /// Check an impl block: verify the trait exists, check method conformance, register.
+    fn check_impl_block(&mut self, impl_block: &ImplBlock) {
+        let trait_name = impl_block.trait_name.name.clone();
+        let type_name = impl_block.type_name.name.clone();
+
+        // 1. Verify trait exists
+        if !self.trait_registry.trait_exists(&trait_name) {
+            self.diagnostics.push(Diagnostic::error_with_code(
+                error_codes::TRAIT_NOT_FOUND,
+                format!("Trait '{}' is not defined", trait_name),
+                impl_block.trait_name.span,
+            ));
+            return;
+        }
+
+        // 2. Check for duplicate impl
+        if self.impl_registry.has_impl(&type_name, &trait_name) {
+            self.diagnostics.push(Diagnostic::error_with_code(
+                error_codes::IMPL_ALREADY_EXISTS,
+                format!("'{}' already implements '{}'", type_name, trait_name),
+                impl_block.span,
+            ));
+            return;
+        }
+
+        // 3. Get required methods from trait
+        let required_methods: Vec<TraitMethodEntry> = self
+            .trait_registry
+            .get_methods(&trait_name)
+            .cloned()
+            .unwrap_or_default();
+
+        // 4. Build a map of provided methods
+        let provided: HashMap<String, &ImplMethod> = impl_block
+            .methods
+            .iter()
+            .map(|m| (m.name.name.clone(), m))
+            .collect();
+
+        // 5. Check all required methods are provided with matching signatures
+        let mut all_ok = true;
+        for required in &required_methods {
+            match provided.get(&required.name) {
+                None => {
+                    self.diagnostics.push(Diagnostic::error_with_code(
+                        error_codes::IMPL_METHOD_MISSING,
+                        format!(
+                            "Impl of '{}' for '{}' is missing required method '{}'",
+                            trait_name, type_name, required.name
+                        ),
+                        impl_block.span,
+                    ));
+                    all_ok = false;
+                }
+                Some(impl_method) => {
+                    // Skip `self` parameter on both sides: trait declares `self: TraitName`
+                    // but impl naturally uses the implementing type. Both sides exclude `self`
+                    // for comparison so parameter names beyond `self` are checked cleanly.
+                    let impl_param_types: Vec<Type> = impl_method
+                        .params
+                        .iter()
+                        .filter(|p| p.name.name != "self")
+                        .map(|p| self.resolve_type_ref(&p.type_ref))
+                        .collect();
+
+                    if impl_param_types != required.param_types {
+                        self.diagnostics.push(Diagnostic::error_with_code(
+                            error_codes::IMPL_METHOD_SIGNATURE_MISMATCH,
+                            format!(
+                                "Method '{}' in impl of '{}' for '{}' has wrong parameter types",
+                                required.name, trait_name, type_name
+                            ),
+                            impl_method.span,
+                        ));
+                        all_ok = false;
+                    }
+
+                    let impl_return = self.resolve_type_ref(&impl_method.return_type);
+                    if impl_return != required.return_type {
+                        self.diagnostics.push(Diagnostic::error_with_code(
+                            error_codes::IMPL_METHOD_SIGNATURE_MISMATCH,
+                            format!(
+                                "Method '{}' in impl of '{}' for '{}' has wrong return type",
+                                required.name, trait_name, type_name
+                            ),
+                            impl_method.span,
+                        ));
+                        all_ok = false;
+                    }
+                }
+            }
+        }
+
+        // 6. Typecheck method bodies
+        for impl_method in &impl_block.methods {
+            self.check_impl_method_body(impl_method);
+        }
+
+        // 7. Register impl if conformance passed
+        if all_ok {
+            let method_map: HashMap<String, ImplMethod> = impl_block
+                .methods
+                .iter()
+                .map(|m| (m.name.name.clone(), m.clone()))
+                .collect();
+            self.impl_registry
+                .register(&type_name, &trait_name, method_map);
+            self.trait_registry.mark_implements(&type_name, &trait_name);
+        }
+    }
+
+    /// Typecheck an impl method body, using the same pattern as `check_function`.
+    fn check_impl_method_body(&mut self, method: &ImplMethod) {
+        let prev_return_type = self.current_function_return_type.clone();
+        let prev_function_info = self.current_function_info.clone();
+        let prev_declared_symbols = std::mem::take(&mut self.declared_symbols);
+        let prev_used_symbols = std::mem::take(&mut self.used_symbols);
+        let prev_param_ownerships = std::mem::take(&mut self.current_fn_param_ownerships);
+
+        self.current_function_return_type = Some(self.resolve_type_ref(&method.return_type));
+        self.current_function_info = Some((method.name.name.clone(), method.span));
+
+        self.enter_scope();
+
+        for param in &method.params {
+            let ty = self.resolve_type_ref(&param.type_ref);
+            let symbol = crate::symbol::Symbol {
+                name: param.name.name.clone(),
+                ty,
+                mutable: false,
+                kind: SymbolKind::Parameter,
+                span: param.name.span,
+                exported: false,
+            };
+            let _ = self.symbol_table.define(symbol);
+            self.declared_symbols.insert(
+                param.name.name.clone(),
+                (param.name.span, SymbolKind::Parameter),
+            );
+        }
+
+        for stmt in &method.body.statements {
+            self.check_statement(stmt);
+        }
+
+        self.exit_scope();
+
+        self.current_function_return_type = prev_return_type;
+        self.current_function_info = prev_function_info;
+        self.declared_symbols = prev_declared_symbols;
+        self.used_symbols = prev_used_symbols;
+        self.current_fn_param_ownerships = prev_param_ownerships;
     }
 
     fn check_function(&mut self, func: &FunctionDecl) {
@@ -1209,6 +1626,62 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
+    /// Returns `true` if the given type implements `Copy` (value semantics).
+    /// Built-in value types are always Copy. User types are Copy only if they have
+    /// an explicit `impl Copy for T { }` registered in the trait registry.
+    pub fn is_copy_type(&self, ty: &Type) -> bool {
+        match ty.normalized() {
+            // All built-in value types are Copy
+            Type::Number | Type::String | Type::Bool | Type::Null | Type::Void => true,
+            Type::Array(_) | Type::JsonValue => true,
+            // Function types are Copy (reference-counted internally)
+            Type::Function { .. } => true,
+            // Generic types: Copy if explicitly registered (e.g. shared<T> is NOT Copy)
+            Type::Generic { name, type_args: _ } => self.trait_registry.implements(&name, "Copy"),
+            // Type parameters: conservative — not Copy unless registry says so
+            Type::TypeParameter { name } => self.trait_registry.implements(&name, "Copy"),
+            _ => false,
+        }
+    }
+
+    /// Returns `true` if the given type requires explicit ownership transfer (Move semantics).
+    /// In Block 3: a type is Move if it is not Copy.
+    pub fn is_move_type(&self, ty: &Type) -> bool {
+        !self.is_copy_type(ty)
+    }
+
+    /// Try to resolve a method call through the trait/impl system.
+    /// Returns the return type if a matching impl method is found, `None` otherwise.
+    /// Only fires after stdlib method dispatch has failed (dispatch priority slot 2).
+    /// Like `resolve_trait_method_call_with_info` but discards dispatch info.
+    pub(super) fn resolve_trait_method_call_with_info(
+        &mut self,
+        receiver_type: &Type,
+        method_name: &str,
+    ) -> Option<(Type, String, String)> {
+        let type_name = type_to_impl_key(receiver_type)?;
+        // Search all impls for this type — return method + the trait that provides it
+        let matching: Option<(ImplMethod, String)> = self
+            .impl_registry
+            .entries
+            .iter()
+            .filter(|((impl_type, _), _)| impl_type == &type_name)
+            .find_map(|((_, trait_name), entry)| {
+                entry
+                    .methods
+                    .get(method_name)
+                    .cloned()
+                    .map(|m| (m, trait_name.clone()))
+            });
+
+        if let Some((method, trait_name)) = matching {
+            let return_type = self.resolve_type_ref(&method.return_type.clone());
+            Some((return_type, type_name, trait_name))
+        } else {
+            None
+        }
+    }
+
     /// Resolve a type reference to a Type
     pub(super) fn resolve_type_ref(&mut self, type_ref: &TypeRef) -> Type {
         self.resolve_type_ref_with_context(type_ref, None)
@@ -1713,13 +2186,67 @@ impl<'a> TypeChecker<'a> {
         inferer: &generics::TypeInferer,
         span: Span,
     ) -> bool {
-        constraints::check_constraints(
+        let mut ok = constraints::check_constraints(
             type_params,
             inferer,
             &self.method_table,
             &mut self.diagnostics,
             span,
-        )
+        );
+
+        // Also check trait bounds (`T: Copy + UserTrait`) from Phase 05/10
+        for param in type_params {
+            if param.trait_bounds.is_empty() {
+                continue;
+            }
+            let Some(actual) = inferer.get_substitution(&param.name) else {
+                continue;
+            };
+            for trait_name in &param.trait_bounds {
+                if !self.type_satisfies_trait_bound(actual, trait_name) {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            error_codes::TRAIT_BOUND_NOT_SATISFIED,
+                            format!(
+                                "Type '{}' does not implement trait '{}' required by type \
+                                 parameter '{}'",
+                                actual.display_name(),
+                                trait_name,
+                                param.name
+                            ),
+                            span,
+                        )
+                        .with_label("trait bound not satisfied")
+                        .with_help(format!(
+                            "implement '{}' for '{}' using `impl {} for {} {{ ... }}`",
+                            trait_name,
+                            actual.display_name(),
+                            trait_name,
+                            actual.display_name()
+                        )),
+                    );
+                    ok = false;
+                }
+            }
+        }
+
+        ok
+    }
+
+    /// Determine if a resolved type satisfies a trait bound by name.
+    fn type_satisfies_trait_bound(&self, ty: &Type, trait_name: &str) -> bool {
+        match trait_name {
+            "Copy" => self.is_copy_type(ty),
+            "Move" => self.is_move_type(ty),
+            _ => {
+                // Built-in or user-defined trait — check impl registry
+                if let Some(type_name) = type_to_impl_key(ty) {
+                    self.trait_registry.implements(&type_name, trait_name)
+                } else {
+                    false
+                }
+            }
+        }
     }
 
     fn validate_type_param_bounds(&mut self, type_params: &[crate::ast::TypeParam]) {

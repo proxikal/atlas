@@ -56,13 +56,14 @@ impl DocumentState {
         let mut parser = Parser::new(tokens);
         let (ast, parse_diagnostics) = parser.parse();
 
+        // Store partial AST even on parse errors — enables LSP features (hover, completion)
+        // for the portion of the document that parsed successfully.
+        self.ast = Some(ast.clone());
+
         if !parse_diagnostics.is_empty() {
             self.diagnostics.extend(parse_diagnostics);
             return;
         }
-
-        // Store AST for navigation
-        self.ast = Some(ast.clone());
 
         // Bind symbols
         let mut binder = Binder::new();

@@ -232,8 +232,30 @@ impl<'a> TypeChecker<'a> {
                         }
                     }
                 }
-                Some(OwnershipAnnotation::Borrow) | None => {
-                    // borrow and unannotated params accept any value — no diagnostic
+                Some(OwnershipAnnotation::Borrow) => {
+                    // borrow params accept any value — no diagnostic
+                }
+                None => {
+                    // Unannotated param: warn if the argument type is non-Copy (Move type)
+                    if let Some(arg_type) = arg_types.get(i) {
+                        if self.is_move_type(arg_type) && *arg_type != Type::Unknown {
+                            self.diagnostics.push(
+                                Diagnostic::warning_with_code(
+                                    error_codes::MOVE_TYPE_REQUIRES_OWNERSHIP_ANNOTATION,
+                                    format!(
+                                        "Type '{}' is not Copy — consider annotating with \
+                                         'own' or 'borrow' to clarify ownership intent",
+                                        arg_type.display_name()
+                                    ),
+                                    arg.span(),
+                                )
+                                .with_help(
+                                    "non-Copy types should use explicit 'own' or 'borrow' \
+                                     ownership annotations",
+                                ),
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -833,25 +855,69 @@ impl<'a> TypeChecker<'a> {
 
             // Return the method's return type
             method_sig.return_type
+        } else if let Some((return_type, type_name, trait_name)) =
+            self.resolve_trait_method_call_with_info(&target_type, method_name)
+        {
+            // Slot 2: trait method dispatch — found a matching impl
+            // Annotate MemberExpr with dispatch info for compiler/interpreter
+            *member.trait_dispatch.borrow_mut() = Some((type_name, trait_name));
+
+            // Check args if present (non-self params only)
+            if let Some(args) = &member.args {
+                for arg in args.iter() {
+                    let _ = self.check_expr(arg);
+                }
+            }
+            return_type
         } else {
-            // Method not found for this type
-            self.diagnostics.push(
-                Diagnostic::error_with_code(
-                    "AT3010",
-                    format!(
-                        "Type '{}' has no method named '{}'",
+            // Check if a declared trait has this method — if so, emit AT3035 (not implemented)
+            // rather than generic AT3010 (not found).
+            let trait_name_with_method = self
+                .trait_registry
+                .find_trait_with_method(method_name)
+                .map(|s| s.to_owned());
+
+            if let Some(trait_name) = trait_name_with_method {
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        error_codes::TYPE_DOES_NOT_IMPLEMENT_TRAIT,
+                        format!(
+                            "Type '{}' does not implement trait '{}' required for method '{}'",
+                            target_type.display_name(),
+                            trait_name,
+                            method_name
+                        ),
+                        member.member.span,
+                    )
+                    .with_label(format!("trait '{}' not implemented", trait_name))
+                    .with_help(format!(
+                        "implement '{}' for '{}' with: impl {} for {} {{ ... }}",
+                        trait_name,
+                        target_type.display_name(),
+                        trait_name,
+                        target_type.display_name()
+                    )),
+                );
+            } else {
+                // Method not found for this type (not a trait method either)
+                self.diagnostics.push(
+                    Diagnostic::error_with_code(
+                        "AT3010",
+                        format!(
+                            "Type '{}' has no method named '{}'",
+                            target_type.display_name(),
+                            method_name
+                        ),
+                        member.member.span,
+                    )
+                    .with_label("method not found")
+                    .with_help(format!(
+                        "type '{}' does not support method '{}'",
                         target_type.display_name(),
                         method_name
-                    ),
-                    member.member.span,
-                )
-                .with_label("method not found")
-                .with_help(format!(
-                    "type '{}' does not support method '{}'",
-                    target_type.display_name(),
-                    method_name
-                )),
-            );
+                    )),
+                );
+            }
             Type::Unknown
         }
     }

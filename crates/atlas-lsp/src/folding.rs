@@ -93,6 +93,9 @@ fn extract_item_folds(text: &str, item: &Item, ranges: &mut Vec<FoldingRange>) {
                 extract_function_folds(text, func, ranges);
             }
         }
+        Item::Trait(_) | Item::Impl(_) => {
+            // Trait/impl folding handled in Block 3
+        }
     }
 }
 

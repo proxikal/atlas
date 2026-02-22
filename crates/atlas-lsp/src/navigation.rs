@@ -157,6 +157,7 @@ fn find_references_in_item(item: &Item, identifier: &str, references: &mut Vec<R
             }
         }
         Item::Import(_) | Item::Export(_) | Item::Extern(_) => {}
+        Item::Trait(_) | Item::Impl(_) => {}
     }
 }
 

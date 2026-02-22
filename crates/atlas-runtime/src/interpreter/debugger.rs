@@ -364,7 +364,12 @@ impl InterpreterDebuggerSession {
                         break;
                     }
                 }
-                Item::Import(_) | Item::Export(_) | Item::Extern(_) | Item::TypeAlias(_) => {
+                Item::Import(_)
+                | Item::Export(_)
+                | Item::Extern(_)
+                | Item::TypeAlias(_)
+                | Item::Trait(_)
+                | Item::Impl(_) => {
                     // These don't need debug pauses
                 }
             }

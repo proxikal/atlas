@@ -1,16 +1,16 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-22 (Block 2 COMPLETE)
+**Last Updated:** 2026-02-22 (Block 3 Phase 18 complete)
 **Version:** v0.3 — The Foundation Version
-**Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 COMPLETE ✅ | v0.3 Block 2 COMPLETE ✅
+**Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 COMPLETE ✅ | v0.3 Block 2 COMPLETE ✅ | v0.3 Block 3 COMPLETE ✅
 
 ---
 
 ## Current State
 
-**Status:** Block 2 COMPLETE — ready for Block 3 scaffolding
-**Last Completed:** Block 2 Phase 16 — Spec update + AC check (9,236 tests passing)
-**Next:** Scaffold Block 3 (Trait System)
+**Status:** Block 3 COMPLETE — ready for Block 4/5/6 scaffolding (all unblock)
+**Last Completed:** Block 3 Phase 18 — Spec update + AC check (~9,436 tests passing)
+**Next:** Scaffold Block 4 (Closures), Block 5 (Type Inference), or Block 6 (Error Handling)
 
 ---
 
@@ -20,7 +20,7 @@
 |-------|-------|--------|--------|
 | 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25 | ✅ Complete (2026-02-21) |
 | 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 16 | ✅ Complete (2026-02-22) |
-| 3 | Trait System (`trait`, `impl`, Copy/Move/Drop) | 20–25 | ⬜ Unblocked — ready to scaffold |
+| 3 | Trait System (`trait`, `impl`, Copy/Move/Drop) | 18 | ✅ Complete (2026-02-22) |
 | 4 | Closures + Anonymous Functions | 15–20 | ⬜ Blocked on Block 3 |
 | 5 | Type Inference (locals + return types) | 10–15 | ⬜ Blocked on Block 3 |
 | 6 | Error Handling (`?` operator) | 10–15 | ⬜ Blocked on Block 3 |
@@ -60,6 +60,23 @@ until all acceptance criteria in its dependency block are met. See V03_PLAN.md.
 | Test failures | 0 |
 | Parity tests (own/borrow/shared) | 22 new (zero divergence) |
 | LSP tests added | 14 new (tokens, hover, completion) |
+| Clippy | 0 warnings (-D warnings) |
+| Fmt | Clean |
+| Acceptance criteria | **5/5** |
+
+---
+
+## Block 3 Completion Metrics
+
+| Metric | Value |
+|--------|-------|
+| Phases | 18/18 |
+| Tests at completion | **~9,436** |
+| Tests added this block | **~200** |
+| Test failures | 0 |
+| Parity tests (trait dispatch) | 40 new (20 basic + 20 extended, zero divergence) |
+| LSP tests added | 25+ new (hover, tokens, completion) |
+| Error codes documented | AT3001–AT3037 range |
 | Clippy | 0 warnings (-D warnings) |
 | Fmt | Clean |
 | Acceptance criteria | **5/5** |

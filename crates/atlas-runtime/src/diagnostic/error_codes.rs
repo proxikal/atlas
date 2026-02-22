@@ -52,6 +52,9 @@ pub const DEPRECATED_TYPE_ALIAS: &str = "AT2009";
 pub const OWN_ON_PRIMITIVE: &str = "AT2010";
 pub const BORROW_ON_SHARED: &str = "AT2011";
 pub const BORROW_TO_OWN: &str = "AT2012";
+/// Warning: a non-Copy (Move) type is passed to a parameter without an ownership annotation.
+/// Add `own` or `borrow` to the parameter to clarify ownership transfer semantics.
+pub const MOVE_TYPE_REQUIRES_OWNERSHIP_ANNOTATION: &str = "AT2013";
 
 // AT3xxx - Semantic and Type Checking Errors
 pub const TYPE_ERROR: &str = "AT3001";
@@ -71,6 +74,42 @@ pub const UNSUPPORTED_PATTERN_TYPE: &str = "AT3025";
 pub const ARRAY_PATTERN_TYPE_MISMATCH: &str = "AT3026";
 pub const NON_EXHAUSTIVE_MATCH: &str = "AT3027";
 pub const NON_SHARED_TO_SHARED: &str = "AT3028";
+
+/// Fired when an `impl Trait for Type` already exists for the same `(Type, Trait)` pair.
+/// Each type may only have one impl per trait. Remove or merge duplicate impls.
+pub const IMPL_ALREADY_EXISTS: &str = "AT3029";
+
+/// Fired when a `trait` declaration attempts to redefine a built-in trait (Copy, Move, Drop,
+/// Display, Debug). Built-in traits are provided by the runtime and cannot be redeclared.
+pub const TRAIT_REDEFINES_BUILTIN: &str = "AT3030";
+
+/// Fired when a `trait` with the same name is declared more than once in the same scope.
+/// Trait names must be unique. Rename or remove the duplicate declaration.
+pub const TRAIT_ALREADY_DEFINED: &str = "AT3031";
+
+/// Fired when an `impl` block references a trait that has not been declared.
+/// Ensure the trait is declared with `trait TraitName { ... }` before the impl.
+pub const TRAIT_NOT_FOUND: &str = "AT3032";
+
+/// Fired when an `impl` block is missing a method required by the trait.
+/// Every method listed in the trait declaration must be implemented.
+pub const IMPL_METHOD_MISSING: &str = "AT3033";
+
+/// Fired when an `impl` block's method signature does not match the trait's declaration.
+/// Parameter types and return type must match exactly (excluding the `self` parameter type).
+pub const IMPL_METHOD_SIGNATURE_MISMATCH: &str = "AT3034";
+
+/// Fired when a method is called on a type that does not implement the required trait.
+/// Implement the trait for the type with `impl TraitName for TypeName { ... }`.
+pub const TYPE_DOES_NOT_IMPLEMENT_TRAIT: &str = "AT3035";
+
+/// Fired when a context requires a Copy type but a non-Copy type is provided.
+/// Primitive types (number, string, bool) are Copy. User-defined types default to Move.
+pub const COPY_TYPE_REQUIRED: &str = "AT3036";
+
+/// Fired when a generic type argument does not satisfy a trait bound.
+/// For example, `fn f<T: Display>(x: T)` requires `T` to implement `Display`.
+pub const TRAIT_BOUND_NOT_SATISFIED: &str = "AT3037";
 
 // AT5xxx - Module System Errors
 pub const INVALID_MODULE_PATH: &str = "AT5001";
@@ -300,6 +339,11 @@ pub static ERROR_CODES: &[ErrorCodeInfo] = &[
         description: "Passing borrowed value to `own` parameter — ownership cannot transfer",
         help: Some("A `borrow` parameter cannot give up ownership. Pass an owned value instead."),
     },
+    ErrorCodeInfo {
+        code: "AT2013",
+        description: "Non-Copy type passed without ownership annotation",
+        help: Some("This type is not Copy. Annotate the parameter with `own` or `borrow` to clarify ownership intent."),
+    },
     // === AT3xxx: Semantic/Type Checking Errors ===
     ErrorCodeInfo {
         code: "AT3001",
@@ -385,6 +429,52 @@ pub static ERROR_CODES: &[ErrorCodeInfo] = &[
         code: "AT3028",
         description: "Passing non-`shared<T>` value to `shared` parameter",
         help: Some("Wrap the value in a shared reference before passing it to a `shared` parameter."),
+    },
+    ErrorCodeInfo {
+        code: "AT3029",
+        description: "Duplicate impl block",
+        help: Some("A type can only implement a given trait once. Remove the duplicate impl block."),
+    },
+    // === AT3030+: Trait System Errors ===
+    ErrorCodeInfo {
+        code: "AT3030",
+        description: "Cannot redefine built-in trait",
+        help: Some("Built-in traits (Copy, Move, Drop, Display, Debug) cannot be redeclared by user code."),
+    },
+    ErrorCodeInfo {
+        code: "AT3031",
+        description: "Trait already defined",
+        help: Some("A trait with this name is already declared in scope. Use a different name."),
+    },
+    ErrorCodeInfo {
+        code: "AT3032",
+        description: "Trait not found",
+        help: Some("The trait name was not declared. Declare it with `trait Name { ... }` before using it."),
+    },
+    ErrorCodeInfo {
+        code: "AT3033",
+        description: "impl block is missing required method",
+        help: Some("The impl block must implement all methods declared in the trait."),
+    },
+    ErrorCodeInfo {
+        code: "AT3034",
+        description: "impl method signature does not match trait declaration",
+        help: Some("The method's parameter types and return type must exactly match the trait definition."),
+    },
+    ErrorCodeInfo {
+        code: "AT3035",
+        description: "Type does not implement required trait",
+        help: Some("Add an `impl TraitName for TypeName { ... }` block to satisfy the trait requirement."),
+    },
+    ErrorCodeInfo {
+        code: "AT3036",
+        description: "Copy type required",
+        help: Some("This operation requires a Copy type. Implement the Copy trait or use a value type."),
+    },
+    ErrorCodeInfo {
+        code: "AT3037",
+        description: "Trait bound not satisfied",
+        help: Some("The type argument does not satisfy the required trait bound on this type parameter."),
     },
     // === AT5xxx: Module System Errors ===
     ErrorCodeInfo {
