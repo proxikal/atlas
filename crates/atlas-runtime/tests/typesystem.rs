@@ -6584,3 +6584,139 @@ fn test_impl_copy_for_type_registers_in_trait_registry() {
         "impl Copy for number should not produce AT3030: {diags:?}"
     );
 }
+
+// ── Phase 10: Trait Bounds Enforcement ─────────────────────────────────────
+
+#[test]
+fn test_copy_bound_satisfied_by_number() {
+    let diags = typecheck_source(
+        "
+        fn safe_copy<T: Copy>(x: T) -> T { return x; }
+        let n: number = safe_copy(42);
+    ",
+    );
+    let bound_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3037").collect();
+    assert!(
+        bound_errors.is_empty(),
+        "number satisfies Copy bound, no AT3037 expected: {diags:?}"
+    );
+}
+
+#[test]
+fn test_copy_bound_satisfied_by_string() {
+    let diags = typecheck_source(
+        "
+        fn safe_copy<T: Copy>(x: T) -> T { return x; }
+        let s: string = safe_copy(\"hello\");
+    ",
+    );
+    let bound_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3037").collect();
+    assert!(
+        bound_errors.is_empty(),
+        "string satisfies Copy bound, no AT3037 expected: {diags:?}"
+    );
+}
+
+#[test]
+fn test_copy_bound_satisfied_by_bool() {
+    let diags = typecheck_source(
+        "
+        fn safe_copy<T: Copy>(x: T) -> T { return x; }
+        let b: bool = safe_copy(true);
+    ",
+    );
+    let bound_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3037").collect();
+    assert!(
+        bound_errors.is_empty(),
+        "bool satisfies Copy bound, no AT3037 expected: {diags:?}"
+    );
+}
+
+#[test]
+fn test_unbounded_type_param_no_error() {
+    // Unbounded type params must still work
+    let diags = typecheck_source(
+        "
+        fn identity<T>(x: T) -> T { return x; }
+        let n: number = identity(42);
+        let s: string = identity(\"hello\");
+    ",
+    );
+    let bound_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3037").collect();
+    assert!(
+        bound_errors.is_empty(),
+        "Unbounded type params should not produce AT3037: {diags:?}"
+    );
+}
+
+#[test]
+fn test_user_trait_bound_satisfied() {
+    let diags = typecheck_source(
+        "
+        trait Printable { fn print_self(self: Printable) -> void; }
+        impl Printable for number {
+            fn print_self(self: number) -> void { }
+        }
+        fn log_it<T: Printable>(x: T) -> void { }
+        log_it(42);
+    ",
+    );
+    let bound_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3037").collect();
+    assert!(
+        bound_errors.is_empty(),
+        "number implements Printable, bound satisfied: {diags:?}"
+    );
+}
+
+#[test]
+fn test_user_trait_bound_not_satisfied_is_error() {
+    let diags = typecheck_source(
+        "
+        trait Printable { fn print_self(self: Printable) -> void; }
+        impl Printable for number {
+            fn print_self(self: number) -> void { }
+        }
+        fn log_it<T: Printable>(x: T) -> void { }
+        log_it(\"hello\");
+    ",
+    );
+    let bound_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3037").collect();
+    assert!(
+        !bound_errors.is_empty(),
+        "string doesn't implement Printable — AT3037 expected: {diags:?}"
+    );
+}
+
+#[test]
+fn test_multiple_bounds_all_satisfied() {
+    let diags = typecheck_source(
+        "
+        trait Printable { fn print_self(self: Printable) -> void; }
+        impl Printable for number { fn print_self(self: number) -> void { } }
+        fn process<T: Copy + Printable>(x: T) -> void { }
+        process(42);
+    ",
+    );
+    let bound_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3037").collect();
+    assert!(
+        bound_errors.is_empty(),
+        "number is Copy AND Printable, both bounds satisfied: {diags:?}"
+    );
+}
+
+#[test]
+fn test_multiple_bounds_one_missing_is_error() {
+    let diags = typecheck_source(
+        "
+        trait Printable { fn print_self(self: Printable) -> void; }
+        fn process<T: Copy + Printable>(x: T) -> void { }
+        process(42);
+    ",
+    );
+    // number is Copy but no impl Printable here
+    let bound_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3037").collect();
+    assert!(
+        !bound_errors.is_empty(),
+        "Missing Printable impl — AT3037 expected: {diags:?}"
+    );
+}

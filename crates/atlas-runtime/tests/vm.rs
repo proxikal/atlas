@@ -3968,7 +3968,8 @@ fn test_vm_monomorphizer_basic() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
     let type_args = vec![Type::Number];
 
     let subst = mono
@@ -3986,7 +3987,8 @@ fn test_vm_monomorphizer_multiple_types() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
 
     // Test number
     mono.get_substitutions("f", &type_params, &[Type::Number])
@@ -4067,7 +4069,8 @@ fn test_vm_monomorphizer_cache_efficiency() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
     let type_args = vec![Type::Number];
 
     // Multiple calls with same types should reuse cache
@@ -4087,7 +4090,8 @@ fn test_vm_monomorphizer_different_functions() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
     let type_args = vec![Type::Number];
 
     // Different functions with same type args should create separate instances
@@ -4109,11 +4113,13 @@ fn test_vm_generic_type_substitution() {
         TypeParamDef {
             name: "T".to_string(),
             bound: None,
-        },
+                trait_bounds: vec![],
+            },
         TypeParamDef {
             name: "E".to_string(),
             bound: None,
-        },
+                trait_bounds: vec![],
+            },
     ];
 
     // Result<number, string>

@@ -649,7 +649,8 @@ fn test_monomorphizer_substitutions() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
     let type_args = vec![Type::Number];
 
     let subst = mono
@@ -667,7 +668,8 @@ fn test_monomorphizer_multiple_instantiations() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
 
     // identity<number>
     let subst1 = mono
@@ -698,7 +700,8 @@ fn test_monomorphizer_complex_types() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
 
     // Array types
     let array_number = Type::Array(Box::new(Type::Number));
@@ -717,11 +720,13 @@ fn test_monomorphizer_multiple_type_params() {
         TypeParamDef {
             name: "K".to_string(),
             bound: None,
-        },
+                trait_bounds: vec![],
+            },
         TypeParamDef {
             name: "V".to_string(),
             bound: None,
-        },
+                trait_bounds: vec![],
+            },
     ];
     let type_args = vec![Type::String, Type::Number];
 
@@ -766,7 +771,8 @@ fn test_monomorphizer_caching() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
     let type_args = vec![Type::Number];
 
     // First call - should create new instance
@@ -796,7 +802,8 @@ fn test_monomorphizer_generic_types() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
 
     // Option<number>
     let option_number = Type::Generic {
@@ -818,7 +825,8 @@ fn test_monomorphizer_nested_generics() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-    }];
+                trait_bounds: vec![],
+            }];
 
     // Option<Result<number, string>>
     let result_type = Type::Generic {

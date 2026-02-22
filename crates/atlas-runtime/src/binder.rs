@@ -223,6 +223,11 @@ impl Binder {
                     .bound
                     .as_ref()
                     .map(|bound| Box::new(self.resolve_type_ref(bound))),
+                trait_bounds: param
+                    .trait_bounds
+                    .iter()
+                    .map(|tb| tb.trait_name.clone())
+                    .collect(),
             })
             .collect();
 
@@ -302,6 +307,11 @@ impl Binder {
                     .bound
                     .as_ref()
                     .map(|bound| Box::new(self.resolve_type_ref(bound))),
+                trait_bounds: param
+                    .trait_bounds
+                    .iter()
+                    .map(|tb| tb.trait_name.clone())
+                    .collect(),
             })
             .collect();
 

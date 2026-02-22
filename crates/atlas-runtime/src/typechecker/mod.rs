@@ -430,6 +430,11 @@ impl<'a> TypeChecker<'a> {
                         None,
                     ))
                 }),
+                trait_bounds: param
+                    .trait_bounds
+                    .iter()
+                    .map(|tb| tb.trait_name.clone())
+                    .collect(),
             })
             .collect();
 
@@ -669,6 +674,11 @@ impl<'a> TypeChecker<'a> {
                         .map(|tp| TypeParamDef {
                             name: tp.name.clone(),
                             bound: None,
+                            trait_bounds: tp
+                                .trait_bounds
+                                .iter()
+                                .map(|tb| tb.trait_name.clone())
+                                .collect(),
                         })
                         .collect(),
                     param_types,
@@ -2157,13 +2167,67 @@ impl<'a> TypeChecker<'a> {
         inferer: &generics::TypeInferer,
         span: Span,
     ) -> bool {
-        constraints::check_constraints(
+        let mut ok = constraints::check_constraints(
             type_params,
             inferer,
             &self.method_table,
             &mut self.diagnostics,
             span,
-        )
+        );
+
+        // Also check trait bounds (`T: Copy + UserTrait`) from Phase 05/10
+        for param in type_params {
+            if param.trait_bounds.is_empty() {
+                continue;
+            }
+            let Some(actual) = inferer.get_substitution(&param.name) else {
+                continue;
+            };
+            for trait_name in &param.trait_bounds {
+                if !self.type_satisfies_trait_bound(&actual, trait_name) {
+                    self.diagnostics.push(
+                        Diagnostic::error_with_code(
+                            error_codes::TRAIT_BOUND_NOT_SATISFIED,
+                            format!(
+                                "Type '{}' does not implement trait '{}' required by type \
+                                 parameter '{}'",
+                                actual.display_name(),
+                                trait_name,
+                                param.name
+                            ),
+                            span,
+                        )
+                        .with_label("trait bound not satisfied")
+                        .with_help(format!(
+                            "implement '{}' for '{}' using `impl {} for {} {{ ... }}`",
+                            trait_name,
+                            actual.display_name(),
+                            trait_name,
+                            actual.display_name()
+                        )),
+                    );
+                    ok = false;
+                }
+            }
+        }
+
+        ok
+    }
+
+    /// Determine if a resolved type satisfies a trait bound by name.
+    fn type_satisfies_trait_bound(&self, ty: &Type, trait_name: &str) -> bool {
+        match trait_name {
+            "Copy" => self.is_copy_type(ty),
+            "Move" => self.is_move_type(ty),
+            _ => {
+                // Built-in or user-defined trait — check impl registry
+                if let Some(type_name) = type_to_impl_key(ty) {
+                    self.trait_registry.implements(&type_name, trait_name)
+                } else {
+                    false
+                }
+            }
+        }
     }
 
     fn validate_type_param_bounds(&mut self, type_params: &[crate::ast::TypeParam]) {
