@@ -76,10 +76,10 @@ git fetch origin                          # Download remote state (safe, touches
 git log HEAD..origin/main --oneline       # Is remote ahead of local main?
 ```
 
-→ **If remote is ahead** (someone pushed): `git checkout main && git merge --ff-only origin/main && git checkout worktree/dev` — fast-forward local main, return to home branch
-→ **If remote is behind or equal** (normal state between weekly pushes): nothing to do
+→ **If remote is ahead** (PR merged since last session): `git checkout main && git pull origin main` — fast-forward local main, return to feature/home branch
+→ **If remote is equal** (no new merges): nothing to do
 
-**Never `rebase origin/main` — always rebase against local `main`.**
+**Sync model:** All work goes through PRs → merge queue → squash onto origin/main. Pull to sync, never rebase origin/main directly.
 
 ---
 
