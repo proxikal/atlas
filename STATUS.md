@@ -1,6 +1,6 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-22 (Block 2 Phases 01–14 complete)
+**Last Updated:** 2026-02-22 (Block 2 Phases 01–15 complete)
 **Version:** v0.3 — The Foundation Version
 **Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 COMPLETE ✅
 
@@ -8,9 +8,9 @@
 
 ## Current State
 
-**Status:** Block 2 in progress — Phases 01–14 complete
-**Last Completed:** Phase 14 — LSP semantic tokens + ownership hover (9,231 tests passing)
-**Next:** Phase 15 — LSP completion (`phases/v0.3/block-02-ownership-syntax/phase-15-lsp-completion.md`)
+**Status:** Block 2 in progress — Phases 01–15 complete
+**Last Completed:** Phase 15 — LSP ownership completion (9,236 tests passing)
+**Next:** Phase 16 — Spec update + Block 2 AC check (`phases/v0.3/block-02-ownership-syntax/phase-16-spec-update-block-ac-check.md`)
 
 ---
 
@@ -19,7 +19,7 @@
 | Block | Theme | Phases | Status |
 |-------|-------|--------|--------|
 | 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25 | ✅ Complete (2026-02-21) |
-| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 16 | 🔄 In progress — Phases 01–14 ✅ |
+| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 16 | 🔄 In progress — Phases 01–15 ✅ |
 | 3 | Trait System (`trait`, `impl`, Copy/Move/Drop) | 20–25 | ⬜ Blocked on Block 2 |
 | 4 | Closures + Anonymous Functions | 15–20 | ⬜ Blocked on Block 3 |
 | 5 | Type Inference (locals + return types) | 10–15 | ⬜ Blocked on Block 3 |
