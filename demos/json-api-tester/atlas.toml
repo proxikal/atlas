@@ -1,8 +1,0 @@
-[project]
-name = "json-api-tester"
-version = "0.1.0"
-description = "HTTP API testing tool demonstrating HTTP client, JSON validation, File I/O, and Collections"
-
-[permissions]
-network = ["*"]
-filesystem = ["./tests/*", "./results/*"]

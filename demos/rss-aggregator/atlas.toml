@@ -1,8 +1,0 @@
-[project]
-name = "rss-aggregator"
-version = "0.1.0"
-description = "RSS feed aggregator demonstrating HTTP, Regex, DateTime, Collections, File I/O, and JSON export"
-
-[permissions]
-network = ["*"]
-filesystem = ["./feeds/*", "./cache/*", "./output/*"]

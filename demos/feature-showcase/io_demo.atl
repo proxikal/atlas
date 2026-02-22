@@ -1,27 +1,18 @@
-// File I/O (requires SecurityContext permissions when running)
+// File I/O demo — writes to a temp file, reads it back
 
 export fn demo_io() -> string {
-    let base = "./data";
-    let sample_path = pathJoin(base, "sample.txt");
-    let json_path = pathJoin(base, "sample.json");
-    let output_path = pathJoin(base, "output.txt");
+    let tmp = fsTmpdir();
+    let output_path = pathJoin(tmp, "atlas-demo.txt");
 
-    let exists_sample: bool = fileExists(sample_path);
-    let exists_json: bool = fileExists(json_path);
+    let content = "Atlas I/O demo\nLine 2\nLine 3\n";
+    writeFile(output_path, content);
+    appendFile(output_path, "Appended line\n");
 
-    let sample_text: string = readFile(sample_path);
-    let json_text: string = readFile(json_path);
+    let read_back: string = readFile(output_path);
+    let lines = split(read_back, "\n");
 
-    // Write and append to a demo output file
-    writeFile(output_path, "Atlas I/O demo\n");
-    appendFile(output_path, sample_text);
-
-    let directory_entries = readDir(base);
-
-    return "sample.txt exists=" + str(exists_sample)
-        + ", sample.json exists=" + str(exists_json)
-        + ", sample length=" + str(len(sample_text))
-        + ", json length=" + str(len(json_text))
-        + ", dir entries=" + toJSON(directory_entries)
-        + ", wrote to " + output_path;
+    return "wrote=" + str(len(content)) + " bytes"
+        + ", read=" + str(len(read_back)) + " bytes"
+        + ", lines=" + str(len(lines))
+        + ", first=" + lines[0];
 }

@@ -1,8 +1,0 @@
-[project]
-name = "weather-dashboard"
-version = "0.1.0"
-description = "Multi-city weather dashboard demonstrating HTTP, JSON, DateTime, Math, Collections, and File I/O"
-
-[permissions]
-network = ["wttr.in", "api.openweathermap.org"]
-filesystem = ["./cache/*", "./config/*"]

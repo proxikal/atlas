@@ -1,8 +1,0 @@
-[project]
-name = "github-stats"
-version = "0.1.0"
-description = "GitHub user statistics dashboard demonstrating HTTP, JSON, DateTime, Collections, and File I/O"
-
-[permissions]
-network = ["api.github.com"]
-filesystem = ["./data/*"]
