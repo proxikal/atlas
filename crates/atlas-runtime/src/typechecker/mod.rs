@@ -160,6 +160,17 @@ impl TraitRegistry {
         self.traits.get(trait_name)
     }
 
+    /// Returns the name of the first trait that declares a method with the given name.
+    pub fn find_trait_with_method(&self, method_name: &str) -> Option<&str> {
+        self.traits.iter().find_map(|(trait_name, methods)| {
+            if methods.iter().any(|m| m.name == method_name) {
+                Some(trait_name.as_str())
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn is_built_in(&self, name: &str) -> bool {
         self.built_in.contains(name)
     }
@@ -2184,7 +2195,7 @@ impl<'a> TypeChecker<'a> {
                 continue;
             };
             for trait_name in &param.trait_bounds {
-                if !self.type_satisfies_trait_bound(&actual, trait_name) {
+                if !self.type_satisfies_trait_bound(actual, trait_name) {
                     self.diagnostics.push(
                         Diagnostic::error_with_code(
                             error_codes::TRAIT_BOUND_NOT_SATISFIED,

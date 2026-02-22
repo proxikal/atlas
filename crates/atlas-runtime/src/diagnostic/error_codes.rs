@@ -52,6 +52,8 @@ pub const DEPRECATED_TYPE_ALIAS: &str = "AT2009";
 pub const OWN_ON_PRIMITIVE: &str = "AT2010";
 pub const BORROW_ON_SHARED: &str = "AT2011";
 pub const BORROW_TO_OWN: &str = "AT2012";
+/// Warning: a non-Copy (Move) type is passed to a parameter without an ownership annotation.
+/// Add `own` or `borrow` to the parameter to clarify ownership transfer semantics.
 pub const MOVE_TYPE_REQUIRES_OWNERSHIP_ANNOTATION: &str = "AT2013";
 
 // AT3xxx - Semantic and Type Checking Errors
@@ -73,17 +75,40 @@ pub const ARRAY_PATTERN_TYPE_MISMATCH: &str = "AT3026";
 pub const NON_EXHAUSTIVE_MATCH: &str = "AT3027";
 pub const NON_SHARED_TO_SHARED: &str = "AT3028";
 
-// AT3029 - Duplicate impl
+/// Fired when an `impl Trait for Type` already exists for the same `(Type, Trait)` pair.
+/// Each type may only have one impl per trait. Remove or merge duplicate impls.
 pub const IMPL_ALREADY_EXISTS: &str = "AT3029";
 
-// AT3030+ - Trait System Errors
+/// Fired when a `trait` declaration attempts to redefine a built-in trait (Copy, Move, Drop,
+/// Display, Debug). Built-in traits are provided by the runtime and cannot be redeclared.
 pub const TRAIT_REDEFINES_BUILTIN: &str = "AT3030";
+
+/// Fired when a `trait` with the same name is declared more than once in the same scope.
+/// Trait names must be unique. Rename or remove the duplicate declaration.
 pub const TRAIT_ALREADY_DEFINED: &str = "AT3031";
+
+/// Fired when an `impl` block references a trait that has not been declared.
+/// Ensure the trait is declared with `trait TraitName { ... }` before the impl.
 pub const TRAIT_NOT_FOUND: &str = "AT3032";
+
+/// Fired when an `impl` block is missing a method required by the trait.
+/// Every method listed in the trait declaration must be implemented.
 pub const IMPL_METHOD_MISSING: &str = "AT3033";
+
+/// Fired when an `impl` block's method signature does not match the trait's declaration.
+/// Parameter types and return type must match exactly (excluding the `self` parameter type).
 pub const IMPL_METHOD_SIGNATURE_MISMATCH: &str = "AT3034";
+
+/// Fired when a method is called on a type that does not implement the required trait.
+/// Implement the trait for the type with `impl TraitName for TypeName { ... }`.
 pub const TYPE_DOES_NOT_IMPLEMENT_TRAIT: &str = "AT3035";
+
+/// Fired when a context requires a Copy type but a non-Copy type is provided.
+/// Primitive types (number, string, bool) are Copy. User-defined types default to Move.
 pub const COPY_TYPE_REQUIRED: &str = "AT3036";
+
+/// Fired when a generic type argument does not satisfy a trait bound.
+/// For example, `fn f<T: Display>(x: T)` requires `T` to implement `Display`.
 pub const TRAIT_BOUND_NOT_SATISFIED: &str = "AT3037";
 
 // AT5xxx - Module System Errors
