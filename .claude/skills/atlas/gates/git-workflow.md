@@ -5,16 +5,24 @@
 
 ## Branch Naming
 ```
-phase/{category}-{number}   # e.g. phase/ownership-01
-feat/{short-description}
-fix/{short-description}
-ci/{short-description}
+block/{name}                # e.g. block/trait-system — ONE branch per block (primary)
+feat/{short-description}    # standalone features outside block plan
+fix/{short-description}     # blocking fixes (may PR immediately)
+ci/{short-description}      # CI/infra
+docs/{short-description}    # docs-only
 ```
 
-## Start of Phase
+## Start of Block (Scaffold Session)
 ```bash
 git checkout main && git pull origin main
-git checkout -b phase/{category}-{number}
+git checkout -b block/{name}
+# scaffold phase files → commit → NO push, NO PR
+```
+
+## Start of Phase (within a block)
+```bash
+# Already on block/{name} branch from scaffold — no branch switch needed
+git pull origin main --rebase  # keep up to date if main has moved
 ```
 
 ## During Phase (multi-part)
@@ -41,19 +49,19 @@ EOF
 )"
 ```
 
-## PR Workflow — Batch Flush (weekly or milestone)
+## PR Workflow — Block Complete Flush
 ```bash
-# When ready to flush the batch (weekly cadence or major milestone):
-git push -u origin phase/{category}-{number}
-gh pr create --title "..." --body "..."
+# ONLY when the block's final AC check phase is committed:
+git push -u origin block/{name}
+gh pr create --title "feat(block-XX): ..." --body "..."
 gh pr merge --auto --squash
 
-# After merge: sync
+# After merge: sync and clean up
 git checkout main && git pull origin main
-git branch -d phase/{category}-{number}
+git branch -d block/{name}
 ```
 
-**Exception:** Blocking fixes or large standalone milestones may PR immediately.
+**Exception:** Blocking fixes (`fix/`) or CI issues (`ci/`) may PR immediately — these are the ONLY valid early-PR cases.
 
 ## Banned
 - `git push origin main` directly

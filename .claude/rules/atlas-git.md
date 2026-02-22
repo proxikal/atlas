@@ -37,16 +37,31 @@ git branch -d feat/short-description
 ## Branch Naming
 
 ```
-phase/{category}-{number}   # e.g. phase/ownership-01
-feat/{short-description}
-fix/{short-description}
-ci/{short-description}
+block/{name}                # e.g. block/trait-system — ONE branch per block
+feat/{short-description}    # standalone features outside the block plan
+fix/{short-description}     # blocking bug fixes (may PR immediately)
+ci/{short-description}      # CI/infra changes
+docs/{short-description}    # docs-only changes
 ```
 
-## Commit Cadence
+## Commit Cadence — ONE PR PER BLOCK
 
-Batch multiple phases into one PR per week. Do NOT push every phase.
-Exception: blocking fixes or large milestones.
+All scaffold commits, phase execution commits, and spec/STATUS updates for a block
+live on the **same branch** (`block/{name}`). The PR is opened only when the block's
+final AC check phase is complete.
+
+```
+block/trait-system branch:
+  scaffold commit
+  phase-01 commit
+  phase-02 commit
+  ...
+  phase-18 commit (spec + AC check)
+  ← PR opened here, auto-merged
+```
+
+**Exception:** Blocking fixes or critical CI changes may PR immediately on a `fix/`
+or `ci/` branch. These are the ONLY valid reasons to PR before block completion.
 
 ## Banned
 

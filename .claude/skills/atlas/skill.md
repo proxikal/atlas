@@ -112,17 +112,17 @@ After GATE -1, declare one:
 
 ## Phase Handoff
 
-**CRITICAL:** Only hand off when ALL tests pass AND commit is made. Do NOT PR after every phase — batch multiple phases per week.
+**CRITICAL:** Only hand off when ALL tests pass AND commit is made. Do NOT PR until the entire block is complete.
 
 **Protocol:**
 1. All gates passed (build, tests, clippy, fmt, security scan)
 2. **Update STATUS.md** — Last Updated, Current State, Next, block table row
-3. **Commit STATUS.md on the phase branch** (same commit or follow-up)
+3. **Commit STATUS.md on the block branch** (same commit or follow-up)
 4. Memory checked (GATE 7)
-5. **Commit only** — no push, no PR (batching cadence)
+5. **Commit only** — no push, no PR (block-complete cadence)
 6. Deliver summary
 
-**PR flush trigger:** Weekly cadence, major milestone, or blocking fix.
+**PR flush trigger:** Block complete (final AC check phase done). Exception: blocking fix or CI issue.
 **See `gates/git-workflow.md`** for batch flush commands.
 
 **Required in summary:**
@@ -147,7 +147,10 @@ After GATE -1, declare one:
    Phase list: [title + ~5 word description each]
    ```
 4. **Present to user** — wait for approval ("looks right, go")
-5. **Only then** scaffold all phase files
+5. **Create block branch:** `git checkout -b block/{name}` — ALL work for this block lives here
+6. **Only then** scaffold all phase files
+7. **Commit scaffold — no push, no PR.** The scaffold commit is the first commit on the block branch.
+   Phase execution commits follow on the same branch. PR opens only at block completion (Phase N).
 
 **After block execution completes:**
 - Verify all block ACs from V03_PLAN.md
