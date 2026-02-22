@@ -12,8 +12,19 @@ Ask these questions:
 
 1. **Did I hit an API surprise?** (pattern not documented) → Update `patterns.md`
 2. **Did I make an architectural decision?** (new constraint or approach) → Update `decisions/{domain}.md`
-3. **Did I discover a crate-specific pattern?** (like LSP testing) → Update `testing-patterns.md` or `patterns.md`
-4. **Is anything in memory wrong or stale?** → Fix or archive it
+3. **Did I discover a crate-specific pattern?** → Update `testing-patterns.md` or `patterns.md`
+4. **Staleness check — 4 targeted greps:**
+   ```bash
+   # a. Stale worktree refs in memory (must return 0)
+   grep -c "worktree" ~/.claude/projects/-Users-proxikal-dev-projects-atlas/memory/MEMORY.md
+   # b. Stale phase/ branch naming in gate (must return 0)
+   grep -c "phase/{category}" .claude/skills/atlas/gates/gate-minus1-sanity.md
+   # c. CI test gate includes PR (must return ≥1)
+   grep -c "pull_request" .github/workflows/ci.yml
+   # d. git-workflow has rebase-before-push (must return ≥1)
+   grep -c "rebase origin/main" .claude/skills/atlas/gates/git-workflow.md
+   ```
+   Any mismatch → fix before committing.
 5. **Is any file approaching size limit?** → Split or archive
 
 ## When to Update Memory
@@ -130,11 +141,4 @@ OR if no updates:
 
 ---
 
-## Git Finalization (After Memory Check)
-
-1. `git add -A && git commit -m "feat(category): description"`
-2. `git checkout main && git merge --no-ff <feature-branch>`
-3. `git branch -d <feature-branch>`
-4. `git -C /Users/proxikal/dev/projects/atlas-dev rebase main && git -C /Users/proxikal/dev/projects/atlas-docs rebase main`   # REQUIRED — sync ALL worktree home branches via git -C (never checkout a branch live in another worktree)
-
-**Next:** Report completion summary with Memory section.
+**Next:** Report completion summary with Memory section. See `gates/git-workflow.md` for commit/PR commands.

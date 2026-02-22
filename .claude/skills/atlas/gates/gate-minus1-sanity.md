@@ -73,6 +73,28 @@ cargo audit
 
 ---
 
+## Step 4b: Spot-Check (2 greps, ~1 second)
+
+These catch the most common memory/skill drift without reading full files:
+
+```bash
+# 1. MEMORY.md line count — must stay ≤ 50
+wc -l ~/.claude/projects/-Users-proxikal-dev-projects-atlas/memory/MEMORY.md
+
+# 2. CI test gate — must include pull_request (added PR #119)
+grep -c "pull_request" .github/workflows/ci.yml
+```
+
+| Result | Action |
+|--------|--------|
+| MEMORY.md > 50 lines | Split/archive before proceeding — BLOCKING |
+| grep returns 0 | CI has drifted — open `ci/` fix branch before phase work |
+| Both clean | Proceed |
+
+**Cost: 2 tool calls, ~0 context.** Catches the two highest-churn facts.
+
+---
+
 ## Step 5: Branch Setup
 
 ```bash
