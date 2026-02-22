@@ -289,6 +289,15 @@ phases/
 4. Every phase must pass: build + tests (100%) + clippy + fmt
 5. No phase is done until parity is verified (both engines identical output)
 
+### Final phase of every block (spec update + AC check)
+The last phase of each block MUST include:
+1. Spec update (`docs/specification/` — whatever changed this block)
+2. STATUS.md block row: ⬜ → ✅
+3. Auto-memory update (GATE 7) — `decisions/{domain}.md`
+4. **Crate CLAUDE.md audit** — update `crates/*/src/CLAUDE.md` for any structural changes
+   introduced this block (new files, new invariants, new test domains). Takes 2 minutes.
+   Skipping this causes stale context in future blocks.
+
 ---
 
 ## References
