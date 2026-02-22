@@ -6354,3 +6354,122 @@ fn test_impl_multi_method_trait_all_provided() {
         "All methods provided should have no conformance errors: {diags:?}"
     );
 }
+
+// ── Phase 08: User Trait Method Call Typechecking ──────────────────────────
+
+#[test]
+fn test_trait_method_call_resolves_return_type() {
+    // x.display() returns string — assigning to string: no error
+    let diags = typecheck_source(
+        "
+        trait Display { fn display(self: Display) -> string; }
+        impl Display for number {
+            fn display(self: number) -> string { return str(self); }
+        }
+        let x: number = 42;
+        let s: string = x.display();
+    ",
+    );
+    let type_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3001").collect();
+    assert!(
+        type_errors.is_empty(),
+        "Trait method call should resolve return type cleanly: {diags:?}"
+    );
+}
+
+#[test]
+fn test_trait_method_call_wrong_assignment_is_error() {
+    // x.display() returns string — assigning to number: type error
+    let diags = typecheck_source(
+        "
+        trait Display { fn display(self: Display) -> string; }
+        impl Display for number {
+            fn display(self: number) -> string { return str(self); }
+        }
+        let x: number = 42;
+        let n: number = x.display();
+    ",
+    );
+    assert!(
+        !diags.is_empty(),
+        "Assigning string return to number should produce a diagnostic: {diags:?}"
+    );
+}
+
+#[test]
+fn test_trait_method_call_number_return_resolves() {
+    let diags = typecheck_source(
+        "
+        trait Doubler { fn double(self: Doubler) -> number; }
+        impl Doubler for number {
+            fn double(self: number) -> number { return self * 2; }
+        }
+        let x: number = 5;
+        let y: number = x.double();
+    ",
+    );
+    let type_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3001").collect();
+    assert!(
+        type_errors.is_empty(),
+        "number-returning trait method should resolve correctly: {diags:?}"
+    );
+}
+
+#[test]
+fn test_trait_method_not_found_on_unimplemented_type() {
+    // string doesn't implement Display in this program — method not found
+    let diags = typecheck_source(
+        "
+        trait Display { fn display(self: Display) -> string; }
+        impl Display for number {
+            fn display(self: number) -> string { return str(self); }
+        }
+        let s: string = \"hello\";
+        let result: string = s.display();
+    ",
+    );
+    // string has no Display impl here — AT3010 should fire
+    let method_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3010").collect();
+    assert!(
+        !method_errors.is_empty(),
+        "Method call on unimplemented type should produce AT3010: {diags:?}"
+    );
+}
+
+#[test]
+fn test_stdlib_method_not_shadowed_by_trait() {
+    // Array push() is stdlib — a trait method named push doesn't conflict
+    let diags = typecheck_source(
+        "
+        trait Pushable { fn push(self: Pushable, x: number) -> void; }
+        impl Pushable for number { fn push(self: number, x: number) -> void { } }
+        let arr: number[] = [1, 2, 3];
+        arr = arr.push(4);
+    ",
+    );
+    // arr.push(4) hits stdlib — no AT3010 expected
+    let method_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3010").collect();
+    assert!(
+        method_errors.is_empty(),
+        "Stdlib array.push should not be shadowed: {diags:?}"
+    );
+}
+
+#[test]
+fn test_trait_method_bool_return_resolves() {
+    let diags = typecheck_source(
+        "
+        trait Check { fn is_valid(self: Check) -> bool; }
+        impl Check for number {
+            fn is_valid(self: number) -> bool { return self > 0; }
+        }
+        let x: number = 5;
+        let ok: bool = x.is_valid();
+    ",
+    );
+    let type_errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3001").collect();
+    assert!(
+        type_errors.is_empty(),
+        "bool-returning trait method should resolve correctly: {diags:?}"
+    );
+}

@@ -256,6 +256,23 @@ pub struct TypeChecker<'a> {
     pub impl_registry: ImplRegistry,
 }
 
+/// Convert a `Type` to a string key used for impl registry lookups.
+/// Returns `None` for types that don't support trait dispatch in Block 3
+/// (e.g. arrays, maps — user-defined struct types are added in v0.4).
+/// Convert a `Type` to a string key used for impl registry lookups.
+/// Returns `None` for types that don't support trait dispatch in Block 3.
+/// User-defined struct types (with named types) are added in v0.4.
+pub(crate) fn type_to_impl_key(ty: &Type) -> Option<String> {
+    match ty.normalized() {
+        Type::Number => Some("number".to_string()),
+        Type::String => Some("string".to_string()),
+        Type::Bool => Some("bool".to_string()),
+        // Generic with no type args represents an opaque user type (e.g. MyType<>)
+        Type::Generic { name, type_args } if type_args.is_empty() => Some(name),
+        _ => None,
+    }
+}
+
 impl<'a> TypeChecker<'a> {
     /// Create a new type checker
     pub fn new(symbol_table: &'a mut SymbolTable) -> Self {
@@ -1585,6 +1602,30 @@ impl<'a> TypeChecker<'a> {
             "HashMap" => Some(2),
             "HashSet" => Some(1),
             _ => None, // Unknown generic type
+        }
+    }
+
+    /// Try to resolve a method call through the trait/impl system.
+    /// Returns the return type if a matching impl method is found, `None` otherwise.
+    /// Only fires after stdlib method dispatch has failed (dispatch priority slot 2).
+    pub(super) fn resolve_trait_method_call(
+        &mut self,
+        receiver_type: &Type,
+        method_name: &str,
+    ) -> Option<Type> {
+        let type_name = type_to_impl_key(receiver_type)?;
+        // Search all impls for this type
+        let matching: Option<ImplMethod> = self
+            .impl_registry
+            .entries
+            .iter()
+            .filter(|((impl_type, _), _)| impl_type == &type_name)
+            .find_map(|(_, entry)| entry.methods.get(method_name).cloned());
+
+        if let Some(method) = matching {
+            Some(self.resolve_type_ref(&method.return_type.clone()))
+        } else {
+            None
         }
     }
 

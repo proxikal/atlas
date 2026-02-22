@@ -1,6 +1,6 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-22 (Block 3 Phase 7 complete)
+**Last Updated:** 2026-02-22 (Block 3 Phase 8 complete)
 **Version:** v0.3 — The Foundation Version
 **Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 COMPLETE ✅ | v0.3 Block 2 COMPLETE ✅
 
@@ -8,9 +8,9 @@
 
 ## Current State
 
-**Status:** Block 3 in progress — Phase 7 complete
-**Last Completed:** Block 3 Phase 7 — Typechecker: impl conformance checking (9,354 tests passing)
-**Next:** Block 3 Phase 8 — Typechecker: user-defined trait checking
+**Status:** Block 3 in progress — Phase 8 complete
+**Last Completed:** Block 3 Phase 8 — Typechecker: user trait method call resolution (9,360 tests passing)
+**Next:** Block 3 Phase 9 — Copy/Move ownership integration
 
 ---
 
