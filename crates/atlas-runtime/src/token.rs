@@ -90,6 +90,14 @@ pub enum TokenKind {
     /// `is` keyword (type predicates)
     Is,
 
+    // Ownership annotations (v0.3+)
+    /// `own` keyword (owned parameter annotation)
+    Own,
+    /// `borrow` keyword (borrowed parameter annotation)
+    Borrow,
+    /// `shared` keyword (shared parameter annotation)
+    Shared,
+
     // Operators
     /// `+` (addition)
     Plus,
@@ -216,6 +224,9 @@ impl TokenKind {
             "as" => Some(TokenKind::As),
             "extends" => Some(TokenKind::Extends),
             "is" => Some(TokenKind::Is),
+            "own" => Some(TokenKind::Own),
+            "borrow" => Some(TokenKind::Borrow),
+            "shared" => Some(TokenKind::Shared),
             _ => None,
         }
     }
@@ -249,6 +260,9 @@ impl TokenKind {
             TokenKind::As => "as",
             TokenKind::Extends => "extends",
             TokenKind::Is => "is",
+            TokenKind::Own => "own",
+            TokenKind::Borrow => "borrow",
+            TokenKind::Shared => "shared",
             TokenKind::Plus => "+",
             TokenKind::Minus => "-",
             TokenKind::Star => "*",
@@ -332,6 +346,20 @@ mod tests {
     fn test_reserved_keywords() {
         assert_eq!(TokenKind::is_keyword("import"), Some(TokenKind::Import));
         assert_eq!(TokenKind::is_keyword("match"), Some(TokenKind::Match));
+    }
+
+    #[test]
+    fn test_ownership_keywords() {
+        assert_eq!(TokenKind::is_keyword("own"), Some(TokenKind::Own));
+        assert_eq!(TokenKind::is_keyword("borrow"), Some(TokenKind::Borrow));
+        assert_eq!(TokenKind::is_keyword("shared"), Some(TokenKind::Shared));
+        assert_eq!(TokenKind::Own.as_str(), "own");
+        assert_eq!(TokenKind::Borrow.as_str(), "borrow");
+        assert_eq!(TokenKind::Shared.as_str(), "shared");
+        // Not identifiers anymore
+        assert_ne!(TokenKind::is_keyword("own"), None);
+        assert_ne!(TokenKind::is_keyword("borrow"), None);
+        assert_ne!(TokenKind::is_keyword("shared"), None);
     }
 
     #[test]

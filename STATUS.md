@@ -1,6 +1,6 @@
 # Atlas Implementation Status
 
-**Last Updated:** 2026-02-21 (Block 1 complete — phases 20–25 done)
+**Last Updated:** 2026-02-22 (Block 2 Phase 01 complete)
 **Version:** v0.3 — The Foundation Version
 **Progress:** v0.2 COMPLETE ✅ | v0.3 Block 1 COMPLETE ✅
 
@@ -8,9 +8,9 @@
 
 ## Current State
 
-**Status:** Block 1 complete — ready for Block 2 scaffolding
-**Last Completed:** Phases 20–25 — Clippy/fmt/docs, full test suite (9,152 passing), Block 1 acceptance check (8/8 AC met)
-**Next:** Scaffold Block 2 (Ownership Syntax) — trigger: "Scaffold Block 2"
+**Status:** Block 2 in progress — Phase 01 complete
+**Last Completed:** Phase 01 — own/borrow/shared keyword tokens (7,268 tests passing)
+**Next:** Phase 02 — AST ownership annotation (`phases/v0.3/block-02-ownership-syntax/phase-02-ast-ownership-annotation.md`)
 
 ---
 
@@ -19,7 +19,7 @@
 | Block | Theme | Phases | Status |
 |-------|-------|--------|--------|
 | 1 | Memory Model (CoW value types, replace Arc<Mutex<>>) | 25 | ✅ Complete (2026-02-21) |
-| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 15–20 | ⬜ Unblocked — ready to scaffold |
+| 2 | Ownership Syntax (`own`, `borrow`, `shared`) | 16 | 🔄 In progress — Phase 01/16 ✅ |
 | 3 | Trait System (`trait`, `impl`, Copy/Move/Drop) | 20–25 | ⬜ Blocked on Block 2 |
 | 4 | Closures + Anonymous Functions | 15–20 | ⬜ Blocked on Block 3 |
 | 5 | Type Inference (locals + return types) | 10–15 | ⬜ Blocked on Block 3 |

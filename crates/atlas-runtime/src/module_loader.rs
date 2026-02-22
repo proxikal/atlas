@@ -980,16 +980,16 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let root = temp_dir.path().to_path_buf();
 
-        create_module(&root, "shared", "export let shared = 0;");
+        create_module(&root, "shared", "export let value = 0;");
         create_module(
             &root,
             "a",
-            "import { shared } from \"./shared\";\nexport let a = 1;",
+            "import { value } from \"./shared\";\nexport let a = 1;",
         );
         create_module(
             &root,
             "b",
-            "import { shared } from \"./shared\";\nexport let b = 2;",
+            "import { value } from \"./shared\";\nexport let b = 2;",
         );
 
         let mut loader = ModuleLoader::new(root.clone());

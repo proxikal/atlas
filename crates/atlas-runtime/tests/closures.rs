@@ -202,9 +202,9 @@ fn test_two_fns_sharing_top_level_let() {
     // Two functions both reading the same top-level let
     assert_parity_number(
         r#"
-let shared = 7;
-fn get_a() -> number { return shared; }
-fn get_b() -> number { return shared * 2; }
+let top = 7;
+fn get_a() -> number { return top; }
+fn get_b() -> number { return top * 2; }
 get_a() + get_b();
 "#,
         21.0,
@@ -984,12 +984,12 @@ fn test_vm_two_inner_fns_capture_same_var_independently() {
     assert_parity_number(
         r#"
 fn outer() -> number {
-    var shared = 7;
+    var cap = 7;
     fn get_a() -> number {
-        return shared;
+        return cap;
     }
     fn get_b() -> number {
-        return shared;
+        return cap;
     }
     return get_a() + get_b();
 }

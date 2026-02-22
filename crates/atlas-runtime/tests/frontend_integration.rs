@@ -2411,3 +2411,60 @@ fn test_valid_bytecode_has_no_errors() {
     let result = validate(&bc);
     assert!(result.is_ok(), "valid bytecode should have no errors");
 }
+
+// ============================================================================
+// Ownership Keyword Token Tests (Phase 01 — Block 2)
+// ============================================================================
+
+#[test]
+fn test_ownership_keywords_lex_as_keywords() {
+    use atlas_runtime::token::TokenKind;
+
+    for (src, expected) in [
+        ("own", TokenKind::Own),
+        ("borrow", TokenKind::Borrow),
+        ("shared", TokenKind::Shared),
+    ] {
+        let mut lexer = Lexer::new(src);
+        let (tokens, errors) = lexer.tokenize();
+        assert!(
+            errors.is_empty(),
+            "{src}: unexpected lex errors: {errors:?}"
+        );
+        // tokens: [keyword, EOF]
+        assert_eq!(tokens.len(), 2, "{src}: expected 2 tokens (keyword + EOF)");
+        assert_eq!(tokens[0].kind, expected, "{src}: wrong token kind");
+        assert_eq!(tokens[0].lexeme, src, "{src}: wrong lexeme");
+    }
+}
+
+#[test]
+fn test_ownership_keywords_in_function_signature() {
+    use atlas_runtime::token::TokenKind;
+
+    let src = "fn process(own data: number) -> number { return 0; }";
+    let mut lexer = Lexer::new(src);
+    let (tokens, errors) = lexer.tokenize();
+    assert!(errors.is_empty(), "unexpected lex errors: {errors:?}");
+
+    let kinds: Vec<TokenKind> = tokens.iter().map(|t| t.kind).collect();
+    assert!(
+        kinds.contains(&TokenKind::Own),
+        "expected Own token in: {kinds:?}"
+    );
+}
+
+#[test]
+fn test_ownership_keywords_not_identifiers() {
+    use atlas_runtime::token::TokenKind;
+
+    for src in ["own", "borrow", "shared"] {
+        let mut lexer = Lexer::new(src);
+        let (tokens, _) = lexer.tokenize();
+        assert_ne!(
+            tokens[0].kind,
+            TokenKind::Identifier,
+            "{src} should not lex as Identifier"
+        );
+    }
+}
