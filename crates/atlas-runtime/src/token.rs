@@ -97,6 +97,11 @@ pub enum TokenKind {
     Borrow,
     /// `shared` keyword (shared parameter annotation)
     Shared,
+    // Trait system (v0.3+)
+    /// `trait` keyword
+    Trait,
+    /// `impl` keyword
+    Impl,
 
     // Operators
     /// `+` (addition)
@@ -227,6 +232,8 @@ impl TokenKind {
             "own" => Some(TokenKind::Own),
             "borrow" => Some(TokenKind::Borrow),
             "shared" => Some(TokenKind::Shared),
+            "trait" => Some(TokenKind::Trait),
+            "impl" => Some(TokenKind::Impl),
             _ => None,
         }
     }
@@ -263,6 +270,8 @@ impl TokenKind {
             TokenKind::Own => "own",
             TokenKind::Borrow => "borrow",
             TokenKind::Shared => "shared",
+            TokenKind::Trait => "trait",
+            TokenKind::Impl => "impl",
             TokenKind::Plus => "+",
             TokenKind::Minus => "-",
             TokenKind::Star => "*",
@@ -360,6 +369,29 @@ mod tests {
         assert_ne!(TokenKind::is_keyword("own"), None);
         assert_ne!(TokenKind::is_keyword("borrow"), None);
         assert_ne!(TokenKind::is_keyword("shared"), None);
+    }
+
+    #[test]
+    fn test_trait_impl_keywords() {
+        assert_eq!(TokenKind::is_keyword("trait"), Some(TokenKind::Trait));
+        assert_eq!(TokenKind::is_keyword("impl"), Some(TokenKind::Impl));
+        assert_eq!(TokenKind::Trait.as_str(), "trait");
+        assert_eq!(TokenKind::Impl.as_str(), "impl");
+        assert_ne!(TokenKind::is_keyword("trait"), None);
+        assert_ne!(TokenKind::is_keyword("impl"), None);
+    }
+
+    #[test]
+    fn test_trait_impl_not_identifiers() {
+        // 'trait' and 'impl' must NOT be usable as variable names
+        assert!(TokenKind::is_keyword("trait").is_some());
+        assert!(TokenKind::is_keyword("impl").is_some());
+    }
+
+    #[test]
+    fn test_for_already_keyword() {
+        // 'for' is already a keyword — no change needed for impl Trait for Type
+        assert_eq!(TokenKind::is_keyword("for"), Some(TokenKind::For));
     }
 
     #[test]
