@@ -1653,22 +1653,30 @@ impl<'a> TypeChecker<'a> {
     /// Try to resolve a method call through the trait/impl system.
     /// Returns the return type if a matching impl method is found, `None` otherwise.
     /// Only fires after stdlib method dispatch has failed (dispatch priority slot 2).
-    pub(super) fn resolve_trait_method_call(
+    /// Like `resolve_trait_method_call_with_info` but discards dispatch info.
+    pub(super) fn resolve_trait_method_call_with_info(
         &mut self,
         receiver_type: &Type,
         method_name: &str,
-    ) -> Option<Type> {
+    ) -> Option<(Type, String, String)> {
         let type_name = type_to_impl_key(receiver_type)?;
-        // Search all impls for this type
-        let matching: Option<ImplMethod> = self
+        // Search all impls for this type — return method + the trait that provides it
+        let matching: Option<(ImplMethod, String)> = self
             .impl_registry
             .entries
             .iter()
             .filter(|((impl_type, _), _)| impl_type == &type_name)
-            .find_map(|(_, entry)| entry.methods.get(method_name).cloned());
+            .find_map(|((_, trait_name), entry)| {
+                entry
+                    .methods
+                    .get(method_name)
+                    .cloned()
+                    .map(|m| (m, trait_name.clone()))
+            });
 
-        if let Some(method) = matching {
-            Some(self.resolve_type_ref(&method.return_type.clone()))
+        if let Some((method, trait_name)) = matching {
+            let return_type = self.resolve_type_ref(&method.return_type.clone());
+            Some((return_type, type_name, trait_name))
         } else {
             None
         }

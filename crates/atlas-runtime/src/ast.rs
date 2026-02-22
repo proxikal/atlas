@@ -489,7 +489,7 @@ pub struct IndexExpr {
 ///
 /// Syntax: `expr.member` or `expr.method(args)`
 /// This is sugar for function calls: `Type::method(expr, args)`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemberExpr {
     /// The target expression (left side of dot)
     pub target: Box<Expr>,
@@ -500,7 +500,21 @@ pub struct MemberExpr {
     /// Type tag for method dispatch (set by typechecker, used by interpreter/compiler)
     #[serde(skip)]
     pub type_tag: Cell<Option<TypeTag>>,
+    /// Trait dispatch info: (type_name, trait_name) when this is a user trait method call.
+    /// Set by the typechecker, used by the compiler and interpreter for static dispatch.
+    #[serde(skip)]
+    pub trait_dispatch: std::cell::RefCell<Option<(String, String)>>,
     pub span: Span,
+}
+
+impl PartialEq for MemberExpr {
+    fn eq(&self, other: &Self) -> bool {
+        // type_tag and trait_dispatch are ephemeral annotations — exclude from equality
+        self.target == other.target
+            && self.member == other.member
+            && self.args == other.args
+            && self.span == other.span
+    }
 }
 
 /// Array literal expression

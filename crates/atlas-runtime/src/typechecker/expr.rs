@@ -855,9 +855,13 @@ impl<'a> TypeChecker<'a> {
 
             // Return the method's return type
             method_sig.return_type
-        } else if let Some(return_type) = self.resolve_trait_method_call(&target_type, method_name)
+        } else if let Some((return_type, type_name, trait_name)) =
+            self.resolve_trait_method_call_with_info(&target_type, method_name)
         {
             // Slot 2: trait method dispatch — found a matching impl
+            // Annotate MemberExpr with dispatch info for compiler/interpreter
+            *member.trait_dispatch.borrow_mut() = Some((type_name, trait_name));
+
             // Check args if present (non-self params only)
             if let Some(args) = &member.args {
                 for arg in args.iter() {

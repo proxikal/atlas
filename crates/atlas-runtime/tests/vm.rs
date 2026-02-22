@@ -3968,8 +3968,8 @@ fn test_vm_monomorphizer_basic() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-                trait_bounds: vec![],
-            }];
+        trait_bounds: vec![],
+    }];
     let type_args = vec![Type::Number];
 
     let subst = mono
@@ -3987,8 +3987,8 @@ fn test_vm_monomorphizer_multiple_types() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-                trait_bounds: vec![],
-            }];
+        trait_bounds: vec![],
+    }];
 
     // Test number
     mono.get_substitutions("f", &type_params, &[Type::Number])
@@ -4069,8 +4069,8 @@ fn test_vm_monomorphizer_cache_efficiency() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-                trait_bounds: vec![],
-            }];
+        trait_bounds: vec![],
+    }];
     let type_args = vec![Type::Number];
 
     // Multiple calls with same types should reuse cache
@@ -4090,8 +4090,8 @@ fn test_vm_monomorphizer_different_functions() {
     let type_params = vec![TypeParamDef {
         name: "T".to_string(),
         bound: None,
-                trait_bounds: vec![],
-            }];
+        trait_bounds: vec![],
+    }];
     let type_args = vec![Type::Number];
 
     // Different functions with same type args should create separate instances
@@ -4113,13 +4113,13 @@ fn test_vm_generic_type_substitution() {
         TypeParamDef {
             name: "T".to_string(),
             bound: None,
-                trait_bounds: vec![],
-            },
+            trait_bounds: vec![],
+        },
         TypeParamDef {
             name: "E".to_string(),
             bound: None,
-                trait_bounds: vec![],
-            },
+            trait_bounds: vec![],
+        },
     ];
 
     // Result<number, string>
@@ -5312,4 +5312,129 @@ fn test_vm_shared_identical_to_interpreter() {
         vm_result.unwrap_err().contains("ownership violation"),
         "VM error should mention 'ownership violation'"
     );
+}
+
+// ============================================================
+// Phase 12 — Compiler: Static Trait Method Dispatch
+// ============================================================
+
+#[test]
+fn test_vm_trait_method_static_dispatch_number() {
+    let result = run_vm(
+        "
+        trait Describe { fn describe(self: Describe) -> string; }
+        impl Describe for number {
+            fn describe(self: number) -> string { return str(self); }
+        }
+        let x: number = 42;
+        let s: string = x.describe();
+        s
+    ",
+    );
+    assert_eq!(result.unwrap(), r#"String("42")"#);
+}
+
+#[test]
+fn test_vm_trait_method_static_dispatch_string() {
+    let result = run_vm(
+        r#"
+        trait Wrap { fn wrap(self: Wrap) -> string; }
+        impl Wrap for string {
+            fn wrap(self: string) -> string { return "[" + self + "]"; }
+        }
+        let s: string = "hello";
+        let r: string = s.wrap();
+        r
+    "#,
+    );
+    assert_eq!(result.unwrap(), r#"String("[hello]")"#);
+}
+
+#[test]
+fn test_vm_multiple_impl_methods_callable() {
+    let result = run_vm(
+        "
+        trait Math {
+            fn double(self: Math) -> number;
+            fn triple(self: Math) -> number;
+        }
+        impl Math for number {
+            fn double(self: number) -> number { return self * 2; }
+            fn triple(self: number) -> number { return self * 3; }
+        }
+        let n: number = 5;
+        let d: number = n.double();
+        let t: number = n.triple();
+        let sum: number = d + t;
+        sum
+    ",
+    );
+    assert_eq!(result.unwrap(), "Number(25)");
+}
+
+#[test]
+fn test_vm_impl_for_different_types_no_collision() {
+    // Both number and string implement Label — each should dispatch to its own impl
+    let d_result = run_vm(
+        "
+        trait Label { fn label(self: Label) -> string; }
+        impl Label for number {
+            fn label(self: number) -> string { return \"num:\" + str(self); }
+        }
+        impl Label for string {
+            fn label(self: string) -> string { return \"str:\" + self; }
+        }
+        let n: number = 7;
+        let nr: string = n.label();
+        nr
+    ",
+    );
+    assert_eq!(d_result.unwrap(), r#"String("num:7")"#);
+
+    let s_result = run_vm(
+        r#"
+        trait Label { fn label(self: Label) -> string; }
+        impl Label for number {
+            fn label(self: number) -> string { return "num:" + str(self); }
+        }
+        impl Label for string {
+            fn label(self: string) -> string { return "str:" + self; }
+        }
+        let s: string = "world";
+        let sr: string = s.label();
+        sr
+    "#,
+    );
+    assert_eq!(s_result.unwrap(), r#"String("str:world")"#);
+}
+
+#[test]
+fn test_vm_impl_method_return_bool() {
+    let result = run_vm(
+        "
+        trait Check { fn is_positive(self: Check) -> bool; }
+        impl Check for number {
+            fn is_positive(self: number) -> bool { return self > 0; }
+        }
+        let n: number = 5;
+        let r: bool = n.is_positive();
+        r
+    ",
+    );
+    assert_eq!(result.unwrap(), "Bool(true)");
+}
+
+#[test]
+fn test_vm_trait_compiles_without_bytecode() {
+    // Trait declarations alone should compile cleanly with no runtime effect
+    // The program just declares a trait and evaluates a number — no error expected
+    let result = run_vm(
+        "
+        trait Marker { fn mark(self: Marker) -> void; }
+        let x: number = 42;
+        x
+    ",
+    );
+    // x is the last local on stack — Number(42) in Atlas display format
+    assert_eq!(result.unwrap(), "Number(42)");
 }

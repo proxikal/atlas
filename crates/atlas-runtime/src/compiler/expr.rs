@@ -205,6 +205,38 @@ impl Compiler {
     /// The function name is determined from the method name using a standard mapping:
     ///   value.as_string() → jsonAsString(value)
     fn compile_member(&mut self, member: &MemberExpr) -> Result<(), Vec<Diagnostic>> {
+        // Check for trait dispatch (user-defined impl methods) first.
+        // The typechecker annotates `trait_dispatch` when a trait method is resolved.
+        if let Some((type_name, trait_name)) = member.trait_dispatch.borrow().clone() {
+            let mangled_name = format!(
+                "__impl__{}__{}__{}",
+                type_name, trait_name, member.member.name
+            );
+
+            // Push the mangled function by name from globals
+            let name_idx = self
+                .bytecode
+                .add_constant(crate::value::Value::string(&mangled_name));
+            self.bytecode.emit(Opcode::GetGlobal, member.span);
+            self.bytecode.emit_u16(name_idx);
+
+            // Compile target (becomes `self` — first argument)
+            self.compile_expr(&member.target)?;
+
+            // Compile method arguments
+            if let Some(args) = &member.args {
+                for arg in args {
+                    self.compile_expr(arg)?;
+                }
+            }
+
+            let arg_count = 1 + member.args.as_ref().map(|a| a.len()).unwrap_or(0);
+            self.bytecode.emit(Opcode::Call, member.span);
+            self.bytecode.emit_u8(arg_count as u8);
+
+            return Ok(());
+        }
+
         // Resolve method via shared dispatch table (type tag set by typechecker)
         let type_tag = member
             .type_tag
