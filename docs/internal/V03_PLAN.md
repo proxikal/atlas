@@ -1,9 +1,10 @@
 # Atlas v0.3 — The Foundation Version
 
-**Status:** LOCKED — ready for phase scaffolding
+**Status:** IN PROGRESS — Blocks 1–3 complete, Blocks 4–9 in execution
 **Replaces:** V03_EXPLORATION_PLAN.md (research phase — complete)
 **Research basis:** 2026-02-21 architectural decision session
-**Phase target:** ~130–150 phases across 9 blocks
+**Block plan:** 9 blocks defined (current milestone). More blocks will follow.
+**Phase target:** Unknown total — v0.3 is complete when exit criteria are met, not when a block count is reached.
 
 ---
 
@@ -19,6 +20,23 @@ regressions across thousands of tests. We do it now. We do it right. We never do
 **v0.3 exit state:** Atlas is a language with value semantics, explicit ownership, a trait
 system, closures, type inference, proper error handling, live JIT compilation, and async/await
 syntax. That is a world-class language foundation.
+
+---
+
+## How v0.3 Grows
+
+v0.3 is not closed at 9 blocks. The 9 blocks are the **first milestone** — the core
+language features. When Block 9 is complete, the following happens:
+
+1. **Milestone commit** — push to remote, tag the milestone (not the version)
+2. **Architectural session** — user and AI review what was built, identify gaps,
+   define the next set of blocks together
+3. **New blocks are planned** and added to this document
+4. **Execution continues** until all exit criteria (all 3 groups) are verified
+
+**v0.3 is done when the language works, not when a list of blocks is exhausted.**
+New blocks discovered during architecture sessions are expected and normal.
+The exit criteria are the authority — not the block count.
 
 ---
 
@@ -460,11 +478,25 @@ block's acceptance criteria are all checked.
 - [ ] **Spec complete:** `memory-model.md`, `types.md`, `syntax.md` all updated and
   internally consistent. No spec sections marked TODO or "v0.4."
 
-### Version gate instruction (for AI)
-When all 9 blocks are complete, do NOT advance to v0.3.0 — run GATE V.
-GATE V will verify this checklist against the actual codebase. Groups 2 and 3 will
-almost certainly be incomplete at block-9 completion. Log blockers in STATUS.md.
-Continue building until all three groups are fully checked.
+### Instructions for AI — milestone vs. version
+
+**When Block 9 AC check is committed:**
+1. Run GATE V — verify Groups 1, 2, 3 against actual codebase
+2. Groups 2 and 3 will almost certainly be incomplete. That is expected.
+3. Log all blockers in STATUS.md under "v0.3 Version Gate Blockers"
+4. Tag the milestone: `git tag v0.3-milestone-blocks-1-9` and push
+5. Trigger an architectural session: surface the blocker list and gaps to the user
+   so new blocks can be planned together. This is NOT asking for permission — it is
+   the defined handoff point between the execution phase and the architecture phase.
+
+**When new blocks are defined (after architectural session):**
+- Add them to this document under a new `## Block N: Theme` section
+- They follow the same scaffolding and execution protocol as the original 9
+- Update the block dependency graph if dependencies exist
+
+**When ALL three groups are ✅:**
+- Run GATE V — advance to v0.3.0, tag, update STATUS.md and ROADMAP.md
+- v0.3 is closed. Begin v0.4 planning.
 
 ---
 

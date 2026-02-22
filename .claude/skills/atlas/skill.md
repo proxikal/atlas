@@ -157,10 +157,12 @@ After GATE -1, declare one:
    Phase execution commits follow on the same branch. PR opens only at block completion (Phase N).
 
 **After block execution completes:**
-- Verify all block ACs from V03_PLAN.md
-- Update V03_PLAN.md with "planned vs. actual" discoveries
+- Verify all block ACs from the current version plan
+- Update the version plan with "planned vs. actual" discoveries
 - Update auto-memory with new patterns/decisions
-- Trigger next block scaffolding
+- Run GATE V (see `gates/gate-versioning.md`)
+- If more blocks remain in the plan → scaffold next block
+- If all defined blocks are complete → milestone tag + surface gaps to user for architectural session (new blocks will be planned together before execution resumes)
 
 ---
 
