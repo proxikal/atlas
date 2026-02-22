@@ -60,8 +60,10 @@ fn test_config_type_hints_disabled() {
     let source = "let x = foo();";
     let (ast, symbols) = parse_source(source);
 
-    let mut config = InlayHintConfig::default();
-    config.show_type_hints = false;
+    let config = InlayHintConfig {
+        show_type_hints: false,
+        ..Default::default()
+    };
 
     let hints = generate_inlay_hints(source, full_range(), Some(&ast), Some(&symbols), &config);
 
@@ -79,8 +81,10 @@ fn test_config_parameter_hints_disabled() {
     let source = "fn foo(a: number, b: number) -> number { return a + b; }\nfoo(1, 2);";
     let (ast, symbols) = parse_source(source);
 
-    let mut config = InlayHintConfig::default();
-    config.show_parameter_hints = false;
+    let config = InlayHintConfig {
+        show_parameter_hints: false,
+        ..Default::default()
+    };
 
     let hints = generate_inlay_hints(source, full_range(), Some(&ast), Some(&symbols), &config);
 
@@ -100,8 +104,10 @@ fn test_type_hint_for_variable() {
     let source = "fn test() { let x = 42; }";
     let (ast, symbols) = parse_source(source);
 
-    let mut config = InlayHintConfig::default();
-    config.skip_obvious_types = false; // Show even for literals
+    let config = InlayHintConfig {
+        skip_obvious_types: false, // Show even for literals
+        ..Default::default()
+    };
 
     let hints = generate_inlay_hints(source, full_range(), Some(&ast), Some(&symbols), &config);
 
@@ -175,8 +181,10 @@ fn test_type_hint_truncation() {
     let source = "fn test() { let x = very_long_function_name_that_returns_complex_type(); }";
     let (ast, symbols) = parse_source(source);
 
-    let mut config = InlayHintConfig::default();
-    config.max_type_length = 10;
+    let config = InlayHintConfig {
+        max_type_length: 10,
+        ..Default::default()
+    };
 
     let hints = generate_inlay_hints(source, full_range(), Some(&ast), Some(&symbols), &config);
 

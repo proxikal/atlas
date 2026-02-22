@@ -92,10 +92,8 @@ fn test_lsp_tcp_startup_message() {
     // Set a timeout for reading
     let start = std::time::Instant::now();
     while start.elapsed() < Duration::from_secs(5) {
-        if reader.read_line(&mut line).unwrap() > 0 {
-            if line.contains("listening on") {
-                break;
-            }
+        if reader.read_line(&mut line).unwrap() > 0 && line.contains("listening on") {
+            break;
         }
         std::thread::sleep(Duration::from_millis(50));
     }
@@ -135,10 +133,8 @@ fn test_lsp_tcp_accepts_connection() {
 
     let start = std::time::Instant::now();
     while start.elapsed() < Duration::from_secs(5) {
-        if reader.read_line(&mut line).unwrap() > 0 {
-            if line.contains("listening on") {
-                break;
-            }
+        if reader.read_line(&mut line).unwrap() > 0 && line.contains("listening on") {
+            break;
         }
         std::thread::sleep(Duration::from_millis(50));
     }
@@ -178,7 +174,7 @@ fn test_lsp_tcp_port_in_use() {
     drop(listener);
 
     // Should fail because port is in use
-    assert!(!child.status.success() || child.stderr.len() > 0);
+    assert!(!child.status.success() || !child.stderr.is_empty());
 }
 
 // ── stdio mode tests ──────────────────────────────────────────────────────────
