@@ -345,6 +345,34 @@ impl Interpreter {
         // 1. Evaluate target expression
         let target_value = self.eval_expr(&member.target)?;
 
+        // 1b. Check for trait dispatch (user-defined impl methods).
+        // The typechecker annotates `trait_dispatch` when a trait method is resolved.
+        if let Some((type_name, trait_name)) = member.trait_dispatch.borrow().clone() {
+            let mangled_name = format!(
+                "__impl__{}__{}__{}",
+                type_name, trait_name, member.member.name
+            );
+            // Build argument list: receiver first (self), then method args
+            let mut args = vec![target_value];
+            if let Some(method_args) = &member.args {
+                for arg in method_args {
+                    args.push(self.eval_expr(arg)?);
+                }
+            }
+            let func = self
+                .function_bodies
+                .get(&mangled_name)
+                .cloned()
+                .ok_or_else(|| RuntimeError::TypeError {
+                    msg: format!(
+                        "Trait method '{}' not found (impl not registered for this type)",
+                        member.member.name
+                    ),
+                    span: member.span,
+                })?;
+            return self.call_user_function(&func, args, member.span);
+        }
+
         // 2. Build desugared function name via shared dispatch table.
         // Prefer the static TypeTag set by the typechecker; fall back to dynamic dispatch
         // from the runtime value when the typechecker couldn't infer the type (e.g. `array`

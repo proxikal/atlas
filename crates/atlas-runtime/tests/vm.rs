@@ -5438,3 +5438,90 @@ fn test_vm_trait_compiles_without_bytecode() {
     // x is the last local on stack — Number(42) in Atlas display format
     assert_eq!(result.unwrap(), "Number(42)");
 }
+
+// ============================================================
+// Phase 13 — Interpreter: Trait Method Dispatch (Parity Tests)
+// ============================================================
+
+// Interpreter trait dispatch tests use Atlas::eval() which:
+// 1. Runs the full pipeline (typecheck + interpret) so trait_dispatch annotations are set
+// 2. Auto-adds semicolons for REPL-style last expressions
+
+#[test]
+fn test_interp_trait_method_dispatch_number() {
+    let atlas = Atlas::new();
+    let result = atlas.eval(
+        "
+        trait Describe { fn describe(self: Describe) -> string; }
+        impl Describe for number {
+            fn describe(self: number) -> string { return str(self); }
+        }
+        let x: number = 42;
+        let s: string = x.describe();
+        s
+    ",
+    );
+    assert_eq!(result.unwrap(), Value::string("42"));
+}
+
+#[test]
+fn test_interp_trait_method_dispatch_bool_return() {
+    let atlas = Atlas::new();
+    let result = atlas.eval(
+        "
+        trait Check { fn is_positive(self: Check) -> bool; }
+        impl Check for number {
+            fn is_positive(self: number) -> bool { return self > 0; }
+        }
+        let n: number = 5;
+        let r: bool = n.is_positive();
+        r
+    ",
+    );
+    assert_eq!(result.unwrap(), Value::Bool(true));
+}
+
+#[test]
+fn test_interp_trait_method_multi_methods() {
+    let atlas = Atlas::new();
+    let result = atlas.eval(
+        "
+        trait Math {
+            fn double(self: Math) -> number;
+            fn triple(self: Math) -> number;
+        }
+        impl Math for number {
+            fn double(self: number) -> number { return self * 2; }
+            fn triple(self: number) -> number { return self * 3; }
+        }
+        let n: number = 5;
+        let d: number = n.double();
+        let t: number = n.triple();
+        let sum: number = d + t;
+        sum
+    ",
+    );
+    assert_eq!(result.unwrap(), Value::Number(25.0));
+}
+
+#[test]
+fn test_interp_vm_trait_dispatch_parity() {
+    // VM path (via run_vm which uses the compiler pipeline)
+    let source = "
+        trait Label { fn label(self: Label) -> string; }
+        impl Label for number {
+            fn label(self: number) -> string { return \"n:\" + str(self); }
+        }
+        let x: number = 7;
+        let s: string = x.label();
+        s
+    ";
+
+    let vm_result = run_vm(source).expect("VM should succeed");
+    assert_eq!(vm_result, r#"String("n:7")"#);
+
+    // Interpreter path (via Atlas::eval which uses the interpreter pipeline)
+    let atlas = Atlas::new();
+    let interp_result = atlas.eval(source).expect("Interpreter should succeed");
+    assert_eq!(interp_result, Value::string("n:7"));
+}
