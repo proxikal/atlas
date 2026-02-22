@@ -86,6 +86,10 @@ pub struct TypeChecker<'a> {
     /// Ownership annotations per function (name -> (param ownerships, return ownership)).
     /// Populated during `check_function`, queried by call-site checking (Phase 07).
     pub fn_ownership_registry: HashMap<String, FnOwnershipEntry>,
+    /// Param ownership annotations for the current function being checked.
+    /// Maps param name -> ownership annotation. Used by call-site checks to detect
+    /// whether an argument is a `borrow` parameter of the enclosing function.
+    pub(super) current_fn_param_ownerships: HashMap<String, Option<OwnershipAnnotation>>,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -107,6 +111,7 @@ impl<'a> TypeChecker<'a> {
             alias_cache: HashMap::new(),
             alias_resolution_stack: Vec::new(),
             fn_ownership_registry: HashMap::new(),
+            current_fn_param_ownerships: HashMap::new(),
         }
     }
 
@@ -441,6 +446,7 @@ impl<'a> TypeChecker<'a> {
         let prev_function_info = self.current_function_info.clone();
         let prev_declared_symbols = std::mem::take(&mut self.declared_symbols);
         let prev_used_symbols = std::mem::take(&mut self.used_symbols);
+        let prev_param_ownerships = std::mem::take(&mut self.current_fn_param_ownerships);
 
         let return_type = self.resolve_type_ref(&func.return_type);
         self.current_function_return_type = Some(return_type.clone());
@@ -519,6 +525,13 @@ impl<'a> TypeChecker<'a> {
             }
             param_ownerships.push(param.ownership.clone());
         }
+        // Populate current_fn_param_ownerships for call-site checking inside this body.
+        self.current_fn_param_ownerships = func
+            .params
+            .iter()
+            .map(|p| (p.name.name.clone(), p.ownership.clone()))
+            .collect();
+
         self.fn_ownership_registry.insert(
             func.name.name.clone(),
             (param_ownerships, func.return_ownership.clone()),
@@ -568,6 +581,7 @@ impl<'a> TypeChecker<'a> {
         self.current_function_info = prev_function_info;
         self.declared_symbols = prev_declared_symbols;
         self.used_symbols = prev_used_symbols;
+        self.current_fn_param_ownerships = prev_param_ownerships;
     }
 
     /// Emit warnings for unused symbols

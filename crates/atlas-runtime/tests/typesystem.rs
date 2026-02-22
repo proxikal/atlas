@@ -5915,3 +5915,94 @@ fn test_typechecker_stores_return_ownership() {
         .expect("allocate not in ownership registry");
     assert_eq!(entry.1, Some(OwnershipAnnotation::Own));
 }
+
+// ============================================================================
+// Call-Site Ownership Checking Tests (Phase 07 — Block 2)
+// ============================================================================
+
+#[test]
+fn test_typechecker_borrow_to_own_warning() {
+    // Passing a `borrow`-annotated caller param to an `own` param should warn AT2012
+    let src = r#"
+fn consumer(own _data: number[]) -> void { }
+fn caller(borrow data: number[]) -> void { consumer(data); }
+"#;
+    let diags = typecheck_source(src);
+    let warnings: Vec<_> = diags
+        .iter()
+        .filter(|d| d.level == DiagnosticLevel::Warning && d.code == "AT2012")
+        .collect();
+    assert!(
+        !warnings.is_empty(),
+        "expected AT2012 warning for borrow-to-own, got: {diags:?}"
+    );
+}
+
+#[test]
+fn test_typechecker_own_param_accepts_owned_value() {
+    // Passing a plain (non-borrow) variable to an `own` param is OK
+    let src = r#"
+fn consume(own _data: number[]) -> void { }
+fn caller() -> void {
+    let arr: number[] = [1, 2, 3];
+    consume(arr);
+}
+"#;
+    let diags = typecheck_source(src);
+    let at2012: Vec<_> = diags.iter().filter(|d| d.code == "AT2012").collect();
+    assert!(
+        at2012.is_empty(),
+        "unexpected AT2012 for owned-value-to-own, got: {diags:?}"
+    );
+}
+
+#[test]
+fn test_typechecker_borrow_param_accepts_any_value() {
+    // Any value can be passed to a `borrow` param — no diagnostic
+    let src = r#"
+fn reader(borrow _data: number[]) -> void { }
+fn caller() -> void {
+    let arr: number[] = [1, 2, 3];
+    reader(arr);
+}
+"#;
+    let diags = typecheck_source(src);
+    let errors: Vec<_> = diags
+        .iter()
+        .filter(|d| d.level == DiagnosticLevel::Error)
+        .collect();
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+}
+
+#[test]
+fn test_typechecker_borrow_param_accepts_borrow_arg() {
+    // Passing a `borrow` param to a `borrow` param is fine
+    let src = r#"
+fn reader(borrow _data: number[]) -> void { }
+fn caller(borrow data: number[]) -> void { reader(data); }
+"#;
+    let diags = typecheck_source(src);
+    let errors: Vec<_> = diags
+        .iter()
+        .filter(|d| d.level == DiagnosticLevel::Error)
+        .collect();
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+}
+
+#[test]
+fn test_typechecker_non_shared_to_shared_error() {
+    // Passing a plain (non-shared) value to a `shared` param should emit AT3028
+    let src = r#"
+fn register(shared _handler: number[]) -> void { }
+fn caller() -> void {
+    let arr: number[] = [1, 2, 3];
+    register(arr);
+}
+"#;
+    let diags = typecheck_source(src);
+    let errors: Vec<_> = diags.iter().filter(|d| d.code == "AT3028").collect();
+    assert!(
+        !errors.is_empty(),
+        "expected AT3028 error for non-shared-to-shared, got: {diags:?}"
+    );
+}
