@@ -14,6 +14,16 @@
 ## Git Process
 - **All changes use PRs.** Code, docs, config—everything goes through merge queue.
 - **Docs-only PRs:** No CI checks, merge queue processes them quickly (~1 min).
+- **Direct push to main is rejected.** Branch protection enforces PRs + CI + merge queue.
+- **See `.claude/rules/atlas-git.md`** for full worktree layout, PR workflow, and branch naming.
+
+## Worktree System
+This repo uses 3 git worktrees:
+- `atlas-dev/` → `main` — **primary dev worktree (you are here)**
+- `atlas-docs/` → `worktree/docs` — docs worktree
+- `atlas/` → varies — secondary worktree
+
+Never `git checkout` a branch owned by another worktree. Use `git -C <path>` for cross-worktree ops.
 
 ## Cross-Platform Testing
 - Use `std::path::Path` APIs, not string manipulation for paths.
