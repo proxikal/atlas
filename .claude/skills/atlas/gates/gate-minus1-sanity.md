@@ -37,11 +37,18 @@ Classify and resolve autonomously:
 
 ```bash
 git fetch origin
-git log HEAD..origin/main --oneline       # Is remote ahead?
+git log HEAD..origin/main --oneline       # Is remote ahead of local main?
+git log origin/main..HEAD --oneline       # Commits on this branch not yet in main
+git log HEAD..origin/$(git branch --show-current) --oneline  # Is remote branch ahead?
 ```
 
-→ **Remote ahead** (PR merged): `git pull origin main`
-→ **Remote equal:** nothing to do
+→ **On main, remote ahead** (PR merged): `git pull origin main`
+→ **On block branch, origin/main has new commits:** `git rebase origin/main` — keep the branch current
+→ **Remote branch ahead of local** (another session pushed): `git pull --rebase`
+→ **All equal:** nothing to do
+
+**Why this matters:** `strict_required_status_checks_policy=true` means auto-merge stalls
+if main advanced while the block branch was in progress. Catch it here, not at PR time.
 
 ---
 
@@ -69,10 +76,11 @@ cargo audit
 ## Step 5: Branch Setup
 
 ```bash
-git checkout -b phase/{category}-{number}   # Create feature branch
+git checkout -b block/{name}   # One branch per block — all phases committed here
 ```
 
-If resuming an existing feature branch (Step 1 State 2): skip, continue on existing branch.
+If resuming an existing block branch (Step 1 State 2): skip, continue on existing branch.
+See `git-workflow.md` for full branch naming convention (`feat/`, `fix/`, `ci/`, `docs/`).
 
 ---
 
