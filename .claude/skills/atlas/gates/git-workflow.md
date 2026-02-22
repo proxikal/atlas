@@ -1,6 +1,7 @@
 # Git Workflow
 
-**Full rules:** `.claude/rules/atlas-git.md` (loaded automatically)
+**Full rules:** `.claude/rules/atlas-git.md` (auto-loaded)
+**Single workspace:** `~/dev/projects/atlas/` — no other worktrees.
 
 ## Branch Naming
 ```
@@ -12,20 +13,20 @@ ci/{short-description}
 
 ## Start of Phase
 ```bash
-git checkout main && git pull origin main   # Sync to remote main
-git checkout -b phase/{category}-{number}   # Feature branch
+git checkout main && git pull origin main
+git checkout -b phase/{category}-{number}
 ```
 
 ## During Phase (multi-part)
 ```bash
-cargo build --workspace                     # Must pass
-cargo nextest run -p atlas-runtime          # Must be 100%
+cargo build --workspace
+cargo nextest run -p atlas-runtime
 git add <files> && git commit -m "feat(phase-XX): Part A"
 ```
 
 ## End of Phase — PR Workflow
 ```bash
-# 1. Final quality gates
+# 1. Quality gates
 cargo build --workspace
 cargo nextest run -p atlas-runtime
 cargo clippy -p atlas-runtime -- -D warnings
@@ -40,24 +41,17 @@ EOF
 )"
 git push -u origin phase/{category}-{number}
 
-# 3. PR with auto-merge (merge queue handles the rest)
+# 3. PR with auto-merge
 gh pr create --title "..." --body "..."
 gh pr merge --auto --squash
 
-# 4. After merge: sync local main + other worktrees
+# 4. After merge: sync
 git checkout main && git pull origin main
 git branch -d phase/{category}-{number}
-git -C /Users/proxikal/dev/projects/atlas-docs rebase main
-git -C /Users/proxikal/dev/projects/atlas rebase main
 ```
 
-## Weekly Push Cadence
-Batch multiple phases into one PR per week. Do NOT push every phase.
-Exception: blocking fixes or large milestones.
-
 ## Banned
-- `git push origin main` directly (branch protection rejects it)
-- Merge commits on main (`--no-ff`)
+- `git push origin main` directly
+- `--no-ff` merges
 - `--force` on main
-- `--no-verify` (skip CI)
-- Leaving uncommitted changes at session end
+- `--no-verify`
