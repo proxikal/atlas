@@ -70,6 +70,13 @@ Verify ALL are met:
 - Update "Next" line to: Scaffold Block 3 (Trait System)
 - Add Block 2 metrics section
 
+### Crate CLAUDE.md Updates
+
+Check each affected crate for staleness — update only what changed this block:
+- `crates/atlas-runtime/src/CLAUDE.md` — verify Key Invariants reflects final `Param` struct
+- `crates/atlas-lsp/src/CLAUDE.md` — verify test file list is current after Phases 14–15
+- `crates/atlas-jit/src/CLAUDE.md` — no changes expected this block
+
 ### Auto-Memory Update (GATE 7)
 Log in `decisions/runtime.md`:
 ```
