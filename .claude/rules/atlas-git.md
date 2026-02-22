@@ -12,7 +12,7 @@ paths:
 - **PRs required** — direct push to `main` is rejected
 - **No merge commits** — linear history only (squash)
 - **CI gate** — "CI Success" check must pass
-- **Merge queue** — PRs auto-queue; do not merge manually
+- **Auto-merge** — use `gh pr merge --auto --squash`; merges when CI passes
 
 ## PR Workflow
 

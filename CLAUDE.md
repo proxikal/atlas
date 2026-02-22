@@ -12,9 +12,9 @@
 - **User is architect, not infallible.** Explain why something is wrong. User makes final call.
 
 ## Git Process
-- **All changes use PRs.** Code, docs, config—everything goes through merge queue.
-- **Docs-only PRs:** No CI checks, merge queue processes them quickly (~1 min).
-- **Direct push to main is rejected.** Branch protection enforces PRs + CI + merge queue.
+- **All changes use PRs.** Code, docs, config—everything goes through a PR.
+- **Docs-only PRs:** CI skips Rust jobs; merges fast.
+- **Direct push to main is rejected.** Branch protection enforces PRs + CI.
 - **Single workspace:** `~/dev/projects/atlas/` — no other worktrees.
 - **See `.claude/rules/atlas-git.md`** for full PR workflow and branch naming.
 

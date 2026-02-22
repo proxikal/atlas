@@ -85,7 +85,7 @@ See `.claude/rules/atlas-testing.md` (auto-loaded on test files).
 **See `gates/git-workflow.md`** for all commands.
 **See `.claude/rules/atlas-git.md`** for full rules (auto-loaded everywhere).
 
-**TL;DR:** All changes via PR → merge queue → auto-squash. Never push main directly.
+**TL;DR:** All changes via PR → CI passes → auto-squash merge. Never push main directly.
 **Single workspace:** `~/dev/projects/atlas/` — open this in Claude Code, not atlas-dev.
 
 ---
