@@ -19,6 +19,12 @@ Common Atlas-specific issues:
 - CoW collections: clippy may warn on `Arc::make_mut` patterns — these are intentional
 - `match` on `Value` variants must be exhaustive — no `_ =>` catchalls in new code
 
+## Before Touching Core Files
+
+**If modifying `ast.rs`, `value.rs`, or `types.rs`:** read auto-memory `domain-prereqs.md` first.
+These files have non-obvious blast radius. The prereqs file has the exact grep queries to run
+before writing a single line. Skipping this step is how compounding refactors happen.
+
 ## Value Enum Rules
 
 Adding a `Value` variant requires updating ALL of:
