@@ -125,6 +125,10 @@ After GATE -1, declare one:
 **PR flush trigger:** Block complete (final AC check phase done). Exception: blocking fix or CI issue.
 **See `gates/git-workflow.md`** for batch flush commands.
 
+**GATE V — run at two moments (see `gates/gate-versioning.md`):**
+- After any `fix/` PR merges to main → patch tag check (automatic)
+- After block AC check phase committed → minor version check (verify exit criteria)
+
 **Required in summary:**
 - Status: "✅ PHASE COMPLETE - COMMITTED (batch)"
 - Final Stats (bullets)

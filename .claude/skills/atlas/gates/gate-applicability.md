@@ -17,6 +17,7 @@
 | **GATE 5** (Docs) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **GATE 6** (Testing) | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ Skip |
 | **GATE 7** (Memory) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **GATE V** (Versioning) | — event-driven, not part of phase sequence — see below | | | | | |
 
 ---
 
@@ -84,6 +85,15 @@ cargo nextest run -p <package> --test <domain_file>
 
 ### GATE 7: Memory Check
 **Always run.** Update memory if you discovered new patterns or made decisions.
+
+### GATE V: Versioning
+**Event-driven — not part of the phase sequence.**
+
+Run at exactly two moments:
+1. **After a `fix/` PR merges to main** → patch tag check
+2. **After a block AC check phase is committed** → minor version check
+
+See `gates/gate-versioning.md` for the full decision process. Never ask the user — the exit criteria in the current version plan are the authority.
 
 **When to update memory:**
 - ✅ Hit an API surprise (pattern wasn't documented)

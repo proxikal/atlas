@@ -421,7 +421,10 @@ block's acceptance criteria are all checked.
 
 ## v0.3 Exit Criteria (ALL required)
 
-- [ ] Block 1–9 complete
+**Completing all 9 blocks satisfies the first group only. All three groups must be ✅.**
+
+### Group 1: Block completion (necessary, not sufficient)
+- [ ] Block 1–9 complete (all AC phases committed, all ACs verified)
 - [ ] No `Arc<Mutex<Value>>` in production code
 - [ ] Value semantics: mutation does not affect aliases
 - [ ] Ownership annotations parse, execute, and are runtime-verified
@@ -431,11 +434,37 @@ block's acceptance criteria are all checked.
 - [ ] `?` operator propagates Result/Option errors
 - [ ] JIT: hot functions compile to native code (10x+ benchmark improvement)
 - [ ] Async/await: syntax exists, both engines execute async code
-- [ ] Test count: ≥ 9,000 (was 7,165 at v0.2 close)
+
+### Group 2: Integration and quality (post-block hardening)
+- [ ] **Integration hardening:** closures × traits × ownership interaction — dedicated test
+  suite covering capture of `Copy`/non-`Copy` types, trait methods in closures, `?` in
+  closures. Both engines pass. No interactions discovered after block completion.
+- [ ] **Stdlib ownership audit:** every stdlib function reviewed against value semantics and
+  ownership model. Functions that should return `Result<T,E>` do. No silent panics remain.
+  Target: all 25 stdlib modules audited, changes committed.
+- [ ] **Error message quality:** every AT-coded error has a clear, actionable message.
+  Verified by attempting to trigger each error class and reading the output.
+- [ ] **REPL stability:** REPL works correctly with all v0.3 features. Tested manually
+  against closures, traits, ownership, `?` operator.
+
+### Group 3: Proof of completeness
+- [ ] **Example program:** at least one non-trivial Atlas program exists in `examples/`
+  that uses ownership annotations, a user-defined trait, a closure, and `?` propagation.
+  It compiles and runs correctly in both interpreter and VM mode.
+- [ ] **Performance baseline:** benchmark established for a numeric loop. JIT vs interpreted
+  result documented in `docs/internal/benchmarks.md`. 10x+ improvement confirmed.
+- [ ] **Test count:** ≥ 11,000 (accounts for integration + stdlib audit + example tests)
 - [ ] Zero test failures
 - [ ] Clippy clean
 - [ ] Fmt clean
-- [ ] Spec complete: memory-model.md, types.md, syntax.md updated
+- [ ] **Spec complete:** `memory-model.md`, `types.md`, `syntax.md` all updated and
+  internally consistent. No spec sections marked TODO or "v0.4."
+
+### Version gate instruction (for AI)
+When all 9 blocks are complete, do NOT advance to v0.3.0 — run GATE V.
+GATE V will verify this checklist against the actual codebase. Groups 2 and 3 will
+almost certainly be incomplete at block-9 completion. Log blockers in STATUS.md.
+Continue building until all three groups are fully checked.
 
 ---
 
