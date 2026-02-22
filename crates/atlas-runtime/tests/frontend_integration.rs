@@ -1638,6 +1638,7 @@ fn test_complete_program_construction() {
                             span: Span::new(9, 10),
                         },
                         type_ref: TypeRef::Named("number".to_string(), Span::new(12, 18)),
+                        ownership: None,
                         span: Span::new(9, 18),
                     },
                     Param {
@@ -1646,10 +1647,12 @@ fn test_complete_program_construction() {
                             span: Span::new(20, 21),
                         },
                         type_ref: TypeRef::Named("number".to_string(), Span::new(23, 29)),
+                        ownership: None,
                         span: Span::new(20, 29),
                     },
                 ],
                 return_type: TypeRef::Named("number".to_string(), Span::new(34, 40)),
+                return_ownership: None,
                 predicate: None,
                 body: Block {
                     statements: vec![Stmt::Return(ReturnStmt {

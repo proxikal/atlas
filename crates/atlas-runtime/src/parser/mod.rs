@@ -148,6 +148,7 @@ impl Parser {
                         span: param_name_span,
                     },
                     type_ref,
+                    ownership: None,
                     span: param_span_start.merge(param_span_end),
                 });
 
@@ -198,6 +199,7 @@ impl Parser {
             type_params,
             params,
             return_type,
+            return_ownership: None,
             predicate,
             body,
             span: fn_span.merge(end_span),

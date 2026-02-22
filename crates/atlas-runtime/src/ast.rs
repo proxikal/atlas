@@ -159,6 +159,8 @@ pub struct FunctionDecl {
     pub type_params: Vec<TypeParam>,
     pub params: Vec<Param>,
     pub return_type: TypeRef,
+    /// Ownership annotation on the return type, or `None` if unannotated
+    pub return_ownership: Option<OwnershipAnnotation>,
     /// Optional type predicate for type guards (e.g., `-> bool is x: string`)
     pub predicate: Option<TypePredicate>,
     pub body: Block,
@@ -182,11 +184,28 @@ pub struct TypeParam {
     pub span: Span,
 }
 
+/// Ownership annotation on a function parameter or return type
+///
+/// Determines the memory transfer semantics at a call site.
+/// `None` on a `Param` means unannotated — the typechecker applies the
+/// default rule (value types copy implicitly; resource types require annotation).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum OwnershipAnnotation {
+    /// `own param: T` — move semantics; caller's binding is invalidated after the call
+    Own,
+    /// `borrow param: T` — immutable borrow; caller retains ownership
+    Borrow,
+    /// `shared param: T` — shared mutable reference (Arc<Mutex<T>>)
+    Shared,
+}
+
 /// Function parameter
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Param {
     pub name: Identifier,
     pub type_ref: TypeRef,
+    /// Ownership annotation (`own`, `borrow`, `shared`), or `None` if unannotated
+    pub ownership: Option<OwnershipAnnotation>,
     pub span: Span,
 }
 
@@ -685,6 +704,45 @@ mod tests {
     }
 
     #[test]
+    fn test_ownership_annotation_variants() {
+        assert_eq!(OwnershipAnnotation::Own, OwnershipAnnotation::Own);
+        assert_ne!(OwnershipAnnotation::Own, OwnershipAnnotation::Borrow);
+        assert_ne!(OwnershipAnnotation::Borrow, OwnershipAnnotation::Shared);
+        // Clone and Debug work
+        let ann = OwnershipAnnotation::Shared;
+        let cloned = ann.clone();
+        let _ = format!("{cloned:?}");
+    }
+
+    #[test]
+    fn test_param_with_ownership() {
+        let param = Param {
+            name: Identifier {
+                name: "data".to_string(),
+                span: Span::new(0, 4),
+            },
+            type_ref: TypeRef::Named("number".to_string(), Span::new(6, 12)),
+            ownership: Some(OwnershipAnnotation::Own),
+            span: Span::new(0, 12),
+        };
+        assert_eq!(param.ownership, Some(OwnershipAnnotation::Own));
+    }
+
+    #[test]
+    fn test_param_without_ownership_is_none() {
+        let param = Param {
+            name: Identifier {
+                name: "x".to_string(),
+                span: Span::new(0, 1),
+            },
+            type_ref: TypeRef::Named("number".to_string(), Span::new(3, 9)),
+            ownership: None,
+            span: Span::new(0, 9),
+        };
+        assert_eq!(param.ownership, None);
+    }
+
+    #[test]
     fn test_function_decl() {
         let func = FunctionDecl {
             name: Identifier {
@@ -694,6 +752,7 @@ mod tests {
             type_params: vec![],
             params: vec![],
             return_type: TypeRef::Named("void".to_string(), Span::new(14, 18)),
+            return_ownership: None,
             predicate: None,
             body: Block {
                 statements: vec![],

@@ -1,6 +1,5 @@
 ---
 source: crates/atlas-runtime/tests/frontend_syntax.rs
-assertion_line: 249
 expression: program
 ---
 items:
@@ -22,6 +21,7 @@ items:
               - number
               - start: 17
                 end: 23
+          ownership: ~
           span:
             start: 14
             end: 23
@@ -30,6 +30,7 @@ items:
           - number
           - start: 28
             end: 34
+      return_ownership: ~
       predicate: ~
       body:
         statements:
