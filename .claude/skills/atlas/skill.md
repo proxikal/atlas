@@ -116,10 +116,11 @@ After GATE -1, declare one:
 
 **Protocol:**
 1. All gates passed (build, tests, clippy, fmt, security scan)
-2. STATUS.md updated
-3. Memory checked (GATE 7)
-4. Commit → PR → `gh pr merge --auto --squash`
-5. Deliver summary
+2. **Update STATUS.md** — Last Updated, Current State, Next, block table row
+3. **Commit STATUS.md on the phase branch** (same commit or follow-up before PR)
+4. Memory checked (GATE 7)
+5. PR → `gh pr merge --auto --squash`
+6. Deliver summary
 
 **Required in summary:**
 - Status: "✅ PHASE COMPLETE - PR QUEUED/MERGED"

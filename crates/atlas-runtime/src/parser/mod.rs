@@ -134,7 +134,39 @@ impl Parser {
         if !self.check(TokenKind::RightParen) {
             loop {
                 let param_span_start = self.peek().span;
-                let param_name_tok = self.consume_identifier("a parameter name")?;
+
+                // Optional ownership annotation: own | borrow | shared
+                let ownership = if self.match_token(TokenKind::Own) {
+                    Some(OwnershipAnnotation::Own)
+                } else if self.match_token(TokenKind::Borrow) {
+                    Some(OwnershipAnnotation::Borrow)
+                } else if self.match_token(TokenKind::Shared) {
+                    Some(OwnershipAnnotation::Shared)
+                } else {
+                    None
+                };
+
+                // If an annotation was present, the next token must be an identifier
+                let param_name_tok = if ownership.is_some() {
+                    match self.consume_identifier("a parameter name after ownership annotation") {
+                        Ok(tok) => tok,
+                        Err(()) => {
+                            let kw = match ownership {
+                                Some(OwnershipAnnotation::Own) => "own",
+                                Some(OwnershipAnnotation::Borrow) => "borrow",
+                                Some(OwnershipAnnotation::Shared) => "shared",
+                                None => unreachable!(),
+                            };
+                            self.error(&format!(
+                                "Expected parameter name after ownership annotation '{kw}'"
+                            ));
+                            return Err(());
+                        }
+                    }
+                } else {
+                    self.consume_identifier("a parameter name")?
+                };
+
                 let param_name = param_name_tok.lexeme.clone();
                 let param_name_span = param_name_tok.span;
 
@@ -148,7 +180,7 @@ impl Parser {
                         span: param_name_span,
                     },
                     type_ref,
-                    ownership: None,
+                    ownership,
                     span: param_span_start.merge(param_span_end),
                 });
 
