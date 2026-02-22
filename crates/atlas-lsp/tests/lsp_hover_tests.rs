@@ -437,3 +437,148 @@ fn test_hover_on_unknown_identifier_returns_none() {
     // Without AST/symbols, unknown identifiers have no hover
     assert!(hover.is_none());
 }
+
+// === Ownership Annotation Hover Tests ===
+
+#[test]
+fn test_own_param_shows_in_hover() {
+    let source = "fn process(own data: number) -> number { return data; }";
+    let (ast, symbols) = parse_source(source);
+    let pos = Position {
+        line: 0,
+        character: 15, // 'data' in the param list
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(hover.is_some());
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("(own parameter) data"),
+        "Expected '(own parameter) data' in: {contents}"
+    );
+}
+
+#[test]
+fn test_borrow_param_shows_in_hover() {
+    let source = "fn process(borrow data: number) -> number { return data; }";
+    let (ast, symbols) = parse_source(source);
+    let pos = Position {
+        line: 0,
+        character: 18, // 'data' in the param list
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(hover.is_some());
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("(borrow parameter) data"),
+        "Expected '(borrow parameter) data' in: {contents}"
+    );
+}
+
+#[test]
+fn test_shared_param_shows_in_hover() {
+    let source = "fn process(shared data: number) -> number { return data; }";
+    let (ast, symbols) = parse_source(source);
+    let pos = Position {
+        line: 0,
+        character: 18, // 'data' in the param list
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(hover.is_some());
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("(shared parameter) data"),
+        "Expected '(shared parameter) data' in: {contents}"
+    );
+}
+
+#[test]
+fn test_unannotated_param_hover_unchanged() {
+    let source = "fn f(x: number) -> number { return x; }";
+    let (ast, symbols) = parse_source(source);
+    let pos = Position {
+        line: 0,
+        character: 5, // 'x'
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(hover.is_some());
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("(parameter) x"),
+        "Expected '(parameter) x' in: {contents}"
+    );
+    assert!(
+        !contents.contains("(own parameter)")
+            && !contents.contains("(borrow parameter)")
+            && !contents.contains("(shared parameter)"),
+        "Unannotated param should not show ownership prefix, got: {contents}"
+    );
+}
+
+#[test]
+fn test_function_signature_hover_shows_ownership() {
+    let source = "fn process(own data: number) -> number { return data; }";
+    let (ast, symbols) = parse_source(source);
+    let pos = Position {
+        line: 0,
+        character: 3, // 'process' function name
+    };
+    let hover = generate_hover(source, pos, ast.as_ref(), symbols.as_ref());
+    assert!(hover.is_some());
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("own data"),
+        "Function signature should include ownership annotation, got: {contents}"
+    );
+}
+
+#[test]
+fn test_keyword_hover_own() {
+    let source = "fn f(own x: number) -> number { return x; }";
+    let pos = Position {
+        line: 0,
+        character: 5, // 'own' keyword
+    };
+    let hover = generate_hover(source, pos, None, None);
+    assert!(hover.is_some());
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(
+        contents.contains("own"),
+        "Expected keyword hover for 'own', got: {contents}"
+    );
+    assert!(
+        contents.contains("ownership") || contents.contains("exclusive"),
+        "Expected ownership description for 'own', got: {contents}"
+    );
+}
+
+#[test]
+fn test_keyword_hover_borrow() {
+    let hover = generate_hover(
+        "borrow",
+        Position {
+            line: 0,
+            character: 3,
+        },
+        None,
+        None,
+    );
+    assert!(hover.is_some());
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(contents.contains("borrow"));
+}
+
+#[test]
+fn test_keyword_hover_shared() {
+    let hover = generate_hover(
+        "shared",
+        Position {
+            line: 0,
+            character: 3,
+        },
+        None,
+        None,
+    );
+    assert!(hover.is_some());
+    let contents = format!("{:?}", hover.unwrap().contents);
+    assert!(contents.contains("shared"));
+}

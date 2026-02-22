@@ -1,6 +1,5 @@
 ---
 source: crates/atlas-cli/tests/ast_dump_tests.rs
-assertion_line: 94
 expression: json
 ---
 {
@@ -34,6 +33,7 @@ expression: json
                 }
               ]
             },
+            "ownership": null,
             "span": {
               "start": 10,
               "end": 22
@@ -49,6 +49,7 @@ expression: json
             }
           ]
         },
+        "return_ownership": null,
         "predicate": null,
         "body": {
           "statements": [

@@ -476,3 +476,102 @@ fn test_token_length_matches_lexeme() {
         panic!("Expected Tokens result");
     }
 }
+
+// === Ownership Keyword Semantic Token Tests ===
+
+/// KEYWORD type index in TOKEN_TYPES (position 15)
+const KEYWORD_TYPE_IDX: u32 = 15;
+
+#[test]
+fn test_own_keyword_is_keyword_semantic_token() {
+    let source = "fn f(own x: number) -> number { return x; }";
+    let (ast, symbols) = parse_source(source);
+    let result = generate_semantic_tokens(source, ast.as_ref(), symbols.as_ref());
+
+    if let SemanticTokensResult::Tokens(tokens) = result {
+        // `own` is 3 chars — verify at least one KEYWORD token of length 3 exists
+        let has_own_keyword = tokens
+            .data
+            .iter()
+            .any(|t| t.token_type == KEYWORD_TYPE_IDX && t.length == 3);
+        assert!(
+            has_own_keyword,
+            "Expected 'own' to be classified as KEYWORD (type {KEYWORD_TYPE_IDX})"
+        );
+    } else {
+        panic!("Expected Tokens result");
+    }
+}
+
+#[test]
+fn test_borrow_keyword_is_keyword_semantic_token() {
+    let source = "fn f(borrow x: number) -> number { return x; }";
+    let (ast, symbols) = parse_source(source);
+    let result = generate_semantic_tokens(source, ast.as_ref(), symbols.as_ref());
+
+    if let SemanticTokensResult::Tokens(tokens) = result {
+        // `borrow` is length 6 — verify at least one KEYWORD token of length 6 exists
+        let has_borrow_keyword = tokens
+            .data
+            .iter()
+            .any(|t| t.token_type == KEYWORD_TYPE_IDX && t.length == 6);
+        assert!(
+            has_borrow_keyword,
+            "Expected 'borrow' to be classified as KEYWORD"
+        );
+    } else {
+        panic!("Expected Tokens result");
+    }
+}
+
+#[test]
+fn test_shared_keyword_is_keyword_semantic_token() {
+    let source = "fn f(shared x: number) -> number { return x; }";
+    let (ast, symbols) = parse_source(source);
+    let result = generate_semantic_tokens(source, ast.as_ref(), symbols.as_ref());
+
+    if let SemanticTokensResult::Tokens(tokens) = result {
+        // `shared` is length 6 — verify at least one KEYWORD token of length 6 exists
+        let has_shared_keyword = tokens
+            .data
+            .iter()
+            .any(|t| t.token_type == KEYWORD_TYPE_IDX && t.length == 6);
+        assert!(
+            has_shared_keyword,
+            "Expected 'shared' to be classified as KEYWORD"
+        );
+    } else {
+        panic!("Expected Tokens result");
+    }
+}
+
+#[test]
+fn test_ownership_keywords_not_classified_as_variable() {
+    // Ensure own/borrow/shared are never emitted as VARIABLE (type 8)
+    const VARIABLE_TYPE_IDX: u32 = 8;
+
+    for source in &[
+        "fn f(own x: number) -> number { return x; }",
+        "fn f(borrow x: number) -> number { return x; }",
+        "fn f(shared x: number) -> number { return x; }",
+    ] {
+        let (ast, symbols) = parse_source(source);
+        let result = generate_semantic_tokens(source, ast.as_ref(), symbols.as_ref());
+        if let SemanticTokensResult::Tokens(tokens) = result {
+            // Accumulate absolute positions to identify the ownership keyword token
+            // The ownership keyword is always at the start of the param list (after the '(')
+            // We verify no token with keyword-matching lengths (3 or 6) on line 0 is VARIABLE
+            let misclassified = tokens.data.iter().any(|t| {
+                t.token_type == VARIABLE_TYPE_IDX
+                    && (t.length == 3 || t.length == 6)
+                    && t.delta_line == 0
+            });
+            assert!(
+                !misclassified,
+                "Ownership keyword incorrectly classified as VARIABLE in: {source}"
+            );
+        } else {
+            panic!("Expected Tokens result");
+        }
+    }
+}

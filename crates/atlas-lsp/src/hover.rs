@@ -7,6 +7,26 @@
 
 use atlas_runtime::ast::*;
 use atlas_runtime::symbol::{SymbolKind, SymbolTable};
+
+/// Format an ownership annotation as a parameter prefix
+fn ownership_prefix(ownership: &Option<OwnershipAnnotation>) -> &'static str {
+    match ownership {
+        Some(OwnershipAnnotation::Own) => "own ",
+        Some(OwnershipAnnotation::Borrow) => "borrow ",
+        Some(OwnershipAnnotation::Shared) => "shared ",
+        None => "",
+    }
+}
+
+/// Format an ownership annotation as a hover label prefix (with parentheses)
+fn ownership_label(ownership: &Option<OwnershipAnnotation>) -> &'static str {
+    match ownership {
+        Some(OwnershipAnnotation::Own) => "(own parameter) ",
+        Some(OwnershipAnnotation::Borrow) => "(borrow parameter) ",
+        Some(OwnershipAnnotation::Shared) => "(shared parameter) ",
+        None => "(parameter) ",
+    }
+}
 use tower_lsp::lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind, Position, Range};
 
 /// Generate hover information for a position in the document
@@ -30,6 +50,8 @@ pub fn generate_hover(
         } else if let Some(hover_info) = find_variable_hover(program, &identifier) {
             contents.push(hover_info);
         } else if let Some(hover_info) = find_type_alias_hover(program, &identifier) {
+            contents.push(hover_info);
+        } else if let Some(hover_info) = find_parameter_hover(program, &identifier) {
             contents.push(hover_info);
         }
     }
@@ -241,6 +263,30 @@ fn find_type_alias_hover(program: &Program, identifier: &str) -> Option<String> 
                 ));
                 hover.push_str("\n```");
                 return Some(hover);
+            }
+        }
+    }
+    None
+}
+
+/// Find hover information for a parameter (with ownership annotation)
+fn find_parameter_hover(program: &Program, identifier: &str) -> Option<String> {
+    for item in &program.items {
+        if let Item::Function(func) = item {
+            for param in &func.params {
+                if param.name.name == identifier {
+                    let label = ownership_label(&param.ownership);
+                    let mut hover = String::new();
+                    hover.push_str("```atlas\n");
+                    hover.push_str(&format!(
+                        "{}{}: {}",
+                        label,
+                        param.name.name,
+                        format_type_ref(&param.type_ref)
+                    ));
+                    hover.push_str("\n```");
+                    return Some(hover);
+                }
             }
         }
     }
@@ -601,6 +647,11 @@ fn find_keyword_hover(identifier: &str) -> Option<String> {
         "as" => "Used for type casts and import aliases.",
         "extends" => "Used in generic constraints.",
         "is" => "Type predicate operator.",
+        "own" => "Ownership annotation: parameter takes exclusive ownership of the value.",
+        "borrow" => "Ownership annotation: parameter borrows the value without taking ownership.",
+        "shared" => {
+            "Ownership annotation: parameter receives a shared (reference-counted) reference."
+        }
         _ => return None,
     };
 
@@ -612,7 +663,14 @@ fn format_function_signature(func: &FunctionDecl) -> String {
     let params: Vec<String> = func
         .params
         .iter()
-        .map(|p| format!("{}: {}", p.name.name, format_type_ref(&p.type_ref)))
+        .map(|p| {
+            format!(
+                "{}{}: {}",
+                ownership_prefix(&p.ownership),
+                p.name.name,
+                format_type_ref(&p.type_ref)
+            )
+        })
         .collect();
 
     let return_type = format!(" -> {}", format_type_ref(&func.return_type));
