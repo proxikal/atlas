@@ -134,11 +134,21 @@ fn allocate(size: number) -> own Buffer
 ```
 
 ### Acceptance criteria
-- [ ] All three annotations parse correctly
-- [ ] Type checker rejects mismatched ownership (passing `borrow` where `own` required)
-- [ ] Runtime assertion fires when ownership is violated (debug mode)
-- [ ] Both engines enforce ownership consistently
-- [ ] LSP shows ownership annotations in hover info
+- [x] All three annotations parse correctly (Phase 03–05)
+- [x] Type checker rejects mismatched ownership (passing `borrow` where `own` required) (Phase 06–07)
+- [x] Runtime assertion fires when ownership is violated (debug mode) (Phases 08–09, 11–12)
+- [x] Both engines enforce ownership consistently (Phase 13 — 22 parity tests)
+- [x] LSP shows ownership annotations in hover info (Phase 14–15)
+
+**Completed:** 2026-02-22 — 16 phases, 9,236 tests passing
+
+### Planned vs. Actual
+
+- **Phases:** Estimated 15–20, delivered exactly 16.
+- **Bug found:** `compiler/mod.rs::updated_ref` had `param_names: vec![]` (script artifact from scaffolding) — caught and fixed in Phase 13 parity check.
+- **Insta snapshot gap:** 2 `ast_dump_tests` snapshots weren't updated when `return_ownership` field was added to `FunctionDecl`. Fixed in Phase 14.
+- **LSP semantic tokens:** `own`/`borrow`/`shared` were already classified as KEYWORD by existing wildcard match — Phase 14 was primarily verification + hover.
+- **No scope changes:** Block 2 executed exactly as planned. No phases merged, split, or added.
 
 ---
 

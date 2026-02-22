@@ -229,6 +229,37 @@ simpler than Rust's NLL (non-lexical lifetimes) analysis.
 
 ---
 
+## Implementation Notes (v0.3 — Block 2 complete)
+
+**Completed:** 2026-02-22
+
+### Ownership Annotation Tokens
+`own`, `borrow`, `shared` are reserved keywords (added in Block 2).
+They are invalid as identifiers in Atlas v0.3+.
+
+### AST Representation
+- `Param.ownership: Option<OwnershipAnnotation>` — `None` = unannotated
+- `FunctionDecl.return_ownership: Option<OwnershipAnnotation>`
+- `OwnershipAnnotation` enum: `Own | Borrow | Shared`
+
+### Runtime Enforcement (v0.3 — debug assertions)
+- `own` param: caller binding marked consumed; reuse → runtime error (debug mode)
+- `shared` param: argument must be `Value::SharedValue(_)` (debug mode assertion)
+- `borrow` param: no runtime enforcement — value semantics + CoW provide the guarantee
+- Both engines (interpreter + VM) enforce identically — verified by 22 parity tests
+
+### Compile-Time Enforcement (v0.4)
+v0.4 adds a static dataflow pass over the typed AST. No syntax changes required —
+the annotation system is already complete. v0.4 only adds the verification layer.
+
+### Diagnostic Codes
+- `AT_OWN_ON_PRIMITIVE` (warning) — `own` annotation on primitive type
+- `AT_BORROW_ON_SHARED` (warning) — `borrow` annotation on `shared<T>` type
+- `AT_BORROW_TO_OWN` (warning) — passing borrowed value to `own` parameter
+- `AT_NON_SHARED_TO_SHARED` (error) — non-`shared<T>` value to `shared` parameter
+
+---
+
 ## AI Code Generation Guidelines
 
 When generating Atlas code, AI agents should follow these rules:

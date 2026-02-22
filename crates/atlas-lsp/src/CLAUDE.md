@@ -9,8 +9,8 @@ LSP server for Atlas. Provides IDE features via tower-lsp.
 | `server.rs` | `AtlasLspServer` struct + `LanguageServer` trait impl |
 | `document.rs` | `DocumentState` — per-file parse/typecheck state |
 | `index.rs` | `SymbolIndex` — workspace symbol table |
-| `hover.rs` | Hover provider — line 267: parameter hover text |
-| `completion.rs` | Completion provider — line 30: fn snippet, line 182: param rendering |
+| `hover.rs` | Hover provider — `find_parameter_hover`: ownership-aware param hover; `format_function_signature`: includes ownership prefix |
+| `completion.rs` | Completion provider — `ownership_annotation_completions()`: own/borrow/shared; `is_in_param_position()`: context detection; `generate_completions(text, pos, ...)` |
 | `semantic_tokens.rs` | Syntax highlighting token classification |
 | `inlay_hints.rs` | Inlay hint rendering + `InlayHintConfig` |
 | `navigation.rs` | Go-to-definition, go-to-declaration |
