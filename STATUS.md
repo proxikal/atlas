@@ -69,7 +69,7 @@ until all acceptance criteria in its dependency block are met. See V03_PLAN.md.
 
 **Completed:** 2026-02-21 (including post-v0.2 fixes)
 **Total phases:** 133/133 + 6/6 completion phases
-**All phase files:** Archived in `phases/*/archive/v0.2/`
+**All phase files:** Archived in git history
 **Audit reports:** `TESTING_REPORT_v02.md`, `STABILITY_AUDIT_REPORT_v02.md`, `V02_KNOWN_ISSUES.md`
 
 ---
@@ -99,7 +99,7 @@ until all acceptance criteria in its dependency block are met. See V03_PLAN.md.
 | **Memory model spec** | `docs/specification/memory-model.md` ← architectural foundation |
 | Roadmap | `ROADMAP.md` |
 | Specs | `docs/specification/` |
-| v0.2 archive | `phases/*/archive/v0.2/` |
+| Phase specs | `phases/v0.3/` |
 | **Auto-memory** | Claude auto-memory (NOT in repo) — `patterns.md`, `decisions/`, `testing-patterns.md` |
 
 **For humans:** Point AI to this file — "Read STATUS.md and continue"
